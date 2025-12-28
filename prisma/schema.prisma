@@ -1,0 +1,342 @@
+// ===========================================
+// PROTECCIÓN CIVIL BORMUJOS - Esquema de Base de Datos
+// ===========================================
+// Este esquema está diseñado para ser escalable y soportar
+// múltiples agrupaciones en el futuro
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ===========================================
+// USUARIOS Y AUTENTICACIÓN
+// ===========================================
+
+model Usuario {
+  id              String    @id @default(cuid())
+  email           String    @unique
+  password        String
+  nombre          String
+  apellidos       String
+  telefono        String?
+  dni             String?   @unique
+  numeroVoluntario String?  @unique @map("numero_voluntario")
+  avatar          String?
+  activo          Boolean   @default(true)
+  
+  // Relaciones
+  rolId           String    @map("rol_id")
+  rol             Rol       @relation(fields: [rolId], references: [id])
+  agrupacionId    String    @map("agrupacion_id")
+  agrupacion      Agrupacion @relation(fields: [agrupacionId], references: [id])
+  
+  // Auditoría
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  lastLogin       DateTime? @map("last_login")
+  
+  // Relaciones inversas
+  guardias        Guardia[]
+  movimientosStock MovimientoStock[]
+  incidenciasCreadas Incidencia[] @relation("IncidenciaCreador")
+  incidenciasAsignadas Incidencia[] @relation("IncidenciaAsignado")
+  vehiculosAsignados VehiculoAsignacion[]
+  
+  @@map("usuarios")
+}
+
+model Rol {
+  id          String   @id @default(cuid())
+  nombre      String   @unique // superadmin, admin, coordinador, voluntario
+  descripcion String?
+  permisos    Json     // Array de permisos: ["inventario.ver", "inventario.editar", ...]
+  
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  
+  usuarios    Usuario[]
+  
+  @@map("roles")
+}
+
+model Agrupacion {
+  id          String   @id @default(cuid())
+  nombre      String   // "Protección Civil Bormujos"
+  codigo      String   @unique // "BORMUJOS"
+  direccion   String?
+  telefono    String?
+  email       String?
+  logo        String?
+  activa      Boolean  @default(true)
+  
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  
+  // Relaciones
+  usuarios    Usuario[]
+  ubicaciones Ubicacion[]
+  vehiculos   Vehiculo[]
+  articulos   Articulo[]
+  incidencias Incidencia[]
+  guardias    Guardia[]
+  
+  @@map("agrupaciones")
+}
+
+// ===========================================
+// INVENTARIO
+// ===========================================
+
+model CategoriaInventario {
+  id          String   @id @default(cuid())
+  nombre      String   // "Incendios", "Socorrismo", "Transmisiones", etc.
+  slug        String   @unique // "incendios", "socorrismo"
+  descripcion String?
+  icono       String?  // Nombre del icono de Lucide
+  color       String?  // Color para UI
+  orden       Int      @default(0)
+  activa      Boolean  @default(true)
+  
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  
+  // Subcategorías (familias)
+  familias    FamiliaArticulo[]
+  
+  @@map("categorias_inventario")
+}
+
+model FamiliaArticulo {
+  id          String   @id @default(cuid())
+  nombre      String   // "EPIs", "Herramientas", "Extintores"
+  slug        String
+  descripcion String?
+  
+  categoriaId String   @map("categoria_id")
+  categoria   CategoriaInventario @relation(fields: [categoriaId], references: [id])
+  
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  
+  articulos   Articulo[]
+  
+  @@unique([categoriaId, slug])
+  @@map("familias_articulo")
+}
+
+model Articulo {
+  id              String   @id @default(cuid())
+  codigo          String?  // Código interno del artículo
+  nombre          String
+  descripcion     String?
+  
+  // Stock
+  stockActual     Int      @default(0) @map("stock_actual")
+  stockMinimo     Int      @default(0) @map("stock_minimo")
+  unidad          String   @default("unidad") // unidad, kg, litros, etc.
+  
+  // Caducidad
+  tieneCaducidad  Boolean  @default(false) @map("tiene_caducidad")
+  fechaCaducidad  DateTime? @map("fecha_caducidad")
+  
+  // Ubicación
+  ubicacionId     String?  @map("ubicacion_id")
+  ubicacion       Ubicacion? @relation(fields: [ubicacionId], references: [id])
+  
+  // Clasificación
+  familiaId       String   @map("familia_id")
+  familia         FamiliaArticulo @relation(fields: [familiaId], references: [id])
+  
+  // Agrupación
+  agrupacionId    String   @map("agrupacion_id")
+  agrupacion      Agrupacion @relation(fields: [agrupacionId], references: [id])
+  
+  // Metadatos adicionales (flexible para diferentes tipos)
+  metadatos       Json?    // { "marca": "...", "modelo": "...", "numeroSerie": "..." }
+  
+  activo          Boolean  @default(true)
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  
+  // Relaciones
+  movimientos     MovimientoStock[]
+  
+  @@unique([agrupacionId, codigo])
+  @@map("articulos")
+}
+
+model Ubicacion {
+  id          String   @id @default(cuid())
+  nombre      String   // "Almacén principal", "Vehículo 1", "Armario EPIs"
+  tipo        String   // "almacen", "vehiculo", "armario", "estanteria"
+  descripcion String?
+  
+  // Ubicación padre (para jerarquía)
+  padreId     String?  @map("padre_id")
+  padre       Ubicacion? @relation("UbicacionJerarquia", fields: [padreId], references: [id])
+  hijos       Ubicacion[] @relation("UbicacionJerarquia")
+  
+  agrupacionId String  @map("agrupacion_id")
+  agrupacion  Agrupacion @relation(fields: [agrupacionId], references: [id])
+  
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  
+  articulos   Articulo[]
+  
+  @@map("ubicaciones")
+}
+
+model MovimientoStock {
+  id          String   @id @default(cuid())
+  tipo        String   // "entrada", "salida", "ajuste", "transferencia"
+  cantidad    Int
+  motivo      String?  // "Compra", "Uso en servicio", "Caducado", etc.
+  notas       String?
+  
+  articuloId  String   @map("articulo_id")
+  articulo    Articulo @relation(fields: [articuloId], references: [id])
+  
+  usuarioId   String   @map("usuario_id")
+  usuario     Usuario  @relation(fields: [usuarioId], references: [id])
+  
+  createdAt   DateTime @default(now()) @map("created_at")
+  
+  @@map("movimientos_stock")
+}
+
+// ===========================================
+// VEHÍCULOS
+// ===========================================
+
+model Vehiculo {
+  id              String   @id @default(cuid())
+  matricula       String   @unique
+  indicativo      String?  // "PC-01", "UME-03"
+  tipo            String   // "furgoneta", "pickup", "ambulancia", "todoterreno"
+  marca           String?
+  modelo          String?
+  anio            Int?     @map("anio")
+  
+  // Estado
+  estado          String   @default("disponible") // disponible, en_servicio, mantenimiento, baja
+  kmActual        Int?     @map("km_actual")
+  
+  // ITV y seguros
+  fechaItv        DateTime? @map("fecha_itv")
+  fechaSeguro     DateTime? @map("fecha_seguro")
+  
+  agrupacionId    String   @map("agrupacion_id")
+  agrupacion      Agrupacion @relation(fields: [agrupacionId], references: [id])
+  
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  
+  asignaciones    VehiculoAsignacion[]
+  
+  @@map("vehiculos")
+}
+
+model VehiculoAsignacion {
+  id          String   @id @default(cuid())
+  
+  vehiculoId  String   @map("vehiculo_id")
+  vehiculo    Vehiculo @relation(fields: [vehiculoId], references: [id])
+  
+  usuarioId   String   @map("usuario_id")
+  usuario     Usuario  @relation(fields: [usuarioId], references: [id])
+  
+  fechaInicio DateTime @map("fecha_inicio")
+  fechaFin    DateTime? @map("fecha_fin")
+  kmInicio    Int?     @map("km_inicio")
+  kmFin       Int?     @map("km_fin")
+  motivo      String?
+  
+  createdAt   DateTime @default(now()) @map("created_at")
+  
+  @@map("vehiculos_asignaciones")
+}
+
+// ===========================================
+// GUARDIAS Y TURNOS
+// ===========================================
+
+model Guardia {
+  id          String   @id @default(cuid())
+  fecha       DateTime @db.Date
+  turno       String   // "mañana", "tarde", "noche", "24h"
+  tipo        String   // "ordinaria", "especial", "evento"
+  notas       String?
+  
+  usuarioId   String   @map("usuario_id")
+  usuario     Usuario  @relation(fields: [usuarioId], references: [id])
+  
+  agrupacionId String  @map("agrupacion_id")
+  agrupacion  Agrupacion @relation(fields: [agrupacionId], references: [id])
+  
+  // Estado
+  estado      String   @default("programada") // programada, confirmada, completada, cancelada
+  
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  
+  @@unique([usuarioId, fecha, turno])
+  @@map("guardias")
+}
+
+// ===========================================
+// INCIDENCIAS E INTERVENCIONES
+// ===========================================
+
+model Incidencia {
+  id              String   @id @default(cuid())
+  numero          String   @unique // "2024-001"
+  titulo          String
+  descripcion     String?
+  tipo            String   // "incendio", "rescate", "sanitario", "preventivo", "otro"
+  prioridad       String   @default("normal") // baja, normal, alta, urgente
+  estado          String   @default("abierta") // abierta, en_curso, resuelta, cerrada
+  
+  // Ubicación
+  direccion       String?
+  coordenadas     Json?    // { lat: ..., lng: ... }
+  
+  // Fechas
+  fechaInicio     DateTime @default(now()) @map("fecha_inicio")
+  fechaFin        DateTime? @map("fecha_fin")
+  
+  // Usuarios
+  creadorId       String   @map("creador_id")
+  creador         Usuario  @relation("IncidenciaCreador", fields: [creadorId], references: [id])
+  
+  asignadoId      String?  @map("asignado_id")
+  asignado        Usuario? @relation("IncidenciaAsignado", fields: [asignadoId], references: [id])
+  
+  agrupacionId    String   @map("agrupacion_id")
+  agrupacion      Agrupacion @relation(fields: [agrupacionId], references: [id])
+  
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  
+  @@map("incidencias")
+}
+
+// ===========================================
+// CONFIGURACIÓN DEL SISTEMA
+// ===========================================
+
+model Configuracion {
+  id          String   @id @default(cuid())
+  clave       String   @unique
+  valor       Json
+  descripcion String?
+  
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  
+  @@map("configuracion")
+}
