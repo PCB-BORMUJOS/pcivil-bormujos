@@ -1,180 +1,287 @@
-import { Header } from '@/components/layout'
-import { StatCard } from '@/components/ui'
-import { 
-  Users, 
-  Calendar, 
-  Truck, 
-  AlertTriangle,
-  Package,
-  Clock,
-  TrendingUp,
-  Activity
-} from 'lucide-react'
+'use client';
 
-// Datos de ejemplo - en producción vendrán de la BD
-const stats = {
-  voluntariosActivos: 24,
-  guardiasHoy: 3,
-  vehiculosDisponibles: 5,
-  incidenciasAbiertas: 2,
-  articulosBajoStock: 8,
-  proximasCaducidades: 3,
+import React, { useState } from 'react';
+import { 
+  Users, Car, MapPin, Sun, Wind, 
+  ChevronLeft, ChevronRight, Clock, 
+  CheckSquare, Square, Save, Droplets, 
+  Calendar as CalendarIcon, X, AlertTriangle,
+  Package, FileText
+} from 'lucide-react';
+
+// Datos Mock
+const MOCK_VOLUNTEERS = [
+  { id: 'j44', name: 'EMILIO', surname: 'SIMÓN GÓMEZ', badgeNumber: 'J-44', rank: 'Jefe de Servicio', status: 'Activo', avatarUrl: 'https://ui-avatars.com/api/?name=EMILIO+SIMON&background=ea580c&color=fff' },
+  { id: 's01', name: 'TANYA', surname: 'GONZÁLEZ MEDINA', badgeNumber: 'S-01', rank: 'Coordinador Socorrismo', status: 'Activo', avatarUrl: 'https://ui-avatars.com/api/?name=TANYA+GONZALEZ&background=0ea5e9&color=fff' },
+  { id: 'b29', name: 'JOSE CARLOS', surname: 'BAILÓN LÓPEZ', badgeNumber: 'B-29', rank: 'Responsable Logística', status: 'Activo', avatarUrl: 'https://ui-avatars.com/api/?name=JOSE+BAILON&background=22c55e&color=fff' },
+  { id: 's02', name: 'ANA MARÍA', surname: 'FERNÁNDEZ PÉREZ', badgeNumber: 'S-02', rank: 'Voluntario', status: 'Activo', avatarUrl: 'https://ui-avatars.com/api/?name=ANA+FERNANDEZ&background=8b5cf6&color=fff' },
+];
+
+const MOCK_VEHICLES = [
+  { id: 'veh1', code: 'A-01', model: 'Mercedes Sprinter', type: 'Ambulancia', status: 'Disponible' },
+  { id: 'veh2', code: 'V-02', model: 'Toyota Land Cruiser', type: 'VIR', status: 'En Servicio' },
+];
+
+const MOCK_EVENTS = [
+  { id: 'e1', title: 'Feria de Bormujos', description: 'Dispositivo preventivo', date: new Date().toISOString().split('T')[0], startTime: '16:00', endTime: '22:00', location: 'Recinto Ferial', type: 'Preventivo' },
+];
+
+const DAYS_OF_WEEK = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+
+// Modal Component
+function Modal({ title, children, onClose }: { title: string; children: React.ReactNode; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div className="bg-slate-50 p-4 border-b border-slate-100 flex justify-between items-center">
+          <h3 className="font-bold text-slate-800">{title}</h3>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X size={20}/></button>
+        </div>
+        <div className="p-4 overflow-y-auto max-h-[70vh]">{children}</div>
+      </div>
+    </div>
+  );
 }
 
-const ultimasIncidencias = [
-  { id: '1', numero: '2024-0042', tipo: 'Preventivo', estado: 'En curso', fecha: '28/12/2024' },
-  { id: '2', numero: '2024-0041', tipo: 'Sanitario', estado: 'Resuelta', fecha: '27/12/2024' },
-  { id: '3', numero: '2024-0040', tipo: 'Incendio', estado: 'Cerrada', fecha: '26/12/2024' },
-]
+// Calendar Component
+function CalendarView() {
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const daysOfWeek = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+  
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
+  const daysCount = new Date(year, month + 1, 0).getDate();
+  const firstDay = new Date(year, month, 1).getDay();
+  const firstDayIndex = firstDay === 0 ? 6 : firstDay - 1;
+  
+  const days: { num: number; date: string; current: boolean }[] = [];
+  for (let i = 0; i < firstDayIndex; i++) days.push({ num: 0, date: '', current: false });
+  for (let i = 1; i <= daysCount; i++) {
+    const date = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+    days.push({ num: i, date, current: true });
+  }
+  
+  const monthName = currentDate.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+  const changeMonth = (dir: 'prev' | 'next') => setCurrentDate(new Date(year, month + (dir === 'next' ? 1 : -1), 1));
+  const today = new Date();
+  const isToday = (d: typeof days[0]) => d.current && d.num === today.getDate() && month === today.getMonth() && year === today.getFullYear();
 
-const proximasGuardias = [
-  { id: '1', voluntario: 'Juan García', turno: 'Mañana', fecha: '29/12/2024' },
-  { id: '2', voluntario: 'María López', turno: 'Tarde', fecha: '29/12/2024' },
-  { id: '3', voluntario: 'Pedro Martínez', turno: 'Noche', fecha: '29/12/2024' },
-]
-
-export default function DashboardPage() {
   return (
-    <>
-      <Header showSearch={true} />
-      
-      <div className="page-content">
-        {/* Page Header */}
-        <div className="page-header">
-          <div>
-            <h1 className="page-title">Dashboard</h1>
-            <p className="page-subtitle">Vista general del estado de la agrupación</p>
-          </div>
+    <div className="bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col h-full">
+      <div className="p-4 border-b border-slate-100 flex justify-between items-center">
+        <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+          <span className="bg-orange-100 p-1 rounded text-orange-600"><Clock size={18}/></span>
+          Calendario Operativo
+        </h2>
+        <div className="flex items-center gap-2 bg-slate-50 rounded-lg p-1">
+          <button onClick={() => changeMonth('prev')} className="p-1 hover:bg-white rounded"><ChevronLeft size={18} className="text-slate-500"/></button>
+          <span className="text-sm font-medium text-slate-700 px-2 capitalize min-w-[140px] text-center">{monthName}</span>
+          <button onClick={() => changeMonth('next')} className="p-1 hover:bg-white rounded"><ChevronRight size={18} className="text-slate-500"/></button>
         </div>
-
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <StatCard
-            label="Voluntarios Activos"
-            value={stats.voluntariosActivos}
-            icon={Users}
-          />
-          <StatCard
-            label="Guardias Hoy"
-            value={stats.guardiasHoy}
-            icon={Calendar}
-            variant="success"
-          />
-          <StatCard
-            label="Vehículos Disponibles"
-            value={stats.vehiculosDisponibles}
-            icon={Truck}
-          />
-          <StatCard
-            label="Incidencias Abiertas"
-            value={stats.incidenciasAbiertas}
-            icon={AlertTriangle}
-            variant={stats.incidenciasAbiertas > 0 ? 'warning' : 'default'}
-          />
-        </div>
-
-        {/* Secondary Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          <StatCard
-            label="Artículos Bajo Stock"
-            value={stats.articulosBajoStock}
-            icon={Package}
-            variant={stats.articulosBajoStock > 5 ? 'danger' : 'warning'}
-          />
-          <StatCard
-            label="Próximas Caducidades"
-            value={stats.proximasCaducidades}
-            icon={Clock}
-            variant={stats.proximasCaducidades > 0 ? 'warning' : 'default'}
-          />
-        </div>
-
-        {/* Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Últimas Incidencias */}
-          <div className="card">
-            <div className="card-header flex items-center justify-between">
-              <h2 className="font-semibold text-gray-900">Últimas Incidencias</h2>
-              <a href="/incidencias" className="text-sm text-pc-primary-500 hover:text-pc-primary-600">
-                Ver todas →
-              </a>
-            </div>
-            <div className="divide-y divide-gray-100">
-              {ultimasIncidencias.map((incidencia) => (
-                <div key={incidencia.id} className="px-6 py-4 flex items-center justify-between hover:bg-gray-50">
-                  <div>
-                    <p className="font-medium text-gray-900">{incidencia.numero}</p>
-                    <p className="text-sm text-gray-500">{incidencia.tipo}</p>
-                  </div>
-                  <div className="text-right">
-                    <span className={`badge ${
-                      incidencia.estado === 'En curso' ? 'badge-warning' :
-                      incidencia.estado === 'Resuelta' ? 'badge-success' :
-                      'badge-gray'
-                    }`}>
-                      {incidencia.estado}
-                    </span>
-                    <p className="text-xs text-gray-400 mt-1">{incidencia.fecha}</p>
-                  </div>
+      </div>
+      <div className="grid grid-cols-7 bg-slate-50 border-b border-slate-100">
+        {daysOfWeek.map(d => <div key={d} className="py-2 text-center text-xs font-semibold text-slate-500 uppercase">{d}</div>)}
+      </div>
+      <div className="grid grid-cols-7 flex-1">
+        {days.map((day, idx) => {
+          const event = day.current ? MOCK_EVENTS.find(e => e.date === day.date) : null;
+          return (
+            <div key={idx} className={`min-h-[70px] border-b border-r border-slate-50 p-1 relative ${day.current ? 'bg-white' : 'bg-slate-50/50'}`}>
+              {day.current && (
+                <span className={`text-xs font-medium absolute top-1 right-1 w-6 h-6 flex items-center justify-center rounded-full ${isToday(day) ? 'bg-orange-500 text-white' : 'text-slate-400'}`}>
+                  {day.num}
+                </span>
+              )}
+              {event && (
+                <div className="mt-6 text-[10px] p-1 rounded bg-blue-100 text-blue-800 border border-blue-200 truncate">
+                  <div className="font-bold">{event.startTime}</div>
+                  <div className="truncate">{event.title}</div>
                 </div>
-              ))}
+              )}
             </div>
-          </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
-          {/* Próximas Guardias */}
-          <div className="card">
-            <div className="card-header flex items-center justify-between">
-              <h2 className="font-semibold text-gray-900">Próximas Guardias</h2>
-              <a href="/cuadrantes" className="text-sm text-pc-primary-500 hover:text-pc-primary-600">
-                Ver cuadrantes →
-              </a>
-            </div>
-            <div className="divide-y divide-gray-100">
-              {proximasGuardias.map((guardia) => (
-                <div key={guardia.id} className="px-6 py-4 flex items-center justify-between hover:bg-gray-50">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-pc-primary-100 flex items-center justify-center text-pc-primary-600 font-semibold text-sm">
-                      {guardia.voluntario.split(' ').map(n => n[0]).join('')}
-                    </div>
-                    <div>
-                      <p className="font-medium text-gray-900">{guardia.voluntario}</p>
-                      <p className="text-sm text-gray-500">{guardia.fecha}</p>
-                    </div>
-                  </div>
-                  <span className="badge badge-info">{guardia.turno}</span>
-                </div>
-              ))}
-            </div>
-          </div>
+// Main Dashboard
+export default function DashboardPage() {
+  const [showPersonnel, setShowPersonnel] = useState(false);
+  const [showVehicles, setShowVehicles] = useState(false);
+  const [showAvailability, setShowAvailability] = useState(false);
+  const [availForm, setAvailForm] = useState({ isNotAvailable: false, details: {} as Record<string, string[]>, desiredShifts: 1, canDouble: false });
+
+  const activeVolunteers = MOCK_VOLUNTEERS.filter(v => v.status === 'Activo');
+  const availableVehicles = MOCK_VEHICLES.filter(v => v.status === 'Disponible');
+
+  const toggleAvail = (day: string, shift: string) => {
+    const current = availForm.details[day] || [];
+    const updated = current.includes(shift) ? current.filter(s => s !== shift) : [...current, shift];
+    setAvailForm({ ...availForm, details: { ...availForm.details, [day]: updated } });
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Top Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div onClick={() => setShowAvailability(true)} className="bg-gradient-to-br from-orange-500 to-orange-600 text-white p-6 rounded-xl shadow-lg cursor-pointer hover:shadow-xl transition-all hover:scale-[1.02]">
+          <p className="text-orange-100 text-xs font-bold uppercase tracking-wider">Acción Requerida</p>
+          <h3 className="text-xl font-bold mt-1">Enviar Disponibilidad</h3>
+          <button className="mt-4 bg-white/20 px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2">
+            <CalendarIcon size={16}/> Próxima Semana
+          </button>
         </div>
+        
+        <div onClick={() => setShowPersonnel(true)} className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 cursor-pointer hover:shadow-md transition-all group">
+          <p className="text-slate-500 text-xs font-medium">Personal Activo</p>
+          <h3 className="text-3xl font-bold text-slate-800 mt-1">{activeVolunteers.length}<span className="text-lg text-slate-400 font-normal">/{MOCK_VOLUNTEERS.length}</span></h3>
+          <div className="mt-2 bg-slate-100 group-hover:bg-orange-100 p-2 rounded-lg w-fit text-slate-500 group-hover:text-orange-600 transition-colors"><Users size={20}/></div>
+        </div>
+        
+        <div onClick={() => setShowVehicles(true)} className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 cursor-pointer hover:shadow-md transition-all group">
+          <p className="text-slate-500 text-xs font-medium">Vehículos Disp.</p>
+          <h3 className="text-3xl font-bold text-slate-800 mt-1">{availableVehicles.length}<span className="text-lg text-slate-400 font-normal">/{MOCK_VEHICLES.length}</span></h3>
+          <div className="mt-2 bg-slate-100 group-hover:bg-green-100 p-2 rounded-lg w-fit text-slate-500 group-hover:text-green-600 transition-colors"><Car size={20}/></div>
+        </div>
+      </div>
 
-        {/* Quick Actions */}
-        <div className="mt-8">
-          <h2 className="font-semibold text-gray-900 mb-4">Acciones Rápidas</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <a href="/incidencias/nueva" className="card p-4 hover:border-pc-primary-300 hover:shadow-md transition-all group">
-              <AlertTriangle className="w-8 h-8 text-pc-primary-500 mb-2 group-hover:scale-110 transition-transform" />
-              <p className="font-medium text-gray-900">Nueva Incidencia</p>
-              <p className="text-sm text-gray-500">Registrar intervención</p>
-            </a>
-            <a href="/inventario" className="card p-4 hover:border-pc-primary-300 hover:shadow-md transition-all group">
-              <Package className="w-8 h-8 text-pc-primary-500 mb-2 group-hover:scale-110 transition-transform" />
-              <p className="font-medium text-gray-900">Inventario</p>
-              <p className="text-sm text-gray-500">Gestionar material</p>
-            </a>
-            <a href="/cuadrantes" className="card p-4 hover:border-pc-primary-300 hover:shadow-md transition-all group">
-              <Calendar className="w-8 h-8 text-pc-primary-500 mb-2 group-hover:scale-110 transition-transform" />
-              <p className="font-medium text-gray-900">Cuadrantes</p>
-              <p className="text-sm text-gray-500">Ver planificación</p>
-            </a>
-            <a href="/vehiculos" className="card p-4 hover:border-pc-primary-300 hover:shadow-md transition-all group">
-              <Truck className="w-8 h-8 text-pc-primary-500 mb-2 group-hover:scale-110 transition-transform" />
-              <p className="font-medium text-gray-900">Vehículos</p>
-              <p className="text-sm text-gray-500">Estado de flota</p>
-            </a>
+      {/* Main Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 h-[500px]">
+          <CalendarView />
+        </div>
+        
+        <div className="space-y-6">
+          {/* Weather */}
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+            <div className="flex justify-between items-start mb-4">
+              <div>
+                <p className="text-slate-400 text-xs flex items-center gap-1"><MapPin size={12}/> Bormujos (Sevilla)</p>
+                <h3 className="text-4xl font-bold text-slate-800 mt-1">28°C</h3>
+                <p className="text-slate-600 text-sm">Cielos Despejados</p>
+              </div>
+              <div className="bg-yellow-100 p-3 rounded-xl text-yellow-600"><Sun size={32}/></div>
+            </div>
+            <div className="flex gap-4 text-xs text-slate-500 border-t border-slate-100 pt-4">
+              <span className="flex items-center gap-1"><Droplets size={14}/> 45%</span>
+              <span className="flex items-center gap-1"><Wind size={14}/> 15 km/h NO</span>
+              <span>☀️ UV: Alto (7)</span>
+            </div>
+          </div>
+
+          {/* AI Summary */}
+          <div className="bg-gradient-to-br from-indigo-500 to-purple-600 text-white p-6 rounded-xl shadow-lg">
+            <h4 className="font-bold flex items-center gap-2 mb-3">✨ IA Operativa - Gemini</h4>
+            <p className="text-sm text-indigo-100 leading-relaxed">
+              <strong>**Resumen de Jornada:**</strong> Despliegue del dispositivo preventivo para la Feria de Bormujos (Turno Tarde, 16:00h). 
+              Sin incidencias de relevancia reportadas al inicio del servicio.
+            </p>
+          </div>
+
+          {/* Fleet Status */}
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+            <h4 className="font-bold text-slate-800 mb-4">Estado de Flota</h4>
+            <div className="flex justify-center mb-4">
+              <div className="w-24 h-24 rounded-full border-8 border-green-500 flex items-center justify-center">
+                <span className="text-2xl font-bold text-slate-800">{availableVehicles.length}/{MOCK_VEHICLES.length}</span>
+              </div>
+            </div>
+            <div className="flex justify-around text-xs text-slate-500">
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500"></span> Disponible</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-orange-500"></span> En Servicio</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500"></span> Mant.</span>
+            </div>
           </div>
         </div>
       </div>
-    </>
-  )
+
+      {/* Modals */}
+      {showPersonnel && (
+        <Modal title="Personal Activo" onClose={() => setShowPersonnel(false)}>
+          <div className="space-y-3">
+            {activeVolunteers.map(v => (
+              <div key={v.id} className="flex items-center gap-3 p-2 bg-slate-50 rounded-lg border border-slate-100">
+                <img src={v.avatarUrl} className="w-10 h-10 rounded-full border border-slate-200" alt={v.name} />
+                <div className="flex-1">
+                  <div className="flex justify-between"><h4 className="font-bold text-slate-800">{v.badgeNumber}</h4><span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-bold">ACTIVO</span></div>
+                  <p className="text-sm text-slate-600">{v.name} {v.surname}</p>
+                  <p className="text-xs text-slate-400">{v.rank}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Modal>
+      )}
+
+      {showVehicles && (
+        <Modal title="Vehículos Disponibles" onClose={() => setShowVehicles(false)}>
+          <div className="space-y-3">
+            {availableVehicles.map(v => (
+              <div key={v.id} className="flex items-center gap-3 p-2 bg-slate-50 rounded-lg border border-slate-100">
+                <div className="bg-white p-2 rounded border border-slate-100 text-slate-600"><Car size={20}/></div>
+                <div><h4 className="font-bold text-slate-800">{v.code}</h4><p className="text-xs text-slate-500">{v.model} - {v.type}</p></div>
+              </div>
+            ))}
+          </div>
+        </Modal>
+      )}
+
+      {showAvailability && (
+        <Modal title="Mi Disponibilidad Semanal" onClose={() => setShowAvailability(false)}>
+          <form onSubmit={e => { e.preventDefault(); alert('Disponibilidad guardada'); setShowAvailability(false); }} className="space-y-4">
+            <div className="bg-blue-50 text-blue-800 p-3 rounded-lg text-xs">Por favor, indique sus preferencias detalladas por día y franja horaria.</div>
+            
+            <div className="border border-red-100 bg-red-50 p-3 rounded-lg flex items-center gap-3">
+              <input type="checkbox" className="w-4 h-4" checked={availForm.isNotAvailable} onChange={e => setAvailForm({...availForm, isNotAvailable: e.target.checked})}/>
+              <label className="text-sm font-bold text-red-700">MARCAR COMO NO DISPONIBLE</label>
+            </div>
+
+            {!availForm.isNotAvailable && (
+              <>
+                <div className="border border-slate-200 rounded-lg overflow-hidden">
+                  <div className="grid grid-cols-3 bg-slate-100 text-xs font-bold text-slate-600 border-b border-slate-200">
+                    <div className="p-2">Día</div><div className="p-2 text-center border-l border-slate-200">Mañana</div><div className="p-2 text-center border-l border-slate-200">Tarde</div>
+                  </div>
+                  {DAYS_OF_WEEK.map(day => {
+                    const shifts = availForm.details[day] || [];
+                    return (
+                      <div key={day} className="grid grid-cols-3 border-b border-slate-100 last:border-0 hover:bg-slate-50">
+                        <div className="p-2 text-xs font-medium text-slate-700">{day}</div>
+                        <div className="border-l border-slate-200 p-1 flex justify-center cursor-pointer" onClick={() => toggleAvail(day, 'Mañana')}>
+                          <div className={`w-5 h-5 rounded border flex items-center justify-center ${shifts.includes('Mañana') ? 'bg-green-500 border-green-600 text-white' : 'bg-white border-slate-300'}`}>
+                            {shifts.includes('Mañana') && <CheckSquare size={14}/>}
+                          </div>
+                        </div>
+                        <div className="border-l border-slate-200 p-1 flex justify-center cursor-pointer" onClick={() => toggleAvail(day, 'Tarde')}>
+                          <div className={`w-5 h-5 rounded border flex items-center justify-center ${shifts.includes('Tarde') ? 'bg-blue-500 border-blue-600 text-white' : 'bg-white border-slate-300'}`}>
+                            {shifts.includes('Tarde') && <CheckSquare size={14}/>}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                
+                <div className="flex items-center gap-2 cursor-pointer border p-2 rounded hover:bg-slate-50" onClick={() => setAvailForm({...availForm, canDouble: !availForm.canDouble})}>
+                  {availForm.canDouble ? <CheckSquare className="text-blue-600" size={18}/> : <Square className="text-slate-400" size={18}/>}
+                  <span className="text-sm font-bold text-slate-700">Disponible para Doblar Turno (M+T)</span>
+                </div>
+                
+                <div>
+                  <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Turnos Deseados (Semanal)</label>
+                  <input type="number" min="1" max="14" className="w-full border border-slate-300 rounded p-2 text-sm" value={availForm.desiredShifts} onChange={e => setAvailForm({...availForm, desiredShifts: parseInt(e.target.value)})}/>
+                </div>
+              </>
+            )}
+            
+            <button type="submit" className="w-full bg-orange-600 text-white py-3 rounded-lg font-bold hover:bg-orange-700 flex justify-center items-center gap-2">
+              <Save size={18}/> Guardar Disponibilidad
+            </button>
+          </form>
+        </Modal>
+      )}
+    </div>
+  );
 }

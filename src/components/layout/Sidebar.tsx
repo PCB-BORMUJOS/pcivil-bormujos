@@ -31,13 +31,13 @@ interface NavItem {
 const navigation: NavItem[] = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Cuadrantes', href: '/cuadrantes', icon: Calendar },
-  { name: 'Mi Área / FRI', href: '/personal/mi-area', icon: User },
-  { name: 'Logística', href: '/inventario/logistica', icon: Package },
+  { name: 'Mi Área / FRI', href: '/mi-area', icon: User },
+  { name: 'Logística', href: '/logistica', icon: Package },
   { name: 'Incendios', href: '/inventario/incendios', icon: Flame },
   { name: 'Socorrismo', href: '/inventario/socorrismo', icon: Heart },
   { name: 'Vehículos', href: '/vehiculos', icon: Truck },
-  { name: 'Transmisiones', href: '/inventario/transmisiones', icon: Radio },
-  { name: 'PMA', href: '/inventario/pma', icon: AlertTriangle },
+  { name: 'Transmisiones', href: '/transmisiones', icon: Radio },
+  { name: 'PMA', href: '/pma', icon: AlertTriangle },
   { name: 'Configuración', href: '/configuracion', icon: Settings },
 ]
 
