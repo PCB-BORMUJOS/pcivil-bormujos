@@ -27,6 +27,11 @@ model Usuario {
   dni             String?   @unique
   numeroVoluntario String?  @unique @map("numero_voluntario")
   avatar          String?
+
+  // Capacidades del voluntario
+  responsableTurno  Boolean   @default(false) @map("responsable_turno")
+  carnetConducir    Boolean   @default(false) @map("carnet_conducir")
+  experiencia       String    @default("MEDIA") // ALTA, MEDIA, BAJA
   activo          Boolean   @default(true)
   
   // Relaciones
