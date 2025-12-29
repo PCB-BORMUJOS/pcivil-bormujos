@@ -115,6 +115,7 @@ export default function DashboardPage() {
   const [stats, setStats] = useState({ total: 0, responsablesTurno: 0, conCarnet: 0, experienciaAlta: 0 });
   const [vehiculos, setVehiculos] = useState<any[]>([]);
   const [statsVeh, setStatsVeh] = useState({ total: 0, disponibles: 0, enServicio: 0, mantenimiento: 0 });
+  const [clima, setClima] = useState<any>(null);
   const [loadingVol, setLoadingVol] = useState(true);
 
   useEffect(() => {
@@ -134,7 +135,13 @@ export default function DashboardPage() {
         setStatsVeh(data.stats || { total: 0, disponibles: 0, enServicio: 0, mantenimiento: 0 });
       })
       .catch(() => {});
+
+    fetch('/api/clima')
+      .then(res => res.json())
+      .then(data => setClima(data))
+      .catch(() => {});  
   }, []);
+
   const [availForm, setAvailForm] = useState({ isNotAvailable: false, details: {} as Record<string, string[]>, desiredShifts: 1, canDouble: false });
 
   const activeVolunteers = MOCK_VOLUNTEERS.filter(v => v.status === 'Activo');
@@ -182,16 +189,16 @@ export default function DashboardPage() {
           <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
             <div className="flex justify-between items-start mb-4">
               <div>
-                <p className="text-slate-400 text-xs flex items-center gap-1"><MapPin size={12}/> Bormujos (Sevilla)</p>
-                <h3 className="text-4xl font-bold text-slate-800 mt-1">28°C</h3>
-                <p className="text-slate-600 text-sm">Cielos Despejados</p>
+                <p className="text-slate-400 text-xs flex items-center gap-1"><MapPin size={12}/> {clima?.municipio || 'Bormujos'} ({clima?.provincia || 'Sevilla'})</p>
+                <h3 className="text-4xl font-bold text-slate-800 mt-1">{clima?.temperatura || '--'}°C</h3>
+                <p className="text-slate-600 text-sm">{clima?.estadoCielo || 'Cargando...'}</p>
               </div>
               <div className="bg-yellow-100 p-3 rounded-xl text-yellow-600"><Sun size={32}/></div>
             </div>
             <div className="flex gap-4 text-xs text-slate-500 border-t border-slate-100 pt-4">
-              <span className="flex items-center gap-1"><Droplets size={14}/> 45%</span>
-              <span className="flex items-center gap-1"><Wind size={14}/> 15 km/h NO</span>
-              <span>☀️ UV: Alto (7)</span>
+              <span className="flex items-center gap-1"><Droplets size={14}/> {clima?.humedad || '--'}%</span>
+              <span className="flex items-center gap-1"><Wind size={14}/> {clima?.viento?.velocidad || '--'} km/h {clima?.viento?.direccion || ''}</span>
+              <span>☀️ UV: {clima?.uvMax || '--'}</span>
             </div>
           </div>
 
