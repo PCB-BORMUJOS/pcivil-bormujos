@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Users, Car, MapPin, Sun, Wind, 
   ChevronLeft, ChevronRight, Clock, 
@@ -111,6 +111,20 @@ export default function DashboardPage() {
   const [showPersonnel, setShowPersonnel] = useState(false);
   const [showVehicles, setShowVehicles] = useState(false);
   const [showAvailability, setShowAvailability] = useState(false);
+  const [voluntarios, setVoluntarios] = useState<any[]>([]);
+  const [stats, setStats] = useState({ total: 0, responsablesTurno: 0, conCarnet: 0, experienciaAlta: 0 });
+  const [loadingVol, setLoadingVol] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/voluntarios')
+      .then(res => res.json())
+      .then(data => {
+        setVoluntarios(data.voluntarios || []);
+        setStats(data.stats || { total: 0, responsablesTurno: 0, conCarnet: 0, experienciaAlta: 0 });
+        setLoadingVol(false);
+      })
+      .catch(() => setLoadingVol(false));
+  }, []);
   const [availForm, setAvailForm] = useState({ isNotAvailable: false, details: {} as Record<string, string[]>, desiredShifts: 1, canDouble: false });
 
   const activeVolunteers = MOCK_VOLUNTEERS.filter(v => v.status === 'Activo');
@@ -136,7 +150,7 @@ export default function DashboardPage() {
         
         <div onClick={() => setShowPersonnel(true)} className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 cursor-pointer hover:shadow-md transition-all group">
           <p className="text-slate-500 text-xs font-medium">Personal Activo</p>
-          <h3 className="text-3xl font-bold text-slate-800 mt-1">{activeVolunteers.length}<span className="text-lg text-slate-400 font-normal">/{MOCK_VOLUNTEERS.length}</span></h3>
+         <h3 className="text-3xl font-bold text-slate-800 mt-1">{loadingVol ? '...' : stats.total}<span className="text-lg text-slate-400 font-normal">/{stats.total}</span></h3>
           <div className="mt-2 bg-slate-100 group-hover:bg-orange-100 p-2 rounded-lg w-fit text-slate-500 group-hover:text-orange-600 transition-colors"><Users size={20}/></div>
         </div>
         
@@ -199,18 +213,48 @@ export default function DashboardPage() {
 
       {/* Modals */}
       {showPersonnel && (
-        <Modal title="Personal Activo" onClose={() => setShowPersonnel(false)}>
-          <div className="space-y-3">
-            {activeVolunteers.map(v => (
-              <div key={v.id} className="flex items-center gap-3 p-2 bg-slate-50 rounded-lg border border-slate-100">
-                <img src={v.avatarUrl} className="w-10 h-10 rounded-full border border-slate-200" alt={v.name} />
-                <div className="flex-1">
-                  <div className="flex justify-between"><h4 className="font-bold text-slate-800">{v.badgeNumber}</h4><span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-bold">ACTIVO</span></div>
-                  <p className="text-sm text-slate-600">{v.name} {v.surname}</p>
-                  <p className="text-xs text-slate-400">{v.rank}</p>
+        <Modal title={`Personal Activo (${stats.total} voluntarios)`} onClose={() => setShowPersonnel(false)}>
+          <div className="mb-4 grid grid-cols-3 gap-2 text-center">
+            <div className="bg-green-50 p-2 rounded-lg">
+              <div className="text-xl font-bold text-green-600">{stats.responsablesTurno}</div>
+              <div className="text-[10px] text-green-700">Resp. Turno</div>
+            </div>
+            <div className="bg-blue-50 p-2 rounded-lg">
+              <div className="text-xl font-bold text-blue-600">{stats.conCarnet}</div>
+              <div className="text-[10px] text-blue-700">Con Carnet</div>
+            </div>
+            <div className="bg-purple-50 p-2 rounded-lg">
+              <div className="text-xl font-bold text-purple-600">{stats.experienciaAlta}</div>
+              <div className="text-[10px] text-purple-700">Exp. Alta</div>
+            </div>
+          </div>
+          <div className="space-y-2 max-h-[400px] overflow-y-auto">
+            {loadingVol ? (
+              <p className="text-center text-slate-500">Cargando...</p>
+            ) : (
+              voluntarios.map(v => (
+                <div key={v.id} className="flex items-center gap-3 p-2 bg-slate-50 rounded-lg border border-slate-100">
+                  <div className="w-10 h-10 rounded-full bg-orange-500 text-white flex items-center justify-center font-bold text-sm">
+                    {v.nombre?.charAt(0)}{v.apellidos?.charAt(0)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-slate-800 text-sm">{v.numeroVoluntario}</span>
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${
+                        v.experiencia === 'ALTA' ? 'bg-green-100 text-green-700' :
+                        v.experiencia === 'MEDIA' ? 'bg-yellow-100 text-yellow-700' :
+                        'bg-red-100 text-red-700'
+                      }`}>{v.experiencia}</span>
+                    </div>
+                    <p className="text-xs text-slate-600 truncate">{v.nombre} {v.apellidos}</p>
+                    <div className="flex gap-1 mt-1">
+                     {v.responsableTurno && <span className="text-[9px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded flex items-center gap-1"><Users size={10}/> Resp.</span>}
+{v.carnetConducir && <span className="text-[9px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded flex items-center gap-1"><Car size={10}/> Carnet</span>} 
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </Modal>
       )}
