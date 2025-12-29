@@ -113,6 +113,8 @@ export default function DashboardPage() {
   const [showAvailability, setShowAvailability] = useState(false);
   const [voluntarios, setVoluntarios] = useState<any[]>([]);
   const [stats, setStats] = useState({ total: 0, responsablesTurno: 0, conCarnet: 0, experienciaAlta: 0 });
+  const [vehiculos, setVehiculos] = useState<any[]>([]);
+  const [statsVeh, setStatsVeh] = useState({ total: 0, disponibles: 0, enServicio: 0, mantenimiento: 0 });
   const [loadingVol, setLoadingVol] = useState(true);
 
   useEffect(() => {
@@ -124,6 +126,14 @@ export default function DashboardPage() {
         setLoadingVol(false);
       })
       .catch(() => setLoadingVol(false));
+
+    fetch('/api/vehiculos')
+      .then(res => res.json())
+      .then(data => {
+        setVehiculos(data.vehiculos || []);
+        setStatsVeh(data.stats || { total: 0, disponibles: 0, enServicio: 0, mantenimiento: 0 });
+      })
+      .catch(() => {});
   }, []);
   const [availForm, setAvailForm] = useState({ isNotAvailable: false, details: {} as Record<string, string[]>, desiredShifts: 1, canDouble: false });
 
@@ -156,7 +166,7 @@ export default function DashboardPage() {
         
         <div onClick={() => setShowVehicles(true)} className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 cursor-pointer hover:shadow-md transition-all group">
           <p className="text-slate-500 text-xs font-medium">Vehículos Disp.</p>
-          <h3 className="text-3xl font-bold text-slate-800 mt-1">{availableVehicles.length}<span className="text-lg text-slate-400 font-normal">/{MOCK_VEHICLES.length}</span></h3>
+          <h3 className="text-3xl font-bold text-slate-800 mt-1">{statsVeh.disponibles}<span className="text-lg text-slate-400 font-normal">//{statsVeh.total}</span></h3>
           <div className="mt-2 bg-slate-100 group-hover:bg-green-100 p-2 rounded-lg w-fit text-slate-500 group-hover:text-green-600 transition-colors"><Car size={20}/></div>
         </div>
       </div>
@@ -260,12 +270,45 @@ export default function DashboardPage() {
       )}
 
       {showVehicles && (
-        <Modal title="Vehículos Disponibles" onClose={() => setShowVehicles(false)}>
-          <div className="space-y-3">
-            {availableVehicles.map(v => (
-              <div key={v.id} className="flex items-center gap-3 p-2 bg-slate-50 rounded-lg border border-slate-100">
-                <div className="bg-white p-2 rounded border border-slate-100 text-slate-600"><Car size={20}/></div>
-                <div><h4 className="font-bold text-slate-800">{v.code}</h4><p className="text-xs text-slate-500">{v.model} - {v.type}</p></div>
+        <Modal title={`Vehículos (${statsVeh.total})`} onClose={() => setShowVehicles(false)}>
+          <div className="mb-4 grid grid-cols-3 gap-2 text-center">
+            <div className="bg-green-50 p-2 rounded-lg">
+              <div className="text-xl font-bold text-green-600">{statsVeh.disponibles}</div>
+              <div className="text-[10px] text-green-700">Disponibles</div>
+            </div>
+            <div className="bg-orange-50 p-2 rounded-lg">
+              <div className="text-xl font-bold text-orange-600">{statsVeh.enServicio}</div>
+              <div className="text-[10px] text-orange-700">En Servicio</div>
+            </div>
+            <div className="bg-red-50 p-2 rounded-lg">
+              <div className="text-xl font-bold text-red-600">{statsVeh.mantenimiento}</div>
+              <div className="text-[10px] text-red-700">Mantenimiento</div>
+            </div>
+          </div>
+          <div className="space-y-2">
+            {vehiculos.map(v => (
+              <div key={v.id} className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-slate-100">
+                <div className={`p-2 rounded-lg ${
+                  v.estado === 'disponible' ? 'bg-green-100 text-green-600' :
+                  v.estado === 'en_servicio' ? 'bg-orange-100 text-orange-600' :
+                  'bg-red-100 text-red-600'
+                }`}>
+                  <Car size={24}/>
+                </div>
+                <div className="flex-1">
+                  <div className="flex justify-between items-center">
+                    <h4 className="font-bold text-slate-800">{v.indicativo}</h4>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                      v.estado === 'disponible' ? 'bg-green-100 text-green-700' :
+                      v.estado === 'en_servicio' ? 'bg-orange-100 text-orange-700' :
+                      'bg-red-100 text-red-700'
+                    }`}>
+                      {v.estado === 'disponible' ? 'DISPONIBLE' : v.estado === 'en_servicio' ? 'EN SERVICIO' : 'MANTENIMIENTO'}
+                    </span>
+                  </div>
+                  <p className="text-sm text-slate-600">{v.marca} {v.modelo}</p>
+                  <p className="text-xs text-slate-400">{v.matricula}</p>
+                </div>
               </div>
             ))}
           </div>
