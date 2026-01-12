@@ -1,0 +1,177 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { prisma } from '@/lib/db'
+
+export async function GET(request: NextRequest) {
+  try {
+    const session = await getServerSession()
+    const { searchParams } = new URL(request.url)
+    const mes = searchParams.get('mes')
+    const incluirPrivados = searchParams.get('privados') === 'true'
+    
+    let whereClause: any = {}
+    
+    // Filtrar por mes si se proporciona
+    if (mes) {
+      const [year, month] = mes.split('-').map(Number)
+      const inicioMes = new Date(year, month - 1, 1)
+      const finMes = new Date(year, month, 0)
+      whereClause.fecha = { gte: inicioMes, lte: finMes }
+    }
+    
+    // Obtener usuario actual si está logueado
+    let usuarioActual = null
+    if (session?.user?.email) {
+      usuarioActual = await prisma.usuario.findUnique({
+        where: { email: session.user.email }
+      })
+    }
+    
+    // Lógica de visibilidad:
+    // - Eventos públicos (visible=true, privado=false) -> todos los ven
+    // - Eventos privados (privado=true) -> solo el creador los ve
+    if (usuarioActual && incluirPrivados) {
+      // Usuario logueado pidiendo sus eventos privados
+      whereClause.OR = [
+        { visible: true, privado: false },
+        { privado: true, creadorId: usuarioActual.id }
+      ]
+    } else {
+      // Solo eventos públicos
+      whereClause.visible = true
+      whereClause.privado = false
+    }
+    
+    const eventos = await prisma.evento.findMany({
+      where: whereClause,
+      include: {
+        creador: { select: { id: true, nombre: true, apellidos: true, numeroVoluntario: true } },
+        participantes: {
+          include: {
+            usuario: { select: { id: true, nombre: true, apellidos: true, numeroVoluntario: true } }
+          }
+        }
+      },
+      orderBy: [{ fecha: 'asc' }, { horaInicio: 'asc' }]
+    })
+    
+    return NextResponse.json({ eventos })
+  } catch (error) {
+    console.error('Error al obtener eventos:', error)
+    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 })
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const session = await getServerSession()
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    }
+    
+    const usuario = await prisma.usuario.findUnique({
+      where: { email: session.user.email },
+      include: { rol: true }
+    })
+    
+    if (!usuario) {
+      return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
+    }
+    
+    const body = await request.json()
+    const { titulo, descripcion, tipo, fecha, horaInicio, horaFin, todoElDia, ubicacion, direccion, coordenadas, visible, privado, voluntariosMin, voluntariosMax, vehiculosNecesarios, color } = body
+    
+    // Validaciones
+    if (!titulo || !tipo || !fecha || !horaInicio) {
+      return NextResponse.json({ error: 'Faltan campos obligatorios' }, { status: 400 })
+    }
+    
+    // Si es evento privado, cualquier usuario puede crearlo
+    // Si es evento público, solo admin/superadmin/coordinador
+    const esEventoPrivado = privado === true
+    const rolesPermitidos = ['superadmin', 'admin', 'coordinador']
+    
+    if (!esEventoPrivado && !rolesPermitidos.includes(usuario.rol.nombre)) {
+      return NextResponse.json({ error: 'No tienes permisos para crear eventos públicos' }, { status: 403 })
+    }
+    
+    const evento = await prisma.evento.create({
+      data: {
+        titulo, 
+        descripcion, 
+        tipo,
+        fecha: new Date(fecha),
+        horaInicio, 
+        horaFin,
+        todoElDia: todoElDia || false,
+        ubicacion, 
+        direccion, 
+        coordenadas,
+        visible: esEventoPrivado ? false : (visible !== false),
+        privado: esEventoPrivado,
+        voluntariosMin, 
+        voluntariosMax, 
+        vehiculosNecesarios, 
+        color,
+        creadorId: usuario.id,
+        servicioId: usuario.servicioId
+      }
+    })
+    
+    return NextResponse.json({ success: true, evento })
+  } catch (error) {
+    console.error('Error al crear evento:', error)
+    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 })
+  }
+}
+
+// PATCH - Actualizar fecha de evento (para drag & drop)
+export async function PATCH(request: NextRequest) {
+  try {
+    const session = await getServerSession()
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    }
+    
+    const usuario = await prisma.usuario.findUnique({
+      where: { email: session.user.email },
+      include: { rol: true }
+    })
+    
+    if (!usuario) {
+      return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
+    }
+    
+    const body = await request.json()
+    const { id, fecha } = body
+    
+    if (!id || !fecha) {
+      return NextResponse.json({ error: 'Faltan campos obligatorios' }, { status: 400 })
+    }
+    
+    // Verificar que el evento existe
+    const eventoExistente = await prisma.evento.findUnique({ where: { id } })
+    if (!eventoExistente) {
+      return NextResponse.json({ error: 'Evento no encontrado' }, { status: 404 })
+    }
+    
+    // Verificar permisos: admin puede mover cualquier evento, usuario solo los suyos privados
+    const rolesPermitidos = ['superadmin', 'admin', 'coordinador']
+    const esAdmin = rolesPermitidos.includes(usuario.rol.nombre)
+    const esPropietario = eventoExistente.creadorId === usuario.id
+    
+    if (!esAdmin && !esPropietario) {
+      return NextResponse.json({ error: 'No tienes permisos para mover este evento' }, { status: 403 })
+    }
+    
+    const evento = await prisma.evento.update({
+      where: { id },
+      data: { fecha: new Date(fecha) }
+    })
+    
+    return NextResponse.json({ success: true, evento })
+  } catch (error) {
+    console.error('Error al actualizar evento:', error)
+    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 })
+  }
+}

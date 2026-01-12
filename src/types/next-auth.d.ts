@@ -1,12 +1,10 @@
-import 'next-auth'
+import NextAuth from 'next-auth'
 
 declare module 'next-auth' {
   interface User {
     id: string
-    email: string
-    name: string
     rol: string
-    agrupacionId: string
+    servicioId: string | null
     numeroVoluntario: string | null
   }
 
@@ -16,7 +14,7 @@ declare module 'next-auth' {
       email: string
       name: string
       rol: string
-      agrupacionId: string
+      servicioId: string | null
       numeroVoluntario: string | null
     }
   }
@@ -25,7 +23,7 @@ declare module 'next-auth' {
 declare module 'next-auth/jwt' {
   interface JWT {
     rol: string
-    agrupacionId: string
+    servicioId: string | null
     numeroVoluntario: string | null
   }
 }

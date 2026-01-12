@@ -12,44 +12,24 @@ const vehiculos = [
 async function main() {
   console.log('🚗 Creando vehículos...')
   
-  const agrupacion = await prisma.agrupacion.findFirst()
+  const servicio = await prisma.servicio.findFirst()
   
-  if (!agrupacion) {
-    console.error('❌ No se encontró la agrupación')
+  if (!servicio) {
+    console.error('❌ No se encontró el Servicio')
     return
   }
 
   for (const veh of vehiculos) {
-    try {
-      await prisma.vehiculo.upsert({
-        where: { matricula: veh.matricula },
-        update: {
-          indicativo: veh.indicativo,
-          tipo: veh.tipo,
-          marca: veh.marca,
-          modelo: veh.modelo,
-          estado: veh.estado,
-        },
-        create: {
-          matricula: veh.matricula,
-          indicativo: veh.indicativo,
-          tipo: veh.tipo,
-          marca: veh.marca,
-          modelo: veh.modelo,
-          estado: veh.estado,
-          agrupacionId: agrupacion.id,
-        }
-      })
-      console.log(`✅ ${veh.indicativo} - ${veh.marca} ${veh.modelo}`)
-    } catch (error) {
-      console.log(`⚠️ ${veh.indicativo} error:`, error)
-    }
+    await prisma.vehiculo.upsert({
+      where: { matricula: veh.matricula },
+      update: { indicativo: veh.indicativo, tipo: veh.tipo, marca: veh.marca, modelo: veh.modelo, estado: veh.estado },
+      create: { matricula: veh.matricula, indicativo: veh.indicativo, tipo: veh.tipo, marca: veh.marca, modelo: veh.modelo, estado: veh.estado, servicioId: servicio.id }
+    })
+    console.log(`✅ ${veh.indicativo} - ${veh.marca} ${veh.modelo}`)
   }
 
   const total = await prisma.vehiculo.count()
-  console.log(`\n🎉 Total vehículos en BD: ${total}`)
+  console.log(`\n🎉 Total vehículos: ${total}`)
 }
 
-main()
-  .catch(console.error)
-  .finally(() => prisma.$disconnect())
+main().catch(console.error).finally(() => prisma.$disconnect())

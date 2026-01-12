@@ -16,21 +16,22 @@ import {
   AlertTriangle,
   Settings,
   LogOut,
-  Search,
   Loader2,
+  ShieldCheck,
 } from 'lucide-react'
-import { useState } from 'react'
 
 interface NavItem {
   name: string
   href: string
   icon: React.ElementType
+  adminOnly?: boolean
 }
 
 const navigation: NavItem[] = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Cuadrantes', href: '/cuadrantes', icon: Calendar },
-  { name: 'Mi Área / FRI', href: '/mi-area', icon: User },
+  { name: 'Administración', href: '/administracion', icon: ShieldCheck, adminOnly: true },
+  { name: 'Mi Área', href: '/mi-area', icon: User },
   { name: 'Logística', href: '/logistica', icon: Package },
   { name: 'Incendios', href: '/inventario/incendios', icon: Flame },
   { name: 'Socorrismo', href: '/inventario/socorrismo', icon: Heart },
@@ -43,7 +44,9 @@ const navigation: NavItem[] = [
 export default function Sidebar() {
   const pathname = usePathname()
   const { data: session, status } = useSession()
-  const [searchQuery, setSearchQuery] = useState('')
+
+  const userRole = session?.user?.rol || ''
+  const isAdmin = ['superadmin', 'admin', 'coordinador'].includes(userRole)
 
   const getInitials = (name: string) => {
     const parts = name.split(' ')
@@ -67,6 +70,11 @@ export default function Sidebar() {
     signOut({ callbackUrl: '/login' })
   }
 
+  const filteredNavigation = navigation.filter(item => {
+    if (item.adminOnly && !isAdmin) return false
+    return true
+  })
+
   return (
     <aside className="sidebar">
       <div className="flex items-center gap-3 px-4 py-5 border-b border-pc-dark-800">
@@ -79,22 +87,9 @@ export default function Sidebar() {
         </div>
       </div>
 
-      <div className="px-4 py-4">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-          <input
-            type="text"
-            placeholder="Buscar..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 text-sm bg-pc-dark-800 border border-pc-dark-700 rounded-lg text-white placeholder:text-gray-500 focus:outline-none focus:ring-1 focus:ring-pc-primary-500 focus:border-pc-primary-500"
-          />
-        </div>
-      </div>
-
-      <nav className="flex-1 overflow-y-auto scrollbar-thin px-2 py-2">
+      <nav className="flex-1 overflow-y-auto scrollbar-thin px-2 py-4">
         <ul className="space-y-1">
-          {navigation.map((item) => {
+          {filteredNavigation.map((item) => {
             const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
             const Icon = item.icon
             return (

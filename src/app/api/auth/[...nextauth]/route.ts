@@ -1,9 +1,7 @@
 import NextAuth from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
-import { PrismaClient } from '@prisma/client'
+import { prisma } from '@/lib/db'
 import { compare } from 'bcryptjs'
-
-const prisma = new PrismaClient()
 
 const handler = NextAuth({
   providers: [
@@ -17,33 +15,27 @@ const handler = NextAuth({
         if (!credentials?.email || !credentials?.password) {
           throw new Error('Email y contraseña requeridos')
         }
-
         const usuario = await prisma.usuario.findUnique({
           where: { email: credentials.email },
-          include: { rol: true, agrupacion: true }
+          include: { rol: true, servicio: true }
         })
-
         if (!usuario || !usuario.activo) {
           throw new Error('Usuario no encontrado o inactivo')
         }
-
         const passwordValid = await compare(credentials.password, usuario.password)
-
         if (!passwordValid) {
           throw new Error('Contraseña incorrecta')
         }
-
         await prisma.usuario.update({
           where: { id: usuario.id },
           data: { lastLogin: new Date() }
         })
-
         return {
           id: usuario.id,
           email: usuario.email,
           name: `${usuario.nombre} ${usuario.apellidos}`,
           rol: usuario.rol.nombre,
-          agrupacionId: usuario.agrupacionId,
+          servicioId: usuario.servicioId,
           numeroVoluntario: usuario.numeroVoluntario,
         }
       }
@@ -53,7 +45,7 @@ const handler = NextAuth({
     async jwt({ token, user }) {
       if (user) {
         token.rol = user.rol
-        token.agrupacionId = user.agrupacionId
+        token.servicioId = user.servicioId
         token.numeroVoluntario = user.numeroVoluntario
       }
       return token
@@ -62,7 +54,7 @@ const handler = NextAuth({
       if (session.user) {
         session.user.id = token.sub!
         session.user.rol = token.rol as string
-        session.user.agrupacionId = token.agrupacionId as string
+        session.user.servicioId = token.servicioId as string
         session.user.numeroVoluntario = token.numeroVoluntario as string
       }
       return session

@@ -1,198 +1,1123 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Users, GraduationCap, Clock, FileText, Bell, Shield, Save, Edit, Download, ChevronRight } from 'lucide-react';
+import NotificacionesTab from '@/components/NotificacionesTab'
+import React, { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
+import { 
+  User, GraduationCap, Clock, FileText, Bell, Save, Edit, Upload, 
+  Calendar, Award, CheckCircle, XCircle, AlertTriangle, Plus,
+  Download, Eye, Trash2, X, ChevronRight, MapPin, Phone, Mail,
+  Shield, Lock, Send, FileCheck, Car, CreditCard, Heart
+} from 'lucide-react';
 
-const MOCK_USER = {
-  id: 'j44', name: 'EMILIO', surname: 'SIMÓN GÓMEZ', email: 'emilio.simon@pcbormujos.es',
-  badgeNumber: 'J-44', rank: 'Jefe de Servicio', systemRole: 'superadmin',
-  phone: '600 123 456', dni: '12345678A', birthDate: '1985-05-15', joinDate: '2015-03-01',
-  municipio: 'Bormujos', kmAllowance: 0,
-  avatarUrl: 'https://ui-avatars.com/api/?name=EMILIO+SIMON&background=ea580c&color=fff&size=128',
-};
+// ============================================
+// TIPOS
+// ============================================
+interface Formacion {
+  id: string;
+  nombre: string;
+  tipo: string;
+  fechaObtencion: string;
+  fechaValidez?: string;
+  entidad: string;
+  horas?: number;
+  documentoUrl?: string;
+  documentoNombre?: string;
+  estado: 'vigente' | 'por_vencer' | 'vencido';
+}
 
-const MOCK_VOLUNTEERS = [
-  { id: 'j44', name: 'EMILIO', surname: 'SIMÓN GÓMEZ', badgeNumber: 'J-44', rank: 'Jefe de Servicio', systemRole: 'superadmin', municipio: 'Bormujos', kmAllowance: 0, lopdAccepted: true, avatarUrl: 'https://ui-avatars.com/api/?name=ES&background=ea580c&color=fff' },
-  { id: 's01', name: 'TANYA', surname: 'GONZÁLEZ MEDINA', badgeNumber: 'S-01', rank: 'Coordinador', systemRole: null, municipio: 'Mairena', kmAllowance: 5.25, lopdAccepted: true, avatarUrl: 'https://ui-avatars.com/api/?name=TG&background=0ea5e9&color=fff' },
-  { id: 'b29', name: 'JOSE CARLOS', surname: 'BAILÓN LÓPEZ', badgeNumber: 'B-29', rank: 'Responsable', systemRole: null, municipio: 'Tomares', kmAllowance: 3.50, lopdAccepted: false, avatarUrl: 'https://ui-avatars.com/api/?name=JB&background=22c55e&color=fff' },
+interface Actividad {
+  id: string;
+  tipo: 'servicio' | 'formacion' | 'evento' | 'reunion';
+  titulo: string;
+  fecha: string;
+  horaInicio: string;
+  horaFin: string;
+  descripcion?: string;
+  turno?: string;
+}
+
+interface Documento {
+  id: string;
+  tipo: string;
+  nombre: string;
+  fechaSubida: string;
+  fechaVencimiento?: string;
+  archivoUrl?: string;
+  archivoNombre?: string;
+  estado: 'vigente' | 'por_vencer' | 'vencido';
+}
+
+interface DatosPersonales {
+  // Datos básicos
+  nombre: string;
+  apellidos: string;
+  dni: string;
+  fechaNacimiento: string;
+  sexo: string;
+  email: string;
+  telefono: string;
+  telefonoEmergencia: string;
+  contactoEmergencia: string;
+  
+  // Dirección
+  domicilio: string;
+  numero: string;
+  piso: string;
+  codigoPostal: string;
+  localidad: string;
+  provincia: string;
+  
+  // Datos del servicio
+  numeroVoluntario: string;
+  indicativo2: string;
+  fechaAlta: string;
+  fechaBaja: string;
+  areaAsignada: string;
+  categoria: string;
+  rol: string;
+  
+  // Permisos conducir
+  permisoConducir: string;
+  fechaExpedicionPermiso: string;
+  fechaValidezPermiso: string;
+  
+  // Otros
+  formacionProfesional: string;
+  ocupacionActual: string;
+  alergias: string;
+  grupoSanguineo: string;
+}
+
+// ============================================
+// CONSTANTES
+// ============================================
+const TIPOS_FORMACION = [
+  'Formación Básica PC',
+  'Socorrismo',
+  'Extinción de Incendios',
+  'Primeros Auxilios',
+  'RCP + DEA',
+  'Comunicaciones',
+  'Rescate Urbano',
+  'Conducción Emergencias',
+  'Logística',
+  'PMA',
+  'Drones / RPA',
+  'Otro'
 ];
 
+const TIPOS_DOCUMENTO = [
+  { id: 'dni', nombre: 'DNI / NIE', icono: CreditCard },
+  { id: 'carnet_conducir', nombre: 'Carnet de Conducir', icono: Car },
+  { id: 'titulo_formacion', nombre: 'Título Formación', icono: GraduationCap },
+  { id: 'certificado_medico', nombre: 'Certificado Médico', icono: Heart },
+  { id: 'seguro', nombre: 'Seguro Personal', icono: Shield },
+  { id: 'otro', nombre: 'Otro Documento', icono: FileText },
+];
+
+const AREAS_SERVICIO = [
+  'JEFATURA', 'SOCORRISMO', 'EXT_INCENDIOS', 'LOGISTICA', 
+  'FORMACION', 'TRANSMISIONES', 'ACCION_SOCIAL', 'PMA', 'ADMINISTRACION'
+];
+
+// ============================================
+// COMPONENTE MODAL
+// ============================================
+function Modal({ title, children, onClose, size = 'md' }: { 
+  title: string; 
+  children: React.ReactNode; 
+  onClose: () => void;
+  size?: 'sm' | 'md' | 'lg';
+}) {
+  const sizeClasses = { sm: 'max-w-md', md: 'max-w-lg', lg: 'max-w-2xl' };
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={onClose}>
+      <div className={`bg-white rounded-2xl shadow-2xl w-full ${sizeClasses[size]} max-h-[90vh] overflow-hidden`} onClick={e => e.stopPropagation()}>
+        <div className="bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-4 flex justify-between items-center">
+          <h3 className="font-bold text-white text-lg">{title}</h3>
+          <button onClick={onClose} className="text-white/80 hover:text-white"><X size={24}/></button>
+        </div>
+        <div className="p-6 overflow-y-auto max-h-[calc(90vh-80px)]">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================
+// COMPONENTE PRINCIPAL
+// ============================================
 export default function MiAreaPage() {
-  const [activeTab, setActiveTab] = useState<'perfil' | 'formacion' | 'actividad' | 'docs' | 'preferencias' | 'admin_list'>('perfil');
+  const { data: session } = useSession();
+  const [activeTab, setActiveTab] = useState<'datos' | 'formacion' | 'actividad' | 'documentos' | 'notificaciones'>('datos');
+  const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
-  const [formData, setFormData] = useState(MOCK_USER);
-  const [notifications, setNotifications] = useState(true);
-  const [privacy, setPrivacy] = useState(false);
+  const [solicitandoPermiso, setSolicitandoPermiso] = useState(false);
+  const [permisoEdicion, setPermisoEdicion] = useState(false);
+  
+  // Estados de datos
+  const [datosPersonales, setDatosPersonales] = useState<DatosPersonales>({
+    nombre: '', apellidos: '', dni: '', fechaNacimiento: '', sexo: '',
+    email: '', telefono: '', telefonoEmergencia: '', contactoEmergencia: '',
+    domicilio: '', numero: '', piso: '', codigoPostal: '', localidad: 'BORMUJOS', provincia: 'SEVILLA',
+    numeroVoluntario: '', indicativo2: '', fechaAlta: '', fechaBaja: '', areaAsignada: '', categoria: 'VOLUNTARIO', rol: '',
+    permisoConducir: '', fechaExpedicionPermiso: '', fechaValidezPermiso: '',
+    formacionProfesional: '', ocupacionActual: '', alergias: '', grupoSanguineo: ''
+  });
+  
+  const [formaciones, setFormaciones] = useState<Formacion[]>([]);
+  const [actividades, setActividades] = useState<Actividad[]>([]);
+  const [documentos, setDocumentos] = useState<Documento[]>([]);
+  
+  // Estados modales
+  const [showNuevaFormacion, setShowNuevaFormacion] = useState(false);
+  const [showNuevoDocumento, setShowNuevoDocumento] = useState(false);
+  const [nuevaFormacion, setNuevaFormacion] = useState({
+    nombre: '', tipo: '', fechaObtencion: '', fechaValidez: '', entidad: '', horas: 0
+  });
+  const [nuevoDocumento, setNuevoDocumento] = useState({
+    tipo: '', nombre: '', fechaVencimiento: ''
+  });
 
-  const isAdmin = MOCK_USER.systemRole === 'superadmin';
+  // Determinar rol del usuario
+  const userRole = session?.user?.rol || 'voluntario';
+  const isAdmin = ['superadmin', 'admin'].includes(userRole);
+  const canEdit = isAdmin || permisoEdicion;
 
+  // Cargar datos del usuario
+  useEffect(() => {
+    cargarDatos();
+  }, []);
+
+  const cargarDatos = async () => {
+    setLoading(true);
+    try {
+      // Cargar datos personales desde la API
+      const res = await fetch('/api/mi-area');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.usuario) {
+          setDatosPersonales({
+            nombre: data.usuario.nombre || '',
+            apellidos: data.usuario.apellidos || '',
+            dni: data.usuario.dni || '',
+            email: data.usuario.email || '',
+            telefono: data.usuario.telefono || '',
+            numeroVoluntario: data.usuario.numeroVoluntario || '',
+            rol: data.usuario.rol?.nombre || '',
+            // Datos de la ficha
+            ...(data.ficha || {})
+          });
+        }
+        if (data.formaciones) setFormaciones(data.formaciones);
+        if (data.actividades) setActividades(data.actividades);
+        if (data.documentos) setDocumentos(data.documentos);
+      }
+    } catch (error) {
+      console.error('Error cargando datos:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGuardarDatos = async () => {
+    try {
+      const res = await fetch('/api/mi-area', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(datosPersonales)
+      });
+      if (res.ok) {
+        alert('✅ Datos guardados correctamente');
+        setIsEditing(false);
+      } else {
+        alert('Error al guardar los datos');
+      }
+    } catch (error) {
+      alert('Error al guardar los datos');
+    }
+  };
+
+  const handleSolicitarPermiso = async () => {
+    setSolicitandoPermiso(true);
+    try {
+      const res = await fetch('/api/mi-area/solicitar-permiso', {
+        method: 'POST'
+      });
+      if (res.ok) {
+        alert('✅ Solicitud enviada. El superadministrador revisará tu petición.');
+      }
+    } catch (error) {
+      alert('Error al enviar solicitud');
+    } finally {
+      setSolicitandoPermiso(false);
+    }
+  };
+
+  const handleGuardarFormacion = async () => {
+    if (!nuevaFormacion.nombre || !nuevaFormacion.tipo || !nuevaFormacion.fechaObtencion) {
+      alert('Nombre, tipo y fecha de obtención son requeridos');
+      return;
+    }
+    try {
+      const res = await fetch('/api/mi-area/formacion', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(nuevaFormacion)
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setFormaciones([...formaciones, data.formacion]);
+        setShowNuevaFormacion(false);
+        setNuevaFormacion({ nombre: '', tipo: '', fechaObtencion: '', fechaValidez: '', entidad: '', horas: 0 });
+      }
+    } catch (error) {
+      alert('Error al guardar formación');
+    }
+  };
+
+  const handleGuardarDocumento = async () => {
+    if (!nuevoDocumento.tipo || !nuevoDocumento.nombre) {
+      alert('Tipo y nombre son requeridos');
+      return;
+    }
+    try {
+      const res = await fetch('/api/mi-area/documento', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(nuevoDocumento)
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setDocumentos([...documentos, data.documento]);
+        setShowNuevoDocumento(false);
+        setNuevoDocumento({ tipo: '', nombre: '', fechaVencimiento: '' });
+      }
+    } catch (error) {
+      alert('Error al guardar documento');
+    }
+  };
+
+  const getEstadoColor = (estado: string) => {
+    switch (estado) {
+      case 'vigente': return 'bg-green-100 text-green-700';
+      case 'por_vencer': return 'bg-yellow-100 text-yellow-700';
+      case 'vencido': return 'bg-red-100 text-red-700';
+      default: return 'bg-slate-100 text-slate-700';
+    }
+  };
+
+  const getTipoActividadColor = (tipo: string) => {
+    switch (tipo) {
+      case 'servicio': return 'bg-blue-500';
+      case 'formacion': return 'bg-purple-500';
+      case 'evento': return 'bg-orange-500';
+      case 'reunion': return 'bg-slate-500';
+      default: return 'bg-slate-400';
+    }
+  };
+
+  // ============================================
+  // RENDER
+  // ============================================
   return (
     <div className="space-y-6">
-      <div className="border-b border-slate-200 pb-6">
-        <h1 className="text-3xl font-black text-slate-800 uppercase tracking-tighter">Mi Área Personal</h1>
-        <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mt-2">Gestión de ficha de voluntario</p>
+      {/* Header con info del usuario */}
+      <div className="bg-gradient-to-r from-slate-800 to-slate-900 rounded-2xl p-6 text-white">
+        <div className="flex items-center gap-6">
+          <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center text-3xl font-bold shadow-lg">
+            {datosPersonales.nombre?.charAt(0)}{datosPersonales.apellidos?.charAt(0)}
+          </div>
+          <div className="flex-1">
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-bold">{datosPersonales.nombre} {datosPersonales.apellidos}</h1>
+              <span className="bg-orange-500 px-3 py-1 rounded-full text-sm font-bold">{datosPersonales.numeroVoluntario}</span>
+            </div>
+            <p className="text-slate-300 mt-1">{datosPersonales.rol} • {datosPersonales.areaAsignada || 'Sin área asignada'}</p>
+            <div className="flex items-center gap-4 mt-3 text-sm text-slate-400">
+              <span className="flex items-center gap-1"><Mail size={14}/> {datosPersonales.email}</span>
+              <span className="flex items-center gap-1"><Phone size={14}/> {datosPersonales.telefono}</span>
+              <span className="flex items-center gap-1"><MapPin size={14}/> {datosPersonales.localidad}</span>
+            </div>
+          </div>
+          <div className="text-right">
+            <p className="text-slate-400 text-sm">Fecha de alta</p>
+            <p className="text-xl font-bold">{datosPersonales.fechaAlta ? new Date(datosPersonales.fechaAlta).toLocaleDateString('es-ES') : '-'}</p>
+          </div>
+        </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-4 border-b border-slate-200 overflow-x-auto pb-px">
-        {[
-          { id: 'perfil', label: 'Mis Datos', icon: Users },
-          { id: 'formacion', label: 'Formación', icon: GraduationCap },
-          { id: 'actividad', label: 'Mi Actividad', icon: Clock },
-          { id: 'docs', label: 'Documentos', icon: FileText },
-          { id: 'preferencias', label: 'Preferencias', icon: Bell },
-        ].map(tab => (
-          <button key={tab.id} onClick={() => setActiveTab(tab.id as any)} className={`pb-3 px-2 text-xs font-bold uppercase tracking-widest flex items-center gap-2 whitespace-nowrap ${activeTab === tab.id ? 'text-orange-600 border-b-2 border-orange-600' : 'text-slate-500'}`}>
-            <tab.icon size={14} /> {tab.label}
-          </button>
-        ))}
-        {isAdmin && (
-          <button onClick={() => setActiveTab('admin_list')} className={`pb-3 px-2 text-xs font-black uppercase tracking-tighter flex items-center gap-2 ml-auto ${activeTab === 'admin_list' ? 'text-slate-800 border-b-2 border-slate-800' : 'text-slate-500'}`}>
-            <Shield size={14} /> Registro FRI
-          </button>
-        )}
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div className="flex border-b border-slate-200 bg-slate-50/50">
+          {[
+            { id: 'datos', label: 'Mis Datos', icon: User },
+            { id: 'formacion', label: 'Formación', icon: GraduationCap },
+            { id: 'actividad', label: 'Historial de Actividad', icon: Clock },
+            { id: 'documentos', label: 'Documentos', icon: FileText },
+            { id: 'notificaciones', label: 'Notificaciones', icon: Bell },
+          ].map(tab => (
+            <button 
+              key={tab.id} 
+              onClick={() => setActiveTab(tab.id as any)} 
+              className={`flex items-center gap-2 px-6 py-4 text-sm font-medium border-b-2 transition-all ${
+                activeTab === tab.id 
+                  ? 'border-orange-500 text-orange-600 bg-white' 
+                  : 'border-transparent text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              <tab.icon size={18} />
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="p-6">
+          {loading ? (
+            <div className="flex justify-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
+            </div>
+          ) : (
+            <>
+              {/* ============================================ */}
+              {/* TAB: MIS DATOS */}
+              {/* ============================================ */}
+              {activeTab === 'datos' && (
+                <div>
+                  {/* Controles de edición */}
+                  <div className="flex justify-between items-center mb-6">
+                    <div>
+                      <h2 className="text-lg font-bold text-slate-800">Datos Personales</h2>
+                      <p className="text-sm text-slate-500">Información completa de tu ficha de voluntario</p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      {!isAdmin && !permisoEdicion && (
+                        <button 
+                          onClick={handleSolicitarPermiso}
+                          disabled={solicitandoPermiso}
+                          className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors text-sm font-medium"
+                        >
+                          <Lock size={16} />
+                          {solicitandoPermiso ? 'Enviando...' : 'Solicitar permiso para editar'}
+                        </button>
+                      )}
+                      {canEdit && (
+                        <button 
+                          onClick={() => isEditing ? handleGuardarDatos() : setIsEditing(true)}
+                          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                            isEditing 
+                              ? 'bg-green-500 text-white hover:bg-green-600' 
+                              : 'bg-orange-500 text-white hover:bg-orange-600'
+                          }`}
+                        >
+                          {isEditing ? <><Save size={16}/> Guardar cambios</> : <><Edit size={16}/> Editar datos</>}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Formulario de datos */}
+                  <div className="space-y-6">
+                    {/* Datos básicos */}
+                    <div className="bg-slate-50 rounded-xl p-5">
+                      <h3 className="font-bold text-slate-700 mb-4 flex items-center gap-2">
+                        <User size={18} className="text-orange-500"/> Datos Básicos
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                          <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Nombre</label>
+                          <input 
+                            type="text" 
+                            value={datosPersonales.nombre} 
+                            onChange={e => setDatosPersonales({...datosPersonales, nombre: e.target.value})}
+                            disabled={!isEditing}
+                            className="w-full border border-slate-200 rounded-lg p-2.5 text-sm disabled:bg-slate-100 disabled:text-slate-500"
+                          />
+                        </div>
+                        <div className="md:col-span-2">
+                          <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Apellidos</label>
+                          <input 
+                            type="text" 
+                            value={datosPersonales.apellidos}
+                            onChange={e => setDatosPersonales({...datosPersonales, apellidos: e.target.value})}
+                            disabled={!isEditing}
+                            className="w-full border border-slate-200 rounded-lg p-2.5 text-sm disabled:bg-slate-100 disabled:text-slate-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-slate-500 uppercase mb-1">DNI / NIE</label>
+                          <input 
+                            type="text" 
+                            value={datosPersonales.dni}
+                            onChange={e => setDatosPersonales({...datosPersonales, dni: e.target.value})}
+                            disabled={!isEditing}
+                            className="w-full border border-slate-200 rounded-lg p-2.5 text-sm disabled:bg-slate-100 disabled:text-slate-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Fecha Nacimiento</label>
+                          <input 
+                            type="date" 
+                            value={datosPersonales.fechaNacimiento?.split('T')[0] || ''}
+                            onChange={e => setDatosPersonales({...datosPersonales, fechaNacimiento: e.target.value})}
+                            disabled={!isEditing}
+                            className="w-full border border-slate-200 rounded-lg p-2.5 text-sm disabled:bg-slate-100 disabled:text-slate-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Sexo</label>
+                          <select 
+                            value={datosPersonales.sexo}
+                            onChange={e => setDatosPersonales({...datosPersonales, sexo: e.target.value})}
+                            disabled={!isEditing}
+                            className="w-full border border-slate-200 rounded-lg p-2.5 text-sm disabled:bg-slate-100 disabled:text-slate-500"
+                          >
+                            <option value="">Seleccionar</option>
+                            <option value="H">Hombre</option>
+                            <option value="M">Mujer</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Email</label>
+                          <input 
+                            type="email" 
+                            value={datosPersonales.email}
+                            onChange={e => setDatosPersonales({...datosPersonales, email: e.target.value})}
+                            disabled={!isEditing}
+                            className="w-full border border-slate-200 rounded-lg p-2.5 text-sm disabled:bg-slate-100 disabled:text-slate-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Teléfono</label>
+                          <input 
+                            type="tel" 
+                            value={datosPersonales.telefono}
+                            onChange={e => setDatosPersonales({...datosPersonales, telefono: e.target.value})}
+                            disabled={!isEditing}
+                            className="w-full border border-slate-200 rounded-lg p-2.5 text-sm disabled:bg-slate-100 disabled:text-slate-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Grupo Sanguíneo</label>
+                          <select 
+                            value={datosPersonales.grupoSanguineo}
+                            onChange={e => setDatosPersonales({...datosPersonales, grupoSanguineo: e.target.value})}
+                            disabled={!isEditing}
+                            className="w-full border border-slate-200 rounded-lg p-2.5 text-sm disabled:bg-slate-100 disabled:text-slate-500"
+                          >
+                            <option value="">Seleccionar</option>
+                            <option value="A+">A+</option>
+                            <option value="A-">A-</option>
+                            <option value="B+">B+</option>
+                            <option value="B-">B-</option>
+                            <option value="AB+">AB+</option>
+                            <option value="AB-">AB-</option>
+                            <option value="O+">O+</option>
+                            <option value="O-">O-</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Dirección */}
+                    <div className="bg-slate-50 rounded-xl p-5">
+                      <h3 className="font-bold text-slate-700 mb-4 flex items-center gap-2">
+                        <MapPin size={18} className="text-orange-500"/> Dirección
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div className="md:col-span-2">
+                          <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Domicilio</label>
+                          <input 
+                            type="text" 
+                            value={datosPersonales.domicilio}
+                            onChange={e => setDatosPersonales({...datosPersonales, domicilio: e.target.value})}
+                            disabled={!isEditing}
+                            className="w-full border border-slate-200 rounded-lg p-2.5 text-sm disabled:bg-slate-100 disabled:text-slate-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Número</label>
+                          <input 
+                            type="text" 
+                            value={datosPersonales.numero}
+                            onChange={e => setDatosPersonales({...datosPersonales, numero: e.target.value})}
+                            disabled={!isEditing}
+                            className="w-full border border-slate-200 rounded-lg p-2.5 text-sm disabled:bg-slate-100 disabled:text-slate-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Piso/Puerta</label>
+                          <input 
+                            type="text" 
+                            value={datosPersonales.piso}
+                            onChange={e => setDatosPersonales({...datosPersonales, piso: e.target.value})}
+                            disabled={!isEditing}
+                            className="w-full border border-slate-200 rounded-lg p-2.5 text-sm disabled:bg-slate-100 disabled:text-slate-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Código Postal</label>
+                          <input 
+                            type="text" 
+                            value={datosPersonales.codigoPostal}
+                            onChange={e => setDatosPersonales({...datosPersonales, codigoPostal: e.target.value})}
+                            disabled={!isEditing}
+                            className="w-full border border-slate-200 rounded-lg p-2.5 text-sm disabled:bg-slate-100 disabled:text-slate-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Localidad</label>
+                          <input 
+                            type="text" 
+                            value={datosPersonales.localidad}
+                            onChange={e => setDatosPersonales({...datosPersonales, localidad: e.target.value})}
+                            disabled={!isEditing}
+                            className="w-full border border-slate-200 rounded-lg p-2.5 text-sm disabled:bg-slate-100 disabled:text-slate-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Provincia</label>
+                          <input 
+                            type="text" 
+                            value={datosPersonales.provincia}
+                            onChange={e => setDatosPersonales({...datosPersonales, provincia: e.target.value})}
+                            disabled={!isEditing}
+                            className="w-full border border-slate-200 rounded-lg p-2.5 text-sm disabled:bg-slate-100 disabled:text-slate-500"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Contacto de emergencia */}
+                    <div className="bg-red-50 rounded-xl p-5 border border-red-100">
+                      <h3 className="font-bold text-red-700 mb-4 flex items-center gap-2">
+                        <AlertTriangle size={18}/> Contacto de Emergencia
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Nombre Contacto</label>
+                          <input 
+                            type="text" 
+                            value={datosPersonales.contactoEmergencia}
+                            onChange={e => setDatosPersonales({...datosPersonales, contactoEmergencia: e.target.value})}
+                            disabled={!isEditing}
+                            className="w-full border border-slate-200 rounded-lg p-2.5 text-sm disabled:bg-slate-100 disabled:text-slate-500"
+                            placeholder="Nombre y relación"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Teléfono Emergencia</label>
+                          <input 
+                            type="tel" 
+                            value={datosPersonales.telefonoEmergencia}
+                            onChange={e => setDatosPersonales({...datosPersonales, telefonoEmergencia: e.target.value})}
+                            disabled={!isEditing}
+                            className="w-full border border-slate-200 rounded-lg p-2.5 text-sm disabled:bg-slate-100 disabled:text-slate-500"
+                          />
+                        </div>
+                        <div className="md:col-span-2">
+                          <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Alergias / Información Médica Relevante</label>
+                          <textarea 
+                            value={datosPersonales.alergias}
+                            onChange={e => setDatosPersonales({...datosPersonales, alergias: e.target.value})}
+                            disabled={!isEditing}
+                            rows={2}
+                            className="w-full border border-slate-200 rounded-lg p-2.5 text-sm disabled:bg-slate-100 disabled:text-slate-500"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Datos del servicio */}
+                    <div className="bg-orange-50 rounded-xl p-5 border border-orange-100">
+                      <h3 className="font-bold text-orange-700 mb-4 flex items-center gap-2">
+                        <Shield size={18}/> Datos del Servicio
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                          <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Indicativo Principal</label>
+                          <input 
+                            type="text" 
+                            value={datosPersonales.numeroVoluntario}
+                            disabled
+                            className="w-full border border-slate-200 rounded-lg p-2.5 text-sm bg-slate-100 text-slate-500 font-bold"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Indicativo Secundario</label>
+                          <input 
+                            type="text" 
+                            value={datosPersonales.indicativo2}
+                            onChange={e => setDatosPersonales({...datosPersonales, indicativo2: e.target.value})}
+                            disabled={!isEditing}
+                            className="w-full border border-slate-200 rounded-lg p-2.5 text-sm disabled:bg-slate-100 disabled:text-slate-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Área Asignada</label>
+                          <select 
+                            value={datosPersonales.areaAsignada}
+                            onChange={e => setDatosPersonales({...datosPersonales, areaAsignada: e.target.value})}
+                            disabled={!isEditing || !isAdmin}
+                            className="w-full border border-slate-200 rounded-lg p-2.5 text-sm disabled:bg-slate-100 disabled:text-slate-500"
+                          >
+                            <option value="">Sin asignar</option>
+                            {AREAS_SERVICIO.map(a => <option key={a} value={a}>{a}</option>)}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Fecha de Alta</label>
+                          <input 
+                            type="date" 
+                            value={datosPersonales.fechaAlta?.split('T')[0] || ''}
+                            onChange={e => setDatosPersonales({...datosPersonales, fechaAlta: e.target.value})}
+                            disabled={!isEditing || !isAdmin}
+                            className="w-full border border-slate-200 rounded-lg p-2.5 text-sm disabled:bg-slate-100 disabled:text-slate-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Categoría</label>
+                          <input 
+                            type="text" 
+                            value={datosPersonales.categoria}
+                            onChange={e => setDatosPersonales({...datosPersonales, categoria: e.target.value})}
+                            disabled={!isEditing || !isAdmin}
+                            className="w-full border border-slate-200 rounded-lg p-2.5 text-sm disabled:bg-slate-100 disabled:text-slate-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Rol en Sistema</label>
+                          <input 
+                            type="text" 
+                            value={datosPersonales.rol}
+                            disabled
+                            className="w-full border border-slate-200 rounded-lg p-2.5 text-sm bg-slate-100 text-slate-500"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Permisos de conducir */}
+                    <div className="bg-slate-50 rounded-xl p-5">
+                      <h3 className="font-bold text-slate-700 mb-4 flex items-center gap-2">
+                        <Car size={18} className="text-orange-500"/> Permisos de Conducir
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                          <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Clases de Permiso</label>
+                          <input 
+                            type="text" 
+                            value={datosPersonales.permisoConducir}
+                            onChange={e => setDatosPersonales({...datosPersonales, permisoConducir: e.target.value})}
+                            disabled={!isEditing}
+                            className="w-full border border-slate-200 rounded-lg p-2.5 text-sm disabled:bg-slate-100 disabled:text-slate-500"
+                            placeholder="Ej: B, B+E, C1"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Fecha Expedición</label>
+                          <input 
+                            type="date" 
+                            value={datosPersonales.fechaExpedicionPermiso?.split('T')[0] || ''}
+                            onChange={e => setDatosPersonales({...datosPersonales, fechaExpedicionPermiso: e.target.value})}
+                            disabled={!isEditing}
+                            className="w-full border border-slate-200 rounded-lg p-2.5 text-sm disabled:bg-slate-100 disabled:text-slate-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Fecha Validez</label>
+                          <input 
+                            type="date" 
+                            value={datosPersonales.fechaValidezPermiso?.split('T')[0] || ''}
+                            onChange={e => setDatosPersonales({...datosPersonales, fechaValidezPermiso: e.target.value})}
+                            disabled={!isEditing}
+                            className="w-full border border-slate-200 rounded-lg p-2.5 text-sm disabled:bg-slate-100 disabled:text-slate-500"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Información profesional */}
+                    <div className="bg-slate-50 rounded-xl p-5">
+                      <h3 className="font-bold text-slate-700 mb-4 flex items-center gap-2">
+                        <GraduationCap size={18} className="text-orange-500"/> Información Profesional
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Formación Profesional</label>
+                          <input 
+                            type="text" 
+                            value={datosPersonales.formacionProfesional}
+                            onChange={e => setDatosPersonales({...datosPersonales, formacionProfesional: e.target.value})}
+                            disabled={!isEditing}
+                            className="w-full border border-slate-200 rounded-lg p-2.5 text-sm disabled:bg-slate-100 disabled:text-slate-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Ocupación Actual</label>
+                          <input 
+                            type="text" 
+                            value={datosPersonales.ocupacionActual}
+                            onChange={e => setDatosPersonales({...datosPersonales, ocupacionActual: e.target.value})}
+                            disabled={!isEditing}
+                            className="w-full border border-slate-200 rounded-lg p-2.5 text-sm disabled:bg-slate-100 disabled:text-slate-500"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ============================================ */}
+              {/* TAB: FORMACIÓN */}
+              {/* ============================================ */}
+              {activeTab === 'formacion' && (
+                <div>
+                  <div className="flex justify-between items-center mb-6">
+                    <div>
+                      <h2 className="text-lg font-bold text-slate-800">Formación y Certificaciones</h2>
+                      <p className="text-sm text-slate-500">Registro de cursos, títulos y certificaciones</p>
+                    </div>
+                    <button 
+                      onClick={() => setShowNuevaFormacion(true)}
+                      className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm font-medium"
+                    >
+                      <Plus size={16}/> Añadir Formación
+                    </button>
+                  </div>
+
+                  {formaciones.length === 0 ? (
+                    <div className="text-center py-12 text-slate-500">
+                      <GraduationCap className="w-12 h-12 mx-auto mb-3 opacity-30"/>
+                      <p>No hay formaciones registradas</p>
+                      <button 
+                        onClick={() => setShowNuevaFormacion(true)}
+                        className="mt-4 text-orange-600 hover:text-orange-700 font-medium text-sm"
+                      >
+                        Añadir primera formación
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {formaciones.map(f => (
+                        <div key={f.id} className="bg-white border border-slate-200 rounded-xl p-4 hover:shadow-md transition-shadow">
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-4">
+                              <div className="w-12 h-12 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center">
+                                <Award size={24}/>
+                              </div>
+                              <div>
+                                <h4 className="font-bold text-slate-800">{f.nombre}</h4>
+                                <p className="text-sm text-slate-600">{f.tipo} • {f.entidad}</p>
+                                <div className="flex items-center gap-4 mt-2 text-xs text-slate-500">
+                                  <span className="flex items-center gap-1">
+                                    <Calendar size={12}/> Obtenido: {new Date(f.fechaObtencion).toLocaleDateString('es-ES')}
+                                  </span>
+                                  {f.fechaValidez && (
+                                    <span className="flex items-center gap-1">
+                                      <Clock size={12}/> Validez: {new Date(f.fechaValidez).toLocaleDateString('es-ES')}
+                                    </span>
+                                  )}
+                                  {f.horas && <span>{f.horas}h</span>}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${getEstadoColor(f.estado)}`}>
+                                {f.estado === 'vigente' ? 'Vigente' : f.estado === 'por_vencer' ? 'Por vencer' : 'Vencido'}
+                              </span>
+                              {f.documentoUrl ? (
+                                <a href={f.documentoUrl} target="_blank" className="p-2 text-orange-600 hover:bg-orange-50 rounded-lg">
+                                  <Eye size={18}/>
+                                </a>
+                              ) : (
+                                <button className="p-2 text-slate-400 hover:text-orange-600 hover:bg-orange-50 rounded-lg">
+                                  <Upload size={18}/>
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ============================================ */}
+              {/* TAB: HISTORIAL DE ACTIVIDAD */}
+              {/* ============================================ */}
+              {activeTab === 'actividad' && (
+                <div>
+                  <div className="flex justify-between items-center mb-6">
+                    <div>
+                      <h2 className="text-lg font-bold text-slate-800">Historial de Actividad</h2>
+                      <p className="text-sm text-slate-500">Servicios realizados, formaciones y eventos</p>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-blue-500"></span> Servicios</span>
+                      <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-purple-500"></span> Formación</span>
+                      <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-orange-500"></span> Eventos</span>
+                    </div>
+                  </div>
+
+                  {actividades.length === 0 ? (
+                    <div className="text-center py-12 text-slate-500">
+                      <Clock className="w-12 h-12 mx-auto mb-3 opacity-30"/>
+                      <p>No hay actividades registradas</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {actividades.map(a => (
+                        <div key={a.id} className="flex items-center gap-4 p-4 bg-white border border-slate-200 rounded-xl hover:shadow-sm transition-shadow">
+                          <div className={`w-1 h-12 rounded-full ${getTipoActividadColor(a.tipo)}`}></div>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <h4 className="font-medium text-slate-800">{a.titulo}</h4>
+                              {a.turno && (
+                                <span className="px-2 py-0.5 bg-slate-100 rounded text-xs text-slate-600">
+                                  Turno {a.turno}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-sm text-slate-500">{a.descripcion}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-medium text-slate-800">{new Date(a.fecha).toLocaleDateString('es-ES')}</p>
+                            <p className="text-sm text-slate-500">{a.horaInicio} - {a.horaFin}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ============================================ */}
+              {/* TAB: DOCUMENTOS */}
+              {/* ============================================ */}
+              {activeTab === 'documentos' && (
+                <div>
+                  <div className="flex justify-between items-center mb-6">
+                    <div>
+                      <h2 className="text-lg font-bold text-slate-800">Mis Documentos</h2>
+                      <p className="text-sm text-slate-500">DNI, carnet de conducir, certificados y otros documentos</p>
+                    </div>
+                    <button 
+                      onClick={() => setShowNuevoDocumento(true)}
+                      className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm font-medium"
+                    >
+                      <Plus size={16}/> Subir Documento
+                    </button>
+                  </div>
+
+                  {documentos.length === 0 ? (
+                    <div className="text-center py-12 text-slate-500">
+                      <FileText className="w-12 h-12 mx-auto mb-3 opacity-30"/>
+                      <p>No hay documentos subidos</p>
+                      <button 
+                        onClick={() => setShowNuevoDocumento(true)}
+                        className="mt-4 text-orange-600 hover:text-orange-700 font-medium text-sm"
+                      >
+                        Subir primer documento
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {documentos.map(d => {
+                        const tipoInfo = TIPOS_DOCUMENTO.find(t => t.id === d.tipo);
+                        const IconoTipo = tipoInfo?.icono || FileText;
+                        return (
+                          <div key={d.id} className="bg-white border border-slate-200 rounded-xl p-4 hover:shadow-md transition-shadow">
+                            <div className="flex items-start gap-3">
+                              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                                d.estado === 'vigente' ? 'bg-green-100 text-green-600' :
+                                d.estado === 'por_vencer' ? 'bg-yellow-100 text-yellow-600' :
+                                'bg-red-100 text-red-600'
+                              }`}>
+                                <IconoTipo size={20}/>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <h4 className="font-medium text-slate-800 truncate">{d.nombre}</h4>
+                                <p className="text-xs text-slate-500">{tipoInfo?.nombre || d.tipo}</p>
+                                <div className="flex items-center gap-2 mt-2">
+                                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${getEstadoColor(d.estado)}`}>
+                                    {d.estado === 'vigente' ? 'Vigente' : d.estado === 'por_vencer' ? 'Por vencer' : 'Vencido'}
+                                  </span>
+                                  {d.fechaVencimiento && (
+                                    <span className="text-[10px] text-slate-400">
+                                      Vence: {new Date(d.fechaVencimiento).toLocaleDateString('es-ES')}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-100">
+                              <span className="text-xs text-slate-400">
+                                Subido: {new Date(d.fechaSubida).toLocaleDateString('es-ES')}
+                              </span>
+                              <div className="flex items-center gap-1">
+                                {d.archivoUrl && (
+                                  <a href={d.archivoUrl} target="_blank" className="p-1.5 text-orange-600 hover:bg-orange-50 rounded">
+                                    <Download size={16}/>
+                                  </a>
+                                )}
+                                <button className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded">
+                                  <Trash2 size={16}/>
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {activeTab === 'notificaciones' && (
+                <NotificacionesTab />
+              )}
+            </>
+          )}
+        </div>
       </div>
 
-      {/* Perfil */}
-      {activeTab === 'perfil' && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
-            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-              <div className="flex justify-between items-center mb-6 pb-4 border-b border-slate-100">
-                <div>
-                  <h3 className="font-black text-slate-800 text-lg uppercase">Ficha de Voluntario</h3>
-                  <p className="text-xs text-slate-400 uppercase tracking-widest">Información operativa básica</p>
-                </div>
-                <button onClick={() => isEditing ? (setIsEditing(false), alert('Guardado')) : setIsEditing(true)} className={`px-4 py-2 rounded-lg text-xs font-bold uppercase flex items-center gap-2 ${isEditing ? 'bg-green-600 text-white' : 'bg-orange-50 text-orange-600 border border-orange-200'}`}>
-                  {isEditing ? <><Save size={14}/> Guardar</> : <><Edit size={14}/> Editar</>}
-                </button>
+      {/* ============================================ */}
+      {/* MODALES */}
+      {/* ============================================ */}
+
+      {/* Modal: Nueva Formación */}
+      {showNuevaFormacion && (
+        <Modal title="Añadir Formación" onClose={() => setShowNuevaFormacion(false)} size="lg">
+          <div className="space-y-4">
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Nombre del Curso/Título *</label>
+              <input 
+                type="text" 
+                value={nuevaFormacion.nombre}
+                onChange={e => setNuevaFormacion({...nuevaFormacion, nombre: e.target.value})}
+                className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
+                placeholder="Ej: Curso Básico de Protección Civil"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Tipo *</label>
+                <select 
+                  value={nuevaFormacion.tipo}
+                  onChange={e => setNuevaFormacion({...nuevaFormacion, tipo: e.target.value})}
+                  className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
+                >
+                  <option value="">Seleccionar...</option>
+                  {TIPOS_FORMACION.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
               </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <div><label className="text-xs text-slate-500 font-bold uppercase block mb-1">Nombre</label><input className="w-full border rounded p-2 text-sm" value={formData.name} disabled={!isEditing} onChange={e => setFormData({...formData, name: e.target.value})}/></div>
-                  <div><label className="text-xs text-slate-500 font-bold uppercase block mb-1">Apellidos</label><input className="w-full border rounded p-2 text-sm" value={formData.surname} disabled={!isEditing} onChange={e => setFormData({...formData, surname: e.target.value})}/></div>
-                  <div><label className="text-xs text-slate-500 font-bold uppercase block mb-1">DNI</label><input className="w-full border rounded p-2 text-sm font-mono" value={formData.dni} disabled={!isEditing}/></div>
-                  <div><label className="text-xs text-slate-500 font-bold uppercase block mb-1">Email</label><input className="w-full border rounded p-2 text-sm" value={formData.email} disabled={!isEditing}/></div>
-                </div>
-                <div className="space-y-4">
-                  <div><label className="text-xs text-slate-500 font-bold uppercase block mb-1">Teléfono</label><input className="w-full border rounded p-2 text-sm" value={formData.phone} disabled={!isEditing}/></div>
-                  <div><label className="text-xs text-slate-500 font-bold uppercase block mb-1">Municipio</label><input className="w-full border rounded p-2 text-sm" value={formData.municipio} disabled={!isEditing}/></div>
-                  <div><label className="text-xs text-slate-500 font-bold uppercase block mb-1">Fecha Alta</label><input className="w-full border rounded p-2 text-sm" value={formData.joinDate} disabled/></div>
-                  <div><label className="text-xs text-slate-500 font-bold uppercase block mb-1">Km/Turno</label><input className="w-full border rounded p-2 text-sm" value={`${formData.kmAllowance.toFixed(2)} €`} disabled/></div>
-                </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Entidad/Centro</label>
+                <input 
+                  type="text" 
+                  value={nuevaFormacion.entidad}
+                  onChange={e => setNuevaFormacion({...nuevaFormacion, entidad: e.target.value})}
+                  className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
+                  placeholder="Ej: APCAS, Cruz Roja..."
+                />
               </div>
             </div>
-          </div>
-          
-          <div>
-            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm text-center">
-              <img src={formData.avatarUrl} className="w-24 h-24 rounded-full mx-auto mb-4 border-4 border-orange-100" alt="Avatar"/>
-              <h4 className="font-black text-slate-800 text-lg">{formData.badgeNumber}</h4>
-              <p className="text-sm text-slate-600">{formData.name} {formData.surname}</p>
-              <p className="text-xs text-slate-400 mt-2">{formData.rank}</p>
-              <div className="mt-4 inline-block bg-orange-100 text-orange-700 px-3 py-1 rounded-full text-xs font-bold uppercase">{formData.systemRole}</div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Formación */}
-      {activeTab === 'formacion' && (
-        <div className="bg-white rounded-xl border border-slate-200 p-6">
-          <h3 className="font-bold text-slate-800 mb-4">Formación Acreditada</h3>
-          <div className="space-y-3">
-            {['Nivel I Protección Civil', 'RCP y DESA', 'Comunicaciones'].map((curso, i) => (
-              <div key={i} className="flex justify-between items-center p-3 bg-slate-50 rounded-lg border">
-                <div><p className="font-medium text-slate-800">{curso}</p><p className="text-xs text-slate-500">Vigente</p></div>
-                <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-bold">ACTIVO</span>
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Fecha Obtención *</label>
+                <input 
+                  type="date" 
+                  value={nuevaFormacion.fechaObtencion}
+                  onChange={e => setNuevaFormacion({...nuevaFormacion, fechaObtencion: e.target.value})}
+                  className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
+                />
               </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Actividad */}
-      {activeTab === 'actividad' && (
-        <div className="bg-white rounded-xl border border-slate-200 p-6">
-          <h3 className="font-bold text-slate-800 mb-4">Historial de Actividad</h3>
-          <div className="space-y-3">
-            {[{ fecha: '2024-12-20', desc: 'Servicio Preventivo Feria', horas: 6 }, { fecha: '2024-12-15', desc: 'Romería', horas: 9 }].map((act, i) => (
-              <div key={i} className="flex justify-between items-center p-3 bg-slate-50 rounded-lg border">
-                <div><p className="font-medium text-slate-800">{act.desc}</p><p className="text-xs text-slate-500">{act.fecha}</p></div>
-                <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-bold">{act.horas}h</span>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Fecha Validez</label>
+                <input 
+                  type="date" 
+                  value={nuevaFormacion.fechaValidez}
+                  onChange={e => setNuevaFormacion({...nuevaFormacion, fechaValidez: e.target.value})}
+                  className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
+                />
               </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Documentos */}
-      {activeTab === 'docs' && (
-        <div className="bg-white rounded-xl border border-slate-200 p-6 text-center py-12">
-          <FileText size={48} className="mx-auto text-slate-300 mb-4"/>
-          <p className="text-slate-500">Sin documentos subidos</p>
-          <button className="mt-4 bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-bold">Subir Documento</button>
-        </div>
-      )}
-
-      {/* Preferencias */}
-      {activeTab === 'preferencias' && (
-        <div className="bg-white rounded-xl border border-slate-200 p-8 max-w-2xl">
-          <h3 className="font-bold text-slate-800 mb-6">Ajustes de la Cuenta</h3>
-          <div className="space-y-6">
-            <div className="flex justify-between items-center">
-              <div><h4 className="font-bold text-slate-800">Notificaciones Push y Email</h4><p className="text-xs text-slate-500">Recibir alertas de servicios y cambios</p></div>
-              <button onClick={() => setNotifications(!notifications)} className={`w-14 h-7 rounded-full p-1 transition-colors ${notifications ? 'bg-orange-500' : 'bg-slate-200'}`}>
-                <div className={`w-5 h-5 bg-white rounded-full shadow transition-transform ${notifications ? 'translate-x-7' : ''}`}></div>
-              </button>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Horas</label>
+                <input 
+                  type="number" 
+                  value={nuevaFormacion.horas || ''}
+                  onChange={e => setNuevaFormacion({...nuevaFormacion, horas: parseInt(e.target.value) || 0})}
+                  className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
+                />
+              </div>
             </div>
-            <div className="flex justify-between items-center">
-              <div><h4 className="font-bold text-slate-800">Privacidad de Perfil</h4><p className="text-xs text-slate-500">Hacer ficha visible para otros voluntarios</p></div>
-              <button onClick={() => setPrivacy(!privacy)} className={`w-14 h-7 rounded-full p-1 transition-colors ${privacy ? 'bg-orange-500' : 'bg-slate-200'}`}>
-                <div className={`w-5 h-5 bg-white rounded-full shadow transition-transform ${privacy ? 'translate-x-7' : ''}`}></div>
-              </button>
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Adjuntar Título/Certificado</label>
+              <div className="border-2 border-dashed border-slate-200 rounded-lg p-6 text-center hover:border-orange-300 transition-colors cursor-pointer">
+                <Upload size={32} className="mx-auto text-slate-300 mb-2"/>
+                <p className="text-sm text-slate-500">Arrastra el archivo o haz clic para seleccionar</p>
+                <p className="text-xs text-slate-400 mt-1">PDF, JPG, PNG (máx. 5MB)</p>
+              </div>
+            </div>
+            <div className="flex gap-3 pt-2">
+              <button onClick={() => setShowNuevaFormacion(false)} className="flex-1 py-2.5 border border-slate-300 text-slate-700 rounded-lg font-medium hover:bg-slate-50">Cancelar</button>
+              <button onClick={handleGuardarFormacion} className="flex-1 py-2.5 bg-orange-500 text-white rounded-lg font-medium hover:bg-orange-600">Guardar</button>
             </div>
           </div>
-          <button className="mt-8 bg-slate-900 text-white px-6 py-3 rounded-xl text-xs font-bold uppercase flex items-center gap-2"><Save size={16}/> Guardar Ajustes</button>
-        </div>
+        </Modal>
       )}
 
-      {/* Admin FRI */}
-      {activeTab === 'admin_list' && isAdmin && (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="p-5 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
-            <h3 className="font-black text-slate-800 uppercase text-xs tracking-widest">Fichero de Registro Individualizado (FRI)</h3>
-            <button className="bg-orange-600 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2"><Download size={16}/> Exportar XLS</button>
+      {/* Modal: Nuevo Documento */}
+      {showNuevoDocumento && (
+        <Modal title="Subir Documento" onClose={() => setShowNuevoDocumento(false)}>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Tipo de Documento *</label>
+              <select 
+                value={nuevoDocumento.tipo}
+                onChange={e => setNuevoDocumento({...nuevoDocumento, tipo: e.target.value})}
+                className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
+              >
+                <option value="">Seleccionar...</option>
+                {TIPOS_DOCUMENTO.map(t => <option key={t.id} value={t.id}>{t.nombre}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Nombre/Descripción *</label>
+              <input 
+                type="text" 
+                value={nuevoDocumento.nombre}
+                onChange={e => setNuevoDocumento({...nuevoDocumento, nombre: e.target.value})}
+                className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
+                placeholder="Ej: DNI - Anverso y Reverso"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Fecha de Vencimiento</label>
+              <input 
+                type="date" 
+                value={nuevoDocumento.fechaVencimiento}
+                onChange={e => setNuevoDocumento({...nuevoDocumento, fechaVencimiento: e.target.value})}
+                className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Adjuntar Archivo *</label>
+              <div className="border-2 border-dashed border-slate-200 rounded-lg p-6 text-center hover:border-orange-300 transition-colors cursor-pointer">
+                <FileText size={32} className="mx-auto text-slate-300 mb-2"/>
+                <p className="text-sm text-slate-500">Arrastra el archivo o haz clic para seleccionar</p>
+                <p className="text-xs text-slate-400 mt-1">PDF, JPG, PNG (máx. 5MB)</p>
+              </div>
+            </div>
+            <div className="flex gap-3 pt-2">
+              <button onClick={() => setShowNuevoDocumento(false)} className="flex-1 py-2.5 border border-slate-300 text-slate-700 rounded-lg font-medium hover:bg-slate-50">Cancelar</button>
+              <button onClick={handleGuardarDocumento} className="flex-1 py-2.5 bg-orange-500 text-white rounded-lg font-medium hover:bg-orange-600">Subir</button>
+            </div>
           </div>
-          <table className="w-full text-left">
-            <thead className="bg-slate-50 border-b border-slate-200">
-              <tr>
-                <th className="p-4 text-xs font-bold text-slate-400 uppercase">Identificativo</th>
-                <th className="p-4 text-xs font-bold text-slate-400 uppercase">Voluntario</th>
-                <th className="p-4 text-xs font-bold text-slate-400 uppercase">Municipio</th>
-                <th className="p-4 text-xs font-bold text-slate-400 uppercase text-center">KM/Turno</th>
-                <th className="p-4 text-xs font-bold text-slate-400 uppercase text-center">LOPD</th>
-                <th className="p-4 text-xs font-bold text-slate-400 uppercase text-right">Acción</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {MOCK_VOLUNTEERS.map(vol => (
-                <tr key={vol.id} className="hover:bg-slate-50">
-                  <td className="p-4 font-mono font-bold text-slate-700">{vol.badgeNumber}</td>
-                  <td className="p-4 flex items-center gap-3">
-                    <img src={vol.avatarUrl} className="w-8 h-8 rounded-full" alt=""/>
-                    <div><div className="font-bold text-slate-800">{vol.name} {vol.surname}</div><div className="text-xs text-slate-400">{vol.rank}</div></div>
-                  </td>
-                  <td className="p-4 text-xs font-bold text-slate-600 uppercase">{vol.municipio}</td>
-                  <td className="p-4 text-center font-mono font-bold">{vol.kmAllowance.toFixed(2)} €</td>
-                  <td className="p-4 text-center"><span className={`px-2 py-1 rounded text-xs font-bold ${vol.lopdAccepted ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{vol.lopdAccepted ? 'Aceptado' : 'Pendiente'}</span></td>
-                  <td className="p-4 text-right"><button className="text-orange-600 hover:bg-orange-50 p-2 rounded"><ChevronRight size={20}/></button></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        </Modal>
       )}
     </div>
   );

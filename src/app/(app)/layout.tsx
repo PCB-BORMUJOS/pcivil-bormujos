@@ -1,4 +1,4 @@
-import { Sidebar } from '@/components/layout'
+import { Sidebar, Header } from '@/components/layout'
 
 export default function AppLayout({
   children,
@@ -6,11 +6,14 @@ export default function AppLayout({
   children: React.ReactNode
 }) {
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-slate-50">
       <Sidebar />
-      <main className="page-container">
-        {children}
-      </main>
+      <div className="page-container">
+        <Header />
+        <main className="p-6">
+          {children}
+        </main>
+      </div>
     </div>
   )
 }
