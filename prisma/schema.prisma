@@ -687,3 +687,76 @@ model Mensaje {
   @@index([remitenteId])
   @@map("mensajes")
 }
+
+// ===========================================
+// SISTEMA DE INCENDIOS
+// ===========================================
+
+model Edificio {
+  id          String      @id @default(cuid())
+  nombre      String      @unique
+  direccion   String?
+  responsable String?
+  telefono    String?
+  
+  equiposECI  EquipoECI[]
+  
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+  
+  @@map("edificios")
+}
+
+model EquipoECI {
+  id                String    @id @default(cuid())
+  edificioId        String    @map("edificio_id")
+  edificio          Edificio  @relation(fields: [edificioId], references: [id], onDelete: Cascade)
+  
+  tipo              String    // extintor, bie, detector, pulsador, alarma, señalizacion
+  subtipo           String?   // Para extintores: CO2, Polvo ABC, etc.
+  ubicacion         String
+  numeroSerie       String?   @map("numero_serie")
+  
+  estado            String    @default("operativo") // operativo, revision_pendiente, fuera_servicio
+  
+  fechaInstalacion  DateTime? @map("fecha_instalacion")
+  ultimaRevision    DateTime? @map("ultima_revision")
+  proximaRevision   DateTime? @map("proxima_revision")
+  
+  observaciones     String?
+  
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+  
+  @@index([edificioId])
+  @@index([estado])
+  @@index([proximaRevision])
+  @@map("equipos_eci")
+}
+
+model Hidrante {
+  id        String   @id @default(cuid())
+  codigo    String   @unique
+  tipo      String   // columna, arqueta
+  ubicacion String
+  
+  latitud   Float?
+  longitud  Float?
+  
+  presion   Float?   // en bar
+  caudal    Int?     // en l/min
+  
+  estado    String   @default("operativo") // operativo, averiado, fuera_servicio
+  
+  fechaInstalacion  DateTime? @map("fecha_instalacion")
+  ultimaRevision    DateTime? @map("ultima_revision")
+  proximaRevision   DateTime? @map("proxima_revision")
+  
+  observaciones String?
+  
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  
+  @@index([estado])
+  @@map("hidrantes")
+}
