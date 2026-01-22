@@ -8,9 +8,67 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider  = "postgresql"
   url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
+}
+
+// ===========================================
+// ENUMS
+// ===========================================
+
+enum TipoHidrante {
+  COLUMNA
+  ARQUETA
+}
+
+enum EstadoHidrante {
+  OPERATIVO
+  AVERIADO
+  FUERA_SERVICIO
+}
+
+enum TipoPrenda {
+  POLO
+  PANTALON
+  CHAQUETA
+  BOTAS
+  CASCO
+  GUANTES
+}
+
+enum Talla {
+  XS
+  S
+  M
+  L
+  XL
+  XXL
+  XXXL
+}
+
+enum EstadoAsignacion {
+  ASIGNADO
+  DESGASTADO
+  PERDIDO
+  DADO_DE_BAJA
+}
+
+enum MotivoSolicitud {
+  NUEVA_ASIGNACION
+  REPOSICION
+  ROTURA
+  PERDIDA
+  DESGASTE
+  CAMBIO_TALLA
+}
+
+enum EstadoSolicitud {
+  PENDIENTE
+  APROBADA
+  RECHAZADA
+  ENTREGADA
+  CANCELADA
 }
 
 // ===========================================
@@ -18,50 +76,48 @@ datasource db {
 // ===========================================
 
 model Usuario {
-  id              String    @id @default(cuid())
-  email           String    @unique
-  password        String
-  nombre          String
-  apellidos       String
-  telefono        String?
-  dni             String?   @unique
-  numeroVoluntario String?  @unique @map("numero_voluntario")
-  avatar          String?
+  id               String    @id @default(cuid())
+  email            String    @unique
+  password         String
+  nombre           String
+  apellidos        String
+  telefono         String?
+  dni              String?   @unique
+  numeroVoluntario String?   @unique @map("numero_voluntario")
+  avatar           String?
+  responsableTurno Boolean   @default(false) @map("responsable_turno")
+  carnetConducir   Boolean   @default(false) @map("carnet_conducir")
+  experiencia      String    @default("MEDIA")
+  activo           Boolean   @default(true)
+  rolId            String    @map("rol_id")
+  rol              Rol       @relation(fields: [rolId], references: [id])
+  servicioId       String    @map("servicio_id")
+  servicio         Servicio  @relation(fields: [servicioId], references: [id])
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+  lastLogin        DateTime? @map("last_login")
 
-  responsableTurno  Boolean   @default(false) @map("responsable_turno")
-  carnetConducir    Boolean   @default(false) @map("carnet_conducir")
-  experiencia       String    @default("MEDIA")
-  activo          Boolean   @default(true)
-  
-  rolId           String    @map("rol_id")
-  rol             Rol       @relation(fields: [rolId], references: [id])
-  servicioId      String    @map("servicio_id")
-  servicio        Servicio  @relation(fields: [servicioId], references: [id])
-  
-  createdAt       DateTime  @default(now()) @map("created_at")
-  updatedAt       DateTime  @updatedAt @map("updated_at")
-  lastLogin       DateTime? @map("last_login")
-  
-  guardias        Guardia[]
-  disponibilidades Disponibilidad[]
-  movimientosStock MovimientoStock[]
-  incidenciasCreadas Incidencia[] @relation("IncidenciaCreador")
-  incidenciasAsignadas Incidencia[] @relation("IncidenciaAsignado")
-  vehiculosAsignados VehiculoAsignacion[]
-  eventosCreados  Evento[] @relation("EventoCreador")
-  eventosAsignados EventoParticipante[]
-  fichaVoluntario FichaVoluntario?
-  dietas          Dieta[]
-  
-  // Relaciones de peticiones de material
-  peticionesSolicitadas  PeticionMaterial[] @relation("PeticionesSolicitadas")
-  peticionesAprobadas    PeticionMaterial[] @relation("PeticionesAprobadas")
-  peticionesRecibidas    PeticionMaterial[] @relation("PeticionesRecibidas")
+  guardias               Guardia[]
+  disponibilidades       Disponibilidad[]
+  movimientosStock       MovimientoStock[]
+  incidenciasCreadas     Incidencia[]          @relation("IncidenciaCreador")
+  incidenciasAsignadas   Incidencia[]          @relation("IncidenciaAsignado")
+  vehiculosAsignados     VehiculoAsignacion[]
+  eventosCreados         Evento[]              @relation("EventoCreador")
+  eventosAsignados       EventoParticipante[]
+  fichaVoluntario        FichaVoluntario?
+  dietas                 Dieta[]
+  peticionesSolicitadas  PeticionMaterial[]    @relation("PeticionesSolicitadas")
+  peticionesAprobadas    PeticionMaterial[]    @relation("PeticionesAprobadas")
+  peticionesRecibidas    PeticionMaterial[]    @relation("PeticionesRecibidas")
   historialPeticiones    HistorialPeticion[]
-  
-  notificaciones    Notificacion[]
-  mensajesEnviados   Mensaje[] @relation("MensajesEnviados")
-  mensajesRecibidos  Mensaje[] @relation("MensajesRecibidos")
+  notificaciones         Notificacion[]
+  mensajesEnviados       Mensaje[]             @relation("MensajesEnviados")
+  mensajesRecibidos      Mensaje[]             @relation("MensajesRecibidos")
+  asignacionesVestuario  AsignacionVestuario[]
+  solicitudesVestuario   SolicitudVestuario[]
+  solicitudesRespondidas SolicitudVestuario[]  @relation("SolicitudesRespondidas")
+
   @@map("usuarios")
 }
 
@@ -70,28 +126,26 @@ model Rol {
   nombre      String   @unique
   descripcion String?
   permisos    Json
-  
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
-  
-  usuarios    Usuario[]
-  
+
+  usuarios Usuario[]
+
   @@map("roles")
 }
 
 model Servicio {
-  id          String   @id @default(cuid())
-  nombre      String
-  codigo      String   @unique
-  direccion   String?
-  telefono    String?
-  email       String?
-  logo        String?
-  activo      Boolean  @default(true)
-  
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-  
+  id        String   @id @default(cuid())
+  nombre    String
+  codigo    String   @unique
+  direccion String?
+  telefono  String?
+  email     String?
+  logo      String?
+  activo    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
   usuarios    Usuario[]
   ubicaciones Ubicacion[]
   vehiculos   Vehiculo[]
@@ -99,7 +153,7 @@ model Servicio {
   incidencias Incidencia[]
   guardias    Guardia[]
   eventos     Evento[]
-  
+
   @@map("servicios")
 }
 
@@ -108,47 +162,49 @@ model Servicio {
 // ===========================================
 
 model Evento {
-  id              String   @id @default(cuid())
-  titulo          String
-  descripcion     String?
-  tipo            String
-  fecha           DateTime @db.Date
-  horaInicio      String   @map("hora_inicio")
-  horaFin         String?  @map("hora_fin")
-  todoElDia       Boolean  @default(false) @map("todo_el_dia")
-  ubicacion       String?
-  direccion       String?
-  coordenadas     Json?
-  estado          String   @default("programado")
-  visible         Boolean  @default(true)
-  privado         Boolean  @default(false)
-  voluntariosMin  Int?     @map("voluntarios_min")
-  voluntariosMax  Int?     @map("voluntarios_max")
-  vehiculosNecesarios String? @map("vehiculos_necesarios")
-  color           String?
-  creadorId       String   @map("creador_id")
-  creador         Usuario  @relation("EventoCreador", fields: [creadorId], references: [id])
-  servicioId      String   @map("servicio_id")
-  servicio        Servicio @relation(fields: [servicioId], references: [id])
-  participantes   EventoParticipante[]
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
-  
+  id                  String   @id @default(cuid())
+  titulo              String
+  descripcion         String?
+  tipo                String
+  fecha               DateTime @db.Date
+  horaInicio          String   @map("hora_inicio")
+  horaFin             String?  @map("hora_fin")
+  todoElDia           Boolean  @default(false) @map("todo_el_dia")
+  ubicacion           String?
+  direccion           String?
+  coordenadas         Json?
+  estado              String   @default("programado")
+  visible             Boolean  @default(true)
+  privado             Boolean  @default(false)
+  voluntariosMin      Int?     @map("voluntarios_min")
+  voluntariosMax      Int?     @map("voluntarios_max")
+  vehiculosNecesarios String?  @map("vehiculos_necesarios")
+  color               String?
+  creadorId           String   @map("creador_id")
+  creador             Usuario  @relation("EventoCreador", fields: [creadorId], references: [id])
+  servicioId          String   @map("servicio_id")
+  servicio            Servicio @relation(fields: [servicioId], references: [id])
+
+  participantes EventoParticipante[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
   @@map("eventos")
 }
 
 model EventoParticipante {
-  id          String   @id @default(cuid())
-  eventoId    String   @map("evento_id")
-  evento      Evento   @relation(fields: [eventoId], references: [id], onDelete: Cascade)
-  usuarioId   String   @map("usuario_id")
-  usuario     Usuario  @relation(fields: [usuarioId], references: [id])
-  estado      String   @default("asignado")
-  rol         String?
-  notas       String?
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-  
+  id        String   @id @default(cuid())
+  eventoId  String   @map("evento_id")
+  evento    Evento   @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  usuarioId String   @map("usuario_id")
+  usuario   Usuario  @relation(fields: [usuarioId], references: [id])
+  estado    String   @default("asignado")
+  rol       String?
+  notas     String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
   @@unique([eventoId, usuarioId])
   @@map("eventos_participantes")
 }
@@ -170,7 +226,7 @@ model Disponibilidad {
   estado          String   @default("pendiente")
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
-  
+
   @@unique([usuarioId, semanaInicio])
   @@map("disponibilidades")
 }
@@ -180,104 +236,100 @@ model Disponibilidad {
 // ===========================================
 
 model CategoriaInventario {
-  id          String   @id @default(cuid())
+  id          String                @id @default(cuid())
   nombre      String
-  slug        String   @unique
+  slug        String                @unique
   descripcion String?
   icono       String?
   color       String?
-  orden       Int      @default(0)
-  activa      Boolean  @default(true)
-  
-  // Jerarquía de inventarios
-  padreId     String?  @map("padre_id")
+  orden       Int                   @default(0)
+  activa      Boolean               @default(true)
+  padreId     String?               @map("padre_id")
   padre       CategoriaInventario?  @relation("CategoriaJerarquia", fields: [padreId], references: [id])
   hijos       CategoriaInventario[] @relation("CategoriaJerarquia")
-  
-  // Indica si es el inventario general (Logística)
-  esGeneral   Boolean  @default(false) @map("es_general")
-  
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-  
-  familias    FamiliaArticulo[]
+  esGeneral   Boolean               @default(false) @map("es_general")
+  createdAt   DateTime              @default(now()) @map("created_at")
+  updatedAt   DateTime              @updatedAt @map("updated_at")
 
-  
-  
+  familias FamiliaArticulo[]
+
   @@map("categorias_inventario")
 }
 
 model FamiliaArticulo {
-  id          String   @id @default(cuid())
+  id          String              @id @default(cuid())
   nombre      String
   slug        String
   descripcion String?
-  categoriaId String   @map("categoria_id")
+  categoriaId String              @map("categoria_id")
   categoria   CategoriaInventario @relation(fields: [categoriaId], references: [id])
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-  articulos   Articulo[]
-  
+  createdAt   DateTime            @default(now()) @map("created_at")
+  updatedAt   DateTime            @updatedAt @map("updated_at")
+
+  articulos Articulo[]
+
   @@unique([categoriaId, slug])
   @@map("familias_articulo")
 }
 
 model Articulo {
-  id              String   @id @default(cuid())
-  codigo          String?
-  nombre          String
-  descripcion     String?
-  stockActual     Int      @default(0) @map("stock_actual")
-  stockMinimo     Int      @default(0) @map("stock_minimo")
-  unidad          String   @default("unidad")
-  tieneCaducidad  Boolean  @default(false) @map("tiene_caducidad")
-  fechaCaducidad  DateTime? @map("fecha_caducidad")
-  ubicacionId     String?  @map("ubicacion_id")
-  ubicacion       Ubicacion? @relation(fields: [ubicacionId], references: [id])
-  familiaId       String   @map("familia_id")
-  familia         FamiliaArticulo @relation(fields: [familiaId], references: [id])
-  servicioId      String   @map("servicio_id")
-  servicio        Servicio @relation(fields: [servicioId], references: [id])
-  metadatos       Json?
-  activo          Boolean  @default(true)
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
-  movimientos     MovimientoStock[]
-  peticiones      PeticionMaterial[]
-  
+  id             String          @id @default(cuid())
+  codigo         String?
+  nombre         String
+  descripcion    String?
+  stockActual    Int             @default(0) @map("stock_actual")
+  stockMinimo    Int             @default(0) @map("stock_minimo")
+  unidad         String          @default("unidad")
+  tieneCaducidad Boolean         @default(false) @map("tiene_caducidad")
+  fechaCaducidad DateTime?       @map("fecha_caducidad")
+  ubicacionId    String?         @map("ubicacion_id")
+  ubicacion      Ubicacion?      @relation(fields: [ubicacionId], references: [id])
+  familiaId      String          @map("familia_id")
+  familia        FamiliaArticulo @relation(fields: [familiaId], references: [id])
+  servicioId     String          @map("servicio_id")
+  servicio       Servicio        @relation(fields: [servicioId], references: [id])
+  metadatos      Json?
+  activo         Boolean         @default(true)
+  createdAt      DateTime        @default(now()) @map("created_at")
+  updatedAt      DateTime        @updatedAt @map("updated_at")
+
+  movimientos MovimientoStock[]
+  peticiones  PeticionMaterial[]
+
   @@unique([servicioId, codigo])
   @@map("articulos")
 }
 
 model Ubicacion {
-  id          String   @id @default(cuid())
+  id          String      @id @default(cuid())
   nombre      String
   tipo        String
   descripcion String?
-  padreId     String?  @map("padre_id")
-  padre       Ubicacion? @relation("UbicacionJerarquia", fields: [padreId], references: [id])
+  padreId     String?     @map("padre_id")
+  padre       Ubicacion?  @relation("UbicacionJerarquia", fields: [padreId], references: [id])
   hijos       Ubicacion[] @relation("UbicacionJerarquia")
-  servicioId  String   @map("servicio_id")
-  servicio    Servicio @relation(fields: [servicioId], references: [id])
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-  articulos   Articulo[]
-  
+  servicioId  String      @map("servicio_id")
+  servicio    Servicio    @relation(fields: [servicioId], references: [id])
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+
+  articulos Articulo[]
+
   @@map("ubicaciones")
 }
 
 model MovimientoStock {
-  id          String   @id @default(cuid())
-  tipo        String
-  cantidad    Int
-  motivo      String?
-  notas       String?
-  articuloId  String   @map("articulo_id")
-  articulo    Articulo @relation(fields: [articuloId], references: [id])
-  usuarioId   String   @map("usuario_id")
-  usuario     Usuario  @relation(fields: [usuarioId], references: [id])
-  createdAt   DateTime @default(now()) @map("created_at")
-  
+  id         String   @id @default(cuid())
+  tipo       String
+  cantidad   Int
+  motivo     String?
+  notas      String?
+  articuloId String   @map("articulo_id")
+  articulo   Articulo @relation(fields: [articuloId], references: [id])
+  usuarioId  String   @map("usuario_id")
+  usuario    Usuario  @relation(fields: [usuarioId], references: [id])
+  createdAt  DateTime @default(now()) @map("created_at")
+
   @@map("movimientos_stock")
 }
 
@@ -286,39 +338,40 @@ model MovimientoStock {
 // ===========================================
 
 model Vehiculo {
-  id              String   @id @default(cuid())
-  matricula       String   @unique
-  indicativo      String?
-  tipo            String
-  marca           String?
-  modelo          String?
-  anio            Int?     @map("anio")
-  estado          String   @default("disponible")
-  kmActual        Int?     @map("km_actual")
-  fechaItv        DateTime? @map("fecha_itv")
-  fechaSeguro     DateTime? @map("fecha_seguro")
-  servicioId      String   @map("servicio_id")
-  servicio        Servicio @relation(fields: [servicioId], references: [id])
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
-  asignaciones    VehiculoAsignacion[]
-  
+  id          String    @id @default(cuid())
+  matricula   String    @unique
+  indicativo  String?
+  tipo        String
+  marca       String?
+  modelo      String?
+  anio        Int?      @map("anio")
+  estado      String    @default("disponible")
+  kmActual    Int?      @map("km_actual")
+  fechaItv    DateTime? @map("fecha_itv")
+  fechaSeguro DateTime? @map("fecha_seguro")
+  servicioId  String    @map("servicio_id")
+  servicio    Servicio  @relation(fields: [servicioId], references: [id])
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  asignaciones VehiculoAsignacion[]
+
   @@map("vehiculos")
 }
 
 model VehiculoAsignacion {
-  id          String   @id @default(cuid())
-  vehiculoId  String   @map("vehiculo_id")
-  vehiculo    Vehiculo @relation(fields: [vehiculoId], references: [id])
-  usuarioId   String   @map("usuario_id")
-  usuario     Usuario  @relation(fields: [usuarioId], references: [id])
-  fechaInicio DateTime @map("fecha_inicio")
+  id          String    @id @default(cuid())
+  vehiculoId  String    @map("vehiculo_id")
+  vehiculo    Vehiculo  @relation(fields: [vehiculoId], references: [id])
+  usuarioId   String    @map("usuario_id")
+  usuario     Usuario   @relation(fields: [usuarioId], references: [id])
+  fechaInicio DateTime  @map("fecha_inicio")
   fechaFin    DateTime? @map("fecha_fin")
-  kmInicio    Int?     @map("km_inicio")
-  kmFin       Int?     @map("km_fin")
+  kmInicio    Int?      @map("km_inicio")
+  kmFin       Int?      @map("km_fin")
   motivo      String?
-  createdAt   DateTime @default(now()) @map("created_at")
-  
+  createdAt   DateTime  @default(now()) @map("created_at")
+
   @@map("vehiculos_asignaciones")
 }
 
@@ -327,19 +380,19 @@ model VehiculoAsignacion {
 // ===========================================
 
 model Guardia {
-  id          String   @id @default(cuid())
-  fecha       DateTime @db.Date
-  turno       String
-  tipo        String
-  notas       String?
-  usuarioId   String   @map("usuario_id")
-  usuario     Usuario  @relation(fields: [usuarioId], references: [id])
-  servicioId  String   @map("servicio_id")
-  servicio    Servicio @relation(fields: [servicioId], references: [id])
-  estado      String   @default("programada")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-  
+  id         String   @id @default(cuid())
+  fecha      DateTime @db.Date
+  turno      String
+  tipo       String
+  notas      String?
+  usuarioId  String   @map("usuario_id")
+  usuario    Usuario  @relation(fields: [usuarioId], references: [id])
+  servicioId String   @map("servicio_id")
+  servicio   Servicio @relation(fields: [servicioId], references: [id])
+  estado     String   @default("programada")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
   @@unique([usuarioId, fecha, turno])
   @@map("guardias")
 }
@@ -349,26 +402,26 @@ model Guardia {
 // ===========================================
 
 model Incidencia {
-  id              String   @id @default(cuid())
-  numero          String   @unique
-  titulo          String
-  descripcion     String?
-  tipo            String
-  prioridad       String   @default("normal")
-  estado          String   @default("abierta")
-  direccion       String?
-  coordenadas     Json?
-  fechaInicio     DateTime @default(now()) @map("fecha_inicio")
-  fechaFin        DateTime? @map("fecha_fin")
-  creadorId       String   @map("creador_id")
-  creador         Usuario  @relation("IncidenciaCreador", fields: [creadorId], references: [id])
-  asignadoId      String?  @map("asignado_id")
-  asignado        Usuario? @relation("IncidenciaAsignado", fields: [asignadoId], references: [id])
-  servicioId      String   @map("servicio_id")
-  servicio        Servicio @relation(fields: [servicioId], references: [id])
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
-  
+  id          String    @id @default(cuid())
+  numero      String    @unique
+  titulo      String
+  descripcion String?
+  tipo        String
+  prioridad   String    @default("normal")
+  estado      String    @default("abierta")
+  direccion   String?
+  coordenadas Json?
+  fechaInicio DateTime  @default(now()) @map("fecha_inicio")
+  fechaFin    DateTime? @map("fecha_fin")
+  creadorId   String    @map("creador_id")
+  creador     Usuario   @relation("IncidenciaCreador", fields: [creadorId], references: [id])
+  asignadoId  String?   @map("asignado_id")
+  asignado    Usuario?  @relation("IncidenciaAsignado", fields: [asignadoId], references: [id])
+  servicioId  String    @map("servicio_id")
+  servicio    Servicio  @relation(fields: [servicioId], references: [id])
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
   @@map("incidencias")
 }
 
@@ -382,7 +435,7 @@ model Configuracion {
   valor       Json
   descripcion String?
   updatedAt   DateTime @updatedAt @map("updated_at")
-  
+
   @@map("configuracion")
 }
 
@@ -391,70 +444,49 @@ model Configuracion {
 // ===========================================
 
 model FichaVoluntario {
-  id                  String   @id @default(cuid())
-  usuarioId           String   @unique @map("usuario_id")
-  usuario             Usuario  @relation(fields: [usuarioId], references: [id])
-  
-  // Datos personales extendidos
-  indicativo2         String?  @map("indicativo_2")
-  fechaAlta           DateTime? @map("fecha_alta") @db.Date
-  fechaBaja           DateTime? @map("fecha_baja") @db.Date
-  fechaNacimiento     DateTime? @map("fecha_nacimiento") @db.Date
-  edad                Int?
-  sexo                String?
-  
-  // Dirección
-  domicilio           String?
-  numero              String?
-  bloque              String?
-  piso                String?
-  puerta              String?
-  letra               String?
-  codigoPostal        String?  @map("codigo_postal")
-  localidad           String?
-  provincia           String?
-  
-  // Contacto
-  telefonoFijo        String?  @map("telefono_fijo")
-  dniNie              String?  @map("dni_nie")
-  
-  // Área y categoría
-  areaAsignada        String?  @map("area_asignada")
-  categoria           String?
-  
-  // Permisos de conducir
-  permisoConducir     String?  @map("permiso_conducir")
-  fechaExpedicion     DateTime? @map("fecha_expedicion") @db.Date
-  fechaValidez        DateTime? @map("fecha_validez") @db.Date
-  
-  // Datos profesionales
-  formacionProfesional String? @map("formacion_profesional")
-  ocupacionActual     String?  @map("ocupacion_actual")
-  
-  // Datos médicos
-  minusvaliaReconocida String? @map("minusvalia_reconocida")
-  datosAlergias       String?  @map("datos_alergias")
-  grupoSanguineo      String?               @map("grupo_sanguineo")
-  
-  // Contacto emergencia
-  contactoEmergencia  String?  @map("contacto_emergencia")
-  telefonoEmergencia  String?  @map("telefono_emergencia")
-  
-  // Formación Protección Civil
-  formacionPC         Json?    @map("formacion_pc") @default("[]")
-  otrasTitulaciones   String?  @map("otras_titulaciones")
-  
-  // Documentos
-  acuerdoIndividual   Boolean  @default(false) @map("acuerdo_individual")
-  acuerdoAdjunto      String?  @map("acuerdo_adjunto")
-  certificadoTitularidad Boolean @default(false) @map("certificado_titularidad")
-  certificadoAdjunto  String?  @map("certificado_adjunto")
-  modelo145           Boolean  @default(false) @map("modelo_145")
-  modelo145Adjunto    String?  @map("modelo_145_adjunto")
-  
-  createdAt           DateTime @default(now()) @map("created_at")
-  updatedAt           DateTime @updatedAt @map("updated_at")
-  
+  id                     String    @id @default(cuid())
+  usuarioId              String    @unique @map("usuario_id")
+  usuario                Usuario   @relation(fields: [usuarioId], references: [id])
+  indicativo2            String?   @map("indicativo_2")
+  fechaAlta              DateTime? @map("fecha_alta") @db.Date
+  fechaBaja              DateTime? @map("fecha_baja") @db.Date
+  fechaNacimiento        DateTime? @map("fecha_nacimiento") @db.Date
+  edad                   Int?
+  sexo                   String?
+  domicilio              String?
+  numero                 String?
+  bloque                 String?
+  piso                   String?
+  puerta                 String?
+  letra                  String?
+  codigoPostal           String?   @map("codigo_postal")
+  localidad              String?
+  provincia              String?
+  telefonoFijo           String?   @map("telefono_fijo")
+  dniNie                 String?   @map("dni_nie")
+  areaAsignada           String?   @map("area_asignada")
+  categoria              String?
+  permisoConducir        String?   @map("permiso_conducir")
+  fechaExpedicion        DateTime? @map("fecha_expedicion") @db.Date
+  fechaValidez           DateTime? @map("fecha_validez") @db.Date
+  formacionProfesional   String?   @map("formacion_profesional")
+  ocupacionActual        String?   @map("ocupacion_actual")
+  minusvaliaReconocida   String?   @map("minusvalia_reconocida")
+  datosAlergias          String?   @map("datos_alergias")
+  grupoSanguineo         String?   @map("grupo_sanguineo")
+  contactoEmergencia     String?   @map("contacto_emergencia")
+  telefonoEmergencia     String?   @map("telefono_emergencia")
+  formacionPC            Json?     @default("[]") @map("formacion_pc")
+  otrasTitulaciones      String?   @map("otras_titulaciones")
+  acuerdoIndividual      Boolean   @default(false) @map("acuerdo_individual")
+  acuerdoAdjunto         String?   @map("acuerdo_adjunto")
+  certificadoTitularidad Boolean   @default(false) @map("certificado_titularidad")
+  certificadoAdjunto     String?   @map("certificado_adjunto")
+  modelo145              Boolean   @default(false) @map("modelo_145")
+  modelo145Adjunto       String?   @map("modelo_145_adjunto")
+  createdAt              DateTime  @default(now()) @map("created_at")
+  updatedAt              DateTime  @updatedAt @map("updated_at")
+
   @@map("fichas_voluntario")
 }
 
@@ -481,7 +513,7 @@ model Dieta {
   notas           String?
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
-  
+
   @@map("dietas")
 }
 
@@ -490,21 +522,21 @@ model Dieta {
 // ===========================================
 
 model MovimientoCaja {
-  id              String   @id @default(cuid())
-  fecha           DateTime @db.Date
-  tipo            String
-  concepto        String
-  descripcion     String?
-  importe         Decimal  @db.Decimal(10, 2)
-  saldoAnterior   Decimal  @map("saldo_anterior") @db.Decimal(10, 2)
-  saldoPosterior  Decimal  @map("saldo_posterior") @db.Decimal(10, 2)
-  categoria       String?
-  adjuntoUrl      String?  @map("adjunto_url")
-  adjuntoNombre   String?  @map("adjunto_nombre")
-  registradoPor   String   @map("registrado_por")
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
-  
+  id             String   @id @default(cuid())
+  fecha          DateTime @db.Date
+  tipo           String
+  concepto       String
+  descripcion    String?
+  importe        Decimal  @db.Decimal(10, 2)
+  saldoAnterior  Decimal  @map("saldo_anterior") @db.Decimal(10, 2)
+  saldoPosterior Decimal  @map("saldo_posterior") @db.Decimal(10, 2)
+  categoria      String?
+  adjuntoUrl     String?  @map("adjunto_url")
+  adjuntoNombre  String?  @map("adjunto_nombre")
+  registradoPor  String   @map("registrado_por")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
   @@map("movimientos_caja")
 }
 
@@ -533,7 +565,7 @@ model TicketCombustible {
   notas           String?
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
-  
+
   @@map("tickets_combustible")
 }
 
@@ -542,112 +574,99 @@ model TicketCombustible {
 // ===========================================
 
 model Poliza {
-  id              String   @id @default(cuid())
-  tipo            String   // vehiculo, rc_general, accidentes, voluntarios
-  numero          String?  @map("numero_poliza")
-  compania        String
-  descripcion     String?
-  fechaInicio     DateTime @map("fecha_inicio") @db.Date
+  id               String   @id @default(cuid())
+  tipo             String
+  numero           String?  @map("numero_poliza")
+  compania         String
+  descripcion      String?
+  fechaInicio      DateTime @map("fecha_inicio") @db.Date
   fechaVencimiento DateTime @map("fecha_vencimiento") @db.Date
-  primaAnual      Decimal? @map("prima_anual") @db.Decimal(10, 2)
-  estado          String   @default("vigente")
-  vehiculoId      String?  @map("vehiculo_id")
-  documentoUrl    String?  @map("documento_url")
-  notas           String?
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
-  
+  primaAnual       Decimal? @map("prima_anual") @db.Decimal(10, 2)
+  estado           String   @default("vigente")
+  vehiculoId       String?  @map("vehiculo_id")
+  documentoUrl     String?  @map("documento_url")
+  notas            String?
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
   @@map("polizas")
 }
 
 // ===========================================
 // PETICIONES DE MATERIAL
 // ===========================================
+
 model PeticionMaterial {
-  id              String   @id @default(cuid())
-  numero          String   @unique
-  
-  solicitanteId   String   @map("solicitante_id")
-  solicitante     Usuario  @relation("PeticionesSolicitadas", fields: [solicitanteId], references: [id])
-  areaOrigen      String   @map("area_origen")
-  
-  articuloId      String?  @map("articulo_id")
+  id              String    @id @default(cuid())
+  numero          String    @unique
+  solicitanteId   String    @map("solicitante_id")
+  solicitante     Usuario   @relation("PeticionesSolicitadas", fields: [solicitanteId], references: [id])
+  areaOrigen      String    @map("area_origen")
+  articuloId      String?   @map("articulo_id")
   articulo        Articulo? @relation(fields: [articuloId], references: [id])
-  nombreArticulo  String   @map("nombre_articulo")
+  nombreArticulo  String    @map("nombre_articulo")
   cantidad        Int
-  unidad          String   @default("unidad")
-  
+  unidad          String    @default("unidad")
   motivo          String
-  prioridad       String   @default("normal")
+  prioridad       String    @default("normal")
   descripcion     String?
-  
-  estado          String   @default("pendiente")
-  
-  fechaSolicitud  DateTime @default(now()) @map("fecha_solicitud")
+  estado          String    @default("pendiente")
+  fechaSolicitud  DateTime  @default(now()) @map("fecha_solicitud")
   fechaAprobacion DateTime? @map("fecha_aprobacion")
   fechaCompra     DateTime? @map("fecha_compra")
   fechaRecepcion  DateTime? @map("fecha_recepcion")
-  
-  aprobadoPorId   String?  @map("aprobado_por_id")
-  aprobadoPor     Usuario? @relation("PeticionesAprobadas", fields: [aprobadoPorId], references: [id])
-  recibidoPorId   String?  @map("recibido_por_id")
-  recibidoPor     Usuario? @relation("PeticionesRecibidas", fields: [recibidoPorId], references: [id])
-  
-  notasAprobacion String?  @map("notas_aprobacion")
-  notasCompra     String?  @map("notas_compra")
-  notasRecepcion  String?  @map("notas_recepcion")
-  motivoRechazo   String?  @map("motivo_rechazo")
-  
+  aprobadoPorId   String?   @map("aprobado_por_id")
+  aprobadoPor     Usuario?  @relation("PeticionesAprobadas", fields: [aprobadoPorId], references: [id])
+  recibidoPorId   String?   @map("recibido_por_id")
+  recibidoPor     Usuario?  @relation("PeticionesRecibidas", fields: [recibidoPorId], references: [id])
+  notasAprobacion String?   @map("notas_aprobacion")
+  notasCompra     String?   @map("notas_compra")
+  notasRecepcion  String?   @map("notas_recepcion")
+  motivoRechazo   String?   @map("motivo_rechazo")
   proveedor       String?
-  numeroFactura   String?  @map("numero_factura")
-  costeEstimado   Decimal? @map("coste_estimado") @db.Decimal(10,2)
-  costeFinal      Decimal? @map("coste_final") @db.Decimal(10,2)
-  
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
-  
-  historial       HistorialPeticion[]
-  
-  notificaciones    Notificacion[]
+  numeroFactura   String?   @map("numero_factura")
+  costeEstimado   Decimal?  @map("coste_estimado") @db.Decimal(10, 2)
+  costeFinal      Decimal?  @map("coste_final") @db.Decimal(10, 2)
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  historial      HistorialPeticion[]
+  notificaciones Notificacion[]
+
   @@map("peticiones_material")
 }
 
 model HistorialPeticion {
-  id             String   @id @default(cuid())
-  peticionId     String   @map("peticion_id")
+  id             String           @id @default(cuid())
+  peticionId     String           @map("peticion_id")
   peticion       PeticionMaterial @relation(fields: [peticionId], references: [id], onDelete: Cascade)
-  
-  estadoAnterior String?  @map("estado_anterior")
-  estadoNuevo    String   @map("estado_nuevo")
+  estadoAnterior String?          @map("estado_anterior")
+  estadoNuevo    String           @map("estado_nuevo")
   comentario     String?
-  
-  usuarioId      String   @map("usuario_id")
-  usuario        Usuario  @relation(fields: [usuarioId], references: [id])
-  
-  createdAt      DateTime @default(now()) @map("created_at")
-  
+  usuarioId      String           @map("usuario_id")
+  usuario        Usuario          @relation(fields: [usuarioId], references: [id])
+  createdAt      DateTime         @default(now()) @map("created_at")
+
   @@map("historial_peticiones")
 }
+
 // ===========================================
 // SISTEMA DE NOTIFICACIONES
 // ===========================================
+
 model Notificacion {
-  id          String   @id @default(cuid())
-  tipo        String   // peticion_estado, stock_bajo, general, etc.
-  titulo      String
-  mensaje     String
-  enlace      String?  // URL para redireccionar al hacer clic
-  leida       Boolean  @default(false)
-  
-  usuarioId   String   @map("usuario_id")
-  usuario     Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
-  
-  // Referencia opcional a la petición relacionada
-  peticionId  String?  @map("peticion_id")
-  peticion    PeticionMaterial? @relation(fields: [peticionId], references: [id], onDelete: SetNull)
-  
-  createdAt   DateTime @default(now()) @map("created_at")
-  
+  id         String            @id @default(cuid())
+  tipo       String
+  titulo     String
+  mensaje    String
+  enlace     String?
+  leida      Boolean           @default(false)
+  usuarioId  String            @map("usuario_id")
+  usuario    Usuario           @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  peticionId String?           @map("peticion_id")
+  peticion   PeticionMaterial? @relation(fields: [peticionId], references: [id], onDelete: SetNull)
+  createdAt  DateTime          @default(now()) @map("created_at")
+
   @@index([usuarioId, leida])
   @@map("notificaciones")
 }
@@ -655,34 +674,26 @@ model Notificacion {
 // ===========================================
 // SISTEMA DE MENSAJES/TICKETS
 // ===========================================
+
 model Mensaje {
-  id          String   @id @default(cuid())
-  asunto      String
-  contenido   String
-  tipo        String   @default("mensaje") // mensaje, ticket, sistema
-  prioridad   String   @default("normal") // baja, normal, alta, urgente
-  leido       Boolean  @default(false)
-  archivado   Boolean  @default(false)
-  
-  // Remitente
-  remitenteId String   @map("remitente_id")
-  remitente   Usuario  @relation("MensajesEnviados", fields: [remitenteId], references: [id])
-  
-  // Destinatario (puede ser null si es para un grupo/área)
-  destinatarioId String? @map("destinatario_id")
-  destinatario   Usuario? @relation("MensajesRecibidos", fields: [destinatarioId], references: [id])
-  
-  // Para mensajes a grupos/áreas
-  destinatarioGrupo String? @map("destinatario_grupo") // "todos", "area:incendios", "rol:admin"
-  
-  // Respuestas (hilo de mensajes)
-  mensajePadreId String?  @map("mensaje_padre_id")
-  mensajePadre   Mensaje? @relation("HiloMensajes", fields: [mensajePadreId], references: [id])
-  respuestas     Mensaje[] @relation("HiloMensajes")
-  
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-  
+  id                String    @id @default(cuid())
+  asunto            String
+  contenido         String
+  tipo              String    @default("mensaje")
+  prioridad         String    @default("normal")
+  leido             Boolean   @default(false)
+  archivado         Boolean   @default(false)
+  remitenteId       String    @map("remitente_id")
+  remitente         Usuario   @relation("MensajesEnviados", fields: [remitenteId], references: [id])
+  destinatarioId    String?   @map("destinatario_id")
+  destinatario      Usuario?  @relation("MensajesRecibidos", fields: [destinatarioId], references: [id])
+  destinatarioGrupo String?   @map("destinatario_grupo")
+  mensajePadreId    String?   @map("mensaje_padre_id")
+  mensajePadre      Mensaje?  @relation("HiloMensajes", fields: [mensajePadreId], references: [id])
+  respuestas        Mensaje[] @relation("HiloMensajes")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
   @@index([destinatarioId, leido])
   @@index([remitenteId])
   @@map("mensajes")
@@ -698,36 +709,29 @@ model Edificio {
   direccion   String?
   responsable String?
   telefono    String?
-  
   equiposECI  EquipoECI[]
-  
   createdAt   DateTime    @default(now()) @map("created_at")
   updatedAt   DateTime    @updatedAt @map("updated_at")
-  
+
   @@map("edificios")
 }
 
 model EquipoECI {
-  id                String    @id @default(cuid())
-  edificioId        String    @map("edificio_id")
-  edificio          Edificio  @relation(fields: [edificioId], references: [id], onDelete: Cascade)
-  
-  tipo              String    // extintor, bie, detector, pulsador, alarma, señalizacion
-  subtipo           String?   // Para extintores: CO2, Polvo ABC, etc.
-  ubicacion         String
-  numeroSerie       String?   @map("numero_serie")
-  
-  estado            String    @default("operativo") // operativo, revision_pendiente, fuera_servicio
-  
-  fechaInstalacion  DateTime? @map("fecha_instalacion")
-  ultimaRevision    DateTime? @map("ultima_revision")
-  proximaRevision   DateTime? @map("proxima_revision")
-  
-  observaciones     String?
-  
-  createdAt         DateTime  @default(now()) @map("created_at")
-  updatedAt         DateTime  @updatedAt @map("updated_at")
-  
+  id               String    @id @default(cuid())
+  edificioId       String    @map("edificio_id")
+  edificio         Edificio  @relation(fields: [edificioId], references: [id], onDelete: Cascade)
+  tipo             String
+  subtipo          String?
+  ubicacion        String
+  numeroSerie      String?   @map("numero_serie")
+  estado           String    @default("operativo")
+  fechaInstalacion DateTime? @map("fecha_instalacion")
+  ultimaRevision   DateTime? @map("ultima_revision")
+  proximaRevision  DateTime? @map("proxima_revision")
+  observaciones    String?
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
   @@index([edificioId])
   @@index([estado])
   @@index([proximaRevision])
@@ -735,28 +739,75 @@ model EquipoECI {
 }
 
 model Hidrante {
-  id        String   @id @default(cuid())
-  codigo    String   @unique
-  tipo      String   // columna, arqueta
-  ubicacion String
-  
-  latitud   Float?
-  longitud  Float?
-  
-  presion   Float?   // en bar
-  caudal    Int?     // en l/min
-  
-  estado    String   @default("operativo") // operativo, averiado, fuera_servicio
-  
-  fechaInstalacion  DateTime? @map("fecha_instalacion")
-  ultimaRevision    DateTime? @map("ultima_revision")
-  proximaRevision   DateTime? @map("proxima_revision")
-  
-  observaciones String?
-  
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  
+  id               String    @id @default(cuid())
+  codigo           String    @unique
+  tipo             String
+  ubicacion        String
+  latitud          Float?
+  longitud         Float?
+  presion          Float?
+  caudal           Int?
+  estado           String    @default("operativo")
+  fechaInstalacion DateTime? @map("fecha_instalacion")
+  ultimaRevision   DateTime? @map("ultima_revision")
+  proximaRevision  DateTime? @map("proxima_revision")
+  observaciones    String?
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
   @@index([estado])
   @@map("hidrantes")
+}
+
+// ===========================================
+// SISTEMA DE VESTUARIO
+// ===========================================
+
+model AsignacionVestuario {
+  id                    String               @id @default(cuid())
+  usuarioId             String               @map("usuario_id")
+  usuario               Usuario              @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  tipoPrenda            String               @map("tipo_prenda")
+  talla                 String
+  cantidad              Int                  @default(1)
+  fechaAsignacion       DateTime             @default(now()) @map("fecha_asignacion")
+  fechaBaja             DateTime?            @map("fecha_baja")
+  estado                String               @default("asignado")
+  observaciones         String?              @db.Text
+  solicitudesReposicion SolicitudVestuario[] @relation("SolicitudesReposicion")
+  solicitudGenerada     SolicitudVestuario?  @relation("AsignacionGenerada")
+  createdAt             DateTime             @default(now()) @map("created_at")
+  updatedAt             DateTime             @updatedAt @map("updated_at")
+
+  @@index([usuarioId])
+  @@index([estado])
+  @@map("asignaciones_vestuario")
+}
+
+model SolicitudVestuario {
+  id                   String               @id @default(cuid())
+  usuarioId            String               @map("usuario_id")
+  usuario              Usuario              @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  tipoPrenda           String               @map("tipo_prenda")
+  talla                String
+  cantidad             Int                  @default(1)
+  asignacionAnteriorId String?              @map("asignacion_anterior_id")
+  asignacionAnterior   AsignacionVestuario? @relation("SolicitudesReposicion", fields: [asignacionAnteriorId], references: [id], onDelete: SetNull)
+  asignacionGeneradaId String?              @unique @map("asignacion_generada_id")
+  asignacionGenerada   AsignacionVestuario? @relation("AsignacionGenerada", fields: [asignacionGeneradaId], references: [id], onDelete: SetNull)
+  motivo               String
+  descripcion          String?              @db.Text
+  estado               String               @default("pendiente")
+  fechaSolicitud       DateTime             @default(now()) @map("fecha_solicitud")
+  fechaRespuesta       DateTime?            @map("fecha_respuesta")
+  respuestaPorId       String?              @map("respuesta_por_id")
+  respuestaPor         Usuario?             @relation("SolicitudesRespondidas", fields: [respuestaPorId], references: [id])
+  comentarioRespuesta  String?              @map("comentario_respuesta") @db.Text
+  createdAt            DateTime             @default(now()) @map("created_at")
+  updatedAt            DateTime             @updatedAt @map("updated_at")
+
+  @@index([usuarioId])
+  @@index([estado])
+  @@index([fechaSolicitud])
+  @@map("solicitudes_vestuario")
 }
