@@ -481,7 +481,7 @@ export async function PUT(request: NextRequest) {
 
     // ===== HIDRANTE =====
     if (tipo === 'hidrante') {
-      const { codigo, tipo: tipoHidrante, ubicacion, latitud, longitud, presion, caudal, estado } = body
+      const { codigo, tipoHidrante, ubicacion, latitud, longitud, presion, caudal, estado } = body
 
       const hidrante = await prisma.hidrante.update({
         where: { id },

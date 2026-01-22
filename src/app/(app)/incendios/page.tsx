@@ -321,7 +321,7 @@ export default function IncendiosPage() {
       const res = await fetch('/api/logistica', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tipo: 'hidrante', id, ...formData })
+        body: JSON.stringify({ tipo: 'hidrante', id, tipoHidrante: formData.tipo, codigo: formData.codigo, ubicacion: formData.ubicacion, latitud: formData.latitud, longitud: formData.longitud, presion: formData.presion, caudal: formData.caudal, estado: formData.estado })
       })
       if (res.ok) { await cargarDatos(); return true }
       return false
