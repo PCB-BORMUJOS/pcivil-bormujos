@@ -20,7 +20,7 @@ const handler = NextAuth({
 
         const usuario = await prisma.usuario.findUnique({
           where: { email: credentials.email },
-          include: { rol: true, agrupacion: true }
+          include: { rol: true, servicio: true }
         })
 
         if (!usuario || !usuario.activo) {
@@ -39,12 +39,12 @@ const handler = NextAuth({
         })
 
         return {
-          id: usuario.id,
-          email: usuario.email,
-          name: `${usuario.nombre} ${usuario.apellidos}`,
-          rol: usuario.rol.nombre,
-          agrupacionId: usuario.agrupacionId,
-          numeroVoluntario: usuario.numeroVoluntario,
+        id: usuario.id,
+        email: usuario.email,
+        name: `${usuario.nombre} ${usuario.apellidos}`,
+        rol: usuario.rol?.nombre || 'voluntario',  // ← CAMBIAR A ESTO
+        servicioId: usuario.servicioId,
+        numeroVoluntario: usuario.numeroVoluntario
         }
       }
     })
@@ -53,7 +53,7 @@ const handler = NextAuth({
     async jwt({ token, user }) {
       if (user) {
         token.rol = user.rol
-        token.agrupacionId = user.agrupacionId
+        token.servicioId = user.servicioId
         token.numeroVoluntario = user.numeroVoluntario
       }
       return token
@@ -62,7 +62,7 @@ const handler = NextAuth({
       if (session.user) {
         session.user.id = token.sub!
         session.user.rol = token.rol as string
-        session.user.agrupacionId = token.agrupacionId as string
+        session.user.servicioId = token.servicioId as string
         session.user.numeroVoluntario = token.numeroVoluntario as string
       }
       return session

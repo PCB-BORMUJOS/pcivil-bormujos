@@ -1144,7 +1144,7 @@ export default function LogisticaPage() {
                   <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Nº Factura</label>
                   <input type="text" value={accionForm.numeroFactura} onChange={e => setAccionForm({ ...accionForm, numeroFactura: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm" />
                 </div>
-                {showAccionPeticion.peticion.articuloId && (
+                {showAccionPeticion.peticion.articulo && (
                   <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-sm text-green-700">
                     ✓ Al recepcionar, se añadirán {showAccionPeticion.peticion.cantidad} {showAccionPeticion.peticion.unidad} al stock del artículo
                   </div>

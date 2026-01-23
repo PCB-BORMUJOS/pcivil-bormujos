@@ -379,6 +379,7 @@ export async function POST(request: NextRequest) {
           descripcion: motivo,
           areaOrigen,
           estado: 'pendiente',
+          motivo: 'REPOSICION',
           solicitanteId: usuario.id,
           fechaSolicitud: new Date()
         },

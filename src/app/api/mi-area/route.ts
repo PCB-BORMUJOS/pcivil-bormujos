@@ -9,11 +9,26 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
 
+    const { searchParams } = new URL(request.url)
+    const tipo = searchParams.get('tipo')
+
     const usuario = await prisma.usuario.findUnique({
       where: { email: session.user.email },
       include: {
         rol: { select: { nombre: true } },
-        fichaVoluntario: true
+        fichaVoluntario: true,
+        asignacionesVestuario: {
+          where: { estado: { not: 'DADO_DE_BAJA' } },
+          orderBy: { fechaAsignacion: 'desc' }
+        },
+        solicitudesVestuario: {
+          include: {
+            respuestaPor: {
+              select: { nombre: true, apellidos: true }
+            }
+          },
+          orderBy: { fechaSolicitud: 'desc' }
+        }
       }
     })
 
@@ -21,6 +36,15 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
     }
 
+    // Si solo piden vestuario, devolver solo eso
+    if (tipo === 'vestuario') {
+      return NextResponse.json({
+        asignaciones: usuario.asignacionesVestuario,
+        solicitudes: usuario.solicitudesVestuario
+      })
+    }
+
+    // Devolver todo
     return NextResponse.json({
       usuario: {
         id: usuario.id,
@@ -59,10 +83,64 @@ export async function GET(request: NextRequest) {
       } : null,
       formaciones: [],
       actividades: [],
-      documentos: []
+      documentos: [],
+      vestuario: {
+        asignaciones: usuario.asignacionesVestuario,
+        solicitudes: usuario.solicitudesVestuario
+      }
     })
   } catch (error) {
     console.error('Error en GET /api/mi-area:', error)
+    return NextResponse.json({ error: 'Error interno' }, { status: 500 })
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const session = await getServerSession()
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    }
+
+    const body = await request.json()
+    const { tipo } = body
+
+    const usuario = await prisma.usuario.findUnique({
+      where: { email: session.user.email }
+    })
+
+    if (!usuario) {
+      return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
+    }
+
+    if (tipo === 'solicitud-vestuario') {
+      // Crear nueva solicitud de vestuario
+      const solicitud = await prisma.solicitudVestuario.create({
+        data: {
+          usuarioId: usuario.id,
+          tipoPrenda: body.tipoPrenda,
+          talla: body.talla,
+          cantidad: body.cantidad || 1,
+          motivo: body.motivo,
+          descripcion: body.descripcion,
+          asignacionAnteriorId: body.asignacionAnteriorId || null,
+          estado: 'PENDIENTE'
+        },
+        include: {
+          usuario: {
+            select: { nombre: true, apellidos: true, email: true }
+          }
+        }
+      })
+
+      // TODO: Crear notificación para logística
+
+      return NextResponse.json({ success: true, solicitud })
+    }
+
+    return NextResponse.json({ error: 'Tipo de operación no válido' }, { status: 400 })
+  } catch (error) {
+    console.error('Error en POST /api/mi-area:', error)
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
   }
 }

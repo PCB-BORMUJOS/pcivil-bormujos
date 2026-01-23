@@ -1344,7 +1344,7 @@ export default function AdministracionPage() {
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">DNI/NIE</label>
-                <input type="text" value={fichaData.dniNie || selectedVoluntario.dni || ''} onChange={e => setFichaData({...fichaData, dniNie: e.target.value})} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"/>
+                <input type="text" value={fichaData.dniNie || ''} onChange={e => setFichaData({...fichaData, dniNie: e.target.value})} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"/>
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Teléfono</label>

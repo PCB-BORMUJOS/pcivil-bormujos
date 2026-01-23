@@ -1828,7 +1828,7 @@ export default function IncendiosPage() {
                       <label className="block text-sm font-medium text-slate-700 mb-2">Observaciones</label>
                       <textarea
                         name="observaciones"
-                        defaultValue={equipoEditandoEditor?.observaciones || ''}
+                        defaultValue={''}
                         className="w-full border border-slate-300 rounded-lg p-2.5"
                         rows={3}
                         placeholder="Observaciones adicionales..."
