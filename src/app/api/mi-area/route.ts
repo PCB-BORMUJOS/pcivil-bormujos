@@ -11,6 +11,7 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url)
     const tipo = searchParams.get('tipo')
+    const mes = searchParams.get('mes')
 
     const usuario = await prisma.usuario.findUnique({
       where: { email: session.user.email },
@@ -36,7 +37,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
     }
 
-    // Si solo piden vestuario, devolver solo eso
     if (tipo === 'vestuario') {
       return NextResponse.json({
         asignaciones: usuario.asignacionesVestuario,
@@ -44,7 +44,30 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Devolver todo
+    if (tipo === 'dietas') {
+      const whereClause: any = { usuarioId: usuario.id }
+      if (mes) whereClause.mesAnio = mes
+
+      const dietas = await prisma.dieta.findMany({
+        where: whereClause,
+        orderBy: { fecha: 'desc' }
+      })
+
+      const totalesPorMes: { [key: string]: { totalDietas: number; totalKm: number; total: number; registros: number } } = {}
+      
+      dietas.forEach(dieta => {
+        if (!totalesPorMes[dieta.mesAnio]) {
+          totalesPorMes[dieta.mesAnio] = { totalDietas: 0, totalKm: 0, total: 0, registros: 0 }
+        }
+        totalesPorMes[dieta.mesAnio].totalDietas += Number(dieta.subtotalDietas)
+        totalesPorMes[dieta.mesAnio].totalKm += Number(dieta.subtotalKm)
+        totalesPorMes[dieta.mesAnio].total += Number(dieta.totalDieta)
+        totalesPorMes[dieta.mesAnio].registros++
+      })
+
+      return NextResponse.json({ dietas, totalesPorMes, mesSeleccionado: mes || null })
+    }
+
     return NextResponse.json({
       usuario: {
         id: usuario.id,
@@ -114,7 +137,6 @@ export async function POST(request: NextRequest) {
     }
 
     if (tipo === 'solicitud-vestuario') {
-      // Crear nueva solicitud de vestuario
       const solicitud = await prisma.solicitudVestuario.create({
         data: {
           usuarioId: usuario.id,
@@ -133,7 +155,16 @@ export async function POST(request: NextRequest) {
         }
       })
 
-      // TODO: Crear notificación para logística
+      await prisma.notificacion.create({
+        data: {
+          usuarioId: usuario.id,
+          tipo: 'SOLICITUD_VESTUARIO',
+          titulo: 'Nueva solicitud de vestuario',
+          mensaje: `${usuario.nombre} ${usuario.apellidos} ha solicitado ${body.tipoPrenda} - ${body.talla}`,
+          leida: false,
+          url: '/logistica?tab=vestuario'
+        }
+      })
 
       return NextResponse.json({ success: true, solicitud })
     }
@@ -163,7 +194,6 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
     }
 
-    // Actualizar datos básicos del usuario
     await prisma.usuario.update({
       where: { id: usuario.id },
       data: {
@@ -174,7 +204,6 @@ export async function PUT(request: NextRequest) {
       }
     })
 
-    // Actualizar o crear ficha de voluntario
     const fichaData = {
       indicativo2: body.indicativo2 || null,
       fechaAlta: body.fechaAlta ? new Date(body.fechaAlta) : null,

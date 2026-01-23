@@ -355,7 +355,6 @@ export default function MiAreaPage() {
             { id: 'formacion', label: 'Formación', icon: GraduationCap },
             { id: 'actividad', label: 'Historial de Actividad', icon: Clock },
             { id: 'documentos', label: 'Documentos', icon: FileText },
-            { id: 'vestuario', label: 'Vestuario', icon: Shield },
             { id: 'notificaciones', label: 'Notificaciones', icon: Bell },
           ].map(tab => (
             <button 
