@@ -7,7 +7,7 @@ import {
   User, GraduationCap, Clock, FileText, Bell, Save, Edit, Upload, 
   Calendar, Award, CheckCircle, XCircle, AlertTriangle, Plus,
   Download, Eye, Trash2, X, ChevronRight, MapPin, Phone, Mail,
-  Shield, Lock, Send, FileCheck, Car, CreditCard, Heart
+  Shield,  Settings, Lock, Send, FileCheck, Car, CreditCard, Heart
 } from 'lucide-react';
 
 // ============================================
@@ -46,6 +46,31 @@ interface Documento {
   archivoUrl?: string;
   archivoNombre?: string;
   estado: 'vigente' | 'por_vencer' | 'vencido';
+}
+
+interface AsignacionVestuario {
+  id: string;
+  tipoPrenda: string;
+  talla: string;
+  cantidad: number;
+  fechaAsignacion: string;
+  fechaBaja?: string;
+  estado: string;
+  observaciones?: string;
+}
+
+interface SolicitudVestuario {
+  id: string;
+  tipoPrenda: string;
+  talla: string;
+  cantidad: number;
+  motivo: string;
+  descripcion?: string;
+  estado: string;
+  fechaSolicitud: string;
+  fechaRespuesta?: string;
+  comentarioRespuesta?: string;
+  asignacionAnteriorId?: string;
 }
 
 interface DatosPersonales {
@@ -149,7 +174,7 @@ function Modal({ title, children, onClose, size = 'md' }: {
 // ============================================
 export default function MiAreaPage() {
   const { data: session } = useSession();
-  const [activeTab, setActiveTab] = useState<'datos' | 'formacion' | 'actividad' | 'documentos' | 'notificaciones'>('datos');
+  const [activeTab, setActiveTab] = useState<'datos' | 'formacion' | 'actividad' | 'documentos' | 'vestuario' | 'notificaciones' | 'configuracion'>('datos');
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [solicitandoPermiso, setSolicitandoPermiso] = useState(false);
@@ -166,8 +191,20 @@ export default function MiAreaPage() {
   });
   
   const [formaciones, setFormaciones] = useState<Formacion[]>([]);
-  const [actividades, setActividades] = useState<Actividad[]>([]);
-  const [documentos, setDocumentos] = useState<Documento[]>([]);
+const [actividades, setActividades] = useState<Actividad[]>([]);
+const [documentos, setDocumentos] = useState<Documento[]>([]);
+const [asignacionesVestuario, setAsignacionesVestuario] = useState<AsignacionVestuario[]>([]);
+const [solicitudesVestuario, setSolicitudesVestuario] = useState<SolicitudVestuario[]>([]);
+const [vestuarioSubTab, setVestuarioSubTab] = useState<'asignadas' | 'solicitudes'>('asignadas');
+const [showNuevaSolicitudVestuario, setShowNuevaSolicitudVestuario] = useState(false);
+const [nuevaSolicitudVestuario, setNuevaSolicitudVestuario] = useState({
+  tipoPrenda: '', talla: '', cantidad: 1, motivo: '', descripcion: '', asignacionAnteriorId: ''
+});
+const [cambioPassword, setCambioPassword] = useState({
+  passwordActual: '',
+  passwordNuevo: '',
+  passwordConfirmar: ''
+});
   
   // Estados modales
   const [showNuevaFormacion, setShowNuevaFormacion] = useState(false);
@@ -196,6 +233,9 @@ export default function MiAreaPage() {
       const res = await fetch('/api/mi-area');
       if (res.ok) {
         const data = await res.json();
+        console.log('DATA COMPLETO:', data);
+        console.log('data.vestuario existe?', !!data.vestuario);
+        console.log('data.usuario.asignacionesVestuario:', data.usuario?.asignacionesVestuario);
         if (data.usuario) {
           setDatosPersonales({
             nombre: data.usuario.nombre || '',
@@ -212,6 +252,10 @@ export default function MiAreaPage() {
         if (data.formaciones) setFormaciones(data.formaciones);
         if (data.actividades) setActividades(data.actividades);
         if (data.documentos) setDocumentos(data.documentos);
+        if (data.vestuario) {
+          setAsignacionesVestuario(data.vestuario.asignaciones || []);
+          setSolicitudesVestuario(data.vestuario.solicitudes || []);
+        }
       }
     } catch (error) {
       console.error('Error cargando datos:', error);
@@ -298,6 +342,69 @@ export default function MiAreaPage() {
     }
   };
 
+  const handleGuardarSolicitudVestuario = async () => {
+    if (!nuevaSolicitudVestuario.tipoPrenda || !nuevaSolicitudVestuario.talla || !nuevaSolicitudVestuario.motivo) {
+      alert('Tipo de prenda, talla y motivo son requeridos');
+      return;
+    }
+    try {
+      const res = await fetch('/api/mi-area', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tipo: 'solicitud-vestuario',
+          ...nuevaSolicitudVestuario
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setSolicitudesVestuario([...solicitudesVestuario, data.solicitud]);
+        setShowNuevaSolicitudVestuario(false);
+        setNuevaSolicitudVestuario({ tipoPrenda: '', talla: '', cantidad: 1, motivo: '', descripcion: '', asignacionAnteriorId: '' });
+        alert('✅ Solicitud enviada correctamente');
+      }
+    } catch (error) {
+      alert('Error al enviar solicitud');
+    }
+  };
+
+  const handleCambiarPassword = async () => {
+  if (!cambioPassword.passwordActual || !cambioPassword.passwordNuevo || !cambioPassword.passwordConfirmar) {
+    alert('Todos los campos son requeridos');
+    return;
+  }
+  if (cambioPassword.passwordNuevo !== cambioPassword.passwordConfirmar) {
+    alert('❌ Las contraseñas nuevas no coinciden');
+    return;
+  }
+  if (cambioPassword.passwordNuevo.length < 6) {
+    alert('❌ La contraseña debe tener al menos 6 caracteres');
+    return;
+  }
+  try {
+    const res = await fetch('/api/mi-area', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        tipo: 'cambiar-password',
+        passwordActual: cambioPassword.passwordActual,
+        passwordNuevo: cambioPassword.passwordNuevo
+      })
+    });
+
+    if (res.ok) {
+      alert('✅ Contraseña cambiada correctamente');
+      setCambioPassword({ passwordActual: '', passwordNuevo: '', passwordConfirmar: '' });
+    } else {
+      const data = await res.json();
+      alert('❌ Error: ' + (data.error || 'No se pudo cambiar la contraseña'));
+    }
+  } catch (error) {
+    console.error('Error:', error);
+    alert('❌ Error al cambiar contraseña');
+  }
+};
+
   const getEstadoColor = (estado: string) => {
     switch (estado) {
       case 'vigente': return 'bg-green-100 text-green-700';
@@ -355,7 +462,9 @@ export default function MiAreaPage() {
             { id: 'formacion', label: 'Formación', icon: GraduationCap },
             { id: 'actividad', label: 'Historial de Actividad', icon: Clock },
             { id: 'documentos', label: 'Documentos', icon: FileText },
+            { id: 'vestuario', label: 'Vestuario', icon: Shield },
             { id: 'notificaciones', label: 'Notificaciones', icon: Bell },
+            { id: 'configuracion', label: 'Configuración', icon: Settings },
           ].map(tab => (
             <button 
               key={tab.id} 
@@ -976,14 +1085,271 @@ export default function MiAreaPage() {
                 </div>
               )}
 
-              {activeTab === 'notificaciones' && (
-                <NotificacionesTab />
+              {/* ============================================ */}
+              {/* TAB: VESTUARIO */}
+              {/* ============================================ */}
+              {activeTab === 'vestuario' && (
+                <div>
+                  <div className="flex justify-between items-center mb-6">
+                    <div>
+                      <h2 className="text-lg font-bold text-slate-800">Mi Vestuario</h2>
+                      <p className="text-sm text-slate-500">Prendas asignadas y solicitudes de vestuario</p>
+                    </div>
+                    <button 
+                      onClick={() => setShowNuevaSolicitudVestuario(true)}
+                      className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm font-medium"
+                    >
+                      <Plus size={16}/> Nueva Solicitud
+                    </button>
+                  </div>
+
+                  {/* Sub-tabs */}
+                  <div className="flex gap-2 mb-6 border-b border-slate-200">
+                    <button
+                      onClick={() => setVestuarioSubTab('asignadas')}
+                      className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                        vestuarioSubTab === 'asignadas'
+                          ? 'border-orange-500 text-orange-600'
+                          : 'border-transparent text-slate-500 hover:text-slate-700'
+                      }`}
+                    >
+                      Prendas Asignadas
+                    </button>
+                    <button
+                      onClick={() => setVestuarioSubTab('solicitudes')}
+                      className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                        vestuarioSubTab === 'solicitudes'
+                          ? 'border-orange-500 text-orange-600'
+                          : 'border-transparent text-slate-500 hover:text-slate-700'
+                      }`}
+                    >
+                      Mis Solicitudes
+                    </button>
+                  </div>
+
+                  {/* Prendas Asignadas */}
+                  {vestuarioSubTab === 'asignadas' && (
+                    <div>
+                      {asignacionesVestuario.length === 0 ? (
+                        <div className="text-center py-12 text-slate-500">
+                          <Shield className="w-12 h-12 mx-auto mb-3 opacity-30"/>
+                          <p>No tienes prendas asignadas</p>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {asignacionesVestuario.map(a => (
+                            <div key={a.id} className="bg-white border border-slate-200 rounded-xl p-4 hover:shadow-md transition-shadow">
+                              <div className="flex items-start justify-between mb-3">
+                                <div className="flex items-center gap-3">
+                                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                                    a.estado === 'ASIGNADO' ? 'bg-green-100 text-green-600' : 'bg-slate-100 text-slate-400'
+                                  }`}>
+                                    <Shield size={24}/>
+                                  </div>
+                                  <div>
+                                    <h4 className="font-bold text-slate-800">{a.tipoPrenda}</h4>
+                                    <p className="text-sm text-slate-600">Talla: {a.talla}</p>
+                                  </div>
+                                </div>
+                                <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
+                                  a.estado === 'ASIGNADO' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'
+                                }`}>
+                                  {a.estado === 'ASIGNADO' ? 'Activo' : 'Baja'}
+                                </span>
+                              </div>
+                              
+                              <div className="space-y-2 text-sm">
+                                <div className="flex justify-between">
+                                  <span className="text-slate-500">Cantidad:</span>
+                                  <span className="font-medium text-slate-800">{a.cantidad}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-slate-500">Asignado:</span>
+                                  <span className="font-medium text-slate-800">
+                                    {new Date(a.fechaAsignacion).toLocaleDateString('es-ES')}
+                                  </span>
+                                </div>
+                                {a.fechaBaja && (
+                                  <div className="flex justify-between">
+                                    <span className="text-slate-500">Fecha baja:</span>
+                                    <span className="font-medium text-red-600">
+                                      {new Date(a.fechaBaja).toLocaleDateString('es-ES')}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+
+                              {a.observaciones && (
+                                <div className="mt-3 pt-3 border-t border-slate-100">
+                                  <p className="text-xs text-slate-500">{a.observaciones}</p>
+                                </div>
+                              )}
+
+                              {a.estado === 'ASIGNADO' && (
+                                <button
+                                  onClick={() => {
+                                    setNuevaSolicitudVestuario({
+                                      tipoPrenda: a.tipoPrenda,
+                                      talla: a.talla,
+                                      cantidad: 1,
+                                      motivo: 'REPOSICION',
+                                      descripcion: '',
+                                      asignacionAnteriorId: a.id
+                                    });
+                                    setShowNuevaSolicitudVestuario(true);
+                                  }}
+                                  className="w-full mt-3 py-2 text-sm text-orange-600 hover:bg-orange-50 rounded-lg font-medium transition-colors"
+                                >
+                                  Solicitar Reposición
+                                </button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Solicitudes */}
+                  {vestuarioSubTab === 'solicitudes' && (
+                    <div>
+                      {solicitudesVestuario.length === 0 ? (
+                        <div className="text-center py-12 text-slate-500">
+                          <FileText className="w-12 h-12 mx-auto mb-3 opacity-30"/>
+                          <p>No has realizado solicitudes</p>
+                          <button 
+                            onClick={() => setShowNuevaSolicitudVestuario(true)}
+                            className="mt-4 text-orange-600 hover:text-orange-700 font-medium text-sm"
+                          >
+                            Crear primera solicitud
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {solicitudesVestuario.map(s => (
+                            <div key={s.id} className="bg-white border border-slate-200 rounded-xl p-4 hover:shadow-sm transition-shadow">
+                              <div className="flex items-start justify-between">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-3 mb-2">
+                                    <h4 className="font-bold text-slate-800">{s.tipoPrenda} - {s.talla}</h4>
+                                    <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                                      s.estado === 'PENDIENTE' ? 'bg-yellow-100 text-yellow-700' :
+                                      s.estado === 'APROBADA' ? 'bg-green-100 text-green-700' :
+                                      s.estado === 'ENTREGADA' ? 'bg-blue-100 text-blue-700' :
+                                      'bg-red-100 text-red-700'
+                                    }`}>
+                                      {s.estado}
+                                    </span>
+                                  </div>
+                                  <div className="space-y-1 text-sm">
+                                    <p className="text-slate-600">
+                                      <span className="font-medium">Motivo:</span> {s.motivo}
+                                    </p>
+                                    {s.descripcion && (
+                                      <p className="text-slate-600">
+                                        <span className="font-medium">Descripción:</span> {s.descripcion}
+                                      </p>
+                                    )}
+                                    <p className="text-slate-500">
+                                      Solicitado: {new Date(s.fechaSolicitud).toLocaleDateString('es-ES')}
+                                    </p>
+                                    {s.fechaRespuesta && (
+                                      <p className="text-slate-500">
+                                        Respondido: {new Date(s.fechaRespuesta).toLocaleDateString('es-ES')}
+                                      </p>
+                                    )}
+                                    {s.comentarioRespuesta && (
+                                      <div className="mt-2 p-2 bg-slate-50 rounded text-xs">
+                                        <span className="font-medium">Comentario:</span> {s.comentarioRespuesta}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <p className="text-sm font-medium text-slate-800">x{s.cantidad}</p>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               )}
-            </>
-          )}
+
+              {activeTab === 'notificaciones' && (
+  <NotificacionesTab />
+)}
+
+{activeTab === 'configuracion' && (
+  <div>
+    <div className="mb-6">
+      <h2 className="text-lg font-bold text-slate-800">Configuración</h2>
+      <p className="text-sm text-slate-500">Gestiona tu cuenta y preferencias</p>
+    </div>
+
+    {/* Cambiar Contraseña */}
+    <div className="bg-white border border-slate-200 rounded-xl p-6 max-w-2xl">
+      <div className="flex items-center gap-3 mb-4 pb-4 border-b border-slate-200">
+        <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center">
+          <Lock size={20} className="text-orange-600"/>
+        </div>
+        <div>
+          <h3 className="font-bold text-slate-800">Cambiar Contraseña</h3>
+          <p className="text-sm text-slate-500">Actualiza tu contraseña de acceso</p>
         </div>
       </div>
 
+      <div className="space-y-4">
+        <div>
+          <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Contraseña Actual *</label>
+          <input 
+            type="password"
+            value={cambioPassword.passwordActual}
+            onChange={e => setCambioPassword({...cambioPassword, passwordActual: e.target.value})}
+            className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
+            placeholder="Introduce tu contraseña actual"
+          />
+        </div>
+
+        <div>
+          <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Nueva Contraseña *</label>
+          <input 
+            type="password"
+            value={cambioPassword.passwordNuevo}
+            onChange={e => setCambioPassword({...cambioPassword, passwordNuevo: e.target.value})}
+            className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
+            placeholder="Mínimo 6 caracteres"
+          />
+        </div>
+
+        <div>
+          <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Confirmar Nueva Contraseña *</label>
+          <input 
+            type="password"
+            value={cambioPassword.passwordConfirmar}
+            onChange={e => setCambioPassword({...cambioPassword, passwordConfirmar: e.target.value})}
+            className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
+            placeholder="Repite la nueva contraseña"
+          />
+        </div>
+
+        <button
+          onClick={handleCambiarPassword}
+          className="w-full py-2.5 bg-orange-500 text-white rounded-lg font-medium hover:bg-orange-600 transition-colors"
+        >
+          Cambiar Contraseña
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
+</>
+          )}
+        </div>
+      </div>
       {/* ============================================ */}
       {/* MODALES */}
       {/* ============================================ */}
@@ -1115,6 +1481,106 @@ export default function MiAreaPage() {
             <div className="flex gap-3 pt-2">
               <button onClick={() => setShowNuevoDocumento(false)} className="flex-1 py-2.5 border border-slate-300 text-slate-700 rounded-lg font-medium hover:bg-slate-50">Cancelar</button>
               <button onClick={handleGuardarDocumento} className="flex-1 py-2.5 bg-orange-500 text-white rounded-lg font-medium hover:bg-orange-600">Subir</button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Modal: Nueva Solicitud de Vestuario */}
+      {showNuevaSolicitudVestuario && (
+        <Modal title="Nueva Solicitud de Vestuario" onClose={() => setShowNuevaSolicitudVestuario(false)}>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Tipo de Prenda *</label>
+                <select 
+                  value={nuevaSolicitudVestuario.tipoPrenda}
+                  onChange={e => setNuevaSolicitudVestuario({...nuevaSolicitudVestuario, tipoPrenda: e.target.value})}
+                  className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
+                >
+                  <option value="">Seleccionar...</option>
+                  <option value="POLO">Polo</option>
+                  <option value="PANTALON">Pantalón</option>
+                  <option value="CHAQUETA">Chaqueta</option>
+                  <option value="BOTAS">Botas</option>
+                  <option value="CASCO">Casco</option>
+                  <option value="GUANTES">Guantes</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Talla *</label>
+                <select 
+                  value={nuevaSolicitudVestuario.talla}
+                  onChange={e => setNuevaSolicitudVestuario({...nuevaSolicitudVestuario, talla: e.target.value})}
+                  className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
+                >
+                  <option value="">Seleccionar...</option>
+                  <option value="XS">XS</option>
+                  <option value="S">S</option>
+                  <option value="M">M</option>
+                  <option value="L">L</option>
+                  <option value="XL">XL</option>
+                  <option value="XXL">XXL</option>
+                  <option value="XXXL">XXXL</option>
+                  {(nuevaSolicitudVestuario.tipoPrenda === 'BOTAS' || nuevaSolicitudVestuario.tipoPrenda === 'GUANTES') && (
+                    <>
+                      <option value="36">36</option>
+                      <option value="37">37</option>
+                      <option value="38">38</option>
+                      <option value="39">39</option>
+                      <option value="40">40</option>
+                      <option value="41">41</option>
+                      <option value="42">42</option>
+                      <option value="43">43</option>
+                      <option value="44">44</option>
+                      <option value="45">45</option>
+                      <option value="46">46</option>
+                    </>
+                  )}
+                </select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Motivo *</label>
+                <select 
+                  value={nuevaSolicitudVestuario.motivo}
+                  onChange={e => setNuevaSolicitudVestuario({...nuevaSolicitudVestuario, motivo: e.target.value})}
+                  className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
+                  disabled={!!nuevaSolicitudVestuario.asignacionAnteriorId}
+                >
+                  <option value="">Seleccionar...</option>
+                  <option value="NUEVO_INGRESO">Nuevo Ingreso</option>
+                  <option value="REPOSICION">Reposición</option>
+                  <option value="DETERIORO">Deterioro</option>
+                  <option value="PERDIDA">Pérdida</option>
+                  <option value="CAMBIO_TALLA">Cambio de Talla</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Cantidad</label>
+                <input 
+                  type="number" 
+                  min="1"
+                  value={nuevaSolicitudVestuario.cantidad}
+                  onChange={e => setNuevaSolicitudVestuario({...nuevaSolicitudVestuario, cantidad: parseInt(e.target.value) || 1})}
+                  className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Descripción / Observaciones</label>
+              <textarea 
+                value={nuevaSolicitudVestuario.descripcion}
+                onChange={e => setNuevaSolicitudVestuario({...nuevaSolicitudVestuario, descripcion: e.target.value})}
+                className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
+                rows={3}
+                placeholder="Explica el motivo de tu solicitud..."
+              />
+            </div>
+            <div className="flex gap-3 pt-2">
+              <button onClick={() => setShowNuevaSolicitudVestuario(false)} className="flex-1 py-2.5 border border-slate-300 text-slate-700 rounded-lg font-medium hover:bg-slate-50">Cancelar</button>
+              <button onClick={handleGuardarSolicitudVestuario} className="flex-1 py-2.5 bg-orange-500 text-white rounded-lg font-medium hover:bg-orange-600">Enviar Solicitud</button>
             </div>
           </div>
         </Modal>

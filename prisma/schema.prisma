@@ -278,6 +278,7 @@ model Articulo {
   nombre         String
   descripcion    String?
   stockActual    Int             @default(0) @map("stock_actual")
+  stockAsignado  Int             @default(0) @map("stock_asignado") 
   stockMinimo    Int             @default(0) @map("stock_minimo")
   unidad         String          @default("unidad")
   tieneCaducidad Boolean         @default(false) @map("tiene_caducidad")

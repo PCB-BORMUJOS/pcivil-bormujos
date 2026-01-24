@@ -54,6 +54,28 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ hidrantes, stats })
     }
 
+    // ===== ASIGNACIONES =====
+    if (tipo === 'asignaciones') {
+      const inventarioSlug = searchParams.get('inventario') || 'vestuario'
+      
+      const asignaciones = await prisma.asignacionVestuario.findMany({
+        include: {
+          usuario: {
+            select: {
+              id: true,
+              nombre: true,
+              apellidos: true,
+              numeroVoluntario: true,
+              email: true
+            }
+          }
+        },
+        orderBy: { fechaAsignacion: 'desc' }
+      })
+      
+      return NextResponse.json({ asignaciones })
+    }
+
     // ===== CATEGORÍA =====
     if (tipo === 'categoria') {
       const slug = searchParams.get('slug')
@@ -257,6 +279,66 @@ export async function POST(request: NextRequest) {
       })
 
       return NextResponse.json({ success: true, articulo })
+    }
+
+    // ===== ASIGNAR VESTUARIO =====
+    if (tipo === 'asignar-vestuario') {
+      const { usuarioId, articuloId, talla, cantidad, observaciones } = body
+      
+      if (!usuarioId || !articuloId || !talla) {
+        return NextResponse.json({ error: 'Usuario, artículo y talla son requeridos' }, { status: 400 })
+      }
+
+      // Obtener el artículo
+      const articulo = await prisma.articulo.findUnique({
+        where: { id: articuloId },
+        include: { familia: true }
+      })
+
+      if (!articulo) {
+        return NextResponse.json({ error: 'Artículo no encontrado' }, { status: 404 })
+      }
+
+      // Verificar stock disponible
+      const stockDisponible = articulo.stockActual - articulo.stockAsignado
+      if (stockDisponible < cantidad) {
+        return NextResponse.json({ 
+          error: `Stock insuficiente. Disponible: ${stockDisponible}` 
+        }, { status: 400 })
+      }
+
+      // Crear asignación
+      const asignacion = await prisma.asignacionVestuario.create({
+        data: {
+          usuarioId,
+          tipoPrenda: articulo.nombre,
+          talla,
+          cantidad: cantidad || 1,
+          observaciones,
+          estado: 'ASIGNADO'
+        },
+        include: {
+          usuario: {
+            select: {
+              nombre: true,
+              apellidos: true,
+              numeroVoluntario: true
+            }
+          }
+        }
+      })
+
+      // Actualizar stock asignado del artículo
+      await prisma.articulo.update({
+        where: { id: articuloId },
+        data: {
+          stockAsignado: {
+            increment: cantidad || 1
+          }
+        }
+      })
+
+      return NextResponse.json({ success: true, asignacion })
     }
 
     // ===== FAMILIA =====

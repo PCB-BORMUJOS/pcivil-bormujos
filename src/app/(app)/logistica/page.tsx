@@ -8,7 +8,7 @@ import {
   AlertCircle, CheckCircle, Clock, Box, ChevronDown, ChevronRight,
   Flame, Heart, Truck, Radio, GraduationCap, Shirt, Shield, Layers,
   ClipboardList, ShoppingCart, Check, FileText, Send, Ban,
-  History, User, Building, Receipt, Filter
+  History, User, Building, Receipt, Filter, Users
 } from 'lucide-react';
 
 // ============================================
@@ -206,7 +206,7 @@ export default function LogisticaPage() {
   // Estados principales
   const searchParams = useSearchParams();
   const tabInicial = searchParams.get('tab') as 'stock' | 'peticiones' | 'movimientos' || 'stock';
-  const [activeTab, setActiveTab] = useState<'stock' | 'peticiones' | 'movimientos'>(tabInicial);
+  const [activeTab, setActiveTab] = useState<'stock' | 'peticiones' | 'movimientos' | 'asignaciones'>(tabInicial);
   const [loading, setLoading] = useState(true);
   const [inventarioActual, setInventarioActual] = useState('all');
   const [showSelectorInventario, setShowSelectorInventario] = useState(false);
@@ -227,6 +227,16 @@ export default function LogisticaPage() {
   const [stats, setStats] = useState<Stats>({ totalArticulos: 0, stockBajo: 0, porCaducar: 0, caducados: 0 });
   const [statsPorArea, setStatsPorArea] = useState<AreaStats[]>([]);
   const [peticionStats, setPeticionStats] = useState<PeticionStats>({ total: 0, pendientes: 0, aprobadas: 0, enCompra: 0, recibidas: 0, rechazadas: 0 });
+  const [asignaciones, setAsignaciones] = useState<any[]>([]);
+  const [showAsignarModal, setShowAsignarModal] = useState(false);
+  const [asignacionData, setAsignacionData] = useState({
+    usuarioId: '',
+    articuloId: '',
+    talla: '',
+    cantidad: 1,
+    observaciones: ''
+  });
+  const [usuarios, setUsuarios] = useState<any[]>([]);
 
   // Modales
   const [showNuevoArticulo, setShowNuevoArticulo] = useState(false);
@@ -258,6 +268,7 @@ export default function LogisticaPage() {
   useEffect(() => {
     if (activeTab === 'peticiones') cargarPeticiones();
     if (activeTab === 'movimientos') cargarMovimientos();
+    if (activeTab === 'asignaciones') { cargarAsignaciones(); cargarUsuarios(); }
   }, [activeTab, filtroPeticiones]);
 
   // ============================================
@@ -311,6 +322,26 @@ export default function LogisticaPage() {
       console.error('Error cargando movimientos:', error);
     }
   };
+  
+  const cargarAsignaciones = async () => {
+    try {
+      const res = await fetch(`/api/logistica?tipo=asignaciones&inventario=${inventarioActual}`);
+      const data = await res.json();
+      setAsignaciones(data.asignaciones || []);
+    } catch (error) {
+      console.error('Error cargando asignaciones:', error);
+    }
+  };
+
+  const cargarUsuarios = async () => {
+  try {
+    const res = await fetch('/api/admin/personal');
+    const data = await res.json();
+    setUsuarios(data.voluntarios || []);
+  } catch (error) {
+    console.error('Error cargando usuarios:', error);
+  }
+};
 
   // ============================================
   // HANDLERS
@@ -330,7 +361,7 @@ export default function LogisticaPage() {
       const res = await fetch('/api/logistica', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(nuevoArticulo)
+        body: JSON.stringify({ tipo: 'articulo', ...nuevoArticulo })
       });
       if (res.ok) {
         setShowNuevoArticulo(false);
@@ -385,6 +416,38 @@ export default function LogisticaPage() {
       }
     } catch (error) {
       alert('Error al crear petición');
+    }
+  };
+
+  const handleAsignarVestuario = async () => {
+    if (!asignacionData.usuarioId || !asignacionData.articuloId || !asignacionData.talla) {
+      alert('Por favor completa todos los campos requeridos');
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/logistica', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tipo: 'asignar-vestuario',
+          ...asignacionData
+        })
+      });
+
+      if (res.ok) {
+        alert('✅ Vestuario asignado correctamente');
+        setShowAsignarModal(false);
+        setAsignacionData({ usuarioId: '', articuloId: '', talla: '', cantidad: 1, observaciones: '' });
+        cargarAsignaciones();
+        cargarDatos(); // Recargar para actualizar el stock
+      } else {
+        const data = await res.json();
+        alert('❌ Error: ' + (data.error || 'No se pudo asignar el vestuario'));
+      }
+    } catch (error) {
+      console.error('Error asignando vestuario:', error);
+      alert('❌ Error al asignar vestuario');
     }
   };
 
@@ -614,6 +677,7 @@ export default function LogisticaPage() {
               { id: 'stock', label: 'Stock', icon: Package },
               { id: 'peticiones', label: 'Peticiones', icon: ClipboardList, badge: peticionStats.pendientes },
               { id: 'movimientos', label: 'Movimientos', icon: ArrowUpDown },
+              { id: 'asignaciones', label: 'Asignaciones', icon: Users },
             ].map(tab => (
               <button
                 key={tab.id}
@@ -883,6 +947,73 @@ export default function LogisticaPage() {
                       <div className="text-right text-sm">
                         <p className="text-slate-600">{mov.usuario.nombre} {mov.usuario.apellidos}</p>
                         <p className="text-slate-400 text-xs">{formatearFechaHora(mov.createdAt)}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+
+          {/* ============================================ */}
+          {/* TAB: ASIGNACIONES */}
+          {/* ============================================ */}
+          {activeTab === 'asignaciones' && (
+            <>
+              <div className="flex justify-between items-center mb-6">
+                <div>
+                  <h3 className="font-bold text-slate-800">Vestuario Asignado</h3>
+                  <p className="text-sm text-slate-500">Gestión de asignaciones a voluntarios</p>
+                </div>
+                <button
+                  onClick={() => setShowAsignarModal(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors"
+                >
+                  <Plus size={18} />
+                  Asignar Vestuario
+                </button>
+              </div>
+
+              {asignaciones.length === 0 ? (
+                <div className="text-center py-12 text-slate-500">
+                  <Users className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                  <p>No hay asignaciones registradas</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {asignaciones.map((asig: any) => (
+                    <div key={asig.id} className="flex items-center gap-4 p-4 bg-white border border-slate-200 rounded-xl hover:shadow-sm transition-shadow">
+                      <div className="w-12 h-12 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center font-bold text-lg">
+                        {asig.usuario.nombre?.charAt(0)}{asig.usuario.apellidos?.charAt(0)}
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-1">
+                          <span className="font-bold text-slate-800">
+                            {asig.usuario.nombre} {asig.usuario.apellidos}
+                          </span>
+                          <span className="text-sm text-slate-500">
+                            {asig.usuario.numeroVoluntario}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-4 text-sm">
+                          <span className="text-slate-600">
+                            <span className="font-medium">{asig.tipoPrenda}</span> - Talla: {asig.talla}
+                          </span>
+                          <span className="text-slate-500">Cantidad: {asig.cantidad}</span>
+                          <span className="text-slate-400">
+                            {new Date(asig.fechaAsignacion).toLocaleDateString('es-ES')}
+                          </span>
+                        </div>
+                        {asig.observaciones && (
+                          <p className="text-xs text-slate-500 mt-1">{asig.observaciones}</p>
+                        )}
+                      </div>
+                      <div>
+                        <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                          asig.estado === 'ASIGNADO' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'
+                        }`}>
+                          {asig.estado}
+                        </span>
                       </div>
                     </div>
                   ))}
@@ -1170,6 +1301,114 @@ export default function LogisticaPage() {
                 }`}
               >
                 Confirmar
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+      {/* Modal: Asignar Vestuario */}
+      {showAsignarModal && (
+        <Modal title="Asignar Vestuario a Voluntario" onClose={() => setShowAsignarModal(false)} size="lg">
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">Seleccionar Voluntario *</label>
+              <select
+                value={asignacionData.usuarioId}
+                onChange={e => setAsignacionData({...asignacionData, usuarioId: e.target.value})}
+                className="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+              >
+                <option value="">Seleccionar voluntario...</option>
+                {usuarios.map(u => (
+                  <option key={u.id} value={u.id}>
+                    {u.nombre} {u.apellidos} - {u.numeroVoluntario}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">Artículo de Vestuario *</label>
+              <select
+                value={asignacionData.articuloId}
+                onChange={e => setAsignacionData({...asignacionData, articuloId: e.target.value})}
+                className="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+              >
+                <option value="">Seleccionar artículo...</option>
+                {articulos.map(art => (
+                  <option key={art.id} value={art.id}>
+                    {art.nombre} (Stock: {art.stockActual - art.stockAsignado})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Talla *</label>
+                <select
+                  value={asignacionData.talla}
+                  onChange={e => setAsignacionData({...asignacionData, talla: e.target.value})}
+                  className="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                >
+                  <option value="">Seleccionar...</option>
+                  <option value="XS">XS</option>
+                  <option value="S">S</option>
+                  <option value="M">M</option>
+                  <option value="L">L</option>
+                  <option value="XL">XL</option>
+                  <option value="XXL">XXL</option>
+                  <option value="XXXL">XXXL</option>
+                  <option value="36">36</option>
+                  <option value="37">37</option>
+                  <option value="38">38</option>
+                  <option value="39">39</option>
+                  <option value="40">40</option>
+                  <option value="41">41</option>
+                  <option value="42">42</option>
+                  <option value="43">43</option>
+                  <option value="44">44</option>
+                  <option value="45">45</option>
+                  <option value="46">46</option>
+                  <option value="47">47</option>
+                  <option value="48">48</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Cantidad *</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={asignacionData.cantidad}
+                  onChange={e => setAsignacionData({...asignacionData, cantidad: parseInt(e.target.value) || 1})}
+                  className="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">Observaciones</label>
+              <textarea
+                value={asignacionData.observaciones}
+                onChange={e => setAsignacionData({...asignacionData, observaciones: e.target.value})}
+                className="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                rows={3}
+                placeholder="Notas adicionales sobre la asignación..."
+              />
+            </div>
+
+            <div className="flex gap-3 pt-4">
+              <button
+                onClick={() => setShowAsignarModal(false)}
+                className="flex-1 px-4 py-2.5 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 font-medium"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleAsignarVestuario}
+                className="flex-1 px-4 py-2.5 bg-purple-500 text-white rounded-lg hover:bg-purple-600 font-medium"
+              >
+                Asignar
               </button>
             </div>
           </div>

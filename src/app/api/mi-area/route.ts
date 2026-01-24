@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { prisma } from '@/lib/db'
+import bcrypt from 'bcryptjs'
 
 export async function GET(request: NextRequest) {
   try {
@@ -168,6 +169,35 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json({ success: true, solicitud })
     }
+
+    if (tipo === 'cambiar-password') {
+  const { passwordActual, passwordNuevo } = body
+
+  if (!passwordActual || !passwordNuevo) {
+    return NextResponse.json({ error: 'Faltan campos requeridos' }, { status: 400 })
+  }
+
+  if (passwordNuevo.length < 6) {
+    return NextResponse.json({ error: 'La contraseña debe tener al menos 6 caracteres' }, { status: 400 })
+  }
+
+  // Verificar contraseña actual
+  const passwordValida = await bcrypt.compare(passwordActual, usuario.password)
+  if (!passwordValida) {
+    return NextResponse.json({ error: 'Contraseña actual incorrecta' }, { status: 400 })
+  }
+
+  // Hash de la nueva contraseña
+  const hashedPassword = await bcrypt.hash(passwordNuevo, 10)
+
+  // Actualizar contraseña
+  await prisma.usuario.update({
+    where: { id: usuario.id },
+    data: { password: hashedPassword }
+  })
+
+  return NextResponse.json({ success: true })
+}
 
     return NextResponse.json({ error: 'Tipo de operación no válido' }, { status: 400 })
   } catch (error) {
