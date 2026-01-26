@@ -674,11 +674,11 @@ export default function LogisticaPage() {
         <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50/50 px-4">
           <div className="flex">
             {[
-              { id: 'stock', label: 'Stock', icon: Package },
-              { id: 'peticiones', label: 'Peticiones', icon: ClipboardList, badge: peticionStats.pendientes },
-              { id: 'movimientos', label: 'Movimientos', icon: ArrowUpDown },
-              { id: 'asignaciones', label: 'Asignaciones', icon: Users },
-            ].map(tab => (
+             { id: 'stock', label: 'Stock', icon: Package },
+             { id: 'peticiones', label: 'Peticiones', icon: ClipboardList, badge: peticionStats.pendientes },
+             { id: 'movimientos', label: 'Movimientos', icon: ArrowUpDown },
+             ...(inventarioActual === 'vestuario' ? [{ id: 'asignaciones', label: 'Asignaciones', icon: Users }] : []),
+             ].map(tab => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}

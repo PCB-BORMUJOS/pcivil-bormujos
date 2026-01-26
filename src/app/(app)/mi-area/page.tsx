@@ -7,7 +7,7 @@ import {
   User, GraduationCap, Clock, FileText, Bell, Save, Edit, Upload, 
   Calendar, Award, CheckCircle, XCircle, AlertTriangle, Plus,
   Download, Eye, Trash2, X, ChevronRight, MapPin, Phone, Mail,
-  Shield,  Settings, Lock, Send, FileCheck, Car, CreditCard, Heart
+  Shield,  Settings, Lock, Send, FileCheck, Car, CreditCard, Heart, Wallet
 } from 'lucide-react';
 
 // ============================================
@@ -174,7 +174,7 @@ function Modal({ title, children, onClose, size = 'md' }: {
 // ============================================
 export default function MiAreaPage() {
   const { data: session } = useSession();
-  const [activeTab, setActiveTab] = useState<'datos' | 'formacion' | 'actividad' | 'documentos' | 'vestuario' | 'notificaciones' | 'configuracion'>('datos');
+  const [activeTab, setActiveTab] = useState<'datos' | 'formacion' | 'actividad' | 'documentos' | 'vestuario' | 'dietas' | 'notificaciones' | 'configuracion'>('datos');
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [solicitandoPermiso, setSolicitandoPermiso] = useState(false);
@@ -205,7 +205,10 @@ const [cambioPassword, setCambioPassword] = useState({
   passwordNuevo: '',
   passwordConfirmar: ''
 });
-  
+  const [dietas, setDietas] = useState<any[]>([]);
+  const [mesSeleccionado, setMesSeleccionado] = useState('');
+  const [totalesPorMes, setTotalesPorMes] = useState<any>({});
+
   // Estados modales
   const [showNuevaFormacion, setShowNuevaFormacion] = useState(false);
   const [showNuevoDocumento, setShowNuevoDocumento] = useState(false);
@@ -225,6 +228,12 @@ const [cambioPassword, setCambioPassword] = useState({
   useEffect(() => {
     cargarDatos();
   }, []);
+
+  useEffect(() => {
+  if (activeTab === 'dietas') {
+    cargarDietas();
+  }
+}, [activeTab]);
 
   const cargarDatos = async () => {
     setLoading(true);
@@ -368,7 +377,7 @@ const [cambioPassword, setCambioPassword] = useState({
     }
   };
 
-  const handleCambiarPassword = async () => {
+const handleCambiarPassword = async () => {
   if (!cambioPassword.passwordActual || !cambioPassword.passwordNuevo || !cambioPassword.passwordConfirmar) {
     alert('Todos los campos son requeridos');
     return;
@@ -391,7 +400,6 @@ const [cambioPassword, setCambioPassword] = useState({
         passwordNuevo: cambioPassword.passwordNuevo
       })
     });
-
     if (res.ok) {
       alert('✅ Contraseña cambiada correctamente');
       setCambioPassword({ passwordActual: '', passwordNuevo: '', passwordConfirmar: '' });
@@ -405,25 +413,40 @@ const [cambioPassword, setCambioPassword] = useState({
   }
 };
 
-  const getEstadoColor = (estado: string) => {
-    switch (estado) {
-      case 'vigente': return 'bg-green-100 text-green-700';
-      case 'por_vencer': return 'bg-yellow-100 text-yellow-700';
-      case 'vencido': return 'bg-red-100 text-red-700';
-      default: return 'bg-slate-100 text-slate-700';
+const cargarDietas = async (mes?: string) => {
+  try {
+    const url = mes ? `/api/mi-area?tipo=dietas&mes=${mes}` : '/api/mi-area?tipo=dietas';
+    const res = await fetch(url);
+    if (res.ok) {
+      const data = await res.json();
+      setDietas(data.dietas || []);
+      setTotalesPorMes(data.totalesPorMes || {});
+      setMesSeleccionado(data.mesSeleccionado || '');
     }
-  };
+  } catch (error) {
+    console.error('Error cargando dietas:', error);
+  }
+};
 
-  const getTipoActividadColor = (tipo: string) => {
-    switch (tipo) {
-      case 'servicio': return 'bg-blue-500';
-      case 'formacion': return 'bg-purple-500';
-      case 'evento': return 'bg-orange-500';
-      case 'reunion': return 'bg-slate-500';
-      default: return 'bg-slate-400';
-    }
-  };
+const getEstadoColor = (estado: string) => {
+  switch (estado) {
+    case 'vigente': return 'bg-green-100 text-green-700';
+    case 'por_vencer': return 'bg-yellow-100 text-yellow-700';
+    case 'vencido': return 'bg-red-100 text-red-700';
+    default: return 'bg-slate-100 text-slate-700';
+  }
+};
 
+const getTipoActividadColor = (tipo: string) => {
+  switch (tipo) {
+    case 'servicio': return 'bg-blue-500';
+    case 'formacion': return 'bg-purple-500';
+    case 'evento': return 'bg-orange-500';
+    case 'reunion': return 'bg-slate-500';
+    default: return 'bg-slate-400';
+  }
+};
+  
   // ============================================
   // RENDER
   // ============================================
@@ -463,6 +486,7 @@ const [cambioPassword, setCambioPassword] = useState({
             { id: 'actividad', label: 'Historial de Actividad', icon: Clock },
             { id: 'documentos', label: 'Documentos', icon: FileText },
             { id: 'vestuario', label: 'Vestuario', icon: Shield },
+            { id: 'dietas', label: 'Dietas', icon: Wallet },
             { id: 'notificaciones', label: 'Notificaciones', icon: Bell },
             { id: 'configuracion', label: 'Configuración', icon: Settings },
           ].map(tab => (
@@ -1136,78 +1160,84 @@ const [cambioPassword, setCambioPassword] = useState({
                           <p>No tienes prendas asignadas</p>
                         </div>
                       ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                          {asignacionesVestuario.map(a => (
-                            <div key={a.id} className="bg-white border border-slate-200 rounded-xl p-4 hover:shadow-md transition-shadow">
-                              <div className="flex items-start justify-between mb-3">
-                                <div className="flex items-center gap-3">
-                                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                                    a.estado === 'ASIGNADO' ? 'bg-green-100 text-green-600' : 'bg-slate-100 text-slate-400'
-                                  }`}>
-                                    <Shield size={24}/>
-                                  </div>
-                                  <div>
-                                    <h4 className="font-bold text-slate-800">{a.tipoPrenda}</h4>
-                                    <p className="text-sm text-slate-600">Talla: {a.talla}</p>
-                                  </div>
-                                </div>
-                                <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
-                                  a.estado === 'ASIGNADO' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'
-                                }`}>
-                                  {a.estado === 'ASIGNADO' ? 'Activo' : 'Baja'}
-                                </span>
-                              </div>
-                              
-                              <div className="space-y-2 text-sm">
-                                <div className="flex justify-between">
-                                  <span className="text-slate-500">Cantidad:</span>
-                                  <span className="font-medium text-slate-800">{a.cantidad}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span className="text-slate-500">Asignado:</span>
-                                  <span className="font-medium text-slate-800">
-                                    {new Date(a.fechaAsignacion).toLocaleDateString('es-ES')}
-                                  </span>
-                                </div>
-                                {a.fechaBaja && (
-                                  <div className="flex justify-between">
-                                    <span className="text-slate-500">Fecha baja:</span>
-                                    <span className="font-medium text-red-600">
-                                      {new Date(a.fechaBaja).toLocaleDateString('es-ES')}
-                                    </span>
-                                  </div>
-                                )}
-                              </div>
-
-                              {a.observaciones && (
-                                <div className="mt-3 pt-3 border-t border-slate-100">
-                                  <p className="text-xs text-slate-500">{a.observaciones}</p>
-                                </div>
-                              )}
-
-                              {a.estado === 'ASIGNADO' && (
-                                <button
-                                  onClick={() => {
-                                    setNuevaSolicitudVestuario({
-                                      tipoPrenda: a.tipoPrenda,
-                                      talla: a.talla,
-                                      cantidad: 1,
-                                      motivo: 'REPOSICION',
-                                      descripcion: '',
-                                      asignacionAnteriorId: a.id
-                                    });
-                                    setShowNuevaSolicitudVestuario(true);
-                                  }}
-                                  className="w-full mt-3 py-2 text-sm text-orange-600 hover:bg-orange-50 rounded-lg font-medium transition-colors"
-                                >
-                                  Solicitar Reposición
-                                </button>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
+                        <div className="overflow-x-auto">
+  <table className="w-full">
+    <thead>
+      <tr className="bg-slate-50 border-b border-slate-200">
+        <th className="text-left py-3 px-4 text-xs font-bold text-slate-500 uppercase">Prenda</th>
+        <th className="text-center py-3 px-4 text-xs font-bold text-slate-500 uppercase">Talla</th>
+        <th className="text-center py-3 px-4 text-xs font-bold text-slate-500 uppercase">Cantidad</th>
+        <th className="text-left py-3 px-4 text-xs font-bold text-slate-500 uppercase">Fecha Asignación</th>
+        <th className="text-center py-3 px-4 text-xs font-bold text-slate-500 uppercase">Estado</th>
+        <th className="text-right py-3 px-4 text-xs font-bold text-slate-500 uppercase">Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      {asignacionesVestuario.map(a => (
+        <tr key={a.id} className="border-b border-slate-100 hover:bg-slate-50/50">
+          <td className="py-3 px-4">
+            <div className="flex items-center gap-3">
+              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                a.estado === 'ASIGNADO' ? 'bg-green-100 text-green-600' : 'bg-slate-100 text-slate-400'
+              }`}>
+                <Shield size={20}/>
+              </div>
+              <div>
+                <p className="font-medium text-slate-800">{a.tipoPrenda}</p>
+                {a.observaciones && <p className="text-xs text-slate-500">{a.observaciones}</p>}
+              </div>
+            </div>
+          </td>
+          <td className="py-3 px-4 text-center">
+            <span className="font-medium text-slate-800">{a.talla}</span>
+          </td>
+          <td className="py-3 px-4 text-center">
+            <span className="text-lg font-bold text-slate-800">{a.cantidad}</span>
+          </td>
+          <td className="py-3 px-4">
+            <span className="text-sm text-slate-600">
+              {new Date(a.fechaAsignacion).toLocaleDateString('es-ES')}
+            </span>
+            {a.fechaBaja && (
+              <p className="text-xs text-red-600 mt-1">
+                Baja: {new Date(a.fechaBaja).toLocaleDateString('es-ES')}
+              </p>
+            )}
+          </td>
+          <td className="py-3 px-4 text-center">
+            <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+              a.estado === 'ASIGNADO' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'
+            }`}>
+              {a.estado === 'ASIGNADO' ? 'Activo' : 'Baja'}
+            </span>
+          </td>
+          <td className="py-3 px-4 text-right">
+            {a.estado === 'ASIGNADO' && (
+              <button
+                onClick={() => {
+                  setNuevaSolicitudVestuario({
+                    tipoPrenda: a.tipoPrenda,
+                    talla: a.talla,
+                    cantidad: 1,
+                    motivo: 'REPOSICION',
+                    descripcion: '',
+                    asignacionAnteriorId: a.id
+                  });
+                  setShowNuevaSolicitudVestuario(true);
+                }}
+                className="px-4 py-2 text-sm bg-orange-500 text-white rounded-lg hover:bg-orange-600 font-medium transition-colors"
+              >
+                Solicitar Reposición
+              </button>
+            )}
+          </td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+</div>
+                  )}
+                  </div>
                   )}
 
                   {/* Solicitudes */}
@@ -1288,7 +1318,6 @@ const [cambioPassword, setCambioPassword] = useState({
       <h2 className="text-lg font-bold text-slate-800">Configuración</h2>
       <p className="text-sm text-slate-500">Gestiona tu cuenta y preferencias</p>
     </div>
-
     {/* Cambiar Contraseña */}
     <div className="bg-white border border-slate-200 rounded-xl p-6 max-w-2xl">
       <div className="flex items-center gap-3 mb-4 pb-4 border-b border-slate-200">
@@ -1300,7 +1329,6 @@ const [cambioPassword, setCambioPassword] = useState({
           <p className="text-sm text-slate-500">Actualiza tu contraseña de acceso</p>
         </div>
       </div>
-
       <div className="space-y-4">
         <div>
           <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Contraseña Actual *</label>
@@ -1312,7 +1340,6 @@ const [cambioPassword, setCambioPassword] = useState({
             placeholder="Introduce tu contraseña actual"
           />
         </div>
-
         <div>
           <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Nueva Contraseña *</label>
           <input 
@@ -1323,7 +1350,6 @@ const [cambioPassword, setCambioPassword] = useState({
             placeholder="Mínimo 6 caracteres"
           />
         </div>
-
         <div>
           <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Confirmar Nueva Contraseña *</label>
           <input 
@@ -1334,7 +1360,6 @@ const [cambioPassword, setCambioPassword] = useState({
             placeholder="Repite la nueva contraseña"
           />
         </div>
-
         <button
           onClick={handleCambiarPassword}
           className="w-full py-2.5 bg-orange-500 text-white rounded-lg font-medium hover:bg-orange-600 transition-colors"
@@ -1343,6 +1368,123 @@ const [cambioPassword, setCambioPassword] = useState({
         </button>
       </div>
     </div>
+  </div>
+)}
+
+{activeTab === 'dietas' && (
+  <div>
+    <div className="flex justify-between items-center mb-6">
+      <div>
+        <h2 className="text-lg font-bold text-slate-800">Mis Dietas</h2>
+        <p className="text-sm text-slate-500">Control de dietas y kilometraje</p>
+      </div>
+      <select
+        value={mesSeleccionado}
+        onChange={(e) => cargarDietas(e.target.value)}
+        className="border border-slate-200 rounded-lg px-4 py-2 text-sm"
+      >
+        <option value="">Todos los meses</option>
+        {Object.keys(totalesPorMes).sort().reverse().map(mes => (
+          <option key={mes} value={mes}>{mes}</option>
+        ))}
+      </select>
+    </div>
+
+    {/* Resumen mensual */}
+    {mesSeleccionado && totalesPorMes[mesSeleccionado] && (
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div className="bg-blue-50 rounded-xl p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <Wallet className="text-blue-600" size={20} />
+            <span className="text-xs font-bold text-blue-600 uppercase">Servicios</span>
+          </div>
+          <p className="text-2xl font-bold text-blue-700">{totalesPorMes[mesSeleccionado].registros}</p>
+        </div>
+        <div className="bg-green-50 rounded-xl p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <CreditCard className="text-green-600" size={20} />
+            <span className="text-xs font-bold text-green-600 uppercase">Dietas</span>
+          </div>
+          <p className="text-2xl font-bold text-green-700">{totalesPorMes[mesSeleccionado].totalDietas.toFixed(2)} €</p>
+        </div>
+        <div className="bg-orange-50 rounded-xl p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <Car className="text-orange-600" size={20} />
+            <span className="text-xs font-bold text-orange-600 uppercase">Kilómetros</span>
+          </div>
+          <p className="text-2xl font-bold text-orange-700">{totalesPorMes[mesSeleccionado].totalKm.toFixed(2)} km</p>
+        </div>
+        <div className="bg-purple-50 rounded-xl p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <Wallet className="text-purple-600" size={20} />
+            <span className="text-xs font-bold text-purple-600 uppercase">Total</span>
+          </div>
+          <p className="text-2xl font-bold text-purple-700">{totalesPorMes[mesSeleccionado].total.toFixed(2)} €</p>
+        </div>
+      </div>
+    )}
+
+    {/* Tabla de dietas */}
+    {dietas.length === 0 ? (
+      <div className="text-center py-12 text-slate-500">
+        <Wallet className="w-12 h-12 mx-auto mb-3 opacity-30" />
+        <p>No hay dietas registradas</p>
+      </div>
+    ) : (
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead>
+            <tr className="bg-slate-50 border-b border-slate-200">
+              <th className="text-left py-3 px-4 text-xs font-bold text-slate-500 uppercase">Fecha</th>
+              <th className="text-left py-3 px-4 text-xs font-bold text-slate-500 uppercase">Turno</th>
+              <th className="text-center py-3 px-4 text-xs font-bold text-slate-500 uppercase">Horas</th>
+              <th className="text-right py-3 px-4 text-xs font-bold text-slate-500 uppercase">Dietas</th>
+              <th className="text-right py-3 px-4 text-xs font-bold text-slate-500 uppercase">Km</th>
+              <th className="text-right py-3 px-4 text-xs font-bold text-slate-500 uppercase">Total</th>
+              <th className="text-center py-3 px-4 text-xs font-bold text-slate-500 uppercase">Estado</th>
+            </tr>
+          </thead>
+          <tbody>
+            {dietas.map(dieta => (
+              <tr key={dieta.id} className="border-b border-slate-100 hover:bg-slate-50/50">
+                <td className="py-3 px-4">
+                  <span className="text-sm text-slate-800">
+                    {new Date(dieta.fecha).toLocaleDateString('es-ES', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })}
+                  </span>
+                </td>
+                <td className="py-3 px-4">
+                  <span className="text-sm font-medium text-slate-700">{dieta.turno}</span>
+                </td>
+                <td className="py-3 px-4 text-center">
+                  <span className="text-sm text-slate-600">{Number(dieta.horasTrabajadas).toFixed(2)} h</span>
+                </td>
+                <td className="py-3 px-4 text-right">
+                  <span className="text-sm font-medium text-green-700">{Number(dieta.subtotalDietas).toFixed(2)} €</span>
+                </td>
+                <td className="py-3 px-4 text-right">
+                  <div className="text-sm">
+                    <span className="text-slate-600">{Number(dieta.kilometros).toFixed(2)} km</span>
+                    <p className="text-xs font-medium text-orange-600">{Number(dieta.subtotalKm).toFixed(2)} €</p>
+                  </div>
+                </td>
+                <td className="py-3 px-4 text-right">
+                  <span className="text-base font-bold text-purple-700">{Number(dieta.totalDieta).toFixed(2)} €</span>
+                </td>
+                <td className="py-3 px-4 text-center">
+                  <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                    dieta.estado === 'pagado' ? 'bg-green-100 text-green-700' :
+                    dieta.estado === 'aprobado' ? 'bg-blue-100 text-blue-700' :
+                    'bg-yellow-100 text-yellow-700'
+                  }`}>
+                    {dieta.estado}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )}
   </div>
 )}
 
