@@ -710,7 +710,8 @@ model Edificio {
   direccion   String?
   responsable String?
   telefono    String?
-  equiposECI  EquipoECI[]
+  equiposECI      EquipoECI[]
+  deas              DEA[]
   createdAt   DateTime    @default(now()) @map("created_at")
   updatedAt   DateTime    @updatedAt @map("updated_at")
 
@@ -811,4 +812,28 @@ model SolicitudVestuario {
   @@index([estado])
   @@index([fechaSolicitud])
   @@map("solicitudes_vestuario")
+}
+
+model DEA {
+  id                String    @id @default(cuid())
+  codigo            String    @unique
+  tipo              String    // automatico, semiautomatico
+  marca             String?
+  modelo            String?
+  numeroSerie       String?   @map("numero_serie")
+  ubicacion         String
+  edificioId        String?   @map("edificio_id")
+  edificio          Edificio? @relation(fields: [edificioId], references: [id])
+  latitud           Float?
+  longitud          Float?
+  fechaInstalacion  DateTime? @map("fecha_instalacion") @db.Date
+  fechaRevision     DateTime? @map("fecha_revision") @db.Date
+  proximaRevision   DateTime? @map("proxima_revision") @db.Date
+  estado            String    @default("operativo") // operativo, revision_pendiente, fuera_servicio
+  accesible24h      Boolean   @default(true) @map("accesible_24h")
+  observaciones     String?
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  @@map("deas")
 }
