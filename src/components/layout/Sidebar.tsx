@@ -34,7 +34,7 @@ const navigation: NavItem[] = [
   { name: 'Mi Área', href: '/mi-area', icon: User },
   { name: 'Logística', href: '/logistica', icon: Package },
   { name: 'Incendios', href: '/incendios', icon: Flame },
-  { name: 'Socorrismo', href: '/inventario/socorrismo', icon: Heart },
+  { name: 'Socorrismo', href: '/socorrismo', icon: Heart },
   { name: 'Vehículos', href: '/vehiculos', icon: Truck },
   { name: 'Transmisiones', href: '/transmisiones', icon: Radio },
   { name: 'PMA', href: '/pma', icon: AlertTriangle },

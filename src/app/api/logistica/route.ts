@@ -54,6 +54,19 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ hidrantes, stats })
     }
 
+    // ===== DEAS =====
+    if (tipo === 'deas') {
+      const deas = await prisma.dEA.findMany({
+        orderBy: { codigo: 'asc' }
+      })
+      const stats = {
+        total: deas.length,
+        operativos: deas.filter(d => d.estado === 'operativo').length,
+        revisionPendiente: deas.filter(d => d.estado === 'revision_pendiente').length
+      }
+      return NextResponse.json({ deas, stats })
+    }
+
     // ===== ASIGNACIONES =====
     if (tipo === 'asignaciones') {
       const inventarioSlug = searchParams.get('inventario') || 'vestuario'
@@ -344,6 +357,7 @@ export async function POST(request: NextRequest) {
     // ===== FAMILIA =====
     if (tipo === 'familia') {
       const { nombre, categoriaId } = body
+
       if (!nombre || !categoriaId) {
         return NextResponse.json({ error: 'Nombre y categoría son requeridos' }, { status: 400 })
       }
@@ -361,6 +375,7 @@ export async function POST(request: NextRequest) {
     // ===== EDIFICIO =====
     if (tipo === 'edificio') {
       const { nombre, direccion, responsable, telefono } = body
+
       if (!nombre) {
         return NextResponse.json({ error: 'Nombre es requerido' }, { status: 400 })
       }
@@ -375,6 +390,7 @@ export async function POST(request: NextRequest) {
     // ===== EQUIPO ECI =====
     if (tipo === 'equipo-eci') {
       const { edificioId, tipoEquipo, subtipo, ubicacion, numeroSerie, estado, observaciones } = body
+
       if (!edificioId || !tipoEquipo || !ubicacion) {
         return NextResponse.json({ error: 'Edificio, tipo y ubicación son requeridos' }, { status: 400 })
       }
@@ -398,6 +414,7 @@ export async function POST(request: NextRequest) {
     // ===== HIDRANTE =====
     if (tipo === 'hidrante') {
       const { codigo, tipo, ubicacion, latitud, longitud, presion, caudal, estado } = body
+
       if (!codigo || !tipo || !ubicacion) {
         return NextResponse.json({ error: 'Código, tipo y ubicación son requeridos' }, { status: 400 })
       }
@@ -416,6 +433,32 @@ export async function POST(request: NextRequest) {
       })
 
       return NextResponse.json({ success: true, hidrante })
+    }
+
+    // ===== DEA =====
+    if (tipo === 'dea') {
+      const { codigo, tipo: tipoDea, marca, modelo, numeroSerie, ubicacion, latitud, longitud, estado, accesible24h } = body
+      
+      if (!codigo || !tipoDea || !ubicacion) {
+        return NextResponse.json({ error: 'Código, tipo y ubicación son requeridos' }, { status: 400 })
+      }
+
+      const dea = await prisma.dEA.create({
+        data: {
+          codigo,
+          tipo: tipoDea,
+          marca,
+          modelo,
+          numeroSerie,
+          ubicacion,
+          latitud: latitud ? parseFloat(latitud) : null,
+          longitud: longitud ? parseFloat(longitud) : null,
+          estado: estado || 'operativo',
+          accesible24h: accesible24h === true
+        }
+      })
+
+      return NextResponse.json({ success: true, dea })
     }
 
     // ===== PETICIÓN =====
@@ -583,6 +626,32 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ success: true, hidrante })
     }
 
+    // ===== DEA =====
+    if (tipo === 'dea') {
+      const { codigo, tipo: tipoDea, marca, modelo, numeroSerie, ubicacion, latitud, longitud, estado, accesible24h } = body
+      
+      if (!codigo || !tipoDea || !ubicacion) {
+        return NextResponse.json({ error: 'Código, tipo y ubicación son requeridos' }, { status: 400 })
+      }
+
+      const dea = await prisma.dEA.update({ where: { id },
+        data: {
+          codigo,
+          tipo: tipoDea,
+          marca,
+          modelo,
+          numeroSerie,
+          ubicacion,
+          latitud: latitud ? parseFloat(latitud) : null,
+          longitud: longitud ? parseFloat(longitud) : null,
+          estado: estado || 'operativo',
+          accesible24h: accesible24h === true
+        }
+      })
+
+      return NextResponse.json({ success: true, dea })
+    }
+
     return NextResponse.json({ error: 'Tipo no válido' }, { status: 400 })
   } catch (error) {
     console.error('Error en PUT /api/logistica:', error)
@@ -655,6 +724,12 @@ export async function DELETE(request: NextRequest) {
     // ===== HIDRANTE =====
     if (tipo === 'hidrante') {
       await prisma.hidrante.delete({ where: { id } })
+      return NextResponse.json({ success: true })
+    }
+
+    // ===== DEA =====
+    if (tipo === 'dea') {
+      await prisma.dEA.delete({ where: { id } })
       return NextResponse.json({ success: true })
     }
 
