@@ -62,6 +62,9 @@ interface DEA {
   longitud?: number
   estado: string
   accesible24h: boolean
+  caducidadBateria?: string
+  caducidadParches?: string
+  caducidadPilas?: string
 }
 
 interface Peticion {
@@ -242,7 +245,7 @@ export default function SocorrismoPage() {
   // Posición del mapa (Bormujos)
   const centerPosition: [number, number] = [37.3710, -6.0710]
 
-  // Filtrar artículos
+   // Filtrar artículos
   const articulosFiltrados = articulos.filter(a => {
     const matchSearch = searchTerm === '' || 
       a.nombre.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -574,7 +577,7 @@ export default function SocorrismoPage() {
                   <MapContainer 
                    center={centerPosition} 
                    zoom={15} 
-                   style={{ height: '100%', width: '100%' }} 
+                   style={{ height: '100%', width: '100%' }}
                    key={`deas-map-${deas.length}`}
                   >
                     <TileLayer
@@ -1045,219 +1048,263 @@ export default function SocorrismoPage() {
       )}
 
       {/* Modal Nuevo DEA */}
-      {showNuevoDEA && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60" onClick={() => setShowNuevoDEA(false)}>
-          <div className="bg-white rounded-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
-            <div className="bg-cyan-600 p-5 text-white flex justify-between items-center">
-              <h2 className="text-xl font-bold">Nuevo DEA</h2>
-              <button onClick={() => setShowNuevoDEA(false)}>
-                <X size={24} />
-              </button>
-            </div>
-            <form onSubmit={async (e) => {
-              e.preventDefault()
-              const form = e.target as HTMLFormElement
-              const latitudValue = (form.elements.namedItem('latitud') as HTMLInputElement).value
-              const longitudValue = (form.elements.namedItem('longitud') as HTMLInputElement).value
-              
-              const formData = {
-                codigo: (form.elements.namedItem('codigo') as HTMLInputElement).value,
-                tipoDea: (form.elements.namedItem('tipoDea') as HTMLSelectElement).value,
-                marca: (form.elements.namedItem('marca') as HTMLInputElement).value,
-                modelo: (form.elements.namedItem('modelo') as HTMLInputElement).value,
-                ubicacion: (form.elements.namedItem('ubicacion') as HTMLInputElement).value,
-                latitud: latitudValue ? parseFloat(latitudValue) : null,
-                longitud: longitudValue ? parseFloat(longitudValue) : null,
-                estado: (form.elements.namedItem('estado') as HTMLSelectElement).value,
-                accesible24h: (form.elements.namedItem('accesible24h') as HTMLInputElement).checked
-              }
-              try {
-                const res = await fetch('/api/logistica', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ tipo: 'dea', codigo: formData.codigo, tipoDea: formData.tipoDea, marca: formData.marca, modelo: formData.modelo, ubicacion: formData.ubicacion, latitud: formData.latitud, longitud: formData.longitud, estado: formData.estado, accesible24h: formData.accesible24h })
-                })
-                if (res.ok) {
-                  await cargarDatos()
-                  setShowNuevoDEA(false)
-                  form.reset()
-                } else {
-                  const error = await res.json()
-                  alert(`Error: ${error.error || 'No se pudo crear el DEA'}`)
-                }
-              } catch (error) {
-                console.error('Error:', error)
-                alert('Error al crear DEA')
-              }
-            }} className="p-6 overflow-y-auto space-y-5">
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Código *</label>
-                  <input name="codigo" type="text" className="w-full border border-slate-300 rounded-lg p-2.5" placeholder="DEA-001" required />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Tipo *</label>
-                  <select name="tipoDea" className="w-full border border-slate-300 rounded-lg p-2.5" required>
-                    <option value="automatico">Automático</option>
-                    <option value="semiautomatico">Semiautomático</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Estado</label>
-                  <select name="estado" className="w-full border border-slate-300 rounded-lg p-2.5">
-                    <option value="operativo">Operativo</option>
-                    <option value="revision_pendiente">Revisión Pendiente</option>
-                    <option value="fuera_servicio">Fuera de Servicio</option>
-                  </select>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Marca</label>
-                  <input name="marca" type="text" className="w-full border border-slate-300 rounded-lg p-2.5" placeholder="Ej: Philips" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Modelo</label>
-                  <input name="modelo" type="text" className="w-full border border-slate-300 rounded-lg p-2.5" placeholder="Ej: HeartStart HS1" />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Ubicación *</label>
-                <input name="ubicacion" type="text" className="w-full border border-slate-300 rounded-lg p-2.5" placeholder="Calle, número..." required />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Latitud</label>
-                  <input name="latitud" type="text" className="w-full border border-slate-300 rounded-lg p-2.5" placeholder="37.371234" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Longitud</label>
-                  <input name="longitud" type="text" className="w-full border border-slate-300 rounded-lg p-2.5" placeholder="-6.072000" />
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <input name="accesible24h" type="checkbox" id="accesible24h" defaultChecked className="w-4 h-4" />
-                <label htmlFor="accesible24h" className="text-sm font-medium text-slate-700">Accesible 24 horas</label>
-              </div>
-              <div className="flex justify-end gap-3 pt-4 border-t">
-                <button type="button" onClick={() => setShowNuevoDEA(false)} className="px-5 py-2.5 text-slate-600 hover:bg-slate-100 rounded-lg font-medium">
-                  Cancelar
-                </button>
-                <button type="submit" className="px-5 py-2.5 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 font-medium">
-                  Crear DEA
-                </button>
-              </div>
-            </form>
+{showNuevoDEA && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60" onClick={() => setShowNuevoDEA(false)}>
+    <div className="bg-white rounded-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+      <div className="bg-cyan-600 p-5 text-white flex justify-between items-center">
+        <h2 className="text-xl font-bold">Nuevo DEA</h2>
+        <button onClick={() => setShowNuevoDEA(false)}>
+          <X size={24} />
+        </button>
+      </div>
+      <form onSubmit={async (e) => {
+        e.preventDefault()
+        const form = e.target as HTMLFormElement
+        const latitudValue = (form.elements.namedItem('latitud') as HTMLInputElement).value
+        const longitudValue = (form.elements.namedItem('longitud') as HTMLInputElement).value
+        
+        const formData = {
+          codigo: (form.elements.namedItem('codigo') as HTMLInputElement).value,
+          tipoDea: (form.elements.namedItem('tipoDea') as HTMLSelectElement).value,
+          marca: (form.elements.namedItem('marca') as HTMLInputElement).value,
+          modelo: (form.elements.namedItem('modelo') as HTMLInputElement).value,
+          numeroSerie: (form.elements.namedItem('numeroSerie') as HTMLInputElement).value,
+          ubicacion: (form.elements.namedItem('ubicacion') as HTMLInputElement).value,
+          latitud: latitudValue ? parseFloat(latitudValue) : null,
+          longitud: longitudValue ? parseFloat(longitudValue) : null,
+          estado: (form.elements.namedItem('estado') as HTMLSelectElement).value,
+          accesible24h: (form.elements.namedItem('accesible24h') as HTMLInputElement).checked,
+          caducidadBateria: (form.elements.namedItem('caducidadBateria') as HTMLInputElement).value || null,
+          caducidadParches: (form.elements.namedItem('caducidadParches') as HTMLInputElement).value || null,
+          caducidadPilas: (form.elements.namedItem('caducidadPilas') as HTMLInputElement).value || null
+        }
+        try {
+          const res = await fetch('/api/logistica', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tipo: 'dea', ...formData })
+          })
+          if (res.ok) {
+            await cargarDatos()
+            setShowNuevoDEA(false)
+            form.reset()
+          } else {
+            const error = await res.json()
+            alert(`Error: ${error.error || 'No se pudo crear el DEA'}`)
+          }
+        } catch (error) {
+          console.error('Error:', error)
+          alert('Error al crear DEA')
+        }
+      }} className="p-6 overflow-y-auto space-y-5">
+        <div className="grid grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Código *</label>
+            <input name="codigo" type="text" className="w-full border border-slate-300 rounded-lg p-2.5" placeholder="DEA-001" required />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Tipo *</label>
+            <select name="tipoDea" className="w-full border border-slate-300 rounded-lg p-2.5" required>
+              <option value="automatico">Automático</option>
+              <option value="semiautomatico">Semiautomático</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Estado</label>
+            <select name="estado" className="w-full border border-slate-300 rounded-lg p-2.5">
+              <option value="operativo">Operativo</option>
+              <option value="revision_pendiente">Revisión Pendiente</option>
+              <option value="fuera_servicio">Fuera de Servicio</option>
+            </select>
           </div>
         </div>
-      )}
-
-      {/* Modal Editar DEA */}
-      {deaSeleccionado && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60" onClick={() => setDEASeleccionado(null)}>
-          <div className="bg-white rounded-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
-            <div className="bg-cyan-600 p-5 text-white flex justify-between items-center">
-              <h2 className="text-xl font-bold">Editar DEA</h2>
-              <button onClick={() => setDEASeleccionado(null)}>
-                <X size={24} />
-              </button>
-            </div>
-            <form onSubmit={async (e) => {
-              e.preventDefault()
-              const form = e.target as HTMLFormElement
-              const latitudValue = (form.elements.namedItem('latitud') as HTMLInputElement).value
-              const longitudValue = (form.elements.namedItem('longitud') as HTMLInputElement).value
-              
-              const formData = {
-                codigo: (form.elements.namedItem('codigo') as HTMLInputElement).value,
-                tipoDea: (form.elements.namedItem('tipoDea') as HTMLSelectElement).value,
-                marca: (form.elements.namedItem('marca') as HTMLInputElement).value,
-                modelo: (form.elements.namedItem('modelo') as HTMLInputElement).value,
-                ubicacion: (form.elements.namedItem('ubicacion') as HTMLInputElement).value,
-                latitud: latitudValue ? parseFloat(latitudValue) : null,
-                longitud: longitudValue ? parseFloat(longitudValue) : null,
-                estado: (form.elements.namedItem('estado') as HTMLSelectElement).value,
-                accesible24h: (form.elements.namedItem('accesible24h') as HTMLInputElement).checked
-              }
-              try {
-                const res = await fetch('/api/logistica', {
-                  method: 'PUT',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ tipo: 'dea', id: deaSeleccionado.id, codigo: formData.codigo, tipoDea: formData.tipoDea, marca: formData.marca, modelo: formData.modelo, ubicacion: formData.ubicacion, latitud: formData.latitud, longitud: formData.longitud, estado: formData.estado, accesible24h: formData.accesible24h })
-                })
-                if (res.ok) {
-                  await cargarDatos()
-                  setDEASeleccionado(null)
-                } else {
-                  const error = await res.json()
-                  alert(`Error: ${error.error || 'No se pudo actualizar el DEA'}`)
-                }
-              } catch (error) {
-                console.error('Error:', error)
-                alert('Error al actualizar DEA')
-              }
-            }} className="p-6 overflow-y-auto space-y-5">
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Código</label>
-                  <input name="codigo" type="text" defaultValue={deaSeleccionado.codigo} className="w-full border border-slate-300 rounded-lg p-2.5" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Tipo</label>
-                  <select name="tipoDea" defaultValue={deaSeleccionado.tipo} className="w-full border border-slate-300 rounded-lg p-2.5">
-                    <option value="automatico">Automático</option>
-                    <option value="semiautomatico">Semiautomático</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Estado</label>
-                  <select name="estado" defaultValue={deaSeleccionado.estado} className="w-full border border-slate-300 rounded-lg p-2.5">
-                    <option value="operativo">Operativo</option>
-                    <option value="revision_pendiente">Revisión Pendiente</option>
-                    <option value="fuera_servicio">Fuera de Servicio</option>
-                  </select>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Marca</label>
-                  <input name="marca" type="text" defaultValue={deaSeleccionado.marca || ''} className="w-full border border-slate-300 rounded-lg p-2.5" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Modelo</label>
-                  <input name="modelo" type="text" defaultValue={deaSeleccionado.modelo || ''} className="w-full border border-slate-300 rounded-lg p-2.5" />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Ubicación</label>
-                <input name="ubicacion" type="text" defaultValue={deaSeleccionado.ubicacion} className="w-full border border-slate-300 rounded-lg p-2.5" />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Latitud</label>
-                  <input name="latitud" type="text" defaultValue={deaSeleccionado.latitud?.toFixed(8) || ''} className="w-full border border-slate-300 rounded-lg p-2.5" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Longitud</label>
-                  <input name="longitud" type="text" defaultValue={deaSeleccionado.longitud?.toFixed(8) || ''} className="w-full border border-slate-300 rounded-lg p-2.5" />
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <input name="accesible24h" type="checkbox" id="accesible24h-edit" defaultChecked={deaSeleccionado.accesible24h} className="w-4 h-4" />
-                <label htmlFor="accesible24h-edit" className="text-sm font-medium text-slate-700">Accesible 24 horas</label>
-              </div>
-              <div className="flex justify-end gap-3 pt-4 border-t">
-                <button type="button" onClick={() => setDEASeleccionado(null)} className="px-5 py-2.5 text-slate-600 hover:bg-slate-100 rounded-lg font-medium">
-                  Cancelar
-                </button>
-                <button type="submit" className="px-5 py-2.5 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 font-medium">
-                  Guardar Cambios
-                </button>
-              </div>
-            </form>
+        <div className="grid grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Marca</label>
+            <input name="marca" type="text" className="w-full border border-slate-300 rounded-lg p-2.5" placeholder="Ej: Philips" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Modelo</label>
+            <input name="modelo" type="text" className="w-full border border-slate-300 rounded-lg p-2.5" placeholder="Ej: HeartStart HS1" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Número de Serie</label>
+            <input name="numeroSerie" type="text" className="w-full border border-slate-300 rounded-lg p-2.5" placeholder="NS123456" />
           </div>
         </div>
-      )}
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-2">Ubicación *</label>
+          <input name="ubicacion" type="text" className="w-full border border-slate-300 rounded-lg p-2.5" placeholder="Calle, número..." required />
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Latitud</label>
+            <input name="latitud" type="text" className="w-full border border-slate-300 rounded-lg p-2.5" placeholder="37.371234" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Longitud</label>
+            <input name="longitud" type="text" className="w-full border border-slate-300 rounded-lg p-2.5" placeholder="-6.072000" />
+          </div>
+        </div>
+        <div className="grid grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Caducidad Batería</label>
+            <input name="caducidadBateria" type="date" className="w-full border border-slate-300 rounded-lg p-2.5" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Caducidad Parches</label>
+            <input name="caducidadParches" type="date" className="w-full border border-slate-300 rounded-lg p-2.5" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Caducidad Pilas</label>
+            <input name="caducidadPilas" type="date" className="w-full border border-slate-300 rounded-lg p-2.5" />
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <input name="accesible24h" type="checkbox" id="accesible24h" defaultChecked className="w-4 h-4" />
+          <label htmlFor="accesible24h" className="text-sm font-medium text-slate-700">Accesible 24 horas</label>
+        </div>
+        <div className="flex justify-end gap-3 pt-4 border-t">
+          <button type="button" onClick={() => setShowNuevoDEA(false)} className="px-5 py-2.5 text-slate-600 hover:bg-slate-100 rounded-lg font-medium">
+            Cancelar
+          </button>
+          <button type="submit" className="px-5 py-2.5 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 font-medium">
+            Crear DEA
+          </button>
+        </div>
+      </form>
     </div>
+  </div>
+)}
+
+{/* Modal Editar DEA */}
+{deaSeleccionado && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60" onClick={() => setDEASeleccionado(null)}>
+    <div className="bg-white rounded-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+      <div className="bg-cyan-600 p-5 text-white flex justify-between items-center">
+        <h2 className="text-xl font-bold">Editar DEA</h2>
+        <button onClick={() => setDEASeleccionado(null)}>
+          <X size={24} />
+        </button>
+      </div>
+      <form onSubmit={async (e) => {
+        e.preventDefault()
+        const form = e.target as HTMLFormElement
+        const latitudValue = (form.elements.namedItem('latitud') as HTMLInputElement).value
+        const longitudValue = (form.elements.namedItem('longitud') as HTMLInputElement).value
+        
+        const formData = {
+          codigo: (form.elements.namedItem('codigo') as HTMLInputElement).value,
+          tipoDea: (form.elements.namedItem('tipoDea') as HTMLSelectElement).value,
+          marca: (form.elements.namedItem('marca') as HTMLInputElement).value,
+          modelo: (form.elements.namedItem('modelo') as HTMLInputElement).value,
+          numeroSerie: (form.elements.namedItem('numeroSerie') as HTMLInputElement).value,
+          ubicacion: (form.elements.namedItem('ubicacion') as HTMLInputElement).value,
+          latitud: latitudValue ? parseFloat(latitudValue) : null,
+          longitud: longitudValue ? parseFloat(longitudValue) : null,
+          estado: (form.elements.namedItem('estado') as HTMLSelectElement).value,
+          accesible24h: (form.elements.namedItem('accesible24h') as HTMLInputElement).checked,
+          caducidadBateria: (form.elements.namedItem('caducidadBateria') as HTMLInputElement).value || null,
+          caducidadParches: (form.elements.namedItem('caducidadParches') as HTMLInputElement).value || null,
+          caducidadPilas: (form.elements.namedItem('caducidadPilas') as HTMLInputElement).value || null
+        }
+        try {
+          const res = await fetch('/api/logistica', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tipo: 'dea', id: deaSeleccionado.id, ...formData })
+          })
+          if (res.ok) {
+            await cargarDatos()
+            setDEASeleccionado(null)
+          } else {
+            const error = await res.json()
+            alert(`Error: ${error.error || 'No se pudo actualizar el DEA'}`)
+          }
+        } catch (error) {
+          console.error('Error:', error)
+          alert('Error al actualizar DEA')
+        }
+      }} className="p-6 overflow-y-auto space-y-5">
+        <div className="grid grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Código</label>
+            <input name="codigo" type="text" defaultValue={deaSeleccionado.codigo} className="w-full border border-slate-300 rounded-lg p-2.5" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Tipo</label>
+            <select name="tipoDea" defaultValue={deaSeleccionado.tipo} className="w-full border border-slate-300 rounded-lg p-2.5">
+              <option value="automatico">Automático</option>
+              <option value="semiautomatico">Semiautomático</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Estado</label>
+            <select name="estado" defaultValue={deaSeleccionado.estado} className="w-full border border-slate-300 rounded-lg p-2.5">
+              <option value="operativo">Operativo</option>
+              <option value="revision_pendiente">Revisión Pendiente</option>
+              <option value="fuera_servicio">Fuera de Servicio</option>
+            </select>
+          </div>
+        </div>
+        <div className="grid grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Marca</label>
+            <input name="marca" type="text" defaultValue={deaSeleccionado.marca || ''} className="w-full border border-slate-300 rounded-lg p-2.5" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Modelo</label>
+            <input name="modelo" type="text" defaultValue={deaSeleccionado.modelo || ''} className="w-full border border-slate-300 rounded-lg p-2.5" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Número de Serie</label>
+            <input name="numeroSerie" type="text" defaultValue={deaSeleccionado.numeroSerie || ''} className="w-full border border-slate-300 rounded-lg p-2.5" />
+          </div>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-2">Ubicación</label>
+          <input name="ubicacion" type="text" defaultValue={deaSeleccionado.ubicacion} className="w-full border border-slate-300 rounded-lg p-2.5" />
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Latitud</label>
+            <input name="latitud" type="text" defaultValue={deaSeleccionado.latitud?.toFixed(8) || ''} className="w-full border border-slate-300 rounded-lg p-2.5" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Longitud</label>
+            <input name="longitud" type="text" defaultValue={deaSeleccionado.longitud?.toFixed(8) || ''} className="w-full border border-slate-300 rounded-lg p-2.5" />
+          </div>
+        </div>
+        <div className="grid grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Caducidad Batería</label>
+            <input name="caducidadBateria" type="date" defaultValue={deaSeleccionado.caducidadBateria ? new Date(deaSeleccionado.caducidadBateria).toISOString().split('T')[0] : ''} className="w-full border border-slate-300 rounded-lg p-2.5" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Caducidad Parches</label>
+            <input name="caducidadParches" type="date" defaultValue={deaSeleccionado.caducidadParches ? new Date(deaSeleccionado.caducidadParches).toISOString().split('T')[0] : ''} className="w-full border border-slate-300 rounded-lg p-2.5" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Caducidad Pilas</label>
+            <input name="caducidadPilas" type="date" defaultValue={deaSeleccionado.caducidadPilas ? new Date(deaSeleccionado.caducidadPilas).toISOString().split('T')[0] : ''} className="w-full border border-slate-300 rounded-lg p-2.5" />
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <input name="accesible24h" type="checkbox" id="accesible24h-edit" defaultChecked={deaSeleccionado.accesible24h} className="w-4 h-4" />
+          <label htmlFor="accesible24h-edit" className="text-sm font-medium text-slate-700">Accesible 24 horas</label>
+        </div>
+        <div className="flex justify-end gap-3 pt-4 border-t">
+          <button type="button" onClick={() => setDEASeleccionado(null)} className="px-5 py-2.5 text-slate-600 hover:bg-slate-100 rounded-lg font-medium">
+            Cancelar
+          </button>
+          <button type="submit" className="px-5 py-2.5 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 font-medium">
+            Guardar Cambios
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+)}
+</div>
   )
 }

@@ -436,30 +436,33 @@ export async function POST(request: NextRequest) {
     }
 
     // ===== DEA =====
-    if (tipo === 'dea') {
-      const { codigo, tipo: tipoDea, marca, modelo, numeroSerie, ubicacion, latitud, longitud, estado, accesible24h } = body
-      
-      if (!codigo || !tipoDea || !ubicacion) {
-        return NextResponse.json({ error: 'Código, tipo y ubicación son requeridos' }, { status: 400 })
-      }
+  if (tipo === 'dea') {
+  const { codigo, tipoDea, marca, modelo, numeroSerie, ubicacion, latitud, longitud, estado, accesible24h, caducidadBateria, caducidadParches, caducidadPilas } = body
+  
+  if (!codigo || !tipoDea || !ubicacion) {
+    return NextResponse.json({ error: 'Código, tipo y ubicación son requeridos' }, { status: 400 })
+  }
 
-      const dea = await prisma.dEA.create({
-        data: {
-          codigo,
-          tipo: tipoDea,
-          marca,
-          modelo,
-          numeroSerie,
-          ubicacion,
-          latitud: latitud ? parseFloat(latitud) : null,
-          longitud: longitud ? parseFloat(longitud) : null,
-          estado: estado || 'operativo',
-          accesible24h: accesible24h === true
-        }
-      })
-
-      return NextResponse.json({ success: true, dea })
+  const dea = await prisma.dEA.create({
+    data: {
+      codigo,
+      tipo: tipoDea,
+      marca,
+      modelo,
+      numeroSerie,
+      ubicacion,
+      latitud: latitud ? parseFloat(latitud) : null,
+      longitud: longitud ? parseFloat(longitud) : null,
+      estado: estado || 'operativo',
+      accesible24h: accesible24h === true,
+      caducidadBateria: caducidadBateria ? new Date(caducidadBateria) : null,
+      caducidadParches: caducidadParches ? new Date(caducidadParches) : null,
+      caducidadPilas: caducidadPilas ? new Date(caducidadPilas) : null
     }
+  })
+
+  return NextResponse.json({ success: true, dea })
+}
 
     // ===== PETICIÓN =====
     if (tipo === 'peticion') {
@@ -627,30 +630,34 @@ export async function PUT(request: NextRequest) {
     }
 
     // ===== DEA =====
-    if (tipo === 'dea') {
-      const { codigo, tipo: tipoDea, marca, modelo, numeroSerie, ubicacion, latitud, longitud, estado, accesible24h } = body
-      
-      if (!codigo || !tipoDea || !ubicacion) {
-        return NextResponse.json({ error: 'Código, tipo y ubicación son requeridos' }, { status: 400 })
-      }
+  if (tipo === 'dea') {
+  const { codigo, tipoDea, marca, modelo, numeroSerie, ubicacion, latitud, longitud, estado, accesible24h, caducidadBateria, caducidadParches, caducidadPilas } = body
+  
+  if (!codigo || !tipoDea || !ubicacion) {
+    return NextResponse.json({ error: 'Código, tipo y ubicación son requeridos' }, { status: 400 })
+  }
 
-      const dea = await prisma.dEA.update({ where: { id },
-        data: {
-          codigo,
-          tipo: tipoDea,
-          marca,
-          modelo,
-          numeroSerie,
-          ubicacion,
-          latitud: latitud ? parseFloat(latitud) : null,
-          longitud: longitud ? parseFloat(longitud) : null,
-          estado: estado || 'operativo',
-          accesible24h: accesible24h === true
-        }
-      })
-
-      return NextResponse.json({ success: true, dea })
+  const dea = await prisma.dEA.update({
+    where: { id },
+    data: {
+      codigo,
+      tipo: tipoDea,
+      marca,
+      modelo,
+      numeroSerie,
+      ubicacion,
+      latitud: latitud ? parseFloat(latitud) : null,
+      longitud: longitud ? parseFloat(longitud) : null,
+      estado: estado || 'operativo',
+      accesible24h: accesible24h === true,
+      caducidadBateria: caducidadBateria ? new Date(caducidadBateria) : null,
+      caducidadParches: caducidadParches ? new Date(caducidadParches) : null,
+      caducidadPilas: caducidadPilas ? new Date(caducidadPilas) : null
     }
+  })
+
+  return NextResponse.json({ success: true, dea })
+}
 
     return NextResponse.json({ error: 'Tipo no válido' }, { status: 400 })
   } catch (error) {

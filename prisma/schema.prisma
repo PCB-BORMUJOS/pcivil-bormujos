@@ -832,6 +832,9 @@ model DEA {
   estado            String    @default("operativo") // operativo, revision_pendiente, fuera_servicio
   accesible24h      Boolean   @default(true) @map("accesible_24h")
   observaciones     String?
+  caducidadBateria  DateTime?
+  caducidadParches  DateTime?
+  caducidadPilas    DateTime?
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
 
