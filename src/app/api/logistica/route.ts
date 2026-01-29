@@ -65,6 +65,7 @@ export async function GET(request: NextRequest) {
         revisionPendiente: deas.filter(d => d.estado === 'revision_pendiente').length
       }
       return NextResponse.json({ deas, stats })
+    }
     // ===== BOTIQUINES =====
     if (tipo === 'botiquines') {
       const botiquines = await prisma.botiquin.findMany({
@@ -84,8 +85,6 @@ export async function GET(request: NextRequest) {
       }
       
       return NextResponse.json({ botiquines, stats })
-    }
-
     }
 
     // ===== ASIGNACIONES =====
@@ -488,7 +487,7 @@ export async function POST(request: NextRequest) {
     // ===== BOTIQUIN =====
     if (tipo === 'botiquin') {
       const { codigo, nombre, tipo: tipoBotiquin, ubicacionActual, vehiculoId, estado, observaciones } = body
-      
+
       if (!codigo || !nombre || !tipoBotiquin || !ubicacionActual) {
         return NextResponse.json({ error: 'Código, nombre, tipo y ubicación son requeridos' }, { status: 400 })
       }
@@ -499,7 +498,7 @@ export async function POST(request: NextRequest) {
           nombre,
           tipo: tipoBotiquin,
           ubicacionActual,
-          vehiculoId: vehiculoId || null,
+          vehiculoId: vehiculoId && vehiculoId !== '' ? vehiculoId : null,
           estado: estado || 'operativo',
           observaciones
         }

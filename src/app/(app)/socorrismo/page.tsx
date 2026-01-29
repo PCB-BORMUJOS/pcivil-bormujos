@@ -1436,14 +1436,15 @@ export default function SocorrismoPage() {
                 nombre: (form.elements.namedItem('nombre') as HTMLInputElement).value,
                 tipo: (form.elements.namedItem('tipo') as HTMLSelectElement).value,
                 ubicacionActual: (form.elements.namedItem('ubicacionActual') as HTMLInputElement).value,
-                vehiculoId: (form.elements.namedItem('vehiculoId') as HTMLSelectElement).value || null,
+                vehiculoId: (form.elements.namedItem('vehiculoId') as HTMLSelectElement).value || undefined,
                 observaciones: (form.elements.namedItem('observaciones') as HTMLTextAreaElement).value
               }
               try {
+                console.log('Enviando botiquín:', formData)
                 const res = await fetch('/api/logistica', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ tipo: 'botiquin', ...formData })
+                  body: JSON.stringify({ tipo: 'botiquin', tipoBotiquin: formData.tipo, codigo: formData.codigo, nombre: formData.nombre, ubicacionActual: formData.ubicacionActual, vehiculoId: formData.vehiculoId, observaciones: formData.observaciones })
                 })
                 if (res.ok) {
                   await cargarDatos()
