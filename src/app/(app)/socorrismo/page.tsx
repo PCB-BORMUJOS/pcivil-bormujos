@@ -102,7 +102,7 @@ const PRIORIDADES = {
 
 export default function SocorrismoPage() {
   // Estados principales
-  const [mainTab, setMainTab] = useState<'inventario' | 'deas'>('inventario')
+  const [mainTab, setMainTab] = useState<'inventario' | 'deas' | 'botiquines'>('inventario')
   const [inventoryTab, setInventoryTab] = useState<'stock' | 'peticiones' | 'movimientos'>('stock')
   const [loading, setLoading] = useState(true)
   const [mapReady, setMapReady] = useState(false)
@@ -132,6 +132,7 @@ export default function SocorrismoPage() {
   const [familias, setFamilias] = useState<Familia[]>([])
   const [edificios, setEdificios] = useState<Edificio[]>([])
   const [deas, setDeas] = useState<DEA[]>([])
+  const [botiquines, setBotiquines] = useState<any[]>([])
   const [peticiones, setPeticiones] = useState<Peticion[]>([])
   const [categoriaSocorrismo, setCategoriaSocorrismo] = useState<string | null>(null)
 
@@ -151,6 +152,7 @@ export default function SocorrismoPage() {
   // Stats
   const [statsArticulos, setStatsArticulos] = useState({ totalArticulos: 0, stockBajo: 0 })
   const [deasStats, setDeasStats] = useState({ total: 0, operativos: 0 })
+  const [botiquinesStats, setBotiquinesStats] = useState({ total: 0, operativos: 0, revisionPendiente: 0, incompletos: 0 })
   const [peticionStats, setPeticionStats] = useState({
     total: 0,
     pendientes: 0,
@@ -201,6 +203,11 @@ export default function SocorrismoPage() {
       const dataDeas = await resDeas.json()
       setDeas(dataDeas.deas || [])
 
+      // Cargar Botiquines
+      const resBotiquines = await fetch('/api/logistica?tipo=botiquines')
+      const dataBotiquines = await resBotiquines.json()
+      setBotiquines(dataBotiquines.botiquines || [])
+
       // Calcular stats
       setStatsArticulos({
         totalArticulos: dataArticulos.articulos?.length || 0,
@@ -210,6 +217,13 @@ export default function SocorrismoPage() {
       setDeasStats({
         total: dataDeas.deas?.length || 0,
         operativos: dataDeas.deas?.filter((d: DEA) => d.estado === 'operativo').length || 0
+      })
+
+      setBotiquinesStats({
+        total: dataBotiquines.botiquines?.length || 0,
+        operativos: dataBotiquines.botiquines?.filter((b: any) => b.estado === 'operativo').length || 0,
+        revisionPendiente: dataBotiquines.botiquines?.filter((b: any) => b.estado === 'revision_pendiente').length || 0,
+        incompletos: dataBotiquines.botiquines?.filter((b: any) => b.estado === 'incompleto').length || 0
       })
     } catch (error) {
       console.error('Error:', error)
@@ -328,6 +342,7 @@ export default function SocorrismoPage() {
           {[
             { id: 'inventario', label: 'Inventario del Área', icon: Package },
             { id: 'deas', label: 'Red de DEAs', icon: Droplet },
+            { id: 'botiquines', label: 'Botiquines SVB', icon: Heart },
           ].map(tab => (
             <button
               key={tab.id}
@@ -679,6 +694,93 @@ export default function SocorrismoPage() {
         )}
       </div>
 
+
+        {/* Contenido de Botiquines */}
+        {mainTab === 'botiquines' && (
+          <div className="p-6">
+            <div className="mb-6">
+              <h3 className="text-lg font-bold text-slate-800 mb-4">Botiquines SVB</h3>
+              <p className="text-slate-600 text-sm mb-6">
+                Gestión de botiquines de Soporte Vital Básico ubicados en vehículos y PMA
+              </p>
+            </div>
+
+            {botiquines.length === 0 ? (
+              <div className="text-center py-12 bg-slate-50 rounded-xl">
+                <Heart size={48} className="mx-auto mb-4 text-slate-300" />
+                <p className="text-slate-500 mb-4">No hay botiquines registrados</p>
+                <button className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+                  <Plus size={18} className="inline mr-2" />
+                  Crear Primer Botiquín
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {botiquines.map(botiquin => (
+                  <div key={botiquin.id} className="bg-white border-2 border-slate-200 rounded-xl p-5 hover:shadow-lg transition-shadow">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                          botiquin.estado === 'operativo' ? 'bg-green-100' :
+                          botiquin.estado === 'revision_pendiente' ? 'bg-yellow-100' : 'bg-red-100'
+                        }`}>
+                          <Heart size={24} className={
+                            botiquin.estado === 'operativo' ? 'text-green-600' :
+                            botiquin.estado === 'revision_pendiente' ? 'text-yellow-600' : 'text-red-600'
+                          } />
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-slate-800">{botiquin.codigo}</h4>
+                          <p className="text-sm text-slate-500">{botiquin.nombre}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2 mb-4">
+                      <div className="flex items-center gap-2 text-sm">
+                        <MapPin size={14} className="text-slate-400" />
+                        <span className="text-slate-600">{botiquin.ubicacionActual}</span>
+                      </div>
+                      {botiquin.vehiculo && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <Package size={14} className="text-slate-400" />
+                          <span className="text-slate-600">{botiquin.vehiculo.indicativo || botiquin.vehiculo.matricula}</span>
+                        </div>
+                      )}
+                      <div className="flex items-center gap-2 text-sm">
+                        <Layers size={14} className="text-slate-400" />
+                        <span className="text-slate-600">{botiquin._count.items} items</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-3 border-t border-slate-200">
+                      <span className={`px-2 py-1 rounded text-xs font-bold ${
+                        botiquin.estado === 'operativo' ? 'bg-green-100 text-green-700' :
+                        botiquin.estado === 'revision_pendiente' ? 'bg-yellow-100 text-yellow-700' :
+                        'bg-red-100 text-red-700'
+                      }`}>
+                        {botiquin.estado === 'operativo' ? '✓ Operativo' :
+                         botiquin.estado === 'revision_pendiente' ? '⚠ Revisión Pendiente' :
+                         '❌ Incompleto'}
+                      </span>
+                      <button className="text-slate-600 hover:bg-slate-100 p-2 rounded-lg">
+                        <Edit size={16} />
+                      </button>
+                    </div>
+
+                    {botiquin.ultimaRevision && (
+                      <div className="mt-3 pt-3 border-t border-slate-100">
+                        <p className="text-xs text-slate-500">
+                          Última revisión: {new Date(botiquin.ultimaRevision).toLocaleDateString('es-ES')}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       {/* MODALES */}
       
       {/* Modal Nuevo Artículo */}
