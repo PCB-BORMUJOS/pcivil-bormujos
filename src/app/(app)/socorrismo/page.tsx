@@ -1518,4 +1518,170 @@ export default function SocorrismoPage() {
 
     </div>
   )
+  {/* MODAL EDITAR BOTIQUÍN */}
+      {botiquinSeleccionado && !showGestionItems && !showChecklist && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60"
+          onClick={() => setBotiquinSeleccionado(null)}
+        >
+          <div
+            className="bg-white rounded-xl w-full max-w-2xl shadow-2xl max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="bg-red-600 p-5 text-white flex items-center justify-between rounded-t-xl sticky top-0 z-10">
+              <h2 className="text-xl font-bold flex items-center gap-2">
+                <Edit className="w-5 h-5" />
+                Editar Botiquín
+              </h2>
+              <button
+                type="button"
+                onClick={() => setBotiquinSeleccionado(null)}
+                className="text-white hover:bg-red-700 p-1 rounded"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault()
+                const formData = new FormData(e.currentTarget)
+                const codigo = formData.get('codigo') as string
+                const tipoBotiquin = formData.get('tipo') as string
+                const nombre = formData.get('nombre') as string
+                const ubicacionActual = formData.get('ubicacionActual') as string
+                const vehiculoId = formData.get('vehiculoId') as string
+                const observaciones = formData.get('observaciones') as string
+
+                try {
+                  const res = await fetch('/api/logistica', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      tipo: 'botiquin',
+                      id: botiquinSeleccionado.id,
+                      codigo: codigo || undefined,
+                      tipo: tipoBotiquin,
+                      nombre,
+                      ubicacionActual,
+                      vehiculoId: vehiculoId && vehiculoId !== '' ? vehiculoId : null,
+                      observaciones: observaciones || undefined
+                    })
+                  })
+
+                  if (res.ok) {
+                    alert('Botiquín actualizado correctamente')
+                    setBotiquinSeleccionado(null)
+                    cargarDatos()
+                  } else {
+                    const error = await res.json()
+                    alert('Error: ' + (error.message || 'No se pudo actualizar'))
+                  }
+                } catch (error) {
+                  console.error('Error al actualizar botiquín:', error)
+                  alert('Error al actualizar el botiquín')
+                }
+              }}
+              className="p-6 space-y-4"
+            >
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Código</label>
+                  <input
+                    type="text"
+                    name="codigo"
+                    defaultValue={botiquinSeleccionado.codigo || ''}
+                    placeholder="BOT-UMJ-01"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Tipo <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    name="tipo"
+                    required
+                    defaultValue={botiquinSeleccionado.tipo}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                  >
+                    <option value="vehiculo">Vehículo</option>
+                    <option value="pma">PMA</option>
+                    <option value="almacen">Almacén</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Nombre <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  name="nombre"
+                  required
+                  defaultValue={botiquinSeleccionado.nombre}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Ubicación Actual <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  name="ubicacionActual"
+                  required
+                  defaultValue={botiquinSeleccionado.ubicacionActual}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Vehículo Asignado</label>
+                <select
+                  name="vehiculoId"
+                  defaultValue={botiquinSeleccionado.vehiculoId || ''}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                >
+                  <option value="">Sin asignar</option>
+                  {vehiculos.map((v) => (
+                    <option key={v.id} value={v.id}>
+                      {v.indicativo || v.matricula}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Observaciones</label>
+                <textarea
+                  name="observaciones"
+                  rows={3}
+                  defaultValue={botiquinSeleccionado.observaciones || ''}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 resize-none"
+                />
+              </div>
+
+              <div className="flex gap-3 pt-4 border-t">
+                <button
+                  type="button"
+                  onClick={() => setBotiquinSeleccionado(null)}
+                  className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium flex items-center justify-center gap-2"
+                >
+                  <Check className="w-4 h-4" />
+                  Guardar Cambios
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 }
