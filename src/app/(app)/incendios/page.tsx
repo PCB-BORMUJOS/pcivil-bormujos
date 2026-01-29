@@ -1093,8 +1093,8 @@ export default function IncendiosPage() {
                 codigo: (form.elements.namedItem('codigo') as HTMLInputElement).value,
                 nombre: (form.elements.namedItem('nombre') as HTMLInputElement).value,
                 descripcion: (form.elements.namedItem('descripcion') as HTMLTextAreaElement).value,
-                stockActual: (form.elements.namedItem('stockActual') as HTMLInputElement).value,
-                stockMinimo: (form.elements.namedItem('stockMinimo') as HTMLInputElement).value,
+                stockActual: parseInt((form.elements.namedItem('stockActual') as HTMLInputElement).value),
+                stockMinimo: parseInt((form.elements.namedItem('stockMinimo') as HTMLInputElement).value),
                 unidad: (form.elements.namedItem('unidad') as HTMLSelectElement).value,
                 familiaId: (form.elements.namedItem('familiaId') as HTMLSelectElement).value
               }
