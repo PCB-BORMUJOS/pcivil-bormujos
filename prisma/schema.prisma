@@ -117,6 +117,7 @@ model Usuario {
   asignacionesVestuario  AsignacionVestuario[]
   solicitudesVestuario   SolicitudVestuario[]
   solicitudesRespondidas SolicitudVestuario[]  @relation("SolicitudesRespondidas")
+  revisionesRealizadas RevisionBotiquin[]
 
   @@map("usuarios")
 }
@@ -296,6 +297,7 @@ model Articulo {
 
   movimientos MovimientoStock[]
   peticiones  PeticionMaterial[]
+  botiquinItems BotiquinItem[]
 
   @@unique([servicioId, codigo])
   @@map("articulos")
@@ -356,6 +358,7 @@ model Vehiculo {
   updatedAt   DateTime  @updatedAt @map("updated_at")
 
   asignaciones VehiculoAsignacion[]
+  botiquines Botiquin[]
 
   @@map("vehiculos")
 }
@@ -839,4 +842,67 @@ model DEA {
   updatedAt         DateTime  @updatedAt @map("updated_at")
 
   @@map("deas")
+}
+
+model Botiquin {
+  id                String    @id @default(cuid())
+  codigo            String    @unique
+  nombre            String
+  tipo              String    // "vehiculo" | "pma" | "almacen"
+  ubicacionActual   String    @map("ubicacion_actual")
+  vehiculoId        String?   @map("vehiculo_id")
+  vehiculo          Vehiculo? @relation(fields: [vehiculoId], references: [id])
+  estado            String    @default("operativo") // operativo, revision_pendiente, incompleto
+  ultimaRevision    DateTime? @map("ultima_revision")
+  proximaRevision   DateTime? @map("proxima_revision")
+  observaciones     String?   @db.Text
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+  
+  items             BotiquinItem[]
+  revisiones        RevisionBotiquin[]
+
+  @@index([tipo])
+  @@index([estado])
+  @@index([vehiculoId])
+  @@map("botiquines")
+}
+
+model BotiquinItem {
+  id                  String    @id @default(cuid())
+  botiquinId          String    @map("botiquin_id")
+  botiquin            Botiquin  @relation(fields: [botiquinId], references: [id], onDelete: Cascade)
+  articuloId          String?   @map("articulo_id")
+  articulo            Articulo? @relation(fields: [articuloId], references: [id])
+  nombreItem          String    @map("nombre_item")
+  cantidadRequerida   Int       @map("cantidad_requerida")
+  cantidadActual      Int       @default(0) @map("cantidad_actual")
+  caducidad           DateTime?
+  unidad              String    @default("Unidad")
+  verificado          Boolean   @default(false)
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  @@index([botiquinId])
+  @@index([caducidad])
+  @@map("botiquin_items")
+}
+
+model RevisionBotiquin {
+  id                String    @id @default(cuid())
+  botiquinId        String    @map("botiquin_id")
+  botiquin          Botiquin  @relation(fields: [botiquinId], references: [id], onDelete: Cascade)
+  usuarioId         String    @map("usuario_id")
+  usuario           Usuario   @relation(fields: [usuarioId], references: [id])
+  fecha             DateTime  @default(now())
+  itemsVerificados  Int       @default(0) @map("items_verificados")
+  itemsFaltantes    Int       @default(0) @map("items_faltantes")
+  itemsCaducados    Int       @default(0) @map("items_caducados")
+  observaciones     String?   @db.Text
+  createdAt         DateTime  @default(now()) @map("created_at")
+
+  @@index([botiquinId])
+  @@index([usuarioId])
+  @@index([fecha])
+  @@map("revisiones_botiquin")
 }

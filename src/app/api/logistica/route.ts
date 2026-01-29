@@ -65,6 +65,27 @@ export async function GET(request: NextRequest) {
         revisionPendiente: deas.filter(d => d.estado === 'revision_pendiente').length
       }
       return NextResponse.json({ deas, stats })
+    // ===== BOTIQUINES =====
+    if (tipo === 'botiquines') {
+      const botiquines = await prisma.botiquin.findMany({
+        include: {
+          vehiculo: { select: { id: true, matricula: true, indicativo: true } },
+          items: { orderBy: { nombreItem: 'asc' } },
+          _count: { select: { items: true, revisiones: true } }
+        },
+        orderBy: { codigo: 'asc' }
+      })
+      
+      const stats = {
+        total: botiquines.length,
+        operativos: botiquines.filter(b => b.estado === 'operativo').length,
+        revisionPendiente: botiquines.filter(b => b.estado === 'revision_pendiente').length,
+        incompletos: botiquines.filter(b => b.estado === 'incompleto').length
+      }
+      
+      return NextResponse.json({ botiquines, stats })
+    }
+
     }
 
     // ===== ASIGNACIONES =====
@@ -464,6 +485,100 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({ success: true, dea })
 }
 
+    // ===== BOTIQUIN =====
+    if (tipo === 'botiquin') {
+      const { codigo, nombre, tipo: tipoBotiquin, ubicacionActual, vehiculoId, estado, observaciones } = body
+      
+      if (!codigo || !nombre || !tipoBotiquin || !ubicacionActual) {
+        return NextResponse.json({ error: 'Código, nombre, tipo y ubicación son requeridos' }, { status: 400 })
+      }
+      
+      const botiquin = await prisma.botiquin.create({
+        data: {
+          codigo,
+          nombre,
+          tipo: tipoBotiquin,
+          ubicacionActual,
+          vehiculoId: vehiculoId || null,
+          estado: estado || 'operativo',
+          observaciones
+        }
+      })
+      
+      return NextResponse.json({ success: true, botiquin })
+    }
+
+    // ===== BOTIQUIN ITEM =====
+    if (tipo === 'botiquin-item') {
+      const { botiquinId, articuloId, nombreItem, cantidadRequerida, cantidadActual, caducidad, unidad } = body
+      
+      if (!botiquinId || !nombreItem || !cantidadRequerida) {
+        return NextResponse.json({ error: 'Botiquín, nombre y cantidad requerida son obligatorios' }, { status: 400 })
+      }
+      
+      const item = await prisma.botiquinItem.create({
+        data: {
+          botiquinId,
+          articuloId: articuloId || null,
+          nombreItem,
+          cantidadRequerida: parseInt(cantidadRequerida),
+          cantidadActual: cantidadActual ? parseInt(cantidadActual) : 0,
+          caducidad: caducidad ? new Date(caducidad) : null,
+          unidad: unidad || 'Unidad'
+        }
+      })
+      
+      return NextResponse.json({ success: true, item })
+    }
+
+    // ===== REVISION BOTIQUIN =====
+    if (tipo === 'revision-botiquin') {
+      const { botiquinId, itemsVerificados, itemsFaltantes, itemsCaducados, observaciones, items } = body
+      
+      const usuario = await prisma.usuario.findUnique({
+        where: { email: session.user.email }
+      })
+      if (!usuario) {
+        return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
+      }
+      
+      // Crear revisión
+      const revision = await prisma.revisionBotiquin.create({
+        data: {
+          botiquinId,
+          usuarioId: usuario.id,
+          itemsVerificados: parseInt(itemsVerificados),
+          itemsFaltantes: parseInt(itemsFaltantes),
+          itemsCaducados: parseInt(itemsCaducados),
+          observaciones
+        }
+      })
+      
+      // Actualizar items si se proporcionan
+      if (items && Array.isArray(items)) {
+        for (const item of items) {
+          await prisma.botiquinItem.update({
+            where: { id: item.id },
+            data: {
+              cantidadActual: item.cantidadActual,
+              verificado: item.verificado
+            }
+          })
+        }
+      }
+      
+      // Actualizar fecha de última revisión del botiquín
+      await prisma.botiquin.update({
+        where: { id: botiquinId },
+        data: { 
+          ultimaRevision: new Date(),
+          proximaRevision: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // +30 días
+        }
+      })
+      
+      return NextResponse.json({ success: true, revision })
+    }
+
     // ===== PETICIÓN =====
     if (tipo === 'peticion') {
       const { articuloId, nombreArticulo, cantidad, prioridad, motivo, areaOrigen } = body
@@ -659,6 +774,45 @@ export async function PUT(request: NextRequest) {
   return NextResponse.json({ success: true, dea })
 }
 
+    // ===== BOTIQUIN =====
+    if (tipo === 'botiquin') {
+      const { codigo, nombre, tipo: tipoBotiquin, ubicacionActual, vehiculoId, estado, observaciones } = body
+      
+      const botiquin = await prisma.botiquin.update({
+        where: { id },
+        data: {
+          codigo,
+          nombre,
+          tipo: tipoBotiquin,
+          ubicacionActual,
+          vehiculoId: vehiculoId || null,
+          estado,
+          observaciones
+        }
+      })
+      
+      return NextResponse.json({ success: true, botiquin })
+    }
+
+    // ===== BOTIQUIN ITEM =====
+    if (tipo === 'botiquin-item') {
+      const { nombreItem, cantidadRequerida, cantidadActual, caducidad, unidad, verificado } = body
+      
+      const item = await prisma.botiquinItem.update({
+        where: { id },
+        data: {
+          nombreItem,
+          cantidadRequerida: cantidadRequerida ? parseInt(cantidadRequerida) : undefined,
+          cantidadActual: cantidadActual !== undefined ? parseInt(cantidadActual) : undefined,
+          caducidad: caducidad ? new Date(caducidad) : null,
+          unidad,
+          verificado
+        }
+      })
+      
+      return NextResponse.json({ success: true, item })
+    }
+
     return NextResponse.json({ error: 'Tipo no válido' }, { status: 400 })
   } catch (error) {
     console.error('Error en PUT /api/logistica:', error)
@@ -737,6 +891,29 @@ export async function DELETE(request: NextRequest) {
     // ===== DEA =====
     if (tipo === 'dea') {
       await prisma.dEA.delete({ where: { id } })
+      return NextResponse.json({ success: true })
+    }
+    
+    // ===== BOTIQUIN =====
+    if (tipo === 'botiquin') {
+      const revisionesCount = await prisma.revisionBotiquin.count({
+        where: { botiquinId: id }
+      })
+      
+      if (revisionesCount > 0) {
+        return NextResponse.json({ 
+          error: `No se puede eliminar. Este botiquín tiene ${revisionesCount} revisiones registradas.` 
+        }, { status: 400 })
+      }
+      
+      await prisma.botiquinItem.deleteMany({ where: { botiquinId: id } })
+      await prisma.botiquin.delete({ where: { id } })
+      return NextResponse.json({ success: true })
+    }
+    
+    // ===== BOTIQUIN ITEM =====
+    if (tipo === 'botiquin-item') {
+      await prisma.botiquinItem.delete({ where: { id } })
       return NextResponse.json({ success: true })
     }
 
