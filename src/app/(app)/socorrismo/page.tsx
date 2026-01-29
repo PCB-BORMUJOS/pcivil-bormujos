@@ -132,6 +132,7 @@ export default function SocorrismoPage() {
   const [familias, setFamilias] = useState<Familia[]>([])
   const [edificios, setEdificios] = useState<Edificio[]>([])
   const [deas, setDeas] = useState<DEA[]>([])
+  const [vehiculos, setVehiculos] = useState<any[]>([])
   const [botiquines, setBotiquines] = useState<any[]>([])
   const [peticiones, setPeticiones] = useState<Peticion[]>([])
   const [categoriaSocorrismo, setCategoriaSocorrismo] = useState<string | null>(null)
@@ -146,6 +147,10 @@ export default function SocorrismoPage() {
   const [showNuevaPeticion, setShowNuevaPeticion] = useState(false)
   const [showGestionFamilias, setShowGestionFamilias] = useState(false)
   const [showNuevoDEA, setShowNuevoDEA] = useState(false)
+  const [showNuevoBotiquin, setShowNuevoBotiquin] = useState(false)
+  const [botiquinSeleccionado, setBotiquinSeleccionado] = useState<any>(null)
+  const [showGestionItems, setShowGestionItems] = useState(false)
+  const [showChecklist, setShowChecklist] = useState(false)
   const [articuloSeleccionado, setArticuloSeleccionado] = useState<Articulo | null>(null)
   const [deaSeleccionado, setDEASeleccionado] = useState<DEA | null>(null)
 
@@ -197,6 +202,11 @@ export default function SocorrismoPage() {
       const resEdificios = await fetch('/api/logistica?tipo=edificios')
       const dataEdificios = await resEdificios.json()
       setEdificios(dataEdificios.edificios || [])
+
+      // Cargar Vehículos
+      const resVehiculos = await fetch('/api/vehiculos')
+      const dataVehiculos = await resVehiculos.json()
+      setVehiculos(dataVehiculos.vehiculos || [])
 
       // Cargar DEAs
       const resDeas = await fetch('/api/logistica?tipo=deas')
@@ -709,7 +719,7 @@ export default function SocorrismoPage() {
               <div className="text-center py-12 bg-slate-50 rounded-xl">
                 <Heart size={48} className="mx-auto mb-4 text-slate-300" />
                 <p className="text-slate-500 mb-4">No hay botiquines registrados</p>
-                <button className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+                <button onClick={() => setShowNuevoBotiquin(true)} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
                   <Plus size={18} className="inline mr-2" />
                   Crear Primer Botiquín
                 </button>
@@ -1407,6 +1417,97 @@ export default function SocorrismoPage() {
     </div>
   </div>
 )}
-</div>
+
+      {/* Modal Nuevo Botiquín */}
+      {showNuevoBotiquin && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60" onClick={() => setShowNuevoBotiquin(false)}>
+          <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="bg-red-600 p-5 text-white flex justify-between items-center">
+              <h2 className="text-xl font-bold">Nuevo Botiquín SVB</h2>
+              <button onClick={() => setShowNuevoBotiquin(false)}>
+                <X size={24} />
+              </button>
+            </div>
+            <form onSubmit={async (e) => {
+              e.preventDefault()
+              const form = e.target as HTMLFormElement
+              const formData = {
+                codigo: (form.elements.namedItem('codigo') as HTMLInputElement).value,
+                nombre: (form.elements.namedItem('nombre') as HTMLInputElement).value,
+                tipo: (form.elements.namedItem('tipo') as HTMLSelectElement).value,
+                ubicacionActual: (form.elements.namedItem('ubicacionActual') as HTMLInputElement).value,
+                vehiculoId: (form.elements.namedItem('vehiculoId') as HTMLSelectElement).value || null,
+                observaciones: (form.elements.namedItem('observaciones') as HTMLTextAreaElement).value
+              }
+              try {
+                const res = await fetch('/api/logistica', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ tipo: 'botiquin', ...formData })
+                })
+                if (res.ok) {
+                  await cargarDatos()
+                  setShowNuevoBotiquin(false)
+                  form.reset()
+                  alert('✅ Botiquín creado correctamente')
+                }
+              } catch (error) {
+                console.error('Error:', error)
+                alert('❌ Error al crear botiquín')
+              }
+            }} className="p-6 overflow-y-auto space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Código *</label>
+                  <input name="codigo" type="text" className="w-full border border-slate-300 rounded-lg p-2.5" placeholder="BOT-UMJ-01" required />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Tipo *</label>
+                  <select name="tipo" className="w-full border border-slate-300 rounded-lg p-2.5" required>
+                    <option value="vehiculo">Vehículo</option>
+                    <option value="pma">PMA</option>
+                    <option value="almacen">Almacén</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Nombre *</label>
+                <input name="nombre" type="text" className="w-full border border-slate-300 rounded-lg p-2.5" placeholder="Botiquín SVB UMJ" required />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Ubicación Actual *</label>
+                  <input name="ubicacionActual" type="text" className="w-full border border-slate-300 rounded-lg p-2.5" placeholder="En vehículo UMJ" required />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Vehículo Asignado</label>
+                  <select name="vehiculoId" className="w-full border border-slate-300 rounded-lg p-2.5">
+                    <option value="">Sin asignar</option>
+                    {vehiculos.map(v => (
+                      <option key={v.id} value={v.id}>
+                        {v.indicativo || v.matricula} - {v.tipo}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Observaciones</label>
+                <textarea name="observaciones" className="w-full border border-slate-300 rounded-lg p-2.5" rows={3} placeholder="Notas adicionales..."></textarea>
+              </div>
+              <div className="flex justify-end gap-3 pt-4 border-t">
+                <button type="button" onClick={() => setShowNuevoBotiquin(false)} className="px-5 py-2.5 text-slate-600 hover:bg-slate-100 rounded-lg font-medium">
+                  Cancelar
+                </button>
+                <button type="submit" className="px-5 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium">
+                  Crear Botiquín
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+    </div>
   )
 }
