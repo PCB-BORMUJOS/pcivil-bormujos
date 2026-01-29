@@ -708,11 +708,15 @@ export default function SocorrismoPage() {
         {/* Contenido de Botiquines */}
         {mainTab === 'botiquines' && (
           <div className="p-6">
-            <div className="mb-6">
-              <h3 className="text-lg font-bold text-slate-800 mb-4">Botiquines SVB</h3>
-              <p className="text-slate-600 text-sm mb-6">
-                Gestión de botiquines de Soporte Vital Básico ubicados en vehículos y PMA
-              </p>
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <h3 className="text-lg font-bold text-slate-800">Botiquines SVB</h3>
+                <p className="text-slate-600 text-sm">Gestión de botiquines de Soporte Vital Básico ubicados en vehículos y PMA</p>
+              </div>
+              <button onClick={() => setShowNuevoBotiquin(true)} className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium">
+                <Plus size={18} />
+                Nuevo Botiquín
+              </button>
             </div>
 
             {botiquines.length === 0 ? (
@@ -773,7 +777,7 @@ export default function SocorrismoPage() {
                          botiquin.estado === 'revision_pendiente' ? '⚠ Revisión Pendiente' :
                          '❌ Incompleto'}
                       </span>
-                      <button className="text-slate-600 hover:bg-slate-100 p-2 rounded-lg">
+                      <button onClick={() => setBotiquinSeleccionado(botiquin)} className="text-slate-600 hover:bg-slate-100 p-2 rounded-lg">
                         <Edit size={16} />
                       </button>
                     </div>
