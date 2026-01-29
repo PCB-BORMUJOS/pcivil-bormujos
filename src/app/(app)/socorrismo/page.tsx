@@ -2,7 +2,7 @@
 
 import dynamic from 'next/dynamic'
 import { useState, useEffect } from 'react'
-import { Plus, Search, Filter, AlertCircle, MapPin, Activity, Package, AlertTriangle, Building2, Eye, Edit, RefreshCw, ShoppingCart, Heart, Droplet, Calendar, User, Layers, Trash2, X } from 'lucide-react'
+import { Plus, Search, Filter, AlertCircle, MapPin, Activity, Package, AlertTriangle, Building2, Eye, Edit, RefreshCw, ShoppingCart, Heart, Droplet, Calendar, User, Layers, Trash2, X, ClipboardCheck, Clock, Check } from 'lucide-react'
 import 'leaflet/dist/leaflet.css'
 
 // Imports dinámicos para Leaflet
@@ -150,6 +150,9 @@ export default function SocorrismoPage() {
   const [showNuevoBotiquin, setShowNuevoBotiquin] = useState(false)
   const [botiquinSeleccionado, setBotiquinSeleccionado] = useState<any>(null)
   const [showGestionItems, setShowGestionItems] = useState(false)
+  const [showNuevoItem, setShowNuevoItem] = useState(false)
+  const [showEditarItem, setShowEditarItem] = useState(false)
+  const [itemSeleccionado, setItemSeleccionado] = useState<any>(null)
   const [showChecklist, setShowChecklist] = useState(false)
   const [articuloSeleccionado, setArticuloSeleccionado] = useState<Articulo | null>(null)
   const [deaSeleccionado, setDEASeleccionado] = useState<DEA | null>(null)

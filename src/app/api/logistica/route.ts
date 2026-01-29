@@ -66,8 +66,42 @@ export async function GET(request: NextRequest) {
       }
       return NextResponse.json({ deas, stats })
     }
+
     // ===== BOTIQUINES =====
     if (tipo === 'botiquines') {
+      const id = searchParams.get('id')
+      
+      // Si hay ID, devolver botiquín individual
+      if (id) {
+        try {
+          const botiquin = await prisma.botiquin.findUnique({
+            where: { id },
+            include: {
+              vehiculo: {
+                select: { id: true, indicativo: true, matricula: true, tipo: true }
+              },
+              items: { orderBy: { nombreItem: 'asc' } },
+              revisiones: {
+                orderBy: { fecha: 'desc' },
+                take: 5,
+                include: {
+                  usuario: { select: { id: true, nombre: true, apellidos: true } }
+                }
+              },
+              _count: { select: { items: true, revisiones: true } }
+            }
+          })
+          if (!botiquin) {
+            return NextResponse.json({ error: 'Botiquín no encontrado' }, { status: 404 })
+          }
+          return NextResponse.json({ botiquin })
+        } catch (error) {
+          console.error('Error al obtener botiquín:', error)
+          return NextResponse.json({ error: 'Error al obtener el botiquín' }, { status: 500 })
+        }
+      }
+      
+      // Si no hay ID, devolver lista completa
       const botiquines = await prisma.botiquin.findMany({
         include: {
           vehiculo: { select: { id: true, matricula: true, indicativo: true } },
@@ -86,8 +120,6 @@ export async function GET(request: NextRequest) {
       
       return NextResponse.json({ botiquines, stats })
     }
-
-    // ===== ASIGNACIONES =====
     if (tipo === 'asignaciones') {
       const inventarioSlug = searchParams.get('inventario') || 'vestuario'
       

@@ -6,8 +6,13 @@ export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession()
     if (!session?.user?.email) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    }
+
+    const { searchParams } = new URL(request.url)
     const tipo = searchParams.get('tipo')
 
+    // ===== EDIFICIOS =====
     if (tipo === 'edificios') {
       const edificios = await prisma.edificio.findMany({
         include: { _count: { select: { equiposECI: true } } },
@@ -16,81 +21,141 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ edificios })
     }
 
+    // ===== EQUIPOS ECI =====
     if (tipo === 'equipos-eci') {
       const edificioId = searchParams.get('edificioId')
       const whereEquipos: any = {}
       if (edificioId) whereEquipos.edificioId = edificioId
+      
       const equipos = await prisma.equipoECI.findMany({
         where: whereEquipos,
         include: { edificio: true },
         orderBy: [{ edificio: { nombre: 'asc' } }, { tipo: 'asc' }]
       })
-      const stats = { total: equipos.length, operativos: equipos.filter(e => e.estado === 'operativo').length, revisionPendiente: equipos.filter(e => e.estado === 'revision_pendiente').length }
+      
+      const stats = { 
+        total: equipos.length, 
+        operativos: equipos.filter(e => e.estado === 'operativo').length, 
+        revisionPendiente: equipos.filter(e => e.estado === 'revision_pendiente').length 
+      }
+      
       return NextResponse.json({ equipos, stats })
     }
 
+    // ===== HIDRANTES =====
     if (tipo === 'hidrantes') {
-      const hidrantes = await prisma.hidrante.findMany({ orderBy: { codigo: 'asc' } })
-      const stats = { total: hidrantes.length, operativos: hidrantes.filter(h => h.estado === 'operativo').length }
+      const hidrantes = await prisma.hidrante.findMany({ 
+        orderBy: { codigo: 'asc' } 
+      })
+      const stats = { 
+        total: hidrantes.length, 
+        operativos: hidrantes.filter(h => h.estado === 'operativo').length 
+      }
       return NextResponse.json({ hidrantes, stats })
     }
 
+    // ===== DEAS =====
+    if (tipo === 'deas') {
+      const deas = await prisma.dEA.findMany({
+        orderBy: { codigo: 'asc' }
+      })
+      const stats = {
+        total: deas.length,
+        operativos: deas.filter(d => d.estado === 'operativo').length,
+        revisionPendiente: deas.filter(d => d.estado === 'revision_pendiente').length
+      }
+      return NextResponse.json({ deas, stats })
+    }
+    // ===== BOTIQUINES =====
+    if (tipo === 'botiquines') {
+      const botiquines = await prisma.botiquin.findMany({
+        include: {
+          vehiculo: { select: { id: true, matricula: true, indicativo: true } },
+          items: { orderBy: { nombreItem: 'asc' } },
+          _count: { select: { items: true, revisiones: true } }
+        },
+        orderBy: { codigo: 'asc' }
+      })
+      
+      const stats = {
+        total: botiquines.length,
+        operativos: botiquines.filter(b => b.estado === 'operativo').length,
+        revisionPendiente: botiquines.filter(b => b.estado === 'revision_pendiente').length,
+        incompletos: botiquines.filter(b => b.estado === 'incompleto').length
+      }
+      
+      return NextResponse.json({ botiquines, stats })
+    }
+
+    // ===== ASIGNACIONES =====
+    if (tipo === 'asignaciones') {
+      const inventarioSlug = searchParams.get('inventario') || 'vestuario'
+      
+      const asignaciones = await prisma.asignacionVestuario.findMany({
+        include: {
+          usuario: {
+            select: {
+              id: true,
+              nombre: true,
+              apellidos: true,
+              numeroVoluntario: true,
+              email: true
+            }
+          }
+        },
+        orderBy: { fechaAsignacion: 'desc' }
+      })
+      
+      return NextResponse.json({ asignaciones })
+    }
+
+    // ===== CATEGORÍA =====
     if (tipo === 'categoria') {
       const slug = searchParams.get('slug')
       if (!slug) return NextResponse.json({ error: 'Slug requerido' }, { status: 400 })
-      const categoria = await prisma.categoriaInventario.findFirst({ where: { slug, activa: true } })
+      const categoria = await prisma.categoriaInventario.findFirst({ 
+        where: { slug, activa: true } 
+      })
       return NextResponse.json({ categoria })
     }
 
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
-    }
-
-    const { searchParams } = new URL(request.url)
-    const inventarioSlug = searchParams.get('inventario') || 'all' // 'all' = general, o slug específico
+    // ===== INVENTARIO GENERAL =====
+    const inventarioSlug = searchParams.get('inventario') || 'all'
     const familiaId = searchParams.get('familia')
     const busqueda = searchParams.get('busqueda')
     const soloAlertas = searchParams.get('alertas') === 'true'
 
-    // Obtener todas las categorías con su jerarquía
+    // Obtener todas las categorías
     const todasCategorias = await prisma.categoriaInventario.findMany({
       where: { activa: true },
       include: {
-        hijos: {
-          where: { activa: true },
-          orderBy: { orden: 'asc' }
-        },
+        hijos: { where: { activa: true }, orderBy: { orden: 'asc' } },
         padre: true
       },
       orderBy: { orden: 'asc' }
     })
 
-    // Separar categoría general y áreas
     const categoriaGeneral = todasCategorias.find(c => c.esGeneral)
     const areas = todasCategorias.filter(c => !c.esGeneral && !c.padreId)
 
-    // Determinar qué categorías incluir en la búsqueda
+    // Determinar categorías a incluir
     let categoriasIds: string[] = []
     
     if (inventarioSlug === 'all') {
-      // Inventario general: incluir TODAS las categorías
       categoriasIds = todasCategorias.map(c => c.id)
     } else {
-      // Inventario específico
       const categoriaSeleccionada = todasCategorias.find(c => c.slug === inventarioSlug)
       if (categoriaSeleccionada) {
         categoriasIds = [categoriaSeleccionada.id]
-        // Incluir sub-inventarios (hijos)
         const hijos = todasCategorias.filter(c => c.padreId === categoriaSeleccionada.id)
         categoriasIds.push(...hijos.map(h => h.id))
       }
     }
 
-    // Construir filtros para artículos
+    // Filtros para artículos
     const where: any = { 
       activo: true,
-      familia: {
-        categoriaId: { in: categoriasIds }
-      }
+      familia: { categoriaId: { in: categoriasIds } }
     }
     
     if (familiaId && familiaId !== 'all') {
@@ -109,9 +174,7 @@ export async function GET(request: NextRequest) {
     let articulos = await prisma.articulo.findMany({
       where,
       include: {
-        familia: {
-          include: { categoria: true }
-        },
+        familia: { include: { categoria: true } },
         ubicacion: true,
         servicio: { select: { nombre: true } }
       },
@@ -121,7 +184,7 @@ export async function GET(request: NextRequest) {
       ]
     })
 
-    // Filtrar por alertas si es necesario
+    // Filtrar alertas
     if (soloAlertas) {
       const hoy = new Date()
       const tresMeses = new Date()
@@ -133,11 +196,9 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Obtener familias filtradas por inventario seleccionado
+    // Obtener familias
     const familias = await prisma.familiaArticulo.findMany({
-      where: {
-        categoriaId: { in: categoriasIds }
-      },
+      where: { categoriaId: { in: categoriasIds } },
       include: { categoria: true },
       orderBy: [
         { categoria: { orden: 'asc' } },
@@ -145,7 +206,7 @@ export async function GET(request: NextRequest) {
       ]
     })
 
-    // Calcular estadísticas para el inventario seleccionado
+    // Estadísticas
     const articulosParaStats = await prisma.articulo.findMany({ 
       where: { 
         activo: true,
@@ -166,11 +227,10 @@ export async function GET(request: NextRequest) {
       ).length,
       caducados: articulosParaStats.filter(a => 
         a.fechaCaducidad && new Date(a.fechaCaducidad) <= hoy
-      ).length,
-      valorTotal: 0 // Se puede añadir si se tiene precio
+      ).length
     }
 
-    // Calcular estadísticas por área (para el inventario general)
+    // Estadísticas por área
     const statsPorArea = inventarioSlug === 'all' ? await Promise.all(
       areas.map(async (area) => {
         const idsArea = [area.id, ...todasCategorias.filter(c => c.padreId === area.id).map(c => c.id)]
@@ -192,42 +252,6 @@ export async function GET(request: NextRequest) {
       })
     ) : []
 
-    const tipo = searchParams.get('tipo')
-
-    if (tipo === 'edificios') {
-      const edificios = await prisma.edificio.findMany({
-        include: { _count: { select: { equiposECI: true } } },
-        orderBy: { nombre: 'asc' }
-      })
-      return NextResponse.json({ edificios })
-    }
-
-    if (tipo === 'equipos-eci') {
-      const edificioId = searchParams.get('edificioId')
-      const whereEquipos: any = {}
-      if (edificioId) whereEquipos.edificioId = edificioId
-      const equipos = await prisma.equipoECI.findMany({
-        where: whereEquipos,
-        include: { edificio: true },
-        orderBy: [{ edificio: { nombre: 'asc' } }, { tipo: 'asc' }]
-      })
-      const stats = { total: equipos.length, operativos: equipos.filter(e => e.estado === 'operativo').length, revisionPendiente: equipos.filter(e => e.estado === 'revision_pendiente').length }
-      return NextResponse.json({ equipos, stats })
-    }
-
-    if (tipo === 'hidrantes') {
-      const hidrantes = await prisma.hidrante.findMany({ orderBy: { codigo: 'asc' } })
-      const stats = { total: hidrantes.length, operativos: hidrantes.filter(h => h.estado === 'operativo').length }
-      return NextResponse.json({ hidrantes, stats })
-    }
-
-    if (tipo === 'categoria') {
-      const slug = searchParams.get('slug')
-      if (!slug) return NextResponse.json({ error: 'Slug requerido' }, { status: 400 })
-      const categoria = await prisma.categoriaInventario.findFirst({ where: { slug, activa: true } })
-      return NextResponse.json({ categoria })
-    }
-
     return NextResponse.json({ 
       articulos, 
       categorias: todasCategorias,
@@ -239,42 +263,6 @@ export async function GET(request: NextRequest) {
     })
   } catch (error) {
     console.error('Error en GET /api/logistica:', error)
-    const tipo = searchParams.get('tipo')
-
-    if (tipo === 'edificios') {
-      const edificios = await prisma.edificio.findMany({
-        include: { _count: { select: { equiposECI: true } } },
-        orderBy: { nombre: 'asc' }
-      })
-      return NextResponse.json({ edificios })
-    }
-
-    if (tipo === 'equipos-eci') {
-      const edificioId = searchParams.get('edificioId')
-      const whereEquipos: any = {}
-      if (edificioId) whereEquipos.edificioId = edificioId
-      const equipos = await prisma.equipoECI.findMany({
-        where: whereEquipos,
-        include: { edificio: true },
-        orderBy: [{ edificio: { nombre: 'asc' } }, { tipo: 'asc' }]
-      })
-      const stats = { total: equipos.length, operativos: equipos.filter(e => e.estado === 'operativo').length, revisionPendiente: equipos.filter(e => e.estado === 'revision_pendiente').length }
-      return NextResponse.json({ equipos, stats })
-    }
-
-    if (tipo === 'hidrantes') {
-      const hidrantes = await prisma.hidrante.findMany({ orderBy: { codigo: 'asc' } })
-      const stats = { total: hidrantes.length, operativos: hidrantes.filter(h => h.estado === 'operativo').length }
-      return NextResponse.json({ hidrantes, stats })
-    }
-
-    if (tipo === 'categoria') {
-      const slug = searchParams.get('slug')
-      if (!slug) return NextResponse.json({ error: 'Slug requerido' }, { status: 400 })
-      const categoria = await prisma.categoriaInventario.findFirst({ where: { slug, activa: true } })
-      return NextResponse.json({ categoria })
-    }
-
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
   }
 }
@@ -283,200 +271,654 @@ export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession()
     if (!session?.user?.email) {
-    const tipo = searchParams.get('tipo')
-
-    if (tipo === 'edificios') {
-      const edificios = await prisma.edificio.findMany({
-        include: { _count: { select: { equiposECI: true } } },
-        orderBy: { nombre: 'asc' }
-      })
-      return NextResponse.json({ edificios })
-    }
-
-    if (tipo === 'equipos-eci') {
-      const edificioId = searchParams.get('edificioId')
-      const whereEquipos: any = {}
-      if (edificioId) whereEquipos.edificioId = edificioId
-      const equipos = await prisma.equipoECI.findMany({
-        where: whereEquipos,
-        include: { edificio: true },
-        orderBy: [{ edificio: { nombre: 'asc' } }, { tipo: 'asc' }]
-      })
-      const stats = { total: equipos.length, operativos: equipos.filter(e => e.estado === 'operativo').length, revisionPendiente: equipos.filter(e => e.estado === 'revision_pendiente').length }
-      return NextResponse.json({ equipos, stats })
-    }
-
-    if (tipo === 'hidrantes') {
-      const hidrantes = await prisma.hidrante.findMany({ orderBy: { codigo: 'asc' } })
-      const stats = { total: hidrantes.length, operativos: hidrantes.filter(h => h.estado === 'operativo').length }
-      return NextResponse.json({ hidrantes, stats })
-    }
-
-    if (tipo === 'categoria') {
-      const slug = searchParams.get('slug')
-      if (!slug) return NextResponse.json({ error: 'Slug requerido' }, { status: 400 })
-      const categoria = await prisma.categoriaInventario.findFirst({ where: { slug, activa: true } })
-      return NextResponse.json({ categoria })
-    }
-
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
 
     const body = await request.json()
-    const { 
-      codigo, nombre, descripcion, stockActual, stockMinimo, 
-      unidad, tieneCaducidad, fechaCaducidad, ubicacionId, 
-      familiaId, metadatos 
-    } = body
+    const { tipo } = body
 
-    if (!nombre || !familiaId) {
-    const tipo = searchParams.get('tipo')
+    // ===== ARTÍCULO =====
+    if (tipo === 'articulo') {
+      const { codigo, nombre, descripcion, stockActual, stockMinimo, unidad, tieneCaducidad, fechaCaducidad, ubicacionId, familiaId, metadatos } = body
 
-    if (tipo === 'edificios') {
-      const edificios = await prisma.edificio.findMany({
-        include: { _count: { select: { equiposECI: true } } },
-        orderBy: { nombre: 'asc' }
-      })
-      return NextResponse.json({ edificios })
-    }
+      if (!nombre || !familiaId) {
+        return NextResponse.json({ error: 'Nombre y familia son requeridos' }, { status: 400 })
+      }
 
-    if (tipo === 'equipos-eci') {
-      const edificioId = searchParams.get('edificioId')
-      const whereEquipos: any = {}
-      if (edificioId) whereEquipos.edificioId = edificioId
-      const equipos = await prisma.equipoECI.findMany({
-        where: whereEquipos,
-        include: { edificio: true },
-        orderBy: [{ edificio: { nombre: 'asc' } }, { tipo: 'asc' }]
-      })
-      const stats = { total: equipos.length, operativos: equipos.filter(e => e.estado === 'operativo').length, revisionPendiente: equipos.filter(e => e.estado === 'revision_pendiente').length }
-      return NextResponse.json({ equipos, stats })
-    }
+      let servicio = await prisma.servicio.findFirst()
+      if (!servicio) {
+        servicio = await prisma.servicio.create({
+          data: { nombre: 'Protección Civil Bormujos', codigo: 'PCB' }
+        })
+      }
 
-    if (tipo === 'hidrantes') {
-      const hidrantes = await prisma.hidrante.findMany({ orderBy: { codigo: 'asc' } })
-      const stats = { total: hidrantes.length, operativos: hidrantes.filter(h => h.estado === 'operativo').length }
-      return NextResponse.json({ hidrantes, stats })
-    }
-
-    if (tipo === 'categoria') {
-      const slug = searchParams.get('slug')
-      if (!slug) return NextResponse.json({ error: 'Slug requerido' }, { status: 400 })
-      const categoria = await prisma.categoriaInventario.findFirst({ where: { slug, activa: true } })
-      return NextResponse.json({ categoria })
-    }
-
-      return NextResponse.json({ error: 'Nombre y familia son requeridos' }, { status: 400 })
-    }
-
-    // Obtener el servicio por defecto
-    let servicio = await prisma.servicio.findFirst()
-    if (!servicio) {
-      // Crear servicio por defecto si no existe
-      servicio = await prisma.servicio.create({
+      const articulo = await prisma.articulo.create({
         data: {
-          nombre: 'Protección Civil Bormujos',
-          codigo: 'PCB'
+          codigo, nombre, descripcion,
+          stockActual: stockActual || 0,
+          stockMinimo: stockMinimo || 0,
+          unidad: unidad || 'unidad',
+          tieneCaducidad: tieneCaducidad || false,
+          fechaCaducidad: fechaCaducidad ? new Date(fechaCaducidad) : null,
+          ubicacionId: ubicacionId || null,
+          familiaId,
+          servicioId: servicio.id,
+          metadatos
+        },
+        include: {
+          familia: { include: { categoria: true } },
+          ubicacion: true
         }
       })
+
+      return NextResponse.json({ success: true, articulo })
     }
 
-    const articulo = await prisma.articulo.create({
-      data: {
-        codigo,
-        nombre,
-        descripcion,
-        stockActual: stockActual || 0,
-        stockMinimo: stockMinimo || 0,
-        unidad: unidad || 'unidad',
-        tieneCaducidad: tieneCaducidad || false,
-        fechaCaducidad: fechaCaducidad ? new Date(fechaCaducidad) : null,
-        ubicacionId: ubicacionId || null,
-        familiaId,
-        servicioId: servicio.id,
-        metadatos
-      },
-      include: {
-        familia: { include: { categoria: true } },
-        ubicacion: true
+    // ===== ASIGNAR VESTUARIO =====
+    if (tipo === 'asignar-vestuario') {
+      const { usuarioId, articuloId, talla, cantidad, observaciones } = body
+      
+      if (!usuarioId || !articuloId || !talla) {
+        return NextResponse.json({ error: 'Usuario, artículo y talla son requeridos' }, { status: 400 })
       }
-    })
 
-    const tipo = searchParams.get('tipo')
-
-    if (tipo === 'edificios') {
-      const edificios = await prisma.edificio.findMany({
-        include: { _count: { select: { equiposECI: true } } },
-        orderBy: { nombre: 'asc' }
+      // Obtener el artículo
+      const articulo = await prisma.articulo.findUnique({
+        where: { id: articuloId },
+        include: { familia: true }
       })
-      return NextResponse.json({ edificios })
-    }
 
-    if (tipo === 'equipos-eci') {
-      const edificioId = searchParams.get('edificioId')
-      const whereEquipos: any = {}
-      if (edificioId) whereEquipos.edificioId = edificioId
-      const equipos = await prisma.equipoECI.findMany({
-        where: whereEquipos,
-        include: { edificio: true },
-        orderBy: [{ edificio: { nombre: 'asc' } }, { tipo: 'asc' }]
+      if (!articulo) {
+        return NextResponse.json({ error: 'Artículo no encontrado' }, { status: 404 })
+      }
+
+      // Verificar stock disponible
+      const stockDisponible = articulo.stockActual - articulo.stockAsignado
+      if (stockDisponible < cantidad) {
+        return NextResponse.json({ 
+          error: `Stock insuficiente. Disponible: ${stockDisponible}` 
+        }, { status: 400 })
+      }
+
+      // Crear asignación
+      const asignacion = await prisma.asignacionVestuario.create({
+        data: {
+          usuarioId,
+          tipoPrenda: articulo.nombre,
+          talla,
+          cantidad: cantidad || 1,
+          observaciones,
+          estado: 'ASIGNADO'
+        },
+        include: {
+          usuario: {
+            select: {
+              nombre: true,
+              apellidos: true,
+              numeroVoluntario: true
+            }
+          }
+        }
       })
-      const stats = { total: equipos.length, operativos: equipos.filter(e => e.estado === 'operativo').length, revisionPendiente: equipos.filter(e => e.estado === 'revision_pendiente').length }
-      return NextResponse.json({ equipos, stats })
+
+      // Actualizar stock asignado del artículo
+      await prisma.articulo.update({
+        where: { id: articuloId },
+        data: {
+          stockAsignado: {
+            increment: cantidad || 1
+          }
+        }
+      })
+
+      return NextResponse.json({ success: true, asignacion })
     }
 
-    if (tipo === 'hidrantes') {
-      const hidrantes = await prisma.hidrante.findMany({ orderBy: { codigo: 'asc' } })
-      const stats = { total: hidrantes.length, operativos: hidrantes.filter(h => h.estado === 'operativo').length }
-      return NextResponse.json({ hidrantes, stats })
+    // ===== FAMILIA =====
+    if (tipo === 'familia') {
+      const { nombre, categoriaId } = body
+
+      if (!nombre || !categoriaId) {
+        return NextResponse.json({ error: 'Nombre y categoría son requeridos' }, { status: 400 })
+      }
+
+      const slug = nombre.toLowerCase().replace(/\s+/g, '-').replace(/[áàäâ]/g, 'a').replace(/[éèëê]/g, 'e').replace(/[íìïî]/g, 'i').replace(/[óòöô]/g, 'o').replace(/[úùüû]/g, 'u')
+
+      const familia = await prisma.familiaArticulo.create({
+        data: { nombre, slug, categoriaId },
+        include: { categoria: true }
+      })
+
+      return NextResponse.json({ success: true, familia })
     }
 
-    if (tipo === 'categoria') {
-      const slug = searchParams.get('slug')
-      if (!slug) return NextResponse.json({ error: 'Slug requerido' }, { status: 400 })
-      const categoria = await prisma.categoriaInventario.findFirst({ where: { slug, activa: true } })
-      return NextResponse.json({ categoria })
+    // ===== EDIFICIO =====
+    if (tipo === 'edificio') {
+      const { nombre, direccion, responsable, telefono } = body
+
+      if (!nombre) {
+        return NextResponse.json({ error: 'Nombre es requerido' }, { status: 400 })
+      }
+
+      const edificio = await prisma.edificio.create({
+        data: { nombre, direccion, responsable, telefono }
+      })
+
+      return NextResponse.json({ success: true, edificio })
     }
 
-    return NextResponse.json({ success: true, articulo })
+    // ===== EQUIPO ECI =====
+    if (tipo === 'equipo-eci') {
+      const { edificioId, tipoEquipo, subtipo, ubicacion, numeroSerie, estado, observaciones } = body
+
+      if (!edificioId || !tipoEquipo || !ubicacion) {
+        return NextResponse.json({ error: 'Edificio, tipo y ubicación son requeridos' }, { status: 400 })
+      }
+
+      const equipo = await prisma.equipoECI.create({
+        data: {
+          edificioId,
+          tipo: tipoEquipo,
+          subtipo,
+          ubicacion,
+          numeroSerie,
+          estado: estado || 'operativo',
+          observaciones
+        },
+        include: { edificio: true }
+      })
+
+      return NextResponse.json({ success: true, equipo })
+    }
+
+    // ===== HIDRANTE =====
+    if (tipo === 'hidrante') {
+      const { codigo, tipo, ubicacion, latitud, longitud, presion, caudal, estado } = body
+
+      if (!codigo || !tipo || !ubicacion) {
+        return NextResponse.json({ error: 'Código, tipo y ubicación son requeridos' }, { status: 400 })
+      }
+
+      const hidrante = await prisma.hidrante.create({
+        data: {
+          codigo,
+          tipo,
+          ubicacion,
+          latitud: latitud ? parseFloat(latitud) : null,
+          longitud: longitud ? parseFloat(longitud) : null,
+          presion: presion ? parseFloat(presion) : null,
+          caudal: caudal ? parseInt(caudal) : null,
+          estado: estado || 'operativo'
+        }
+      })
+
+      return NextResponse.json({ success: true, hidrante })
+    }
+
+    // ===== DEA =====
+  if (tipo === 'dea') {
+  const { codigo, tipoDea, marca, modelo, numeroSerie, ubicacion, latitud, longitud, estado, accesible24h, caducidadBateria, caducidadParches, caducidadPilas } = body
+  
+  if (!codigo || !tipoDea || !ubicacion) {
+    return NextResponse.json({ error: 'Código, tipo y ubicación son requeridos' }, { status: 400 })
+  }
+
+  const dea = await prisma.dEA.create({
+    data: {
+      codigo,
+      tipo: tipoDea,
+      marca,
+      modelo,
+      numeroSerie,
+      ubicacion,
+      latitud: latitud ? parseFloat(latitud) : null,
+      longitud: longitud ? parseFloat(longitud) : null,
+      estado: estado || 'operativo',
+      accesible24h: accesible24h === true,
+      caducidadBateria: caducidadBateria ? new Date(caducidadBateria) : null,
+      caducidadParches: caducidadParches ? new Date(caducidadParches) : null,
+      caducidadPilas: caducidadPilas ? new Date(caducidadPilas) : null
+    }
+  })
+
+  return NextResponse.json({ success: true, dea })
+}
+
+    // ===== BOTIQUIN =====
+    if (tipo === 'botiquin') {
+      const { codigo, nombre, tipo: tipoBotiquin, ubicacionActual, vehiculoId, estado, observaciones } = body
+
+      if (!codigo || !nombre || !tipoBotiquin || !ubicacionActual) {
+        return NextResponse.json({ error: 'Código, nombre, tipo y ubicación son requeridos' }, { status: 400 })
+      }
+      
+      const botiquin = await prisma.botiquin.create({
+        data: {
+          codigo,
+          nombre,
+          tipo: tipoBotiquin,
+          ubicacionActual,
+          vehiculoId: vehiculoId && vehiculoId !== '' ? vehiculoId : null,
+          estado: estado || 'operativo',
+          observaciones
+        }
+      })
+      
+      return NextResponse.json({ success: true, botiquin })
+    }
+
+    // ===== BOTIQUIN ITEM =====
+    if (tipo === 'botiquin-item') {
+      const { botiquinId, articuloId, nombreItem, cantidadRequerida, cantidadActual, caducidad, unidad } = body
+      
+      if (!botiquinId || !nombreItem || !cantidadRequerida) {
+        return NextResponse.json({ error: 'Botiquín, nombre y cantidad requerida son obligatorios' }, { status: 400 })
+      }
+      
+      const item = await prisma.botiquinItem.create({
+        data: {
+          botiquinId,
+          articuloId: articuloId || null,
+          nombreItem,
+          cantidadRequerida: parseInt(cantidadRequerida),
+          cantidadActual: cantidadActual ? parseInt(cantidadActual) : 0,
+          caducidad: caducidad ? new Date(caducidad) : null,
+          unidad: unidad || 'Unidad'
+        }
+      })
+      
+      return NextResponse.json({ success: true, item })
+    }
+
+    // ===== REVISION BOTIQUIN =====
+    if (tipo === 'revision-botiquin') {
+      const { botiquinId, itemsVerificados, itemsFaltantes, itemsCaducados, observaciones, items } = body
+      
+      const usuario = await prisma.usuario.findUnique({
+        where: { email: session.user.email }
+      })
+      if (!usuario) {
+        return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
+      }
+      
+      // Crear revisión
+      const revision = await prisma.revisionBotiquin.create({
+        data: {
+          botiquinId,
+          usuarioId: usuario.id,
+          itemsVerificados: parseInt(itemsVerificados),
+          itemsFaltantes: parseInt(itemsFaltantes),
+          itemsCaducados: parseInt(itemsCaducados),
+          observaciones
+        }
+      })
+      
+      // Actualizar items si se proporcionan
+      if (items && Array.isArray(items)) {
+        for (const item of items) {
+          await prisma.botiquinItem.update({
+            where: { id: item.id },
+            data: {
+              cantidadActual: item.cantidadActual,
+              verificado: item.verificado
+            }
+          })
+        }
+      }
+      
+      // Actualizar fecha de última revisión del botiquín
+      await prisma.botiquin.update({
+        where: { id: botiquinId },
+        data: { 
+          ultimaRevision: new Date(),
+          proximaRevision: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // +30 días
+        }
+      })
+      
+      return NextResponse.json({ success: true, revision })
+    }
+
+    // ===== PETICIÓN =====
+    if (tipo === 'peticion') {
+      const { articuloId, nombreArticulo, cantidad, prioridad, motivo, areaOrigen } = body
+      
+      const usuario = await prisma.usuario.findUnique({
+        where: { email: session.user.email }
+      })
+
+      if (!usuario) {
+        return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
+      }
+
+      // Generar número de petición
+      const año = new Date().getFullYear()
+      const ultimaPeticion = await prisma.peticionMaterial.findFirst({
+        where: { numero: { startsWith: `PET-${año}` } },
+        orderBy: { numero: 'desc' }
+      })
+      
+      let siguiente = 1
+      if (ultimaPeticion) {
+        const partes = ultimaPeticion.numero.split('-')
+        siguiente = parseInt(partes[2]) + 1
+      }
+      
+      const numero = `PET-${año}-${siguiente.toString().padStart(4, '0')}`
+
+      // Obtener artículo
+      const articulo = articuloId ? await prisma.articulo.findUnique({
+        where: { id: articuloId }
+      }) : null
+
+      const peticion = await prisma.peticionMaterial.create({
+        data: {
+          numero,
+          articuloId,
+          nombreArticulo: articulo?.nombre || nombreArticulo,
+          cantidad,
+          unidad: articulo?.unidad || 'unidad',
+          prioridad: prioridad || 'normal',
+          descripcion: motivo,
+          areaOrigen,
+          estado: 'pendiente',
+          motivo: 'REPOSICION',
+          solicitanteId: usuario.id,
+          fechaSolicitud: new Date()
+        },
+        include: {
+          solicitante: {
+            select: { nombre: true, apellidos: true }
+          },
+          articulo: true
+        }
+      })
+
+      // Crear historial
+      await prisma.historialPeticion.create({
+        data: {
+          peticionId: peticion.id,
+          estadoAnterior: null,
+          estadoNuevo: 'pendiente',
+          usuarioId: usuario.id,
+          comentario: 'Petición creada'
+        }
+      })
+
+      return NextResponse.json({ success: true, peticion })
+    }
+
+    return NextResponse.json({ error: 'Tipo no válido' }, { status: 400 })
   } catch (error) {
     console.error('Error en POST /api/logistica:', error)
+    return NextResponse.json({ error: 'Error interno' }, { status: 500 })
+  }
+}
+
+export async function PUT(request: NextRequest) {
+  try {
+    const session = await getServerSession()
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    }
+
+    const body = await request.json()
+    const { tipo, id } = body
+
+    if (!id) {
+      return NextResponse.json({ error: 'ID es requerido' }, { status: 400 })
+    }
+
+    // ===== ARTÍCULO =====
+    if (tipo === 'articulo') {
+      const { codigo, nombre, descripcion, stockActual, stockMinimo, unidad, familiaId } = body
+
+      const articulo = await prisma.articulo.update({
+        where: { id },
+        data: { codigo, nombre, descripcion, stockActual, stockMinimo, unidad, familiaId },
+        include: {
+          familia: { include: { categoria: true } },
+          ubicacion: true
+        }
+      })
+
+      return NextResponse.json({ success: true, articulo })
+    }
+
+    // ===== FAMILIA =====
+    if (tipo === 'familia') {
+      const { nombre } = body
+      
+      const familia = await prisma.familiaArticulo.update({
+        where: { id },
+        data: { nombre },
+        include: { categoria: true }
+      })
+
+      return NextResponse.json({ success: true, familia })
+    }
+
+    // ===== EDIFICIO =====
+    if (tipo === 'edificio') {
+      const { nombre, direccion, responsable, telefono } = body
+
+      const edificio = await prisma.edificio.update({
+        where: { id },
+        data: { nombre, direccion, responsable, telefono }
+      })
+
+      return NextResponse.json({ success: true, edificio })
+    }
+
+    // ===== EQUIPO ECI =====
+    if (tipo === 'equipo-eci') {
+      const { tipo: tipoEquipo, subtipo, ubicacion, numeroSerie, estado } = body
+
+      const equipo = await prisma.equipoECI.update({
+        where: { id },
+        data: { tipo: tipoEquipo, subtipo, ubicacion, numeroSerie, estado },
+        include: { edificio: true }
+      })
+
+      return NextResponse.json({ success: true, equipo })
+    }
+
+    // ===== HIDRANTE =====
+    if (tipo === 'hidrante') {
+      const { codigo, tipoHidrante, ubicacion, latitud, longitud, presion, caudal, estado } = body
+
+      const hidrante = await prisma.hidrante.update({
+        where: { id },
+        data: {
+          codigo,
+          tipo: tipoHidrante,
+          ubicacion,
+          latitud: latitud ? parseFloat(latitud) : null,
+          longitud: longitud ? parseFloat(longitud) : null,
+          presion: presion ? parseFloat(presion) : null,
+          caudal: caudal ? parseInt(caudal) : null,
+          estado
+        }
+      })
+
+      return NextResponse.json({ success: true, hidrante })
+    }
+
+    // ===== DEA =====
+  if (tipo === 'dea') {
+  const { codigo, tipoDea, marca, modelo, numeroSerie, ubicacion, latitud, longitud, estado, accesible24h, caducidadBateria, caducidadParches, caducidadPilas } = body
+  
+  if (!codigo || !tipoDea || !ubicacion) {
+    return NextResponse.json({ error: 'Código, tipo y ubicación son requeridos' }, { status: 400 })
+  }
+
+  const dea = await prisma.dEA.update({
+    where: { id },
+    data: {
+      codigo,
+      tipo: tipoDea,
+      marca,
+      modelo,
+      numeroSerie,
+      ubicacion,
+      latitud: latitud ? parseFloat(latitud) : null,
+      longitud: longitud ? parseFloat(longitud) : null,
+      estado: estado || 'operativo',
+      accesible24h: accesible24h === true,
+      caducidadBateria: caducidadBateria ? new Date(caducidadBateria) : null,
+      caducidadParches: caducidadParches ? new Date(caducidadParches) : null,
+      caducidadPilas: caducidadPilas ? new Date(caducidadPilas) : null
+    }
+  })
+
+  return NextResponse.json({ success: true, dea })
+}
+
+    // ===== BOTIQUIN =====
+    if (tipo === 'botiquin') {
+      const { codigo, nombre, tipo: tipoBotiquin, ubicacionActual, vehiculoId, estado, observaciones } = body
+      
+      const botiquin = await prisma.botiquin.update({
+        where: { id },
+        data: {
+          codigo,
+          nombre,
+          tipo: tipoBotiquin,
+          ubicacionActual,
+          vehiculoId: vehiculoId || null,
+          estado,
+          observaciones
+        }
+      })
+      
+      return NextResponse.json({ success: true, botiquin })
+    }
+
+    // ===== BOTIQUIN ITEM =====
+    if (tipo === 'botiquin-item') {
+      const { nombreItem, cantidadRequerida, cantidadActual, caducidad, unidad, verificado } = body
+      
+      const item = await prisma.botiquinItem.update({
+        where: { id },
+        data: {
+          nombreItem,
+          cantidadRequerida: cantidadRequerida ? parseInt(cantidadRequerida) : undefined,
+          cantidadActual: cantidadActual !== undefined ? parseInt(cantidadActual) : undefined,
+          caducidad: caducidad ? new Date(caducidad) : null,
+          unidad,
+          verificado
+        }
+      })
+      
+      return NextResponse.json({ success: true, item })
+    }
+
+    return NextResponse.json({ error: 'Tipo no válido' }, { status: 400 })
+  } catch (error) {
+    console.error('Error en PUT /api/logistica:', error)
+    return NextResponse.json({ error: 'Error interno' }, { status: 500 })
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const session = await getServerSession()
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    }
+
+    const { searchParams } = new URL(request.url)
     const tipo = searchParams.get('tipo')
+    const id = searchParams.get('id')
 
-    if (tipo === 'edificios') {
-      const edificios = await prisma.edificio.findMany({
-        include: { _count: { select: { equiposECI: true } } },
-        orderBy: { nombre: 'asc' }
+    if (!id || !tipo) {
+      return NextResponse.json({ error: 'ID y tipo son requeridos' }, { status: 400 })
+    }
+
+    // ===== ARTÍCULO =====
+    if (tipo === 'articulo') {
+      await prisma.articulo.update({
+        where: { id },
+        data: { activo: false }
       })
-      return NextResponse.json({ edificios })
+      return NextResponse.json({ success: true })
     }
 
-    if (tipo === 'equipos-eci') {
-      const edificioId = searchParams.get('edificioId')
-      const whereEquipos: any = {}
-      if (edificioId) whereEquipos.edificioId = edificioId
-      const equipos = await prisma.equipoECI.findMany({
-        where: whereEquipos,
-        include: { edificio: true },
-        orderBy: [{ edificio: { nombre: 'asc' } }, { tipo: 'asc' }]
+    // ===== FAMILIA =====
+    if (tipo === 'familia') {
+      const articulosCount = await prisma.articulo.count({
+        where: { familiaId: id, activo: true }
       })
-      const stats = { total: equipos.length, operativos: equipos.filter(e => e.estado === 'operativo').length, revisionPendiente: equipos.filter(e => e.estado === 'revision_pendiente').length }
-      return NextResponse.json({ equipos, stats })
+
+      if (articulosCount > 0) {
+        return NextResponse.json({ 
+          error: `No se puede eliminar. Hay ${articulosCount} artículos en esta familia.` 
+        }, { status: 400 })
+      }
+
+      await prisma.familiaArticulo.delete({ where: { id } })
+      return NextResponse.json({ success: true })
     }
 
-    if (tipo === 'hidrantes') {
-      const hidrantes = await prisma.hidrante.findMany({ orderBy: { codigo: 'asc' } })
-      const stats = { total: hidrantes.length, operativos: hidrantes.filter(h => h.estado === 'operativo').length }
-      return NextResponse.json({ hidrantes, stats })
+    // ===== EDIFICIO =====
+    if (tipo === 'edificio') {
+      const equiposCount = await prisma.equipoECI.count({
+        where: { edificioId: id }
+      })
+
+      if (equiposCount > 0) {
+        return NextResponse.json({ 
+          error: `No se puede eliminar. Hay ${equiposCount} equipos en este edificio.` 
+        }, { status: 400 })
+      }
+
+      await prisma.edificio.delete({ where: { id } })
+      return NextResponse.json({ success: true })
     }
 
-    if (tipo === 'categoria') {
-      const slug = searchParams.get('slug')
-      if (!slug) return NextResponse.json({ error: 'Slug requerido' }, { status: 400 })
-      const categoria = await prisma.categoriaInventario.findFirst({ where: { slug, activa: true } })
-      return NextResponse.json({ categoria })
+    // ===== EQUIPO ECI =====
+    if (tipo === 'equipo-eci') {
+      await prisma.equipoECI.delete({ where: { id } })
+      return NextResponse.json({ success: true })
     }
 
+    // ===== HIDRANTE =====
+    if (tipo === 'hidrante') {
+      await prisma.hidrante.delete({ where: { id } })
+      return NextResponse.json({ success: true })
+    }
+
+    // ===== DEA =====
+    if (tipo === 'dea') {
+      await prisma.dEA.delete({ where: { id } })
+      return NextResponse.json({ success: true })
+    }
+    
+    // ===== BOTIQUIN =====
+    if (tipo === 'botiquin') {
+      const revisionesCount = await prisma.revisionBotiquin.count({
+        where: { botiquinId: id }
+      })
+      
+      if (revisionesCount > 0) {
+        return NextResponse.json({ 
+          error: `No se puede eliminar. Este botiquín tiene ${revisionesCount} revisiones registradas.` 
+        }, { status: 400 })
+      }
+      
+      await prisma.botiquinItem.deleteMany({ where: { botiquinId: id } })
+      await prisma.botiquin.delete({ where: { id } })
+      return NextResponse.json({ success: true })
+    }
+    
+    // ===== BOTIQUIN ITEM =====
+    if (tipo === 'botiquin-item') {
+      await prisma.botiquinItem.delete({ where: { id } })
+      return NextResponse.json({ success: true })
+    }
+
+    return NextResponse.json({ error: 'Tipo no válido' }, { status: 400 })
+  } catch (error) {
+    console.error('Error en DELETE /api/logistica:', error)
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
   }
 }
