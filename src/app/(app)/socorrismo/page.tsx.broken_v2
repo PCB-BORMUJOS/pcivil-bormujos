@@ -110,7 +110,15 @@ export default function SocorrismoPage() {
     if (typeof window === 'undefined') return undefined
     
     // Importar L dinámicamente solo en el cliente
-    const L = require('leaflet')
+    const L = (() => {
+      try {
+        return require('leaflet')
+      } catch (e) {
+        return null
+      }
+    })()
+    
+    if (!L) return undefined
     
     const color = estado === 'operativo' ? '#10b981' : 
       estado === 'revision_pendiente' ? '#f59e0b' : '#ef4444'
@@ -705,6 +713,8 @@ export default function SocorrismoPage() {
             </div>
           </div>
         )}
+      </div>
+
 
         {/* Contenido de Botiquines */}
         {mainTab === 'botiquines' && (
@@ -764,7 +774,7 @@ export default function SocorrismoPage() {
                       )}
                       <div className="flex items-center gap-2 text-sm">
                         <Layers size={14} className="text-slate-400" />
-                        <span className="text-slate-600">{botiquin._count?.items} items</span>
+                        <span className="text-slate-600">{botiquin._count.items} items</span>
                       </div>
                     </div>
 
@@ -779,45 +789,45 @@ export default function SocorrismoPage() {
                          '❌ Incompleto'}
                       </span>
                       <div className="flex gap-2">
-                        <button
-                          onClick={() => setBotiquinSeleccionado(botiquin)}
-                          className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-1"
-                          title="Editar botiquín"
-                        >
-                          <Edit size={14} />
-                          Editar
-                        </button>
-                        
-                        <button
-                          onClick={async () => {
-                            try {
-                              const res = await fetch(`/api/logistica?tipo=botiquines&id=${botiquin.id}`)
-                              const data = await res.json()
-                              setBotiquinSeleccionado(data.botiquin)
-                              setShowGestionItems(true)
-                            } catch (error) {
-                              console.error('Error:', error)
-                              alert('Error al cargar items')
-                            }
-                          }}
-                          className="px-2 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700 flex items-center gap-1"
-                          title="Gestionar items"
-                        >
-                          <Layers size={14} />
-                          Items ({botiquin._count?.items || 0})
-                        </button>
-                        
-                        <button
-                          onClick={async () => {
-                            alert('Funcionalidad de checklist pendiente')
-                          }}
-                          className="px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700 flex items-center gap-1"
-                          title="Hacer checklist (próximamente)"
-                        >
-                          <ClipboardCheck size={14} />
-                          Revisar
-                        </button>
-                      </div>
+  <button
+    onClick={() => setBotiquinSeleccionado(botiquin)}
+    className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-1"
+    title="Editar botiquín"
+  >
+    <Edit size={14} />
+    Editar
+  </button>
+  
+  <button
+    onClick={async () => {
+      try {
+        const res = await fetch(`/api/logistica?tipo=botiquines&id=${botiquin.id}`)
+        const data = await res.json()
+        setBotiquinSeleccionado(data.botiquin)
+        setShowGestionItems(true)
+      } catch (error) {
+        console.error('Error:', error)
+        alert('Error al cargar items')
+      }
+    }}
+    className="px-2 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700 flex items-center gap-1"
+    title="Gestionar items"
+  >
+    <Layers size={14} />
+    Items ({botiquin._count?.items || 0})
+  </button>
+  
+  <button
+    onClick={async () => {
+      alert('Funcionalidad de checklist pendiente')
+    }}
+    className="px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700 flex items-center gap-1"
+    title="Hacer checklist (próximamente)"
+  >
+    <ClipboardCheck size={14} />
+    Revisar
+  </button>
+</div>
                     </div>
 
                     {botiquin.ultimaRevision && (
@@ -833,8 +843,6 @@ export default function SocorrismoPage() {
             )}
           </div>
         )}
-      </div>
-
       {/* MODALES */}
       
       {/* Modal Nuevo Artículo */}
@@ -1104,6 +1112,8 @@ export default function SocorrismoPage() {
         </div>
       )}
 
+      </div>
+
       {/* Modal Gestión de Familias */}
       {showGestionFamilias && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60" onClick={() => setShowGestionFamilias(false)}>
@@ -1204,263 +1214,263 @@ export default function SocorrismoPage() {
       )}
 
       {/* Modal Nuevo DEA */}
-      {showNuevoDEA && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60" onClick={() => setShowNuevoDEA(false)}>
-          <div className="bg-white rounded-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
-            <div className="bg-cyan-600 p-5 text-white flex justify-between items-center">
-              <h2 className="text-xl font-bold">Nuevo DEA</h2>
-              <button onClick={() => setShowNuevoDEA(false)}>
-                <X size={24} />
-              </button>
-            </div>
-            <form onSubmit={async (e) => {
-              e.preventDefault()
-              const form = e.target as HTMLFormElement
-              const latitudValue = (form.elements.namedItem('latitud') as HTMLInputElement).value
-              const longitudValue = (form.elements.namedItem('longitud') as HTMLInputElement).value
-              
-              const formData = {
-                codigo: (form.elements.namedItem('codigo') as HTMLInputElement).value,
-                tipoDea: (form.elements.namedItem('tipoDea') as HTMLSelectElement).value,
-                marca: (form.elements.namedItem('marca') as HTMLInputElement).value,
-                modelo: (form.elements.namedItem('modelo') as HTMLInputElement).value,
-                numeroSerie: (form.elements.namedItem('numeroSerie') as HTMLInputElement).value,
-                ubicacion: (form.elements.namedItem('ubicacion') as HTMLInputElement).value,
-                latitud: latitudValue ? parseFloat(latitudValue) : null,
-                longitud: longitudValue ? parseFloat(longitudValue) : null,
-                estado: (form.elements.namedItem('estado') as HTMLSelectElement).value,
-                accesible24h: (form.elements.namedItem('accesible24h') as HTMLInputElement).checked,
-                caducidadBateria: (form.elements.namedItem('caducidadBateria') as HTMLInputElement).value || null,
-                caducidadParches: (form.elements.namedItem('caducidadParches') as HTMLInputElement).value || null,
-                caducidadPilas: (form.elements.namedItem('caducidadPilas') as HTMLInputElement).value || null
-              }
-              try {
-                const res = await fetch('/api/logistica', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ tipo: 'dea', ...formData })
-                })
-                if (res.ok) {
-                  await cargarDatos()
-                  setShowNuevoDEA(false)
-                  form.reset()
-                } else {
-                  const error = await res.json()
-                  alert(`Error: ${error.error || 'No se pudo crear el DEA'}`)
-                }
-              } catch (error) {
-                console.error('Error:', error)
-                alert('Error al crear DEA')
-              }
-            }} className="p-6 overflow-y-auto space-y-5">
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Código *</label>
-                  <input name="codigo" type="text" className="w-full border border-slate-300 rounded-lg p-2.5" placeholder="DEA-001" required />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Tipo *</label>
-                  <select name="tipoDea" className="w-full border border-slate-300 rounded-lg p-2.5" required>
-                    <option value="automatico">Automático</option>
-                    <option value="semiautomatico">Semiautomático</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Estado</label>
-                  <select name="estado" className="w-full border border-slate-300 rounded-lg p-2.5">
-                    <option value="operativo">Operativo</option>
-                    <option value="revision_pendiente">Revisión Pendiente</option>
-                    <option value="fuera_servicio">Fuera de Servicio</option>
-                  </select>
-                </div>
-              </div>
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Marca</label>
-                  <input name="marca" type="text" className="w-full border border-slate-300 rounded-lg p-2.5" placeholder="Ej: Philips" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Modelo</label>
-                  <input name="modelo" type="text" className="w-full border border-slate-300 rounded-lg p-2.5" placeholder="Ej: HeartStart HS1" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Número de Serie</label>
-                  <input name="numeroSerie" type="text" className="w-full border border-slate-300 rounded-lg p-2.5" placeholder="NS123456" />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Ubicación *</label>
-                <input name="ubicacion" type="text" className="w-full border border-slate-300 rounded-lg p-2.5" placeholder="Calle, número..." required />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Latitud</label>
-                  <input name="latitud" type="text" className="w-full border border-slate-300 rounded-lg p-2.5" placeholder="37.371234" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Longitud</label>
-                  <input name="longitud" type="text" className="w-full border border-slate-300 rounded-lg p-2.5" placeholder="-6.072000" />
-                </div>
-              </div>
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Caducidad Batería</label>
-                  <input name="caducidadBateria" type="date" className="w-full border border-slate-300 rounded-lg p-2.5" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Caducidad Parches</label>
-                  <input name="caducidadParches" type="date" className="w-full border border-slate-300 rounded-lg p-2.5" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Caducidad Pilas</label>
-                  <input name="caducidadPilas" type="date" className="w-full border border-slate-300 rounded-lg p-2.5" />
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <input name="accesible24h" type="checkbox" id="accesible24h" defaultChecked className="w-4 h-4" />
-                <label htmlFor="accesible24h" className="text-sm font-medium text-slate-700">Accesible 24 horas</label>
-              </div>
-              <div className="flex justify-end gap-3 pt-4 border-t">
-                <button type="button" onClick={() => setShowNuevoDEA(false)} className="px-5 py-2.5 text-slate-600 hover:bg-slate-100 rounded-lg font-medium">
-                  Cancelar
-                </button>
-                <button type="submit" className="px-5 py-2.5 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 font-medium">
-                  Crear DEA
-                </button>
-              </div>
-            </form>
+{showNuevoDEA && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60" onClick={() => setShowNuevoDEA(false)}>
+    <div className="bg-white rounded-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+      <div className="bg-cyan-600 p-5 text-white flex justify-between items-center">
+        <h2 className="text-xl font-bold">Nuevo DEA</h2>
+        <button onClick={() => setShowNuevoDEA(false)}>
+          <X size={24} />
+        </button>
+      </div>
+      <form onSubmit={async (e) => {
+        e.preventDefault()
+        const form = e.target as HTMLFormElement
+        const latitudValue = (form.elements.namedItem('latitud') as HTMLInputElement).value
+        const longitudValue = (form.elements.namedItem('longitud') as HTMLInputElement).value
+        
+        const formData = {
+          codigo: (form.elements.namedItem('codigo') as HTMLInputElement).value,
+          tipoDea: (form.elements.namedItem('tipoDea') as HTMLSelectElement).value,
+          marca: (form.elements.namedItem('marca') as HTMLInputElement).value,
+          modelo: (form.elements.namedItem('modelo') as HTMLInputElement).value,
+          numeroSerie: (form.elements.namedItem('numeroSerie') as HTMLInputElement).value,
+          ubicacion: (form.elements.namedItem('ubicacion') as HTMLInputElement).value,
+          latitud: latitudValue ? parseFloat(latitudValue) : null,
+          longitud: longitudValue ? parseFloat(longitudValue) : null,
+          estado: (form.elements.namedItem('estado') as HTMLSelectElement).value,
+          accesible24h: (form.elements.namedItem('accesible24h') as HTMLInputElement).checked,
+          caducidadBateria: (form.elements.namedItem('caducidadBateria') as HTMLInputElement).value || null,
+          caducidadParches: (form.elements.namedItem('caducidadParches') as HTMLInputElement).value || null,
+          caducidadPilas: (form.elements.namedItem('caducidadPilas') as HTMLInputElement).value || null
+        }
+        try {
+          const res = await fetch('/api/logistica', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tipo: 'dea', ...formData })
+          })
+          if (res.ok) {
+            await cargarDatos()
+            setShowNuevoDEA(false)
+            form.reset()
+          } else {
+            const error = await res.json()
+            alert(`Error: ${error.error || 'No se pudo crear el DEA'}`)
+          }
+        } catch (error) {
+          console.error('Error:', error)
+          alert('Error al crear DEA')
+        }
+      }} className="p-6 overflow-y-auto space-y-5">
+        <div className="grid grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Código *</label>
+            <input name="codigo" type="text" className="w-full border border-slate-300 rounded-lg p-2.5" placeholder="DEA-001" required />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Tipo *</label>
+            <select name="tipoDea" className="w-full border border-slate-300 rounded-lg p-2.5" required>
+              <option value="automatico">Automático</option>
+              <option value="semiautomatico">Semiautomático</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Estado</label>
+            <select name="estado" className="w-full border border-slate-300 rounded-lg p-2.5">
+              <option value="operativo">Operativo</option>
+              <option value="revision_pendiente">Revisión Pendiente</option>
+              <option value="fuera_servicio">Fuera de Servicio</option>
+            </select>
           </div>
         </div>
-      )}
+        <div className="grid grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Marca</label>
+            <input name="marca" type="text" className="w-full border border-slate-300 rounded-lg p-2.5" placeholder="Ej: Philips" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Modelo</label>
+            <input name="modelo" type="text" className="w-full border border-slate-300 rounded-lg p-2.5" placeholder="Ej: HeartStart HS1" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Número de Serie</label>
+            <input name="numeroSerie" type="text" className="w-full border border-slate-300 rounded-lg p-2.5" placeholder="NS123456" />
+          </div>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-2">Ubicación *</label>
+          <input name="ubicacion" type="text" className="w-full border border-slate-300 rounded-lg p-2.5" placeholder="Calle, número..." required />
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Latitud</label>
+            <input name="latitud" type="text" className="w-full border border-slate-300 rounded-lg p-2.5" placeholder="37.371234" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Longitud</label>
+            <input name="longitud" type="text" className="w-full border border-slate-300 rounded-lg p-2.5" placeholder="-6.072000" />
+          </div>
+        </div>
+        <div className="grid grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Caducidad Batería</label>
+            <input name="caducidadBateria" type="date" className="w-full border border-slate-300 rounded-lg p-2.5" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Caducidad Parches</label>
+            <input name="caducidadParches" type="date" className="w-full border border-slate-300 rounded-lg p-2.5" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Caducidad Pilas</label>
+            <input name="caducidadPilas" type="date" className="w-full border border-slate-300 rounded-lg p-2.5" />
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <input name="accesible24h" type="checkbox" id="accesible24h" defaultChecked className="w-4 h-4" />
+          <label htmlFor="accesible24h" className="text-sm font-medium text-slate-700">Accesible 24 horas</label>
+        </div>
+        <div className="flex justify-end gap-3 pt-4 border-t">
+          <button type="button" onClick={() => setShowNuevoDEA(false)} className="px-5 py-2.5 text-slate-600 hover:bg-slate-100 rounded-lg font-medium">
+            Cancelar
+          </button>
+          <button type="submit" className="px-5 py-2.5 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 font-medium">
+            Crear DEA
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+)}
 
-      {/* Modal Editar DEA */}
-      {deaSeleccionado && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60" onClick={() => setDEASeleccionado(null)}>
-          <div className="bg-white rounded-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
-            <div className="bg-cyan-600 p-5 text-white flex justify-between items-center">
-              <h2 className="text-xl font-bold">Editar DEA</h2>
-              <button onClick={() => setDEASeleccionado(null)}>
-                <X size={24} />
-              </button>
-            </div>
-            <form onSubmit={async (e) => {
-              e.preventDefault()
-              const form = e.target as HTMLFormElement
-              const latitudValue = (form.elements.namedItem('latitud') as HTMLInputElement).value
-              const longitudValue = (form.elements.namedItem('longitud') as HTMLInputElement).value
-              
-              const formData = {
-                codigo: (form.elements.namedItem('codigo') as HTMLInputElement).value,
-                tipoDea: (form.elements.namedItem('tipoDea') as HTMLSelectElement).value,
-                marca: (form.elements.namedItem('marca') as HTMLInputElement).value,
-                modelo: (form.elements.namedItem('modelo') as HTMLInputElement).value,
-                numeroSerie: (form.elements.namedItem('numeroSerie') as HTMLInputElement).value,
-                ubicacion: (form.elements.namedItem('ubicacion') as HTMLInputElement).value,
-                latitud: latitudValue ? parseFloat(latitudValue) : null,
-                longitud: longitudValue ? parseFloat(longitudValue) : null,
-                estado: (form.elements.namedItem('estado') as HTMLSelectElement).value,
-                accesible24h: (form.elements.namedItem('accesible24h') as HTMLInputElement).checked,
-                caducidadBateria: (form.elements.namedItem('caducidadBateria') as HTMLInputElement).value || null,
-                caducidadParches: (form.elements.namedItem('caducidadParches') as HTMLInputElement).value || null,
-                caducidadPilas: (form.elements.namedItem('caducidadPilas') as HTMLInputElement).value || null
-              }
-              try {
-                const res = await fetch('/api/logistica', {
-                  method: 'PUT',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ tipo: 'dea', id: deaSeleccionado.id, ...formData })
-                })
-                if (res.ok) {
-                  await cargarDatos()
-                  setDEASeleccionado(null)
-                } else {
-                  const error = await res.json()
-                  alert(`Error: ${error.error || 'No se pudo actualizar el DEA'}`)
-                }
-              } catch (error) {
-                console.error('Error:', error)
-                alert('Error al actualizar DEA')
-              }
-            }} className="p-6 overflow-y-auto space-y-5">
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Código</label>
-                  <input name="codigo" type="text" defaultValue={deaSeleccionado.codigo} className="w-full border border-slate-300 rounded-lg p-2.5" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Tipo</label>
-                  <select name="tipoDea" defaultValue={deaSeleccionado.tipo} className="w-full border border-slate-300 rounded-lg p-2.5">
-                    <option value="automatico">Automático</option>
-                    <option value="semiautomatico">Semiautomático</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Estado</label>
-                  <select name="estado" defaultValue={deaSeleccionado.estado} className="w-full border border-slate-300 rounded-lg p-2.5">
-                    <option value="operativo">Operativo</option>
-                    <option value="revision_pendiente">Revisión Pendiente</option>
-                    <option value="fuera_servicio">Fuera de Servicio</option>
-                  </select>
-                </div>
-              </div>
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Marca</label>
-                  <input name="marca" type="text" defaultValue={deaSeleccionado.marca || ''} className="w-full border border-slate-300 rounded-lg p-2.5" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Modelo</label>
-                  <input name="modelo" type="text" defaultValue={deaSeleccionado.modelo || ''} className="w-full border border-slate-300 rounded-lg p-2.5" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Número de Serie</label>
-                  <input name="numeroSerie" type="text" defaultValue={deaSeleccionado.numeroSerie || ''} className="w-full border border-slate-300 rounded-lg p-2.5" />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Ubicación</label>
-                <input name="ubicacion" type="text" defaultValue={deaSeleccionado.ubicacion} className="w-full border border-slate-300 rounded-lg p-2.5" />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Latitud</label>
-                  <input name="latitud" type="text" defaultValue={deaSeleccionado.latitud?.toFixed(8) || ''} className="w-full border border-slate-300 rounded-lg p-2.5" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Longitud</label>
-                  <input name="longitud" type="text" defaultValue={deaSeleccionado.longitud?.toFixed(8) || ''} className="w-full border border-slate-300 rounded-lg p-2.5" />
-                </div>
-              </div>
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Caducidad Batería</label>
-                  <input name="caducidadBateria" type="date" defaultValue={deaSeleccionado.caducidadBateria ? new Date(deaSeleccionado.caducidadBateria).toISOString().split('T')[0] : ''} className="w-full border border-slate-300 rounded-lg p-2.5" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Caducidad Parches</label>
-                  <input name="caducidadParches" type="date" defaultValue={deaSeleccionado.caducidadParches ? new Date(deaSeleccionado.caducidadParches).toISOString().split('T')[0] : ''} className="w-full border border-slate-300 rounded-lg p-2.5" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Caducidad Pilas</label>
-                  <input name="caducidadPilas" type="date" defaultValue={deaSeleccionado.caducidadPilas ? new Date(deaSeleccionado.caducidadPilas).toISOString().split('T')[0] : ''} className="w-full border border-slate-300 rounded-lg p-2.5" />
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <input name="accesible24h" type="checkbox" id="accesible24h-edit" defaultChecked={deaSeleccionado.accesible24h} className="w-4 h-4" />
-                <label htmlFor="accesible24h-edit" className="text-sm font-medium text-slate-700">Accesible 24 horas</label>
-              </div>
-              <div className="flex justify-end gap-3 pt-4 border-t">
-                <button type="button" onClick={() => setDEASeleccionado(null)} className="px-5 py-2.5 text-slate-600 hover:bg-slate-100 rounded-lg font-medium">
-                  Cancelar
-                </button>
-                <button type="submit" className="px-5 py-2.5 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 font-medium">
-                  Guardar Cambios
-                </button>
-              </div>
-            </form>
+{/* Modal Editar DEA */}
+{deaSeleccionado && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60" onClick={() => setDEASeleccionado(null)}>
+    <div className="bg-white rounded-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+      <div className="bg-cyan-600 p-5 text-white flex justify-between items-center">
+        <h2 className="text-xl font-bold">Editar DEA</h2>
+        <button onClick={() => setDEASeleccionado(null)}>
+          <X size={24} />
+        </button>
+      </div>
+      <form onSubmit={async (e) => {
+        e.preventDefault()
+        const form = e.target as HTMLFormElement
+        const latitudValue = (form.elements.namedItem('latitud') as HTMLInputElement).value
+        const longitudValue = (form.elements.namedItem('longitud') as HTMLInputElement).value
+        
+        const formData = {
+          codigo: (form.elements.namedItem('codigo') as HTMLInputElement).value,
+          tipoDea: (form.elements.namedItem('tipoDea') as HTMLSelectElement).value,
+          marca: (form.elements.namedItem('marca') as HTMLInputElement).value,
+          modelo: (form.elements.namedItem('modelo') as HTMLInputElement).value,
+          numeroSerie: (form.elements.namedItem('numeroSerie') as HTMLInputElement).value,
+          ubicacion: (form.elements.namedItem('ubicacion') as HTMLInputElement).value,
+          latitud: latitudValue ? parseFloat(latitudValue) : null,
+          longitud: longitudValue ? parseFloat(longitudValue) : null,
+          estado: (form.elements.namedItem('estado') as HTMLSelectElement).value,
+          accesible24h: (form.elements.namedItem('accesible24h') as HTMLInputElement).checked,
+          caducidadBateria: (form.elements.namedItem('caducidadBateria') as HTMLInputElement).value || null,
+          caducidadParches: (form.elements.namedItem('caducidadParches') as HTMLInputElement).value || null,
+          caducidadPilas: (form.elements.namedItem('caducidadPilas') as HTMLInputElement).value || null
+        }
+        try {
+          const res = await fetch('/api/logistica', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tipo: 'dea', id: deaSeleccionado.id, ...formData })
+          })
+          if (res.ok) {
+            await cargarDatos()
+            setDEASeleccionado(null)
+          } else {
+            const error = await res.json()
+            alert(`Error: ${error.error || 'No se pudo actualizar el DEA'}`)
+          }
+        } catch (error) {
+          console.error('Error:', error)
+          alert('Error al actualizar DEA')
+        }
+      }} className="p-6 overflow-y-auto space-y-5">
+        <div className="grid grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Código</label>
+            <input name="codigo" type="text" defaultValue={deaSeleccionado.codigo} className="w-full border border-slate-300 rounded-lg p-2.5" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Tipo</label>
+            <select name="tipoDea" defaultValue={deaSeleccionado.tipo} className="w-full border border-slate-300 rounded-lg p-2.5">
+              <option value="automatico">Automático</option>
+              <option value="semiautomatico">Semiautomático</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Estado</label>
+            <select name="estado" defaultValue={deaSeleccionado.estado} className="w-full border border-slate-300 rounded-lg p-2.5">
+              <option value="operativo">Operativo</option>
+              <option value="revision_pendiente">Revisión Pendiente</option>
+              <option value="fuera_servicio">Fuera de Servicio</option>
+            </select>
           </div>
         </div>
-      )}
+        <div className="grid grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Marca</label>
+            <input name="marca" type="text" defaultValue={deaSeleccionado.marca || ''} className="w-full border border-slate-300 rounded-lg p-2.5" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Modelo</label>
+            <input name="modelo" type="text" defaultValue={deaSeleccionado.modelo || ''} className="w-full border border-slate-300 rounded-lg p-2.5" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Número de Serie</label>
+            <input name="numeroSerie" type="text" defaultValue={deaSeleccionado.numeroSerie || ''} className="w-full border border-slate-300 rounded-lg p-2.5" />
+          </div>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-2">Ubicación</label>
+          <input name="ubicacion" type="text" defaultValue={deaSeleccionado.ubicacion} className="w-full border border-slate-300 rounded-lg p-2.5" />
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Latitud</label>
+            <input name="latitud" type="text" defaultValue={deaSeleccionado.latitud?.toFixed(8) || ''} className="w-full border border-slate-300 rounded-lg p-2.5" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Longitud</label>
+            <input name="longitud" type="text" defaultValue={deaSeleccionado.longitud?.toFixed(8) || ''} className="w-full border border-slate-300 rounded-lg p-2.5" />
+          </div>
+        </div>
+        <div className="grid grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Caducidad Batería</label>
+            <input name="caducidadBateria" type="date" defaultValue={deaSeleccionado.caducidadBateria ? new Date(deaSeleccionado.caducidadBateria).toISOString().split('T')[0] : ''} className="w-full border border-slate-300 rounded-lg p-2.5" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Caducidad Parches</label>
+            <input name="caducidadParches" type="date" defaultValue={deaSeleccionado.caducidadParches ? new Date(deaSeleccionado.caducidadParches).toISOString().split('T')[0] : ''} className="w-full border border-slate-300 rounded-lg p-2.5" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Caducidad Pilas</label>
+            <input name="caducidadPilas" type="date" defaultValue={deaSeleccionado.caducidadPilas ? new Date(deaSeleccionado.caducidadPilas).toISOString().split('T')[0] : ''} className="w-full border border-slate-300 rounded-lg p-2.5" />
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <input name="accesible24h" type="checkbox" id="accesible24h-edit" defaultChecked={deaSeleccionado.accesible24h} className="w-4 h-4" />
+          <label htmlFor="accesible24h-edit" className="text-sm font-medium text-slate-700">Accesible 24 horas</label>
+        </div>
+        <div className="flex justify-end gap-3 pt-4 border-t">
+          <button type="button" onClick={() => setDEASeleccionado(null)} className="px-5 py-2.5 text-slate-600 hover:bg-slate-100 rounded-lg font-medium">
+            Cancelar
+          </button>
+          <button type="submit" className="px-5 py-2.5 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 font-medium">
+            Guardar Cambios
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+)}
 
       {/* Modal Nuevo Botiquín */}
       {showNuevoBotiquin && (
@@ -1488,7 +1498,7 @@ export default function SocorrismoPage() {
                 const res = await fetch('/api/logistica', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ tipoBotiquin: formData.tipo, codigo: formData.codigo, nombre: formData.nombre, ubicacionActual: formData.ubicacionActual, vehiculoId: formData.vehiculoId, observaciones: formData.observaciones })
+                  body: JSON.stringify({ tipo: 'botiquin', tipoBotiquin: formData.tipo, codigo: formData.codigo, nombre: formData.nombre, ubicacionActual: formData.ubicacionActual, vehiculoId: formData.vehiculoId, observaciones: formData.observaciones })
                 })
                 if (res.ok) {
                   await cargarDatos()
@@ -1553,7 +1563,9 @@ export default function SocorrismoPage() {
         </div>
       )}
 
-      {/* Modal Editar Botiquín */}
+    </div>
+  )
+  {/* MODAL EDITAR BOTIQUÍN */}
       {botiquinSeleccionado && !showGestionItems && !showChecklist && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60"
@@ -1711,250 +1723,250 @@ export default function SocorrismoPage() {
                   className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium flex items-center justify-center gap-2"
                 >
                   <Check className="w-4 h-4" />
-                  Guardar Cambios
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Modal Gestión de Items */}
-      {showGestionItems && botiquinSeleccionado && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60" onClick={() => {setShowGestionItems(false); setBotiquinSeleccionado(null)}}>
-          <div className="bg-white rounded-xl w-full max-w-4xl shadow-2xl max-h-[90vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
-            <div className="bg-red-600 p-5 text-white flex items-center justify-between">
-              <h2 className="text-xl font-bold flex items-center gap-2">
-                <Layers className="w-5 h-5" />
-                Gestión de Items - {botiquinSeleccionado.codigo}
-              </h2>
-              <button onClick={() => {setShowGestionItems(false); setBotiquinSeleccionado(null)}} className="text-white hover:bg-red-700 p-1 rounded">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="p-6 overflow-y-auto">
-              <div className="flex justify-between items-center mb-4">
-                <p className="text-slate-600">{botiquinSeleccionado.items?.length || 0} items en el botiquín</p>
-                <button onClick={() => setShowNuevoItem(true)} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center gap-2">
-                  <Plus size={18} />Añadir Item
-                </button>
-              </div>
-
-              {(!botiquinSeleccionado.items || botiquinSeleccionado.items.length === 0) ? (
-                <div className="text-center py-12 bg-slate-50 rounded-xl">
-                  <Package size={48} className="mx-auto mb-4 text-slate-300" />
-                  <p className="text-slate-500 mb-4">No hay items en este botiquín</p>
-                  <button onClick={() => setShowNuevoItem(true)} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
-                    Añadir Primer Item
-                  </button>
+                        Guardar Cambios
+                      </button>
+                    </div>
+                  </form>
                 </div>
-              ) : (
-                <div className="space-y-3">
-                  {botiquinSeleccionado.items.map((item: any) => (
-                    <div key={item.id} className="p-4 rounded-lg border-2 bg-white hover:shadow-md transition-shadow">
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <h4 className="font-semibold text-slate-900">{item.nombreItem}</h4>
-                          <div className="grid grid-cols-2 gap-2 mt-2 text-sm">
-                            <div>
-                              <span className="text-slate-500">Cantidad:</span>
-                              <span className="ml-2 font-bold text-green-600">
-                                {item.cantidadActual} / {item.cantidadRequerida} {item.unidad}
-                              </span>
+              </div>
+            )}
+
+            {/* MODAL GESTIÓN DE ITEMS */}
+            {showGestionItems && botiquinSeleccionado && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60" onClick={() => {setShowGestionItems(false); setBotiquinSeleccionado(null)}}>
+                <div className="bg-white rounded-xl w-full max-w-4xl shadow-2xl max-h-[90vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+                  <div className="bg-red-600 p-5 text-white flex items-center justify-between">
+                    <h2 className="text-xl font-bold flex items-center gap-2">
+                      <Layers className="w-5 h-5" />
+                      Gestión de Items - {botiquinSeleccionado.codigo}
+                    </h2>
+                    <button onClick={() => {setShowGestionItems(false); setBotiquinSeleccionado(null)}} className="text-white hover:bg-red-700 p-1 rounded">
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+
+                  <div className="p-6 overflow-y-auto">
+                    <div className="flex justify-between items-center mb-4">
+                      <p className="text-slate-600">{botiquinSeleccionado.items?.length || 0} items en el botiquín</p>
+                      <button onClick={() => setShowNuevoItem(true)} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center gap-2">
+                        <Plus size={18} />Añadir Item
+                      </button>
+                    </div>
+
+                    {(!botiquinSeleccionado.items || botiquinSeleccionado.items.length === 0) ? (
+                      <div className="text-center py-12 bg-slate-50 rounded-xl">
+                        <Package size={48} className="mx-auto mb-4 text-slate-300" />
+                        <p className="text-slate-500 mb-4">No hay items en este botiquín</p>
+                        <button onClick={() => setShowNuevoItem(true)} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+                          Añadir Primer Item
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {botiquinSeleccionado.items.map((item: any) => (
+                          <div key={item.id} className="p-4 rounded-lg border-2 bg-white hover:shadow-md transition-shadow">
+                            <div className="flex justify-between items-start">
+                              <div className="flex-1">
+                                <h4 className="font-semibold text-slate-900">{item.nombreItem}</h4>
+                                <div className="grid grid-cols-2 gap-2 mt-2 text-sm">
+                                  <div>
+                                    <span className="text-slate-500">Cantidad:</span>
+                                    <span className="ml-2 font-bold text-green-600">
+                                      {item.cantidadActual} / {item.cantidadRequerida} {item.unidad}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="flex gap-2 ml-4">
+                                <button onClick={() => {setItemSeleccionado(item); setShowEditarItem(true)}} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg">
+                                  <Edit className="w-4 h-4" />
+                                </button>
+                                <button onClick={async () => {
+                                  if (confirm(`¿Eliminar "${item.nombreItem}"?`)) {
+                                    try {
+                                      const res = await fetch(`/api/logistica?tipo=botiquin-item&id=${item.id}`, {method: 'DELETE'})
+                                      if (res.ok) {
+                                        const resReload = await fetch(`/api/logistica?tipo=botiquines&id=${botiquinSeleccionado.id}`)
+                                        const dataReload = await resReload.json()
+                                        setBotiquinSeleccionado(dataReload.botiquin)
+                                        await cargarDatos()
+                                        alert('✅ Item eliminado')
+                                      }
+                                    } catch (error) {
+                                      console.error('Error:', error)
+                                      alert('❌ Error al eliminar')
+                                    }
+                                  }
+                                }} className="p-2 text-red-600 hover:bg-red-50 rounded-lg">
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                        <div className="flex gap-2 ml-4">
-                          <button onClick={() => {setItemSeleccionado(item); setShowEditarItem(true)}} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg">
-                            <Edit className="w-4 h-4" />
-                          </button>
-                          <button onClick={async () => {
-                            if (confirm(`¿Eliminar "${item.nombreItem}"?`)) {
-                              try {
-                                const res = await fetch(`/api/logistica?tipo=botiquin-item&id=${item.id}`, {method: 'DELETE'})
-                                if (res.ok) {
-                                  const resReload = await fetch(`/api/logistica?tipo=botiquines&id=${botiquinSeleccionado.id}`)
-                                  const dataReload = await resReload.json()
-                                  setBotiquinSeleccionado(dataReload.botiquin)
-                                  await cargarDatos()
-                                  alert('✅ Item eliminado')
-                                }
-                              } catch (error) {
-                                console.error('Error:', error)
-                                alert('❌ Error al eliminar')
-                              }
-                            }
-                          }} className="p-2 text-red-600 hover:bg-red-50 rounded-lg">
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* SUB-MODAL: NUEVO ITEM */}
+            {showNuevoItem && (
+              <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60" onClick={() => setShowNuevoItem(false)}>
+                <div className="bg-white rounded-xl w-full max-w-2xl shadow-2xl" onClick={(e) => e.stopPropagation()}>
+                  <div className="bg-red-700 p-5 text-white flex items-center justify-between rounded-t-xl">
+                    <h3 className="text-lg font-bold">Añadir Item al Botiquín</h3>
+                    <button onClick={() => setShowNuevoItem(false)} className="text-white hover:bg-red-800 p-1 rounded">
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+                  <form onSubmit={async (e) => {
+                    e.preventDefault()
+                    const form = e.target as HTMLFormElement
+                    const formData = {
+                      botiquinId: botiquinSeleccionado.id,
+                      nombreItem: (form.elements.namedItem('nombreItem') as HTMLInputElement).value,
+                      cantidadRequerida: parseInt((form.elements.namedItem('cantidadRequerida') as HTMLInputElement).value),
+                      cantidadActual: parseInt((form.elements.namedItem('cantidadActual') as HTMLInputElement).value),
+                      unidad: (form.elements.namedItem('unidad') as HTMLSelectElement).value,
+                      caducidad: (form.elements.namedItem('caducidad') as HTMLInputElement).value || null
+                    }
+                    try {
+                      const res = await fetch('/api/logistica', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({tipo: 'botiquin-item', ...formData})
+                      })
+                      if (res.ok) {
+                        const resReload = await fetch(`/api/logistica?tipo=botiquines&id=${botiquinSeleccionado.id}`)
+                        const dataReload = await resReload.json()
+                        setBotiquinSeleccionado(dataReload.botiquin)
+                        setShowNuevoItem(false)
+                        form.reset()
+                        await cargarDatos()
+                        alert('✅ Item añadido')
+                      } else {
+                        alert('❌ Error al crear item')
+                      }
+                    } catch (error) {
+                      console.error('Error:', error)
+                      alert('❌ Error al crear item')
+                    }
+                  }} className="p-6 space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Nombre del Item *</label>
+                      <input name="nombreItem" type="text" required className="w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="Ej: Vendas estériles 10x10" />
+                    </div>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Cantidad Requerida *</label>
+                        <input name="cantidadRequerida" type="number" min="1" defaultValue="1" required className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Cantidad Actual *</label>
+                        <input name="cantidadActual" type="number" min="0" defaultValue="0" required className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Unidad *</label>
+                        <select name="unidad" required className="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                          <option value="uds">Unidades</option>
+                          <option value="cajas">Cajas</option>
+                          <option value="paquetes">Paquetes</option>
+                          <option value="ml">Mililitros</option>
+                        </select>
                       </div>
                     </div>
-                  ))}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Fecha de Caducidad</label>
+                      <input name="caducidad" type="date" className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+                    </div>
+                    <div className="flex gap-3 pt-4 border-t">
+                      <button type="button" onClick={() => setShowNuevoItem(false)} className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">Cancelar</button>
+                      <button type="submit" className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">Añadir Item</button>
+                    </div>
+                  </form>
                 </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+              </div>
+            )}
 
-      {/* Modal Nuevo Item */}
-      {showNuevoItem && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60" onClick={() => setShowNuevoItem(false)}>
-          <div className="bg-white rounded-xl w-full max-w-2xl shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="bg-red-700 p-5 text-white flex items-center justify-between rounded-t-xl">
-              <h3 className="text-lg font-bold">Añadir Item al Botiquín</h3>
-              <button onClick={() => setShowNuevoItem(false)} className="text-white hover:bg-red-800 p-1 rounded">
-                <X className="w-5 h-5" />
-              </button>
+            {/* SUB-MODAL: EDITAR ITEM */}
+            {showEditarItem && itemSeleccionado && (
+              <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60" onClick={() => {setShowEditarItem(false); setItemSeleccionado(null)}}>
+                <div className="bg-white rounded-xl w-full max-w-2xl shadow-2xl" onClick={(e) => e.stopPropagation()}>
+                  <div className="bg-blue-600 p-5 text-white flex items-center justify-between rounded-t-xl">
+                    <h3 className="text-lg font-bold">Editar Item</h3>
+                    <button onClick={() => {setShowEditarItem(false); setItemSeleccionado(null)}} className="text-white hover:bg-blue-700 p-1 rounded">
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+                  <form onSubmit={async (e) => {
+                    e.preventDefault()
+                    const form = e.target as HTMLFormElement
+                    const formData = {
+                      nombreItem: (form.elements.namedItem('nombreItem') as HTMLInputElement).value,
+                      cantidadRequerida: parseInt((form.elements.namedItem('cantidadRequerida') as HTMLInputElement).value),
+                      cantidadActual: parseInt((form.elements.namedItem('cantidadActual') as HTMLInputElement).value),
+                      unidad: (form.elements.namedItem('unidad') as HTMLSelectElement).value,
+                      caducidad: (form.elements.namedItem('caducidad') as HTMLInputElement).value || null
+                    }
+                    try {
+                      const res = await fetch('/api/logistica', {
+                        method: 'PUT',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({tipo: 'botiquin-item', id: itemSeleccionado.id, ...formData})
+                      })
+                      if (res.ok) {
+                        const resReload = await fetch(`/api/logistica?tipo=botiquines&id=${botiquinSeleccionado.id}`)
+                        const dataReload = await resReload.json()
+                        setBotiquinSeleccionado(dataReload.botiquin)
+                        setShowEditarItem(false)
+                        setItemSeleccionado(null)
+                        await cargarDatos()
+                        alert('✅ Item actualizado')
+                      } else {
+                        alert('❌ Error al actualizar')
+                      }
+                    } catch (error) {
+                      console.error('Error:', error)
+                      alert('❌ Error al actualizar')
+                    }
+                  }} className="p-6 space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Nombre del Item *</label>
+                      <input name="nombreItem" type="text" defaultValue={itemSeleccionado.nombreItem} required className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+                    </div>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Cantidad Requerida *</label>
+                        <input name="cantidadRequerida" type="number" min="1" defaultValue={itemSeleccionado.cantidadRequerida} required className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Cantidad Actual *</label>
+                        <input name="cantidadActual" type="number" min="0" defaultValue={itemSeleccionado.cantidadActual} required className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Unidad *</label>
+                        <select name="unidad" defaultValue={itemSeleccionado.unidad} required className="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                          <option value="uds">Unidades</option>
+                          <option value="cajas">Cajas</option>
+                          <option value="paquetes">Paquetes</option>
+                          <option value="ml">Mililitros</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Fecha de Caducidad</label>
+                      <input name="caducidad" type="date" defaultValue={itemSeleccionado.caducidad ? new Date(itemSeleccionado.caducidad).toISOString().split('T')[0] : ''} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+                    </div>
+                    <div className="flex gap-3 pt-4 border-t">
+                      <button type="button" onClick={() => {setShowEditarItem(false); setItemSeleccionado(null)}} className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">Cancelar</button>
+                      <button type="submit" className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Guardar</button>
+                    </div>
+                </form>
+              </div>
             </div>
-            <form onSubmit={async (e) => {
-              e.preventDefault()
-              const form = e.target as HTMLFormElement
-              const formData = {
-                botiquinId: botiquinSeleccionado.id,
-                nombreItem: (form.elements.namedItem('nombreItem') as HTMLInputElement).value,
-                cantidadRequerida: parseInt((form.elements.namedItem('cantidadRequerida') as HTMLInputElement).value),
-                cantidadActual: parseInt((form.elements.namedItem('cantidadActual') as HTMLInputElement).value),
-                unidad: (form.elements.namedItem('unidad') as HTMLSelectElement).value,
-                caducidad: (form.elements.namedItem('caducidad') as HTMLInputElement).value || null
-              }
-              try {
-                const res = await fetch('/api/logistica', {
-                  method: 'POST',
-                  headers: {'Content-Type': 'application/json'},
-                  body: JSON.stringify({tipo: 'botiquin-item', ...formData})
-                })
-                if (res.ok) {
-                  const resReload = await fetch(`/api/logistica?tipo=botiquines&id=${botiquinSeleccionado.id}`)
-                  const dataReload = await resReload.json()
-                  setBotiquinSeleccionado(dataReload.botiquin)
-                  setShowNuevoItem(false)
-                  form.reset()
-                  await cargarDatos()
-                  alert('✅ Item añadido')
-                } else {
-                  alert('❌ Error al crear item')
-                }
-              } catch (error) {
-                console.error('Error:', error)
-                alert('❌ Error al crear item')
-              }
-            }} className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Nombre del Item *</label>
-                <input name="nombreItem" type="text" required className="w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="Ej: Vendas estériles 10x10" />
-              </div>
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Cantidad Requerida *</label>
-                  <input name="cantidadRequerida" type="number" min="1" defaultValue="1" required className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Cantidad Actual *</label>
-                  <input name="cantidadActual" type="number" min="0" defaultValue="0" required className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Unidad *</label>
-                  <select name="unidad" required className="w-full px-3 py-2 border border-gray-300 rounded-lg">
-                    <option value="uds">Unidades</option>
-                    <option value="cajas">Cajas</option>
-                    <option value="paquetes">Paquetes</option>
-                    <option value="ml">Mililitros</option>
-                  </select>
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Fecha de Caducidad</label>
-                <input name="caducidad" type="date" className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
-              </div>
-              <div className="flex gap-3 pt-4 border-t">
-                <button type="button" onClick={() => setShowNuevoItem(false)} className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">Cancelar</button>
-                <button type="submit" className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">Añadir Item</button>
-              </div>
-            </form>
+          )}
           </div>
-        </div>
-      )}
-
-      {/* Modal Editar Item */}
-      {showEditarItem && itemSeleccionado && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60" onClick={() => {setShowEditarItem(false); setItemSeleccionado(null)}}>
-          <div className="bg-white rounded-xl w-full max-w-2xl shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="bg-blue-600 p-5 text-white flex items-center justify-between rounded-t-xl">
-              <h3 className="text-lg font-bold">Editar Item</h3>
-              <button onClick={() => {setShowEditarItem(false); setItemSeleccionado(null)}} className="text-white hover:bg-blue-700 p-1 rounded">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <form onSubmit={async (e) => {
-              e.preventDefault()
-              const form = e.target as HTMLFormElement
-              const formData = {
-                nombreItem: (form.elements.namedItem('nombreItem') as HTMLInputElement).value,
-                cantidadRequerida: parseInt((form.elements.namedItem('cantidadRequerida') as HTMLInputElement).value),
-                cantidadActual: parseInt((form.elements.namedItem('cantidadActual') as HTMLInputElement).value),
-                unidad: (form.elements.namedItem('unidad') as HTMLSelectElement).value,
-                caducidad: (form.elements.namedItem('caducidad') as HTMLInputElement).value || null
-              }
-              try {
-                const res = await fetch('/api/logistica', {
-                  method: 'PUT',
-                  headers: {'Content-Type': 'application/json'},
-                  body: JSON.stringify({tipo: 'botiquin-item', id: itemSeleccionado.id, ...formData})
-                })
-                if (res.ok) {
-                  const resReload = await fetch(`/api/logistica?tipo=botiquines&id=${botiquinSeleccionado.id}`)
-                  const dataReload = await resReload.json()
-                  setBotiquinSeleccionado(dataReload.botiquin)
-                  setShowEditarItem(false)
-                  setItemSeleccionado(null)
-                  await cargarDatos()
-                  alert('✅ Item actualizado')
-                } else {
-                  alert('❌ Error al actualizar')
-                }
-              } catch (error) {
-                console.error('Error:', error)
-                alert('❌ Error al actualizar')
-              }
-            }} className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Nombre del Item *</label>
-                <input name="nombreItem" type="text" defaultValue={itemSeleccionado.nombreItem} required className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
-              </div>
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Cantidad Requerida *</label>
-                  <input name="cantidadRequerida" type="number" min="1" defaultValue={itemSeleccionado.cantidadRequerida} required className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Cantidad Actual *</label>
-                  <input name="cantidadActual" type="number" min="0" defaultValue={itemSeleccionado.cantidadActual} required className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Unidad *</label>
-                  <select name="unidad" defaultValue={itemSeleccionado.unidad} required className="w-full px-3 py-2 border border-gray-300 rounded-lg">
-                    <option value="uds">Unidades</option>
-                    <option value="cajas">Cajas</option>
-                    <option value="paquetes">Paquetes</option>
-                    <option value="ml">Mililitros</option>
-                  </select>
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Fecha de Caducidad</label>
-                <input name="caducidad" type="date" defaultValue={itemSeleccionado.caducidad ? new Date(itemSeleccionado.caducidad).toISOString().split('T')[0] : ''} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
-              </div>
-              <div className="flex gap-3 pt-4 border-t">
-                <button type="button" onClick={() => {setShowEditarItem(false); setItemSeleccionado(null)}} className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">Cancelar</button>
-                <button type="submit" className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Guardar</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
+        )
+      }
