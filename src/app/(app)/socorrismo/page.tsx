@@ -1561,7 +1561,6 @@ export default function SocorrismoPage() {
                       tipo: 'botiquin',
                       id: botiquinSeleccionado.id,
                       codigo: codigo || undefined,
-                      tipo: tipoBotiquin,
                       nombre,
                       ubicacionActual,
                       vehiculoId: vehiculoId && vehiculoId !== '' ? vehiculoId : null,
