@@ -39,6 +39,7 @@ interface Articulo {
   descripcion: string;
   stockActual: number;
   stockMinimo: number;
+  stockAsignado?: number;
   unidad: string;
   tieneCaducidad: boolean;
   fechaCaducidad: string | null;
@@ -1336,7 +1337,7 @@ export default function LogisticaPage() {
                 <option value="">Seleccionar artículo...</option>
                 {articulos.map(art => (
                   <option key={art.id} value={art.id}>
-                    {art.nombre} (Stock: {art.stockActual - art.stockAsignado})
+                    {art.nombre} (Stock: {art.stockActual - (art.stockAsignado || 0)})
                   </option>
                 ))}
               </select>

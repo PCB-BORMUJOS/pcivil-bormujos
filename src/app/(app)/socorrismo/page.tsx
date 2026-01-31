@@ -2014,8 +2014,8 @@ export default function SocorrismoPage() {
                 }
               })
               
-              const itemsVerificados = itemsData.filter(i => i.verificado).length
-              const itemsFaltantes = itemsData.filter(i => i.cantidadActual < i.cantidadRequerida).length
+              const itemsVerificados = itemsData.filter((i: any) => i.verificado).length
+              const itemsFaltantes = itemsData.filter((i: any) => i.cantidadActual < i.cantidadRequerida).length
               const itemsCaducados = items.filter((item: any) => item.caducidad && new Date(item.caducidad) < new Date()).length
               const observaciones = (form.elements.namedItem('observaciones') as HTMLTextAreaElement).value
               

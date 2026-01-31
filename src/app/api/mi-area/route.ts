@@ -163,7 +163,7 @@ export async function POST(request: NextRequest) {
           titulo: 'Nueva solicitud de vestuario',
           mensaje: `${usuario.nombre} ${usuario.apellidos} ha solicitado ${body.tipoPrenda} - ${body.talla}`,
           leida: false,
-          url: '/logistica?tab=vestuario'
+          enlace: '/logistica?tab=vestuario'
         }
       })
 

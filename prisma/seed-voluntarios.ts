@@ -17,12 +17,12 @@ async function main() {
   // Obtener o crear roles
   let rolSuperadmin = await prisma.rol.findFirst({ where: { nombre: 'superadmin' } })
   if (!rolSuperadmin) {
-    rolSuperadmin = await prisma.rol.create({ data: { nombre: 'superadmin', descripcion: 'Superadministrador' } })
+    rolSuperadmin = await prisma.rol.create({ data: { nombre: 'superadmin', descripcion: 'Superadministrador', permisos: {} } })
   }
 
   let rolVoluntario = await prisma.rol.findFirst({ where: { nombre: 'voluntario' } })
   if (!rolVoluntario) {
-    rolVoluntario = await prisma.rol.create({ data: { nombre: 'voluntario', descripcion: 'Voluntario' } })
+    rolVoluntario = await prisma.rol.create({ data: { nombre: 'voluntario', descripcion: 'Voluntario', permisos: {} } })
   }
 
   const usuarios = [
