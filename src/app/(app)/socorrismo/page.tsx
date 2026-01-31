@@ -815,10 +815,10 @@ export default function SocorrismoPage() {
                         
                         <button
                           onClick={async () => {
-                            alert('Funcionalidad de checklist pendiente')
+                            setBotiquinSeleccionado(botiquin); setShowChecklist(true)
                           }}
                           className="px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700 flex items-center gap-1"
-                          title="Hacer checklist (próximamente)"
+                          title="Hacer checklist de revisión"
                         >
                           <ClipboardCheck size={14} />
                           Revisar
@@ -1975,6 +1975,175 @@ export default function SocorrismoPage() {
               <div className="flex gap-3 pt-4 border-t">
                 <button type="button" onClick={() => {setShowEditarItem(false); setItemSeleccionado(null)}} className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">Cancelar</button>
                 <button type="submit" className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Guardar</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Checklist de Revisión */}
+      {showChecklist && botiquinSeleccionado && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60" onClick={() => setShowChecklist(false)}>
+          <div className="bg-white rounded-xl w-full max-w-3xl max-h-[90vh] overflow-hidden shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="bg-green-700 p-5 text-white flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-bold flex items-center gap-2">
+                  <ClipboardCheck size={20} />
+                  Checklist de Revisión - {botiquinSeleccionado.codigo}
+                </h3>
+                <p className="text-green-100 text-sm">{botiquinSeleccionado.nombre}</p>
+              </div>
+              <button onClick={() => setShowChecklist(false)} className="text-white hover:bg-green-800 p-1 rounded">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <form onSubmit={async (e) => {
+              e.preventDefault()
+              const form = e.target as HTMLFormElement
+              const items = botiquinSeleccionado.items || []
+              
+              // Recopilar datos de cada item
+              const itemsData = items.map((item: any) => {
+                const checkbox = form.elements.namedItem(`verificado-${item.id}`) as HTMLInputElement
+                const cantidad = form.elements.namedItem(`cantidad-${item.id}`) as HTMLInputElement
+                return {
+                  id: item.id,
+                  verificado: checkbox?.checked || false,
+                  cantidadActual: parseInt(cantidad?.value) || 0,
+                  cantidadRequerida: item.cantidadRequerida
+                }
+              })
+              
+              const itemsVerificados = itemsData.filter(i => i.verificado).length
+              const itemsFaltantes = itemsData.filter(i => i.cantidadActual < i.cantidadRequerida).length
+              const itemsCaducados = items.filter((item: any) => item.caducidad && new Date(item.caducidad) < new Date()).length
+              const observaciones = (form.elements.namedItem('observaciones') as HTMLTextAreaElement).value
+              
+              try {
+                const res = await fetch('/api/logistica', {
+                  method: 'POST',
+                  headers: {'Content-Type': 'application/json'},
+                  body: JSON.stringify({
+                    tipo: 'revision-botiquin',
+                    botiquinId: botiquinSeleccionado.id,
+                    itemsVerificados,
+                    itemsFaltantes,
+                    itemsCaducados,
+                    observaciones,
+                    items: itemsData
+                  })
+                })
+                if (res.ok) {
+                  alert('✅ Revisión guardada correctamente')
+                  setShowChecklist(false)
+                  await cargarDatos()
+                } else {
+                  const error = await res.json()
+                  alert(`❌ ${error.error || 'Error al guardar revisión'}`)
+                }
+              } catch (error) {
+                console.error('Error:', error)
+                alert('❌ Error al guardar revisión')
+              }
+            }} className="flex flex-col max-h-[calc(90vh-100px)]">
+              <div className="p-4 overflow-y-auto flex-1">
+                <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+                  <p className="text-sm text-blue-800">
+                    <strong>Instrucciones:</strong> Verifica cada item del botiquín, actualiza las cantidades si es necesario y marca como verificado.
+                  </p>
+                </div>
+                
+                {(!botiquinSeleccionado.items || botiquinSeleccionado.items.length === 0) ? (
+                  <div className="text-center py-8 text-slate-500">
+                    <Package size={40} className="mx-auto mb-2 opacity-50" />
+                    <p>Este botiquín no tiene items registrados</p>
+                    <p className="text-sm">Añade items antes de hacer una revisión</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-12 gap-2 p-2 bg-slate-100 rounded font-medium text-sm text-slate-700">
+                      <div className="col-span-1 text-center">✓</div>
+                      <div className="col-span-5">Item</div>
+                      <div className="col-span-2 text-center">Requerido</div>
+                      <div className="col-span-2 text-center">Actual</div>
+                      <div className="col-span-2 text-center">Estado</div>
+                    </div>
+                    {botiquinSeleccionado.items.map((item: any) => {
+                      const caducado = item.caducidad && new Date(item.caducidad) < new Date()
+                      const faltante = item.cantidadActual < item.cantidadRequerida
+                      return (
+                        <div key={item.id} className={`grid grid-cols-12 gap-2 p-2 rounded border ${caducado ? 'bg-red-50 border-red-200' : faltante ? 'bg-yellow-50 border-yellow-200' : 'bg-white border-slate-200'}`}>
+                          <div className="col-span-1 flex items-center justify-center">
+                            <input 
+                              type="checkbox" 
+                              name={`verificado-${item.id}`}
+                              defaultChecked={item.verificado}
+                              className="w-5 h-5 text-green-600 rounded"
+                            />
+                          </div>
+                          <div className="col-span-5">
+                            <p className="font-medium text-slate-800">{item.nombreItem}</p>
+                            {item.caducidad && (
+                              <p className={`text-xs ${caducado ? 'text-red-600 font-bold' : 'text-slate-500'}`}>
+                                Cad: {new Date(item.caducidad).toLocaleDateString('es-ES')}
+                                {caducado && ' ⚠️ CADUCADO'}
+                              </p>
+                            )}
+                          </div>
+                          <div className="col-span-2 flex items-center justify-center">
+                            <span className="text-slate-600">{item.cantidadRequerida} {item.unidad}</span>
+                          </div>
+                          <div className="col-span-2 flex items-center justify-center">
+                            <input 
+                              type="number" 
+                              name={`cantidad-${item.id}`}
+                              defaultValue={item.cantidadActual}
+                              min="0"
+                              className="w-16 px-2 py-1 text-center border border-slate-300 rounded"
+                            />
+                          </div>
+                          <div className="col-span-2 flex items-center justify-center">
+                            {caducado ? (
+                              <span className="px-2 py-1 text-xs bg-red-100 text-red-700 rounded font-bold">Caducado</span>
+                            ) : faltante ? (
+                              <span className="px-2 py-1 text-xs bg-yellow-100 text-yellow-700 rounded font-bold">Faltante</span>
+                            ) : (
+                              <span className="px-2 py-1 text-xs bg-green-100 text-green-700 rounded font-bold">OK</span>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+                
+                <div className="mt-4">
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Observaciones</label>
+                  <textarea 
+                    name="observaciones" 
+                    rows={3}
+                    placeholder="Añade observaciones sobre el estado del botiquín, items a reponer, etc."
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg resize-none"
+                  ></textarea>
+                </div>
+              </div>
+              
+              <div className="p-4 border-t bg-slate-50 flex gap-3">
+                <button 
+                  type="button" 
+                  onClick={() => setShowChecklist(false)} 
+                  className="flex-1 px-4 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300"
+                >
+                  Cancelar
+                </button>
+                <button 
+                  type="submit" 
+                  className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center justify-center gap-2"
+                  disabled={!botiquinSeleccionado.items || botiquinSeleccionado.items.length === 0}
+                >
+                  <ClipboardCheck size={18} />
+                  Guardar Revisión
+                </button>
               </div>
             </form>
           </div>
