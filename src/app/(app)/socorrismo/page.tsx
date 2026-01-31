@@ -815,7 +815,7 @@ export default function SocorrismoPage() {
                         
                         <button
                           onClick={async () => {
-                            setBotiquinSeleccionado(botiquin); setShowChecklist(true)
+                            const res = await fetch(`/api/logistica?tipo=botiquines&id=${botiquin.id}`); const data = await res.json(); setBotiquinSeleccionado(data.botiquin); setShowChecklist(true)
                           }}
                           className="px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700 flex items-center gap-1"
                           title="Hacer checklist de revisión"
