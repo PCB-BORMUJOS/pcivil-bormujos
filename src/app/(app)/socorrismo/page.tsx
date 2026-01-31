@@ -31,6 +31,7 @@ interface Articulo {
   descripcion?: string
   stockActual: number
   stockMinimo: number
+  stockAsignado?: number
   unidad: string
   familia: {
     id: string
@@ -466,8 +467,13 @@ export default function SocorrismoPage() {
                             </td>
                             <td className="p-3 text-sm text-slate-600">{art.familia?.nombre || '-'}</td>
                             <td className="p-3 text-center">
-                              <span className="font-bold text-slate-800">{art.stockActual}</span>
-                              <span className="text-slate-400 text-sm ml-1">{art.unidad}</span>
+                              <div className="flex flex-col">
+                                <span className="font-bold text-slate-800">{art.stockActual - (art.stockAsignado || 0)} <span className="text-slate-400 font-normal text-xs">disponible</span></span>
+                                {(art.stockAsignado || 0) > 0 && (
+                                  <span className="text-xs text-amber-600">{art.stockAsignado} en botiquines</span>
+                                )}
+                                <span className="text-slate-400 text-xs">{art.stockActual} total {art.unidad}</span>
+                              </div>
                             </td>
                             <td className="p-3 text-center">
                               {art.stockActual <= art.stockMinimo ? (
@@ -1812,12 +1818,26 @@ export default function SocorrismoPage() {
             <form onSubmit={async (e) => {
               e.preventDefault()
               const form = e.target as HTMLFormElement
+              const articuloId = (form.elements.namedItem('articuloId') as HTMLSelectElement).value
+              const cantidadActual = parseInt((form.elements.namedItem('cantidadActual') as HTMLInputElement).value)
+              const articuloSel = articulos.find(a => a.id === articuloId)
+              
+              if (!articuloSel) {
+                alert('❌ Selecciona un artículo')
+                return
+              }
+              
+              const stockDisponible = articuloSel.stockActual - (articuloSel.stockAsignado || 0)
+              if (cantidadActual > stockDisponible) {
+                alert(`❌ Stock insuficiente. Disponible: ${stockDisponible} ${articuloSel.unidad}`)
+                return
+              }
+              
               const formData = {
                 botiquinId: botiquinSeleccionado.id,
-                nombreItem: (form.elements.namedItem('nombreItem') as HTMLInputElement).value,
+                articuloId,
                 cantidadRequerida: parseInt((form.elements.namedItem('cantidadRequerida') as HTMLInputElement).value),
-                cantidadActual: parseInt((form.elements.namedItem('cantidadActual') as HTMLInputElement).value),
-                unidad: (form.elements.namedItem('unidad') as HTMLSelectElement).value,
+                cantidadActual,
                 caducidad: (form.elements.namedItem('caducidad') as HTMLInputElement).value || null
               }
               try {
@@ -1833,9 +1853,10 @@ export default function SocorrismoPage() {
                   setShowNuevoItem(false)
                   form.reset()
                   await cargarDatos()
-                  alert('✅ Item añadido')
+                  alert('✅ Item añadido correctamente')
                 } else {
-                  alert('❌ Error al crear item')
+                  const errorData = await res.json()
+                  alert(`❌ ${errorData.error || 'Error al crear item'}`)
                 }
               } catch (error) {
                 console.error('Error:', error)
@@ -1843,26 +1864,30 @@ export default function SocorrismoPage() {
               }
             }} className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Nombre del Item *</label>
-                <input name="nombreItem" type="text" required className="w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="Ej: Vendas estériles 10x10" />
+                <label className="block text-sm font-medium text-gray-700 mb-1">Artículo del Inventario *</label>
+                <select name="articuloId" required className="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                  <option value="">Seleccionar artículo...</option>
+                  {articulos.map(art => {
+                    const disponible = art.stockActual - (art.stockAsignado || 0)
+                    return (
+                      <option key={art.id} value={art.id} disabled={disponible <= 0}>
+                        {art.nombre} - Disponible: {disponible} {art.unidad} {disponible <= 0 ? '(Sin stock)' : ''}
+                      </option>
+                    )
+                  })}
+                </select>
+                <p className="text-xs text-gray-500 mt-1">Solo se muestran artículos del inventario de Socorrismo</p>
               </div>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Cantidad Requerida *</label>
                   <input name="cantidadRequerida" type="number" min="1" defaultValue="1" required className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+                  <p className="text-xs text-gray-500 mt-1">Unidades que debería tener el botiquín</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Cantidad Actual *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Cantidad a Asignar *</label>
                   <input name="cantidadActual" type="number" min="0" defaultValue="0" required className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Unidad *</label>
-                  <select name="unidad" required className="w-full px-3 py-2 border border-gray-300 rounded-lg">
-                    <option value="uds">Unidades</option>
-                    <option value="cajas">Cajas</option>
-                    <option value="paquetes">Paquetes</option>
-                    <option value="ml">Mililitros</option>
-                  </select>
+                  <p className="text-xs text-gray-500 mt-1">Unidades que se asignan ahora del almacén</p>
                 </div>
               </div>
               <div>

@@ -541,23 +541,43 @@ export async function POST(request: NextRequest) {
 
     // ===== BOTIQUIN ITEM =====
     if (tipo === 'botiquin-item') {
-      const { botiquinId, articuloId, nombreItem, cantidadRequerida, cantidadActual, caducidad, unidad } = body
+      const { botiquinId, articuloId, cantidadRequerida, cantidadActual, caducidad } = body
       
-      if (!botiquinId || !nombreItem || !cantidadRequerida) {
-        return NextResponse.json({ error: 'Botiquín, nombre y cantidad requerida son obligatorios' }, { status: 400 })
+      if (!botiquinId || !articuloId || !cantidadRequerida) {
+        return NextResponse.json({ error: 'Botiquín, artículo y cantidad requerida son obligatorios' }, { status: 400 })
       }
       
-      const item = await prisma.botiquinItem.create({
-        data: {
-          botiquinId,
-          articuloId: articuloId || null,
-          nombreItem,
-          cantidadRequerida: parseInt(cantidadRequerida),
-          cantidadActual: cantidadActual ? parseInt(cantidadActual) : 0,
-          caducidad: caducidad ? new Date(caducidad) : null,
-          unidad: unidad || 'Unidad'
-        }
-      })
+      // Verificar que el artículo existe y tiene stock disponible
+      const articulo = await prisma.articulo.findUnique({ where: { id: articuloId } })
+      if (!articulo) {
+        return NextResponse.json({ error: 'Artículo no encontrado' }, { status: 404 })
+      }
+      
+      const stockDisponible = articulo.stockActual - articulo.stockAsignado
+      const cantidadAsignar = parseInt(cantidadActual) || 0
+      
+      if (cantidadAsignar > stockDisponible) {
+        return NextResponse.json({ error: `Stock insuficiente. Disponible: ${stockDisponible} ${articulo.unidad}` }, { status: 400 })
+      }
+      
+      // Crear item y actualizar stockAsignado en transacción
+      const [item] = await prisma.$transaction([
+        prisma.botiquinItem.create({
+          data: {
+            botiquinId,
+            articuloId,
+            nombreItem: articulo.nombre,
+            cantidadRequerida: parseInt(cantidadRequerida),
+            cantidadActual: cantidadAsignar,
+            caducidad: caducidad ? new Date(caducidad) : null,
+            unidad: articulo.unidad
+          }
+        }),
+        prisma.articulo.update({
+          where: { id: articuloId },
+          data: { stockAsignado: { increment: cantidadAsignar } }
+        })
+      ])
       
       return NextResponse.json({ success: true, item })
     }
@@ -944,7 +964,23 @@ export async function DELETE(request: NextRequest) {
     
     // ===== BOTIQUIN ITEM =====
     if (tipo === 'botiquin-item') {
-      await prisma.botiquinItem.delete({ where: { id } })
+      // Obtener el item antes de eliminarlo para saber cuánto devolver al stock
+      const item = await prisma.botiquinItem.findUnique({ where: { id } })
+      if (!item) {
+        return NextResponse.json({ error: 'Item no encontrado' }, { status: 404 })
+      }
+      
+      // Eliminar item y decrementar stockAsignado en transacción
+      await prisma.$transaction([
+        prisma.botiquinItem.delete({ where: { id } }),
+        ...(item.articuloId ? [
+          prisma.articulo.update({
+            where: { id: item.articuloId },
+            data: { stockAsignado: { decrement: item.cantidadActual } }
+          })
+        ] : [])
+      ])
+      
       return NextResponse.json({ success: true })
     }
 
