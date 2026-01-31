@@ -1488,7 +1488,7 @@ export default function SocorrismoPage() {
                 const res = await fetch('/api/logistica', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ tipoBotiquin: formData.tipo, codigo: formData.codigo, nombre: formData.nombre, ubicacionActual: formData.ubicacionActual, vehiculoId: formData.vehiculoId, observaciones: formData.observaciones })
+                  body: JSON.stringify({ tipo: 'botiquin', tipoBotiquin: formData.tipo, codigo: formData.codigo, nombre: formData.nombre, ubicacionActual: formData.ubicacionActual, vehiculoId: formData.vehiculoId, observaciones: formData.observaciones })
                 })
                 if (res.ok) {
                   await cargarDatos()
