@@ -117,9 +117,27 @@ export async function GET(request: NextRequest) {
         revisionPendiente: botiquines.filter(b => b.estado === 'revision_pendiente').length,
         incompletos: botiquines.filter(b => b.estado === 'incompleto').length
       }
-      
-      return NextResponse.json({ botiquines, stats })
+    return NextResponse.json({ botiquines, stats })
     }
+
+    // ===== REVISIONES DE BOTIQUÍN =====
+    if (tipo === 'revisiones-botiquin') {
+      const botiquinId = searchParams.get('botiquinId')
+      if (!botiquinId) {
+        return NextResponse.json({ error: 'botiquinId requerido' }, { status: 400 })
+      }
+      
+      const revisiones = await prisma.revisionBotiquin.findMany({
+        where: { botiquinId },
+        include: {
+          usuario: { select: { id: true, nombre: true, apellidos: true } }
+        },
+        orderBy: { fecha: 'desc' }
+      })
+      
+      return NextResponse.json({ revisiones })
+    }
+
     if (tipo === 'asignaciones') {
       const inventarioSlug = searchParams.get('inventario') || 'vestuario'
       

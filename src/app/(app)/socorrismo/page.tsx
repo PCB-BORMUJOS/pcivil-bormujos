@@ -2,7 +2,7 @@
 
 import dynamic from 'next/dynamic'
 import { useState, useEffect } from 'react'
-import { Plus, Search, Filter, AlertCircle, MapPin, Activity, Package, AlertTriangle, Building2, Eye, Edit, RefreshCw, ShoppingCart, Heart, Droplet, Calendar, User, Layers, Trash2, X, ClipboardCheck, Clock, Check, Info, TrendingDown } from 'lucide-react'
+import { Plus, Search, Filter, AlertCircle, MapPin, Activity, Package, AlertTriangle, Building2, Eye, Edit, RefreshCw, ShoppingCart, Heart, History, Droplet, Calendar, User, Layers, Trash2, X, ClipboardCheck, Clock, Check, Info, TrendingDown } from 'lucide-react'
 import 'leaflet/dist/leaflet.css'
 
 // Imports dinámicos para Leaflet
@@ -155,6 +155,9 @@ export default function SocorrismoPage() {
   const [showEditarItem, setShowEditarItem] = useState(false)
   const [itemSeleccionado, setItemSeleccionado] = useState<any>(null)
   const [showChecklist, setShowChecklist] = useState(false)
+  const [showHistorial, setShowHistorial] = useState(false)
+  const [revisionesHistorial, setRevisionesHistorial] = useState<any[]>([])
+  const [showEditarBotiquin, setShowEditarBotiquin] = useState(false)
   const [articuloSeleccionado, setArticuloSeleccionado] = useState<Articulo | null>(null)
   const [deaSeleccionado, setDEASeleccionado] = useState<DEA | null>(null)
 
@@ -777,7 +780,7 @@ export default function SocorrismoPage() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-3 border-t border-slate-200">
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 pt-3 border-t border-slate-200">
                       <div className={`flex items-center justify-center px-2 py-1.5 rounded-lg text-xs font-semibold ${
                         botiquin.estado === 'operativo' ? 'bg-green-100 text-green-700' :
                         botiquin.estado === 'revision_pendiente' ? 'bg-yellow-100 text-yellow-700' :
@@ -788,7 +791,7 @@ export default function SocorrismoPage() {
                          '✗ Incomp'}
                       </div>
                       <button
-                        onClick={() => setBotiquinSeleccionado(botiquin)}
+                        onClick={() => { setBotiquinSeleccionado(botiquin); setShowEditarBotiquin(true); }}
                         className="flex items-center justify-center gap-1 px-2 py-1.5 text-xs font-medium bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors"
                         title="Editar botiquín"
                       >
@@ -827,8 +830,26 @@ export default function SocorrismoPage() {
                         <ClipboardCheck size={14} />
                         <span className="hidden sm:inline">Revisar</span>
                       </button>
+                      <button
+                        onClick={async () => {
+                          try {
+                            const res = await fetch(`/api/logistica?tipo=revisiones-botiquin&botiquinId=${botiquin.id}`)
+                            const data = await res.json()
+                            setRevisionesHistorial(data.revisiones || [])
+                            setBotiquinSeleccionado(botiquin)
+                            setShowHistorial(true)
+                          } catch (error) {
+                            console.error('Error:', error)
+                            alert('Error al cargar historial')
+                          }
+                        }}
+                        className="flex items-center justify-center gap-1 px-2 py-1.5 text-xs font-medium bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors"
+                        title="Ver historial de revisiones"
+                      >
+                        <History size={14} />
+                        <span className="hidden sm:inline">Historial</span>
+                      </button>
                     </div>
-
                     {botiquin.ultimaRevision && (
                       <div className="mt-3 pt-3 border-t border-slate-100">
                         <p className="text-xs text-slate-500">
@@ -1563,10 +1584,10 @@ export default function SocorrismoPage() {
       )}
 
       {/* Modal Editar Botiquín */}
-      {botiquinSeleccionado && !showGestionItems && !showChecklist && (
+      {showEditarBotiquin && botiquinSeleccionado && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60"
-          onClick={() => setBotiquinSeleccionado(null)}
+          onClick={() => { setShowEditarBotiquin(false); setBotiquinSeleccionado(null); }}
         >
           <div
             className="bg-white rounded-xl w-full max-w-2xl shadow-2xl max-h-[90vh] overflow-y-auto"
@@ -1579,7 +1600,7 @@ export default function SocorrismoPage() {
               </h2>
               <button
                 type="button"
-                onClick={() => setBotiquinSeleccionado(null)}
+                onClick={() => { setShowEditarBotiquin(false); setBotiquinSeleccionado(null); }}
                 className="text-white hover:bg-red-700 p-1 rounded"
               >
                 <X className="w-5 h-5" />
@@ -1614,7 +1635,7 @@ export default function SocorrismoPage() {
 
                   if (res.ok) {
                     alert('Botiquín actualizado correctamente')
-                    setBotiquinSeleccionado(null)
+                    setShowEditarBotiquin(false); setBotiquinSeleccionado(null)
                     cargarDatos()
                   } else {
                     const error = await res.json()
@@ -1710,7 +1731,7 @@ export default function SocorrismoPage() {
               <div className="flex gap-3 pt-4 border-t">
                 <button
                   type="button"
-                  onClick={() => setBotiquinSeleccionado(null)}
+                  onClick={() => { setShowEditarBotiquin(false); setBotiquinSeleccionado(null); }}
                   className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
                 >
                   Cancelar
@@ -2149,6 +2170,106 @@ export default function SocorrismoPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Historial de Revisiones */}
+      {showHistorial && botiquinSeleccionado && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="p-4 border-b bg-gradient-to-r from-blue-600 to-blue-700 text-white flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <History size={24} />
+                <div>
+                  <h3 className="font-bold text-lg">Historial de Revisiones</h3>
+                  <p className="text-blue-100 text-sm">{botiquinSeleccionado.codigo} - {botiquinSeleccionado.nombre}</p>
+                </div>
+              </div>
+              <button onClick={() => setShowHistorial(false)} className="p-1 hover:bg-white/20 rounded">
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-4">
+              {revisionesHistorial.length === 0 ? (
+                <div className="text-center py-12 text-slate-500">
+                  <History size={48} className="mx-auto mb-4 opacity-30" />
+                  <p className="font-medium">No hay revisiones registradas</p>
+                  <p className="text-sm">Las revisiones aparecerán aquí cuando se realicen</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {revisionesHistorial.map((revision: any, index: number) => (
+                    <div key={revision.id || index} className="border border-slate-200 rounded-xl p-4 hover:shadow-md transition-shadow">
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                            revision.itemsFaltantes === 0 && revision.itemsCaducados === 0 
+                              ? 'bg-green-100 text-green-600' 
+                              : 'bg-yellow-100 text-yellow-600'
+                          }`}>
+                            <ClipboardCheck size={20} />
+                          </div>
+                          <div>
+                            <p className="font-semibold text-slate-800">
+                              {new Date(revision.fecha).toLocaleDateString('es-ES', { 
+                                weekday: 'long', 
+                                year: 'numeric', 
+                                month: 'long', 
+                                day: 'numeric' 
+                              })}
+                            </p>
+                            <p className="text-sm text-slate-500">
+                              {new Date(revision.fecha).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                              {revision.usuario && ` • ${revision.usuario.nombre} ${revision.usuario.apellidos}`}
+                            </p>
+                          </div>
+                        </div>
+                        <div className={`px-3 py-1 rounded-full text-xs font-bold ${
+                          revision.itemsFaltantes === 0 && revision.itemsCaducados === 0 
+                            ? 'bg-green-100 text-green-700' 
+                            : 'bg-yellow-100 text-yellow-700'
+                        }`}>
+                          {revision.itemsFaltantes === 0 && revision.itemsCaducados === 0 ? '✓ Completo' : '⚠ Incidencias'}
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-3 gap-3 mb-3">
+                        <div className="bg-slate-50 rounded-lg p-3 text-center">
+                          <p className="text-2xl font-bold text-slate-800">{revision.itemsVerificados}</p>
+                          <p className="text-xs text-slate-500">Verificados</p>
+                        </div>
+                        <div className="bg-yellow-50 rounded-lg p-3 text-center">
+                          <p className="text-2xl font-bold text-yellow-600">{revision.itemsFaltantes}</p>
+                          <p className="text-xs text-slate-500">Faltantes</p>
+                        </div>
+                        <div className="bg-red-50 rounded-lg p-3 text-center">
+                          <p className="text-2xl font-bold text-red-600">{revision.itemsCaducados}</p>
+                          <p className="text-xs text-slate-500">Caducados</p>
+                        </div>
+                      </div>
+                      
+                      {revision.observaciones && (
+                        <div className="bg-slate-50 rounded-lg p-3">
+                          <p className="text-xs font-medium text-slate-500 mb-1">Observaciones:</p>
+                          <p className="text-sm text-slate-700">{revision.observaciones}</p>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            
+            <div className="p-4 border-t bg-slate-50">
+              <button 
+                onClick={() => setShowHistorial(false)} 
+                className="w-full px-4 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 font-medium"
+              >
+                Cerrar
+              </button>
+            </div>
           </div>
         </div>
       )}
