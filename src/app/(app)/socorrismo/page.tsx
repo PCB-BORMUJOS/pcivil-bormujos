@@ -284,19 +284,20 @@ export default function SocorrismoPage() {
 
   return (
     <div className="space-y-6">
+
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <div className="bg-red-100 p-3 rounded-xl">
             <Heart className="text-red-600" size={28} />
           </div>
           <div>
             <p className="text-xs font-bold text-red-600 uppercase tracking-wider">SOCORRISMO</p>
-            <h1 className="text-2xl font-bold text-slate-800">Área de Socorrismo</h1>
-            <p className="text-slate-500 text-sm">Material sanitario, DEAs y recursos de socorrismo</p>
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-800">Área de Socorrismo</h1>
+            <p className="text-slate-500 text-sm hidden sm:block">Material sanitario, DEAs y recursos de socorrismo</p>
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2">
           <button 
             onClick={cargarDatos} 
             className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg"
@@ -305,30 +306,30 @@ export default function SocorrismoPage() {
           </button>
           <button 
             onClick={() => setShowNuevaPeticion(true)} 
-            className="px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 font-medium"
+            className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-1.5 text-sm font-medium"
           >
-            <ShoppingCart size={18} />
-            Nueva Petición
+            <ShoppingCart size={16} />
+            <span className="hidden sm:inline">Petición</span>
           </button>
           <button 
             onClick={() => setShowNuevoArticulo(true)} 
-            className="px-4 py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center gap-2 font-medium"
+            className="px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center gap-1.5 text-sm font-medium"
           >
-            <Plus size={18} />
-            Nuevo Artículo
+            <Plus size={16} />
+            <span className="hidden sm:inline">Artículo</span>
           </button>
           <button 
             onClick={() => setShowNuevoDEA(true)} 
-            className="px-4 py-2.5 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 flex items-center gap-2 font-medium"
+            className="px-3 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 flex items-center gap-1.5 text-sm font-medium"
           >
-            <Droplet size={18} />
-            Nuevo DEA
+            <Droplet size={16} />
+            <span className="hidden sm:inline">DEA</span>
           </button>
         </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
           { label: 'Material del Área', value: statsArticulos.totalArticulos, icon: Package, bg: 'bg-purple-100', color: 'text-purple-600' },
           { label: 'Stock Bajo', value: statsArticulos.stockBajo, icon: AlertTriangle, bg: 'bg-yellow-100', color: 'text-yellow-600' },
@@ -351,24 +352,26 @@ export default function SocorrismoPage() {
 
       {/* Main Content */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+
         {/* Tabs Principales */}
-        <div className="flex border-b border-slate-200">
+        <div className="flex overflow-x-auto border-b border-slate-200 -mx-4 px-4 sm:mx-0 sm:px-0">
           {[
-            { id: 'inventario', label: 'Inventario del Área', icon: Package },
-            { id: 'deas', label: 'Red de DEAs', icon: Droplet },
-            { id: 'botiquines', label: 'Botiquines SVB', icon: Heart },
+            { id: 'inventario', label: 'Inventario', labelFull: 'Inventario del Área', icon: Package },
+            { id: 'deas', label: 'DEAs', labelFull: 'Red de DEAs', icon: Droplet },
+            { id: 'botiquines', label: 'Botiquines', labelFull: 'Botiquines SVB', icon: Heart },
           ].map(tab => (
             <button
               key={tab.id}
               onClick={() => setMainTab(tab.id as any)}
-              className={`flex items-center gap-2 px-6 py-3 text-sm font-medium border-b-2 transition-all ${
+              className={`flex items-center gap-1.5 px-3 sm:px-6 py-3 text-sm font-medium border-b-2 transition-all whitespace-nowrap ${
                 mainTab === tab.id
                   ? 'border-red-500 text-red-600 bg-red-50'
                   : 'border-transparent text-slate-500 hover:text-slate-700'
               }`}
             >
               <tab.icon size={18} />
-              {tab.label}
+              <span className="hidden sm:inline">{tab.labelFull}</span>
+              <span className="sm:hidden">{tab.label}</span>
             </button>
           ))}
         </div>
@@ -774,56 +777,56 @@ export default function SocorrismoPage() {
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between pt-3 border-t border-slate-200">
-                      <span className={`px-2 py-1 rounded text-xs font-bold ${
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-3 border-t border-slate-200">
+                      <div className={`flex items-center justify-center px-2 py-1.5 rounded-lg text-xs font-semibold ${
                         botiquin.estado === 'operativo' ? 'bg-green-100 text-green-700' :
                         botiquin.estado === 'revision_pendiente' ? 'bg-yellow-100 text-yellow-700' :
                         'bg-red-100 text-red-700'
                       }`}>
-                        {botiquin.estado === 'operativo' ? '✓ Operativo' :
-                         botiquin.estado === 'revision_pendiente' ? '⚠ Revisión Pendiente' :
-                         '❌ Incompleto'}
-                      </span>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => setBotiquinSeleccionado(botiquin)}
-                          className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-1"
-                          title="Editar botiquín"
-                        >
-                          <Edit size={14} />
-                          Editar
-                        </button>
-                        
-                        <button
-                          onClick={async () => {
-                            try {
-                              const res = await fetch(`/api/logistica?tipo=botiquines&id=${botiquin.id}`)
-                              const data = await res.json()
-                              setBotiquinSeleccionado(data.botiquin)
-                              setShowGestionItems(true)
-                            } catch (error) {
-                              console.error('Error:', error)
-                              alert('Error al cargar items')
-                            }
-                          }}
-                          className="px-2 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700 flex items-center gap-1"
-                          title="Gestionar items"
-                        >
-                          <Layers size={14} />
-                          Items ({botiquin._count?.items || 0})
-                        </button>
-                        
-                        <button
-                          onClick={async () => {
-                            const res = await fetch(`/api/logistica?tipo=botiquines&id=${botiquin.id}`); const data = await res.json(); setBotiquinSeleccionado(data.botiquin); setShowChecklist(true)
-                          }}
-                          className="px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700 flex items-center gap-1"
-                          title="Hacer checklist de revisión"
-                        >
-                          <ClipboardCheck size={14} />
-                          Revisar
-                        </button>
+                        {botiquin.estado === 'operativo' ? '✓ OK' :
+                         botiquin.estado === 'revision_pendiente' ? '⚠ Pdte' :
+                         '✗ Incomp'}
                       </div>
+                      <button
+                        onClick={() => setBotiquinSeleccionado(botiquin)}
+                        className="flex items-center justify-center gap-1 px-2 py-1.5 text-xs font-medium bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors"
+                        title="Editar botiquín"
+                      >
+                        <Edit size={14} />
+                        <span className="hidden sm:inline">Editar</span>
+                      </button>
+                      <button
+                        onClick={async () => {
+                          try {
+                            const res = await fetch(`/api/logistica?tipo=botiquines&id=${botiquin.id}`)
+                            const data = await res.json()
+                            setBotiquinSeleccionado(data.botiquin)
+                            setShowGestionItems(true)
+                          } catch (error) {
+                            console.error('Error:', error)
+                            alert('Error al cargar items')
+                          }
+                        }}
+                        className="flex items-center justify-center gap-1 px-2 py-1.5 text-xs font-medium bg-red-50 text-red-700 rounded-lg hover:bg-red-100 transition-colors"
+                        title="Gestionar items"
+                      >
+                        <Layers size={14} />
+                        <span className="hidden sm:inline">Items</span>
+                        <span className="bg-red-200 text-red-800 px-1.5 rounded-full text-xs">{botiquin._count?.items || 0}</span>
+                      </button>
+                      <button
+                        onClick={async () => {
+                          const res = await fetch(`/api/logistica?tipo=botiquines&id=${botiquin.id}`)
+                          const data = await res.json()
+                          setBotiquinSeleccionado(data.botiquin)
+                          setShowChecklist(true)
+                        }}
+                        className="flex items-center justify-center gap-1 px-2 py-1.5 text-xs font-medium bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-colors"
+                        title="Hacer checklist de revisión"
+                      >
+                        <ClipboardCheck size={14} />
+                        <span className="hidden sm:inline">Revisar</span>
+                      </button>
                     </div>
 
                     {botiquin.ultimaRevision && (
