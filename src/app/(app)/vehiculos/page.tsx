@@ -99,24 +99,68 @@ export default function VehiculosPage() {
   const [busqueda, setBusqueda] = useState('')
   const [mainTab, setMainTab] = useState<'flota' | 'inventario'>('inventario')
   const [detalleTab, setDetalleTab] = useState<'ficha' | 'documentacion' | 'mantenimiento'>('ficha')
+ 
+  // Estados para inventario del área
+  const [inventoryTab, setInventoryTab] = useState<'stock' | 'peticiones' | 'movimientos'>('stock')
+  const [articulos, setArticulos] = useState<any[]>([])
+  const [familias, setFamilias] = useState<any[]>([])
+  const [peticiones, setPeticiones] = useState<any[]>([])
+  const [categoriaVehiculos, setCategoriaVehiculos] = useState<string | null>(null)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [selectedFamiliaFilter, setSelectedFamiliaFilter] = useState('all')
+  const [filtroPeticiones, setFiltroPeticiones] = useState('all')
+  const [showNuevoArticulo, setShowNuevoArticulo] = useState(false)
+  const [showNuevaPeticion, setShowNuevaPeticion] = useState(false)
+  const [showGestionFamilias, setShowGestionFamilias] = useState(false)
+  const [articuloSeleccionado, setArticuloSeleccionado] = useState<any>(null)
 
   const cargarDatos = async () => {
     try {
       setLoading(true)
-      const res = await fetch('/api/vehiculos')
-      const data = await res.json()
-      setVehiculos(data.vehiculos || [])
-      setStats(data.stats || { total: 0, disponibles: 0, enServicio: 0, mantenimiento: 0 })
+      // Cargar vehículos
+      const resVehiculos = await fetch('/api/vehiculos')
+      const dataVehiculos = await resVehiculos.json()
+      setVehiculos(dataVehiculos.vehiculos || [])
+      setStats(dataVehiculos.stats || { total: 0, disponibles: 0, enServicio: 0, mantenimiento: 0 })
+      
+      // Cargar inventario del área
+      const resInventario = await fetch('/api/logistica?inventario=vehiculos')
+      const dataInventario = await resInventario.json()
+      setArticulos(dataInventario.articulos || [])
+      setFamilias(dataInventario.familias || [])
+      
+      // Obtener categoría de vehículos
+      const resCat = await fetch('/api/logistica?tipo=categoria&slug=vehiculos')
+      const dataCat = await resCat.json()
+      if (dataCat.categoria) {
+        setCategoriaVehiculos(dataCat.categoria.id)
+      }
     } catch (error) {
-      console.error('Error cargando vehículos:', error)
+      console.error('Error cargando datos:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const cargarPeticiones = async () => {
+    try {
+      const res = await fetch('/api/logistica/peticiones?area=vehiculos')
+      const data = await res.json()
+      setPeticiones(data.peticiones || [])
+    } catch (error) {
+      console.error('Error cargando peticiones:', error)
     }
   }
 
   useEffect(() => {
     cargarDatos()
   }, [])
+
+  useEffect(() => {
+    if (inventoryTab === 'peticiones') {
+      cargarPeticiones()
+    }
+  }, [inventoryTab])
 
   const vehiculosFiltrados = vehiculos.filter(v => {
     const matchEstado = filtroEstado === 'all' || v.estado === filtroEstado
@@ -272,10 +316,230 @@ export default function VehiculosPage() {
       </div>
 
       {mainTab === 'inventario' && (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-12 text-center">
-          <Package size={48} className="mx-auto mb-4 text-slate-300" />
-          <p className="text-slate-500 font-medium">Inventario del Área de Vehículos</p>
-          <p className="text-slate-400 text-sm mt-1">Próximamente: Gestión de material y peticiones</p>
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+          {/* Sub-tabs del inventario */}
+          <div className="flex border-b border-slate-200 bg-slate-50">
+            <button
+              onClick={() => setInventoryTab('stock')}
+              className={`flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${
+                inventoryTab === 'stock'
+                  ? 'text-teal-600 border-b-2 border-teal-600 bg-white'
+                  : 'text-slate-600 hover:text-slate-800'
+              }`}
+            >
+              <Package size={16} />
+              Stock
+            </button>
+            <button
+              onClick={() => setInventoryTab('peticiones')}
+              className={`flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${
+                inventoryTab === 'peticiones'
+                  ? 'text-teal-600 border-b-2 border-teal-600 bg-white'
+                  : 'text-slate-600 hover:text-slate-800'
+              }`}
+            >
+              <FileText size={16} />
+              Peticiones
+            </button>
+            <button
+              onClick={() => setInventoryTab('movimientos')}
+              className={`flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${
+                inventoryTab === 'movimientos'
+                  ? 'text-teal-600 border-b-2 border-teal-600 bg-white'
+                  : 'text-slate-600 hover:text-slate-800'
+              }`}
+            >
+              <RefreshCw size={16} />
+              Movimientos
+            </button>
+          </div>
+
+          {/* Contenido Stock */}
+          {inventoryTab === 'stock' && (
+            <div className="p-4">
+              {/* Filtros */}
+              <div className="flex flex-col sm:flex-row gap-4 mb-4">
+                <div className="flex-1">
+                  <input
+                    type="text"
+                    placeholder="Buscar artículos..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  />
+                </div>
+                <select
+                  value={selectedFamiliaFilter}
+                  onChange={(e) => setSelectedFamiliaFilter(e.target.value)}
+                  className="px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                >
+                  <option value="all">Todas las familias</option>
+                  {familias.map((f: any) => (
+                    <option key={f.id} value={f.id}>{f.nombre}</option>
+                  ))}
+                </select>
+                <button
+                  onClick={() => setShowGestionFamilias(true)}
+                  className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 font-medium flex items-center gap-2"
+                >
+                  <Package size={16} />
+                  Familias
+                </button>
+              </div>
+
+              {/* Tabla de artículos */}
+              {loading ? (
+                <div className="text-center py-12">
+                  <RefreshCw size={32} className="mx-auto mb-4 text-slate-400 animate-spin" />
+                  <p className="text-slate-500">Cargando...</p>
+                </div>
+              ) : articulos.length === 0 ? (
+                <div className="text-center py-12">
+                  <Package size={48} className="mx-auto mb-4 text-slate-300" />
+                  <p className="text-slate-500 font-medium">No hay artículos en el inventario</p>
+                  <p className="text-slate-400 text-sm mt-1">Añade el primer artículo del área</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-slate-50 border-b border-slate-200">
+                      <tr>
+                        <th className="text-left px-4 py-3 text-xs font-semibold text-slate-600 uppercase">Artículo</th>
+                        <th className="text-left px-4 py-3 text-xs font-semibold text-slate-600 uppercase">Familia</th>
+                        <th className="text-center px-4 py-3 text-xs font-semibold text-slate-600 uppercase">Stock</th>
+                        <th className="text-center px-4 py-3 text-xs font-semibold text-slate-600 uppercase">Estado</th>
+                        <th className="text-center px-4 py-3 text-xs font-semibold text-slate-600 uppercase">Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {articulos
+                        .filter((a: any) => {
+                          const matchSearch = searchTerm === '' || 
+                            a.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            a.codigo?.toLowerCase().includes(searchTerm.toLowerCase())
+                          const matchFamilia = selectedFamiliaFilter === 'all' || a.familiaId === selectedFamiliaFilter
+                          return matchSearch && matchFamilia
+                        })
+                        .map((articulo: any) => (
+                          <tr key={articulo.id} className="hover:bg-slate-50">
+                            <td className="px-4 py-3">
+                              <p className="font-medium text-slate-800">{articulo.nombre}</p>
+                              <p className="text-xs text-slate-500">Cód: {articulo.codigo || '-'}</p>
+                            </td>
+                            <td className="px-4 py-3 text-sm text-slate-600">
+                              {articulo.familia?.nombre || '-'}
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              <span className="font-bold text-slate-800">{articulo.stockActual}</span>
+                              <span className="text-slate-400 text-sm"> / {articulo.stockMinimo}</span>
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              {articulo.stockActual <= articulo.stockMinimo ? (
+                                <span className="px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs font-medium">
+                                  ⚠ Bajo
+                                </span>
+                              ) : (
+                                <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+                                  ✓ OK
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="flex items-center justify-center gap-1">
+                                <button
+                                  onClick={() => setArticuloSeleccionado(articulo)}
+                                  className="p-2 text-slate-500 hover:text-teal-600 hover:bg-teal-50 rounded-lg"
+                                  title="Ver detalles"
+                                >
+                                  <Eye size={16} />
+                                </button>
+                                <button
+                                  onClick={() => { setArticuloSeleccionado(articulo); setShowNuevoArticulo(true); }}
+                                  className="p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg"
+                                  title="Editar"
+                                >
+                                  <Edit size={16} />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Contenido Peticiones */}
+          {inventoryTab === 'peticiones' && (
+            <div className="p-4">
+              {/* Filtro de peticiones */}
+              <div className="flex gap-2 mb-4">
+                <select
+                  value={filtroPeticiones}
+                  onChange={(e) => setFiltroPeticiones(e.target.value)}
+                  className="px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                >
+                  <option value="all">Todos los estados</option>
+                  <option value="pendiente">Pendientes</option>
+                  <option value="aprobada">Aprobadas</option>
+                  <option value="en_compra">En Compra</option>
+                  <option value="recibida">Recibidas</option>
+                  <option value="rechazada">Rechazadas</option>
+                </select>
+              </div>
+
+              {peticiones.length === 0 ? (
+                <div className="text-center py-12">
+                  <FileText size={48} className="mx-auto mb-4 text-slate-300" />
+                  <p className="text-slate-500 font-medium">No hay peticiones</p>
+                  <p className="text-slate-400 text-sm mt-1">Las peticiones de material aparecerán aquí</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {peticiones
+                    .filter((p: any) => filtroPeticiones === 'all' || p.estado === filtroPeticiones)
+                    .map((peticion: any) => (
+                      <div key={peticion.id} className="border border-slate-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <p className="font-medium text-slate-800">{peticion.nombreArticulo}</p>
+                            <p className="text-sm text-slate-500">
+                              {peticion.cantidad} {peticion.unidad} • {new Date(peticion.fechaSolicitud).toLocaleDateString('es-ES')}
+                            </p>
+                          </div>
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            peticion.estado === 'pendiente' ? 'bg-yellow-100 text-yellow-700' :
+                            peticion.estado === 'aprobada' ? 'bg-blue-100 text-blue-700' :
+                            peticion.estado === 'en_compra' ? 'bg-purple-100 text-purple-700' :
+                            peticion.estado === 'recibida' ? 'bg-green-100 text-green-700' :
+                            'bg-red-100 text-red-700'
+                          }`}>
+                            {peticion.estado === 'pendiente' ? 'Pendiente' :
+                             peticion.estado === 'aprobada' ? 'Aprobada' :
+                             peticion.estado === 'en_compra' ? 'En Compra' :
+                             peticion.estado === 'recibida' ? 'Recibida' : 'Rechazada'}
+                          </span>
+                        </div>
+                        {peticion.descripcion && (
+                          <p className="text-sm text-slate-600 mt-2">{peticion.descripcion}</p>
+                        )}
+                      </div>
+                    ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Contenido Movimientos */}
+          {inventoryTab === 'movimientos' && (
+            <div className="p-12 text-center">
+              <RefreshCw size={48} className="mx-auto mb-4 text-slate-300" />
+              <p className="text-slate-500 font-medium">Historial de Movimientos</p>
+              <p className="text-slate-400 text-sm mt-1">Próximamente: Registro de entradas y salidas</p>
+            </div>
+          )}
         </div>
       )}
 
@@ -887,11 +1151,122 @@ export default function VehiculosPage() {
                   type="submit"
                   className="flex-1 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 font-medium flex items-center justify-center gap-2"
                 >
-                  <Check size={16} />
+                 <Check size={16} />
                   {showEditarVehiculo ? 'Guardar Cambios' : 'Crear Vehículo'}
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Gestión de Familias */}
+      {showGestionFamilias && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[80vh] overflow-hidden flex flex-col">
+            <div className="p-4 bg-gradient-to-r from-teal-600 to-teal-700 text-white flex items-center justify-between">
+              <h3 className="font-bold text-lg flex items-center gap-2">
+                <Package size={20} />
+                Gestión de Familias
+              </h3>
+              <button onClick={() => setShowGestionFamilias(false)} className="p-1 hover:bg-white/20 rounded">
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="p-4 border-b">
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault()
+                  const formData = new FormData(e.currentTarget)
+                  const nombre = formData.get('nombre') as string
+                  if (!nombre.trim()) return
+                  
+                  try {
+                    const res = await fetch('/api/logistica', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        tipo: 'familia',
+                        nombre: nombre.trim(),
+                        categoriaId: categoriaVehiculos
+                      })
+                    })
+                    if (res.ok) {
+                      (e.target as HTMLFormElement).reset()
+                      cargarDatos()
+                    } else {
+                      const error = await res.json()
+                      alert('Error: ' + (error.message || 'No se pudo crear'))
+                    }
+                  } catch (error) {
+                    alert('Error al crear familia')
+                  }
+                }}
+                className="flex gap-2"
+              >
+                <input
+                  type="text"
+                  name="nombre"
+                  placeholder="Nueva familia..."
+                  className="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                />
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 font-medium"
+                >
+                  Añadir
+                </button>
+              </form>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-4">
+              {familias.length === 0 ? (
+                <p className="text-center text-slate-500 py-4">No hay familias creadas</p>
+              ) : (
+                <div className="space-y-2">
+                  {familias.map((familia: any) => (
+                    <div key={familia.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                      <div>
+                        <p className="font-medium text-slate-800">{familia.nombre}</p>
+                        <p className="text-xs text-slate-500">{familia._count?.articulos || 0} artículos</p>
+                      </div>
+                      <button
+                        onClick={async () => {
+                          if (!confirm(`¿Eliminar familia "${familia.nombre}"?`)) return
+                          try {
+                            const res = await fetch(`/api/logistica?tipo=familia&id=${familia.id}`, {
+                              method: 'DELETE'
+                            })
+                            if (res.ok) {
+                              cargarDatos()
+                            } else {
+                              const error = await res.json()
+                              alert('Error: ' + (error.message || 'No se pudo eliminar'))
+                            }
+                          } catch (error) {
+                            alert('Error al eliminar')
+                          }
+                        }}
+                        className="p-2 text-red-500 hover:bg-red-50 rounded-lg"
+                        title="Eliminar"
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            
+            <div className="p-4 border-t bg-slate-50">
+              <button
+                onClick={() => setShowGestionFamilias(false)}
+                className="w-full px-4 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 font-medium"
+              >
+                Cerrar
+              </button>
+            </div>
           </div>
         </div>
       )}
