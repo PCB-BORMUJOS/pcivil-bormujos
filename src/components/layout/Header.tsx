@@ -306,11 +306,35 @@ export default function Header({
   return (
     <>
       <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-sm border-b border-slate-200 shadow-sm">
-        <div className="flex items-center justify-between px-6 py-3">
-          {/* Lado izquierdo - Búsqueda */}
-          <div className="flex items-center gap-6">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3">
+          {/* Lado izquierdo - Menú móvil + Búsqueda */}
+          <div className="flex items-center gap-4">
+            {/* Botón hamburguesa para móvil */}
+            <button 
+              onClick={() => {
+                const sidebar = document.querySelector('.sidebar')
+                sidebar?.classList.toggle('open')
+                const existingOverlay = document.querySelector('.sidebar-overlay')
+                if (existingOverlay) {
+                  existingOverlay.remove()
+                  sidebar?.classList.remove('open')
+                } else {
+                  const newOverlay = document.createElement('div')
+                  newOverlay.className = 'sidebar-overlay'
+                  newOverlay.onclick = () => {
+                    sidebar?.classList.remove('open')
+                    newOverlay.remove()
+                  }
+                  document.body.appendChild(newOverlay)
+                }
+              }}
+              className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg lg:hidden"
+              aria-label="Abrir menú"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
+            </button>
             {showSearch && (
-              <div className="relative">
+              <div className="relative hidden sm:block">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <input
                   type="text"

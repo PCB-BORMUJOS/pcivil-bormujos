@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useSession, signOut } from 'next-auth/react'
@@ -18,6 +19,10 @@ import {
   LogOut,
   Loader2,
   ShieldCheck,
+  ChevronLeft,
+  ChevronRight,
+  Menu,
+  X,
 } from 'lucide-react'
 
 interface NavItem {
@@ -44,9 +49,25 @@ const navigation: NavItem[] = [
 export default function Sidebar() {
   const pathname = usePathname()
   const { data: session, status } = useSession()
-
   const userRole = session?.user?.rol || ''
   const isAdmin = ['superadmin', 'admin', 'coordinador'].includes(userRole)
+  
+  const [collapsed, setCollapsed] = useState(false)
+  const [mobileOpen, setMobileOpen] = useState(false)
+
+  // Cerrar sidebar móvil al cambiar de ruta
+  useEffect(() => {
+    setMobileOpen(false)
+  }, [pathname])
+
+  // Cerrar sidebar móvil con Escape
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMobileOpen(false)
+    }
+    document.addEventListener('keydown', handleEscape)
+    return () => document.removeEventListener('keydown', handleEscape)
+  }, [])
 
   const getInitials = (name: string) => {
     const parts = name.split(' ')
@@ -76,62 +97,127 @@ export default function Sidebar() {
   })
 
   return (
-    <aside className="sidebar">
-      <div className="flex items-center gap-3 px-4 py-5 border-b border-pc-dark-800">
-        <div className="w-10 h-10 rounded-full bg-pc-primary-500 flex items-center justify-center">
-          <span className="text-white font-bold text-lg">PC</span>
-        </div>
-        <div className="flex flex-col">
-          <span className="font-semibold text-white text-sm">Protección Civil</span>
-          <span className="text-pc-primary-500 text-xs font-medium">BORMUJOS</span>
-        </div>
-      </div>
+    <>
+      {/* Botón hamburguesa para móvil */}
+      <button
+        onClick={() => setMobileOpen(true)}
+        className="fixed top-4 left-4 z-30 p-2 bg-pc-dark-900 text-white rounded-lg lg:hidden"
+        aria-label="Abrir menú"
+      >
+        <Menu size={24} />
+      </button>
 
-      <nav className="flex-1 overflow-y-auto scrollbar-thin px-2 py-4">
-        <ul className="space-y-1">
-          {filteredNavigation.map((item) => {
-            const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
-            const Icon = item.icon
-            return (
-              <li key={item.name}>
-                <Link href={item.href} className={cn('sidebar-link', isActive && 'active')}>
-                  <Icon className="w-5 h-5" />
-                  <span>{item.name}</span>
-                </Link>
-              </li>
-            )
-          })}
-        </ul>
-      </nav>
+      {/* Overlay para móvil */}
+      {mobileOpen && (
+        <div 
+          className="sidebar-overlay"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
 
-      <div className="border-t border-pc-dark-800 p-4">
-        {status === 'loading' ? (
-          <div className="flex items-center justify-center py-4">
-            <Loader2 className="w-6 h-6 text-pc-primary-500 animate-spin" />
-          </div>
-        ) : session?.user ? (
-          <div>
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 rounded-full bg-pc-primary-500 flex items-center justify-center text-white font-semibold text-sm">
-                {getInitials(session.user.name || 'U')}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-white truncate">{session.user.name}</p>
-                <p className="text-xs text-pc-primary-500 truncate">{getRolLabel(session.user.rol)}</p>
-              </div>
+      {/* Sidebar */}
+      <aside className={cn(
+        'sidebar',
+        collapsed && 'collapsed',
+        mobileOpen && 'open'
+      )}>
+        {/* Header del sidebar */}
+        <div className="flex items-center justify-between px-4 py-5 border-b border-pc-dark-800">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-pc-primary-500 flex items-center justify-center flex-shrink-0">
+              <span className="text-white font-bold text-lg">PC</span>
             </div>
-            <button onClick={handleLogout} className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-400 hover:text-white hover:bg-pc-dark-800 rounded-lg transition-colors">
-              <LogOut className="w-4 h-4" />
-              <span>DESCONECTAR</span>
-            </button>
+            <div className="sidebar-logo-text flex flex-col">
+              <span className="font-semibold text-white text-sm">Protección Civil</span>
+              <span className="text-pc-primary-500 text-xs font-medium">BORMUJOS</span>
+            </div>
           </div>
-        ) : (
-          <Link href="/login" className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-400 hover:text-white hover:bg-pc-dark-800 rounded-lg transition-colors">
-            <User className="w-4 h-4" />
-            <span>INICIAR SESIÓN</span>
-          </Link>
-        )}
-      </div>
-    </aside>
+          
+          {/* Botón cerrar en móvil */}
+          <button
+            onClick={() => setMobileOpen(false)}
+            className="p-1 text-gray-400 hover:text-white lg:hidden"
+            aria-label="Cerrar menú"
+          >
+            <X size={20} />
+          </button>
+          
+          {/* Botón colapsar en desktop */}
+          <button
+            onClick={() => setCollapsed(!collapsed)}
+            className="sidebar-toggle hidden lg:block text-gray-400 hover:text-white"
+            aria-label={collapsed ? 'Expandir menú' : 'Contraer menú'}
+          >
+            {collapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
+          </button>
+        </div>
+
+        {/* Navegación */}
+        <nav className="flex-1 overflow-y-auto scrollbar-thin px-2 py-4">
+          <ul className="space-y-1">
+            {filteredNavigation.map((item) => {
+              const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
+              const Icon = item.icon
+              return (
+                <li key={item.name}>
+                  <Link 
+                    href={item.href} 
+                    className={cn('sidebar-link', isActive && 'active')}
+                    title={collapsed ? item.name : undefined}
+                  >
+                    <Icon className="w-5 h-5" />
+                    <span className="sidebar-text">{item.name}</span>
+                  </Link>
+                </li>
+              )
+            })}
+          </ul>
+        </nav>
+
+        {/* Usuario */}
+        <div className="border-t border-pc-dark-800 p-4">
+          {status === 'loading' ? (
+            <div className="flex items-center justify-center py-4">
+              <Loader2 className="w-6 h-6 text-pc-primary-500 animate-spin" />
+            </div>
+          ) : session?.user ? (
+            <div>
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 rounded-full bg-pc-primary-500 flex items-center justify-center text-white font-semibold text-sm flex-shrink-0">
+                  {getInitials(session.user.name || 'U')}
+                </div>
+                <div className="sidebar-user-info flex-1 min-w-0">
+                  <p className="text-sm font-medium text-white truncate">{session.user.name}</p>
+                  <p className="text-xs text-pc-primary-500 truncate">{getRolLabel(session.user.rol)}</p>
+                </div>
+              </div>
+              <button 
+                onClick={handleLogout} 
+                className={cn(
+                  "flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-400 hover:text-white hover:bg-pc-dark-800 rounded-lg transition-colors",
+                  collapsed && "justify-center px-0"
+                )}
+                title={collapsed ? 'Desconectar' : undefined}
+              >
+                <LogOut className="w-4 h-4" />
+                <span className="sidebar-text">DESCONECTAR</span>
+              </button>
+            </div>
+          ) : (
+            <Link 
+              href="/login" 
+              className={cn(
+                "flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-400 hover:text-white hover:bg-pc-dark-800 rounded-lg transition-colors",
+                collapsed && "justify-center px-0"
+              )}
+              title={collapsed ? 'Iniciar sesión' : undefined}
+            >
+              <User className="w-4 h-4" />
+              <span className="sidebar-text">INICIAR SESIÓN</span>
+            </Link>
+          )}
+        </div>
+      </aside>
+    </>
   )
 }
