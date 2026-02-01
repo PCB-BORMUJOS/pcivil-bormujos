@@ -77,8 +77,6 @@ export default function VehiculosPage() {
   const [showEditarVehiculo, setShowEditarVehiculo] = useState(false)
   const [filtroEstado, setFiltroEstado] = useState('all')
   const [busqueda, setBusqueda] = useState('')
-  const [mainTab, setMainTab] = useState<'flota' | 'inventario'>('inventario')
-  const [detalleTab, setDetalleTab] = useState<'ficha' | 'documentacion' | 'mantenimiento'>('ficha')
 
   const cargarDatos = async () => {
     try {
@@ -150,25 +148,11 @@ export default function VehiculosPage() {
             <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
           </button>
           <button
-            onClick={() => alert('Próximamente: Nueva Petición')}
-            className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-          >
-            <FileText size={18} />
-            <span className="hidden sm:inline">Petición</span>
-          </button>
-          <button
-            onClick={() => alert('Próximamente: Nuevo Artículo')}
-            className="flex items-center gap-2 px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium"
+            onClick={() => setShowNuevoVehiculo(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors font-medium"
           >
             <Plus size={18} />
-            <span className="hidden sm:inline">Artículo</span>
-          </button>
-          <button
-            onClick={() => setShowNuevoVehiculo(true)}
-            className="flex items-center gap-2 px-3 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors font-medium"
-          >
-            <Truck size={18} />
-            <span className="hidden sm:inline">Vehículo</span>
+            <span className="hidden sm:inline">Nuevo Vehículo</span>
           </button>
         </div>
       </div>
@@ -220,47 +204,6 @@ export default function VehiculosPage() {
           </div>
         </div>
       </div>
-
-      {/* Tabs Principales */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
-        <div className="flex border-b border-slate-200">
-          <button
-            onClick={() => setMainTab('inventario')}
-            className={`flex items-center gap-2 px-6 py-3 font-medium transition-colors ${
-              mainTab === 'inventario'
-                ? 'text-teal-600 border-b-2 border-teal-600 bg-teal-50/50'
-                : 'text-slate-600 hover:text-slate-800 hover:bg-slate-50'
-            }`}
-          >
-            <Package size={18} />
-            <span className="hidden sm:inline">Inventario del Área</span>
-            <span className="sm:hidden">Inventario</span>
-          </button>
-          <button
-            onClick={() => setMainTab('flota')}
-            className={`flex items-center gap-2 px-6 py-3 font-medium transition-colors ${
-              mainTab === 'flota'
-                ? 'text-teal-600 border-b-2 border-teal-600 bg-teal-50/50'
-                : 'text-slate-600 hover:text-slate-800 hover:bg-slate-50'
-            }`}
-          >
-            <Truck size={18} />
-            <span className="hidden sm:inline">Gestión de Flota</span>
-            <span className="sm:hidden">Flota</span>
-          </button>
-        </div>
-      </div>
-
-      {mainTab === 'inventario' && (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-12 text-center">
-          <Package size={48} className="mx-auto mb-4 text-slate-300" />
-          <p className="text-slate-500 font-medium">Inventario del Área de Vehículos</p>
-          <p className="text-slate-400 text-sm mt-1">Próximamente: Gestión de material y peticiones</p>
-        </div>
-      )}
-
-      {mainTab === 'flota' && (
-        <>
 
       {/* Filtros */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
@@ -387,20 +330,19 @@ export default function VehiculosPage() {
           </div>
         )}
       </div>
-        </>
-      )}
+
       {/* Modal Ver Detalles */}
       {vehiculoSeleccionado && !showEditarVehiculo && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
-            <div className="p-4 bg-gradient-to-r from-slate-700 to-slate-800 text-white flex items-center justify-between">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden">
+            <div className="p-4 bg-gradient-to-r from-teal-600 to-teal-700 text-white flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center">
                   {getVehicleIcon(vehiculoSeleccionado.tipo)}
                 </div>
                 <div>
                   <h3 className="font-bold text-lg">{vehiculoSeleccionado.indicativo || vehiculoSeleccionado.matricula}</h3>
-                  <p className="text-slate-300 text-sm">{vehiculoSeleccionado.marca} {vehiculoSeleccionado.modelo} - {vehiculoSeleccionado.matricula}</p>
+                  <p className="text-teal-100 text-sm">{vehiculoSeleccionado.marca} {vehiculoSeleccionado.modelo}</p>
                 </div>
               </div>
               <button onClick={() => setVehiculoSeleccionado(null)} className="p-1 hover:bg-white/20 rounded">
@@ -408,154 +350,49 @@ export default function VehiculosPage() {
               </button>
             </div>
             
-            {/* Tabs del modal */}
-            <div className="flex border-b border-slate-200 bg-slate-50">
-              <button
-                onClick={() => setDetalleTab('ficha')}
-                className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
-                  detalleTab === 'ficha'
-                    ? 'text-orange-600 border-b-2 border-orange-600 bg-white'
-                    : 'text-slate-600 hover:text-slate-800'
-                }`}
-              >
-                Ficha Técnica
-              </button>
-              <button
-                onClick={() => setDetalleTab('documentacion')}
-                className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
-                  detalleTab === 'documentacion'
-                    ? 'text-orange-600 border-b-2 border-orange-600 bg-white'
-                    : 'text-slate-600 hover:text-slate-800'
-                }`}
-              >
-                Documentación
-              </button>
-              <button
-                onClick={() => setDetalleTab('mantenimiento')}
-                className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
-                  detalleTab === 'mantenimiento'
-                    ? 'text-orange-600 border-b-2 border-orange-600 bg-white'
-                    : 'text-slate-600 hover:text-slate-800'
-                }`}
-              >
-                Mantenimiento
-              </button>
-            </div>
-            
-            <div className="flex-1 overflow-y-auto p-6">
-              {/* Tab Ficha Técnica */}
-              {detalleTab === 'ficha' && (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-slate-50 rounded-lg p-4">
-                      <p className="text-xs text-slate-500 uppercase font-medium mb-2">Estado Actual</p>
-                      <span className={`inline-flex px-3 py-1.5 rounded-full text-sm font-semibold border ${getStatusColor(vehiculoSeleccionado.estado)}`}>
-                        {getStatusLabel(vehiculoSeleccionado.estado)}
-                      </span>
-                    </div>
-                    <div className="bg-slate-50 rounded-lg p-4">
-                      <p className="text-xs text-slate-500 uppercase font-medium mb-2">Última Revisión</p>
-                      <p className="font-semibold text-slate-800">{formatDate(vehiculoSeleccionado.updatedAt)}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-slate-50 rounded-lg p-4">
-                    <p className="text-xs text-slate-500 uppercase font-medium mb-3">Datos del Vehículo</p>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-xs text-slate-500">Tipo</p>
-                        <p className="font-semibold text-slate-800">{getTipoLabel(vehiculoSeleccionado.tipo)}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-slate-500">Matrícula</p>
-                        <p className="font-mono font-semibold text-slate-800">{vehiculoSeleccionado.matricula}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-slate-500">Marca</p>
-                        <p className="font-semibold text-slate-800">{vehiculoSeleccionado.marca || '-'}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-slate-500">Modelo</p>
-                        <p className="font-semibold text-slate-800">{vehiculoSeleccionado.modelo || '-'}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-slate-500">Año</p>
-                        <p className="font-semibold text-slate-800">{vehiculoSeleccionado.anio || '-'}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-slate-500">Kilómetros</p>
-                        <p className="font-semibold text-slate-800">{vehiculoSeleccionado.kmActual?.toLocaleString() || '-'} km</p>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className={`p-4 rounded-lg border-2 ${isExpired(vehiculoSeleccionado.fechaItv) ? 'bg-red-50 border-red-200' : isExpiringSoon(vehiculoSeleccionado.fechaItv) ? 'bg-yellow-50 border-yellow-200' : 'bg-green-50 border-green-200'}`}>
-                      <p className="text-xs text-slate-500 uppercase font-medium flex items-center gap-1 mb-1">
-                        <Calendar size={12} /> ITV
-                      </p>
-                      <p className={`font-semibold ${isExpired(vehiculoSeleccionado.fechaItv) ? 'text-red-600' : isExpiringSoon(vehiculoSeleccionado.fechaItv) ? 'text-yellow-600' : 'text-green-600'}`}>
-                        {formatDate(vehiculoSeleccionado.fechaItv)}
-                      </p>
-                    </div>
-                    <div className={`p-4 rounded-lg border-2 ${isExpired(vehiculoSeleccionado.fechaSeguro) ? 'bg-red-50 border-red-200' : isExpiringSoon(vehiculoSeleccionado.fechaSeguro) ? 'bg-yellow-50 border-yellow-200' : 'bg-green-50 border-green-200'}`}>
-                      <p className="text-xs text-slate-500 uppercase font-medium flex items-center gap-1 mb-1">
-                        <Shield size={12} /> Seguro
-                      </p>
-                      <p className={`font-semibold ${isExpired(vehiculoSeleccionado.fechaSeguro) ? 'text-red-600' : isExpiringSoon(vehiculoSeleccionado.fechaSeguro) ? 'text-yellow-600' : 'text-green-600'}`}>
-                        {formatDate(vehiculoSeleccionado.fechaSeguro)}
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-red-50 rounded-lg p-4 border border-red-200">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 text-red-700">
-                        <AlertTriangle size={18} />
-                        <span className="font-medium">Reportar Incidencia</span>
-                      </div>
-                      <button
-                        onClick={() => alert('Próximamente: Notificar avería')}
-                        className="px-3 py-1.5 bg-white text-red-600 border border-red-300 rounded-lg text-sm font-medium hover:bg-red-50"
-                      >
-                        Notificar Avería
-                      </button>
-                    </div>
-                  </div>
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-slate-50 rounded-lg p-3">
+                  <p className="text-xs text-slate-500 uppercase font-medium">Estado</p>
+                  <span className={`inline-flex mt-1 px-2 py-1 rounded-full text-xs font-semibold border ${getStatusColor(vehiculoSeleccionado.estado)}`}>
+                    {getStatusLabel(vehiculoSeleccionado.estado)}
+                  </span>
                 </div>
-              )}
+                <div className="bg-slate-50 rounded-lg p-3">
+                  <p className="text-xs text-slate-500 uppercase font-medium">Tipo</p>
+                  <p className="font-semibold text-slate-800 mt-1">{getTipoLabel(vehiculoSeleccionado.tipo)}</p>
+                </div>
+              </div>
               
-              {/* Tab Documentación */}
-              {detalleTab === 'documentacion' && (
-                <div className="space-y-4">
-                  <div className="border-2 border-dashed border-slate-300 rounded-xl p-8 text-center">
-                    <FileText size={48} className="mx-auto mb-4 text-slate-300" />
-                    <p className="text-slate-500 font-medium">No hay documentos subidos.</p>
-                    <button
-                      onClick={() => alert('Próximamente: Subir PDF')}
-                      className="mt-4 px-4 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-700 font-medium"
-                    >
-                      Subir PDF
-                    </button>
-                  </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs text-slate-500 uppercase font-medium">Matrícula</p>
+                  <p className="font-mono font-semibold text-slate-800">{vehiculoSeleccionado.matricula}</p>
                 </div>
-              )}
+                <div>
+                  <p className="text-xs text-slate-500 uppercase font-medium">Kilómetros</p>
+                  <p className="font-semibold text-slate-800">{vehiculoSeleccionado.kmActual?.toLocaleString() || '-'} km</p>
+                </div>
+              </div>
               
-              {/* Tab Mantenimiento */}
-              {detalleTab === 'mantenimiento' && (
-                <div className="space-y-4">
-                  <div className="border-2 border-dashed border-slate-300 rounded-xl p-8 text-center">
-                    <Wrench size={48} className="mx-auto mb-4 text-slate-300" />
-                    <p className="text-slate-500 font-medium">Sin historial de mantenimiento registrado.</p>
-                    <button
-                      onClick={() => alert('Próximamente: Registrar mantenimiento')}
-                      className="mt-4 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 font-medium"
-                    >
-                      Registrar Mantenimiento
-                    </button>
-                  </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className={`p-3 rounded-lg ${isExpired(vehiculoSeleccionado.fechaItv) ? 'bg-red-50' : isExpiringSoon(vehiculoSeleccionado.fechaItv) ? 'bg-yellow-50' : 'bg-slate-50'}`}>
+                  <p className="text-xs text-slate-500 uppercase font-medium flex items-center gap-1">
+                    <Calendar size={12} /> ITV
+                  </p>
+                  <p className={`font-semibold ${isExpired(vehiculoSeleccionado.fechaItv) ? 'text-red-600' : isExpiringSoon(vehiculoSeleccionado.fechaItv) ? 'text-yellow-600' : 'text-slate-800'}`}>
+                    {formatDate(vehiculoSeleccionado.fechaItv)}
+                  </p>
                 </div>
-              )}
+                <div className={`p-3 rounded-lg ${isExpired(vehiculoSeleccionado.fechaSeguro) ? 'bg-red-50' : isExpiringSoon(vehiculoSeleccionado.fechaSeguro) ? 'bg-yellow-50' : 'bg-slate-50'}`}>
+                  <p className="text-xs text-slate-500 uppercase font-medium flex items-center gap-1">
+                    <Shield size={12} /> Seguro
+                  </p>
+                  <p className={`font-semibold ${isExpired(vehiculoSeleccionado.fechaSeguro) ? 'text-red-600' : isExpiringSoon(vehiculoSeleccionado.fechaSeguro) ? 'text-yellow-600' : 'text-slate-800'}`}>
+                    {formatDate(vehiculoSeleccionado.fechaSeguro)}
+                  </p>
+                </div>
+              </div>
             </div>
             
             <div className="p-4 border-t bg-slate-50 flex gap-3">
