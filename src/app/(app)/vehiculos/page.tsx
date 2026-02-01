@@ -1,6 +1,26 @@
 'use client'
 import React, { useState, useEffect } from 'react'
+import dynamic from 'next/dynamic'
 import { Truck, MapPin, Car, Ambulance, Package, Calendar, Gauge, Shield, Wrench, Plus, Edit, Eye, X, Check, RefreshCw, FileText, AlertTriangle } from 'lucide-react'
+import 'leaflet/dist/leaflet.css'
+
+// Imports dinámicos para Leaflet
+const MapContainer = dynamic(
+  () => import('react-leaflet').then((mod) => mod.MapContainer),
+  { ssr: false }
+)
+const TileLayer = dynamic(
+  () => import('react-leaflet').then((mod) => mod.TileLayer),
+  { ssr: false }
+)
+const Marker = dynamic(
+  () => import('react-leaflet').then((mod) => mod.Marker),
+  { ssr: false }
+)
+const Popup = dynamic(
+  () => import('react-leaflet').then((mod) => mod.Popup),
+  { ssr: false }
+)
 
 interface Vehiculo {
   id: string
@@ -261,6 +281,100 @@ export default function VehiculosPage() {
 
       {mainTab === 'flota' && (
         <>
+          {/* Mapa Táctico */}
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+              <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                <MapPin size={18} className="text-teal-600" />
+                Mapa Táctico de Flota
+              </h3>
+              <div className="flex gap-3 text-xs text-slate-500">
+                <span className="flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-orange-500"></span> En Servicio
+                </span>
+                <span className="flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-green-500"></span> Disponible
+                </span>
+              </div>
+            </div>
+            <div className="h-[350px]">
+              <MapContainer
+                center={[37.3716, -6.0719]}
+                zoom={14}
+                style={{ height: '100%', width: '100%' }}
+                scrollWheelZoom={true}
+              >
+                <TileLayer
+                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                />
+                {vehiculos
+                  .filter(v => v.estado === 'disponible' || v.estado === 'en_servicio')
+                  .map((vehiculo, index) => {
+                    // Coordenadas simuladas en Bormujos
+                    const coordenadas = [
+                      [37.3725, -6.0735],
+                      [37.3708, -6.0698],
+                      [37.3732, -6.0680],
+                      [37.3698, -6.0745],
+                      [37.3715, -6.0760],
+                    ]
+                    const [lat, lng] = coordenadas[index % coordenadas.length]
+                    
+                    // Crear icono personalizado
+                    const L = typeof window !== 'undefined' ? require('leaflet') : null
+                    const customIcon = L ? new L.DivIcon({
+                      html: `<div style="
+                        background-color: ${vehiculo.estado === 'en_servicio' ? '#f97316' : '#22c55e'};
+                        width: 32px;
+                        height: 32px;
+                        border-radius: 50%;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        border: 3px solid white;
+                        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+                      ">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
+                          <path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4zM6 18.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm13.5-9l1.96 2.5H17V9.5h2.5zm-1.5 9c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/>
+                        </svg>
+                      </div>`,
+                      className: 'custom-vehicle-marker',
+                      iconSize: [32, 32],
+                      iconAnchor: [16, 16],
+                    }) : undefined
+
+                    return customIcon ? (
+                      <Marker
+                        key={vehiculo.id}
+                        position={[lat, lng]}
+                        icon={customIcon}
+                        eventHandlers={{
+                          click: () => setVehiculoSeleccionado(vehiculo)
+                        }}
+                      >
+                        <Popup>
+                          <div className="text-center">
+                            <p className="font-bold text-slate-800">{vehiculo.indicativo || vehiculo.matricula}</p>
+                            <p className="text-xs text-slate-500">{vehiculo.marca} {vehiculo.modelo}</p>
+                            <span className={`inline-block mt-1 px-2 py-0.5 rounded-full text-xs font-medium ${
+                              vehiculo.estado === 'en_servicio' 
+                                ? 'bg-orange-100 text-orange-700' 
+                                : 'bg-green-100 text-green-700'
+                            }`}>
+                              {vehiculo.estado === 'en_servicio' ? 'En Servicio' : 'Disponible'}
+                            </span>
+                          </div>
+                        </Popup>
+                      </Marker>
+                    ) : null
+                  })}
+              </MapContainer>
+            </div>
+            <div className="p-2 text-center text-xs text-slate-400 border-t">
+              * Ubicaciones simuladas para demostración del sistema
+            </div>
+          </div>
 
       {/* Filtros */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
