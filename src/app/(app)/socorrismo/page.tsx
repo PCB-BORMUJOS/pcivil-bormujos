@@ -2174,98 +2174,84 @@ export default function SocorrismoPage() {
         </div>
       )}
 
-      {/* Modal Historial de Revisiones */}
+       {/* Modal Historial de Revisiones */}
       {showHistorial && botiquinSeleccionado && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
             <div className="p-4 border-b bg-gradient-to-r from-blue-600 to-blue-700 text-white flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <History size={24} />
+                <History size={20} />
                 <div>
-                  <h3 className="font-bold text-lg">Historial de Revisiones</h3>
-                  <p className="text-blue-100 text-sm">{botiquinSeleccionado.codigo} - {botiquinSeleccionado.nombre}</p>
+                  <h3 className="font-bold">Historial de Revisiones</h3>
+                  <p className="text-blue-100 text-xs">{botiquinSeleccionado.codigo} - {botiquinSeleccionado.nombre}</p>
                 </div>
               </div>
-              <button onClick={() => setShowHistorial(false)} className="p-1 hover:bg-white/20 rounded">
+              <button onClick={() => { setShowHistorial(false); setBotiquinSeleccionado(null); }} className="p-1 hover:bg-white/20 rounded">
                 <X size={20} />
               </button>
             </div>
             
-            <div className="flex-1 overflow-y-auto p-4">
+            <div className="flex-1 overflow-y-auto">
               {revisionesHistorial.length === 0 ? (
                 <div className="text-center py-12 text-slate-500">
-                  <History size={48} className="mx-auto mb-4 opacity-30" />
+                  <History size={40} className="mx-auto mb-3 opacity-30" />
                   <p className="font-medium">No hay revisiones registradas</p>
-                  <p className="text-sm">Las revisiones aparecerán aquí cuando se realicen</p>
                 </div>
               ) : (
-                <div className="space-y-4">
-                  {revisionesHistorial.map((revision: any, index: number) => (
-                    <div key={revision.id || index} className="border border-slate-200 rounded-xl p-4 hover:shadow-md transition-shadow">
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex items-center gap-3">
-                          <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                            revision.itemsFaltantes === 0 && revision.itemsCaducados === 0 
-                              ? 'bg-green-100 text-green-600' 
-                              : 'bg-yellow-100 text-yellow-600'
-                          }`}>
-                            <ClipboardCheck size={20} />
-                          </div>
-                          <div>
-                            <p className="font-semibold text-slate-800">
-                              {new Date(revision.fecha).toLocaleDateString('es-ES', { 
-                                weekday: 'long', 
-                                year: 'numeric', 
-                                month: 'long', 
-                                day: 'numeric' 
-                              })}
-                            </p>
-                            <p className="text-sm text-slate-500">
-                              {new Date(revision.fecha).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
-                              {revision.usuario && ` • ${revision.usuario.nombre} ${revision.usuario.apellidos}`}
-                            </p>
-                          </div>
-                        </div>
-                        <div className={`px-3 py-1 rounded-full text-xs font-bold ${
-                          revision.itemsFaltantes === 0 && revision.itemsCaducados === 0 
-                            ? 'bg-green-100 text-green-700' 
-                            : 'bg-yellow-100 text-yellow-700'
-                        }`}>
-                          {revision.itemsFaltantes === 0 && revision.itemsCaducados === 0 ? '✓ Completo' : '⚠ Incidencias'}
-                        </div>
-                      </div>
-                      
-                      <div className="grid grid-cols-3 gap-3 mb-3">
-                        <div className="bg-slate-50 rounded-lg p-3 text-center">
-                          <p className="text-2xl font-bold text-slate-800">{revision.itemsVerificados}</p>
-                          <p className="text-xs text-slate-500">Verificados</p>
-                        </div>
-                        <div className="bg-yellow-50 rounded-lg p-3 text-center">
-                          <p className="text-2xl font-bold text-yellow-600">{revision.itemsFaltantes}</p>
-                          <p className="text-xs text-slate-500">Faltantes</p>
-                        </div>
-                        <div className="bg-red-50 rounded-lg p-3 text-center">
-                          <p className="text-2xl font-bold text-red-600">{revision.itemsCaducados}</p>
-                          <p className="text-xs text-slate-500">Caducados</p>
-                        </div>
-                      </div>
-                      
-                      {revision.observaciones && (
-                        <div className="bg-slate-50 rounded-lg p-3">
-                          <p className="text-xs font-medium text-slate-500 mb-1">Observaciones:</p>
-                          <p className="text-sm text-slate-700">{revision.observaciones}</p>
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                <table className="w-full text-sm">
+                  <thead className="bg-slate-50 sticky top-0">
+                    <tr>
+                      <th className="text-left px-4 py-2 font-medium text-slate-600">Fecha</th>
+                      <th className="text-center px-2 py-2 font-medium text-slate-600">✓</th>
+                      <th className="text-center px-2 py-2 font-medium text-slate-600">⚠</th>
+                      <th className="text-center px-2 py-2 font-medium text-slate-600">✗</th>
+                      <th className="text-left px-4 py-2 font-medium text-slate-600">Revisor</th>
+                      <th className="text-center px-2 py-2 font-medium text-slate-600">Estado</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {revisionesHistorial.slice(0, 20).map((revision: any, index: number) => (
+                      <tr key={revision.id || index} className="hover:bg-slate-50">
+                        <td className="px-4 py-2">
+                          <p className="font-medium text-slate-800">{new Date(revision.fecha).toLocaleDateString('es-ES')}</p>
+                          <p className="text-xs text-slate-500">{new Date(revision.fecha).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</p>
+                        </td>
+                        <td className="text-center px-2 py-2">
+                          <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-green-100 text-green-700 text-xs font-bold">{revision.itemsVerificados}</span>
+                        </td>
+                        <td className="text-center px-2 py-2">
+                          <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-yellow-100 text-yellow-700 text-xs font-bold">{revision.itemsFaltantes}</span>
+                        </td>
+                        <td className="text-center px-2 py-2">
+                          <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-red-100 text-red-700 text-xs font-bold">{revision.itemsCaducados}</span>
+                        </td>
+                        <td className="px-4 py-2 text-slate-600 text-xs">
+                          {revision.usuario ? `${revision.usuario.nombre} ${revision.usuario.apellidos?.charAt(0)}.` : '-'}
+                        </td>
+                        <td className="text-center px-2 py-2">
+                          {revision.itemsFaltantes === 0 && revision.itemsCaducados === 0 ? (
+                            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">OK</span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">!</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+              {revisionesHistorial.length > 20 && (
+                <div className="text-center py-3 text-sm text-slate-500 border-t">
+                  Mostrando las últimas 20 revisiones de {revisionesHistorial.length}
                 </div>
               )}
             </div>
             
-            <div className="p-4 border-t bg-slate-50">
+            <div className="p-3 border-t bg-slate-50 flex justify-between items-center">
+              <span className="text-xs text-slate-500">{revisionesHistorial.length} revisiones</span>
               <button 
-                onClick={() => setShowHistorial(false)} 
-                className="w-full px-4 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 font-medium"
+                onClick={() => { setShowHistorial(false); setBotiquinSeleccionado(null); }} 
+                className="px-4 py-1.5 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 text-sm font-medium"
               >
                 Cerrar
               </button>
