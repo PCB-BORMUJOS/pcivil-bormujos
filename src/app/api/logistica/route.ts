@@ -21,6 +21,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ edificios })
     }
 
+    if (tipo === 'equipos-radio') {
+  const equipos = await prisma.equipoRadio.findMany({
+    orderBy: { codigo: 'asc' }
+  })
+  return NextResponse.json({ equipos })
+}
+
     // ===== EQUIPOS ECI =====
     if (tipo === 'equipos-eci') {
       const edificioId = searchParams.get('edificioId')
@@ -533,6 +540,31 @@ export async function POST(request: NextRequest) {
 
   return NextResponse.json({ success: true, dea })
 }
+    // ===== EQUIPO RADIO =====
+    if (tipo === 'equipo-radio') {
+      const { codigo, tipo: tipoEquipo, marca, modelo, numeroSerie, configuracion, estado, estadoBateria, fechaInstalacionBat, ubicacion, observaciones } = body
+      
+      if (!codigo || !tipoEquipo || !marca || !modelo || !configuracion) {
+        return NextResponse.json({ error: 'Código, tipo, marca, modelo y configuración son requeridos' }, { status: 400 })
+      }
+      
+      const equipo = await prisma.equipoRadio.create({
+        data: {
+          codigo,
+          tipo: tipoEquipo,
+          marca,
+          modelo,
+          numeroSerie,
+          configuracion,
+          estado: estado || 'disponible',
+          estadoBateria: estadoBateria ? parseInt(estadoBateria) : null,
+          fechaInstalacionBat: fechaInstalacionBat ? new Date(fechaInstalacionBat) : null,
+          ubicacion,
+          observaciones
+        }
+      })
+      return NextResponse.json({ success: true, equipo })
+    }
 
     // ===== BOTIQUIN =====
     if (tipo === 'botiquin') {
@@ -843,6 +875,29 @@ export async function PUT(request: NextRequest) {
   return NextResponse.json({ success: true, dea })
 }
 
+    // ===== EQUIPO RADIO =====
+    if (tipo === 'equipo-radio') {
+      const { codigo, tipo: tipoEquipo, marca, modelo, numeroSerie, configuracion, estado, estadoBateria, fechaInstalacionBat, ubicacion, observaciones } = body
+      
+      const equipo = await prisma.equipoRadio.update({
+        where: { id },
+        data: {
+          codigo,
+          tipo: tipoEquipo,
+          marca,
+          modelo,
+          numeroSerie,
+          configuracion,
+          estado,
+          estadoBateria: estadoBateria ? parseInt(estadoBateria) : null,
+          fechaInstalacionBat: fechaInstalacionBat ? new Date(fechaInstalacionBat) : null,
+          ubicacion,
+          observaciones
+        }
+      })
+      return NextResponse.json({ success: true, equipo })
+    }
+
     // ===== BOTIQUIN =====
     if (tipo === 'botiquin') {
       const { codigo, nombre, tipo: tipoBotiquin, ubicacionActual, vehiculoId, estado, observaciones } = body
@@ -960,6 +1015,12 @@ export async function DELETE(request: NextRequest) {
     // ===== DEA =====
     if (tipo === 'dea') {
       await prisma.dEA.delete({ where: { id } })
+      return NextResponse.json({ success: true })
+    }
+
+    // ===== EQUIPO RADIO =====
+    if (tipo === 'equipo-radio') {
+      await prisma.equipoRadio.delete({ where: { id } })
       return NextResponse.json({ success: true })
     }
     

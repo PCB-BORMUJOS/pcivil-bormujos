@@ -857,3 +857,62 @@ model MantenimientoVehiculo {
   @@index([fecha])
   @@map("mantenimientos_vehiculo")
 }
+
+model EquipoRadio {
+  id                    String    @id @default(cuid())
+  codigo                String    @unique // TR-01, TR-02, etc.
+  tipo                  String    // portatil, movil, base, repetidor
+  marca                 String
+  modelo                String
+  numeroSerie           String?
+  configuracion         String    // analogico, dmr, tetra
+  estado                String    @default("disponible") // disponible, en_carga, averiado, mantenimiento
+  
+  // Batería
+  estadoBateria         Int?      // Porcentaje de salud (0-100)
+  fechaInstalacionBat   DateTime?
+  ciclosCarga           Int       @default(0)
+  
+  // Ubicación y notas
+  ubicacion             String?
+  observaciones         String?
+  
+  // Timestamps
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  
+  // Relaciones
+  mantenimientos        MantenimientoEquipo[]
+  ciclosCargaHistorial  CicloCarga[]
+}
+
+model MantenimientoEquipo {
+  id                String    @id @default(cuid())
+  equipoId          String
+  tipo              String    // revision, reparacion, cambio_bateria, actualizacion_firmware
+  descripcion       String
+  fecha             DateTime  @default(now())
+  realizadoPor      String?
+  coste             Float?
+  observaciones     String?
+  
+  equipo            EquipoRadio @relation(fields: [equipoId], references: [id], onDelete: Cascade)
+  
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+}
+
+model CicloCarga {
+  id                String    @id @default(cuid())
+  equipoId          String
+  fechaInicio       DateTime  @default(now())
+  fechaFin          DateTime?
+  duracionHoras     Float?
+  nivelInicial      Int?      // % batería al conectar
+  nivelFinal        Int?      // % batería al desconectar
+  observaciones     String?
+  
+  equipo            EquipoRadio @relation(fields: [equipoId], references: [id], onDelete: Cascade)
+  
+  createdAt         DateTime  @default(now())
+}
