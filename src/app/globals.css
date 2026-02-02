@@ -18,6 +18,7 @@
     --pc-orange-700: #c2410c;
     --pc-orange-800: #9a3412;
     --pc-orange-900: #7c2d12;
+
     --pc-dark-700: #1e293b;
     --pc-dark-800: #1a1f2e;
     --pc-dark-850: #151a27;
@@ -36,7 +37,9 @@
 }
 
 @layer components {
-  /* Sidebar */
+  /* ============================================
+     SIDEBAR
+     ============================================ */
   .sidebar {
     @apply fixed left-0 top-0 h-full bg-pc-dark-900 text-white flex flex-col z-50 transition-all duration-300;
     width: 256px;
@@ -62,6 +65,7 @@
     @apply hidden;
   }
 
+  /* Sidebar móvil */
   @media (max-width: 1024px) {
     .sidebar {
       @apply -translate-x-full;
@@ -85,7 +89,29 @@
     @apply w-5 h-5 flex-shrink-0;
   }
 
-  /* Page Container */
+  /* Overlay del sidebar móvil */
+  .sidebar-overlay {
+    @apply fixed inset-0 bg-black/50 backdrop-blur-sm lg:hidden;
+    z-index: 40;
+    animation: fadeIn 0.2s ease-out;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  .sidebar-toggle {
+    @apply p-2 rounded-lg hover:bg-pc-dark-800 transition-colors cursor-pointer;
+  }
+
+  /* ============================================
+     PAGE CONTAINER
+     ============================================ */
   .page-container {
     @apply min-h-screen transition-all duration-300;
     margin-left: 256px;
@@ -100,16 +126,10 @@
       margin-left: 0;
     }
   }
-  
-  .sidebar-overlay {
-    @apply fixed inset-0 bg-black/50 z-40 lg:hidden;
-  }
-  
-  .sidebar-toggle {
-    @apply p-2 rounded-lg hover:bg-pc-dark-800 transition-colors cursor-pointer;
-  }
 
-  /* Cards */
+  /* ============================================
+     CARDS
+     ============================================ */
   .card {
     @apply bg-white rounded-xl border border-gray-200 shadow-sm;
   }
@@ -143,7 +163,9 @@
     @apply text-red-500;
   }
 
-  /* Buttons */
+  /* ============================================
+     BUTTONS
+     ============================================ */
   .btn {
     @apply inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
   }
@@ -172,7 +194,9 @@
     @apply px-6 py-3 text-base;
   }
 
-  /* Forms */
+  /* ============================================
+     FORMS
+     ============================================ */
   .input {
     @apply w-full px-4 py-2.5 text-sm border border-gray-300 rounded-lg bg-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-pc-primary-500 focus:border-transparent transition-all duration-200;
   }
@@ -192,7 +216,9 @@
     @apply block text-sm font-medium text-gray-700 mb-1.5;
   }
 
-  /* Tables */
+  /* ============================================
+     TABLES
+     ============================================ */
   .table-container {
     @apply overflow-x-auto;
   }
@@ -213,7 +239,9 @@
     @apply bg-gray-50;
   }
 
-  /* Badges */
+  /* ============================================
+     BADGES
+     ============================================ */
   .badge {
     @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
   }
@@ -238,12 +266,16 @@
     @apply badge bg-gray-100 text-gray-800;
   }
 
-  /* Empty State */
+  /* ============================================
+     EMPTY STATE
+     ============================================ */
   .empty-state {
     @apply py-12 text-center text-gray-500;
   }
 
-  /* Page Layout */
+  /* ============================================
+     PAGE LAYOUT
+     ============================================ */
   .page-header {
     @apply flex items-center justify-between mb-6;
   }
@@ -262,6 +294,9 @@
 }
 
 @layer utilities {
+  /* ============================================
+     SCROLLBAR
+     ============================================ */
   .scrollbar-thin {
     scrollbar-width: thin;
   }
@@ -281,5 +316,15 @@
 
   .scrollbar-thin::-webkit-scrollbar-thumb:hover {
     @apply bg-gray-400;
+  }
+
+  /* Ocultar scrollbar en elementos con scrollbar-hide */
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
 }

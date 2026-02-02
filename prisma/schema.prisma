@@ -50,6 +50,8 @@ model Usuario {
   rol                    Rol                   @relation(fields: [rolId], references: [id])
   servicio               Servicio              @relation(fields: [servicioId], references: [id])
   vehiculosAsignados     VehiculoAsignacion[]
+  documentosVehiculo    DocumentoVehiculo[]
+  mantenimientosVehiculo MantenimientoVehiculo[]
 
   @@map("usuarios")
 }
@@ -266,6 +268,8 @@ model Vehiculo {
   botiquines   Botiquin[]
   servicio     Servicio             @relation(fields: [servicioId], references: [id])
   asignaciones VehiculoAsignacion[]
+  documentos      DocumentoVehiculo[]
+  mantenimientos  MantenimientoVehiculo[]
 
   @@map("vehiculos")
 }
@@ -812,4 +816,44 @@ enum EstadoSolicitud {
   RECHAZADA
   ENTREGADA
   CANCELADA
+}
+
+model DocumentoVehiculo {
+  id           String   @id @default(cuid())
+  vehiculoId   String
+  vehiculo     Vehiculo @relation(fields: [vehiculoId], references: [id], onDelete: Cascade)
+  tipo         String   // 'itv', 'seguro', 'permiso_circulacion', 'otros'
+  nombre       String
+  url          String   // URL del archivo en Vercel Blob
+  blobKey      String   // Key para eliminar de Vercel Blob
+  fechaSubida  DateTime @default(now())
+  usuarioId    String
+  usuario      Usuario  @relation(fields: [usuarioId], references: [id])
+  
+  @@index([vehiculoId])
+  @@index([usuarioId])
+  @@map("documentos_vehiculo")
+}
+
+model MantenimientoVehiculo {
+  id              String    @id @default(cuid())
+  vehiculoId      String
+  vehiculo        Vehiculo  @relation(fields: [vehiculoId], references: [id], onDelete: Cascade)
+  fecha           DateTime
+  tipo            String    // 'revision', 'reparacion', 'cambio_aceite', 'neumaticos', 'itv', 'otros'
+  descripcion     String
+  kilometraje     Int?
+  coste           Float?
+  proximaRevision DateTime?
+  realizadoPor    String?   // Taller o persona
+  observaciones   String?
+  usuarioId       String
+  usuario         Usuario   @relation(fields: [usuarioId], references: [id])
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@index([vehiculoId])
+  @@index([usuarioId])
+  @@index([fecha])
+  @@map("mantenimientos_vehiculo")
 }

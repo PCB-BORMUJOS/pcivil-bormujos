@@ -69,6 +69,18 @@ export default function Sidebar() {
     return () => document.removeEventListener('keydown', handleEscape)
   }, [])
 
+  // Prevenir scroll del body cuando el sidebar móvil está abierto
+  useEffect(() => {
+    if (mobileOpen) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [mobileOpen])
+
   const getInitials = (name: string) => {
     const parts = name.split(' ')
     if (parts.length >= 2) {
@@ -112,6 +124,7 @@ export default function Sidebar() {
         <div 
           className="sidebar-overlay"
           onClick={() => setMobileOpen(false)}
+          aria-hidden="true"
         />
       )}
 
