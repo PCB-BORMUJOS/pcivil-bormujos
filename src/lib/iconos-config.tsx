@@ -47,6 +47,18 @@ const DEAIcon = ({ size = 24, className = '' }: { size?: number; className?: str
   <img src="/images/dea-icon.svg" alt="DEA" style={{ width: size, height: size }} className={className} />
 )
 
+const PulsadorIcon = ({ size = 24, className = '' }: { size?: number; className?: string }) => (
+  <span className={`material-symbols-outlined ${className}`} style={{ fontSize: size }}>
+    nest_protect
+  </span>
+)
+
+const DetectorIcon = ({ size = 24, className = '' }: { size?: number; className?: string }) => (
+  <span className={`material-symbols-outlined ${className}`} style={{ fontSize: size }}>
+    detector
+  </span>
+)
+
 // ============================================================================
 // ICONOS POR ÁREA
 // ============================================================================
@@ -55,9 +67,9 @@ export const ICONOS_INCENDIOS = {
   extintor_polvo: PiFireExtinguisherLight,
   extintor_co2: FaFireExtinguisher,
   bie: BIEIcon,
-  detector_humo: DetectorSmokeIcon,
-  detector_alarma: DetectorSmokeIcon, // Mismo que humo por ahora
-  pulsador: NestProtectIcon,
+  detector_humo: DetectorIcon,
+  detector_alarma: DetectorIcon, // Mismo que humo por ahora
+  pulsador: PulsadorIcon,
   hidrante: FireHydrantIcon,
   sirena: SirenIcon,
   señalizacion: EmergenciaIcon,
@@ -95,8 +107,8 @@ export const ICONOS_GENERAL = {
 export const TIPOS_EQUIPO_ECI: Record<string, any> = {
   extintor: PiFireExtinguisherLight,
   bie: BIEIcon,
-  detector: DetectorSmokeIcon,
-  pulsador: NestProtectIcon,
+  detector: DetectorIcon,
+  pulsador: PulsadorIcon,
   alarma: SirenIcon,
   señalizacion: EmergenciaIcon,
 }
@@ -154,7 +166,7 @@ export const RenderIcon = ({ tipo, categoria, size = 24, className = '' }: IconP
   if (!IconComponent) IconComponent = Package
 
   // Si es componente de imagen personalizado
-  if (IconComponent === BIEIcon || IconComponent === RepetidorIcon || IconComponent === EmergenciaIcon || IconComponent === DEAIcon) {
+  if (IconComponent === BIEIcon || IconComponent === RepetidorIcon || IconComponent === EmergenciaIcon || IconComponent === DEAIcon || IconComponent === PulsadorIcon || IconComponent === DetectorIcon) {
     return <IconComponent size={size} className={className} />
   }
 

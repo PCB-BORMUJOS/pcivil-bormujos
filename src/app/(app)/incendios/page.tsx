@@ -21,6 +21,7 @@ const createHidranteIcon = (tipo: string, estado: string) => {
   const L = require('leaflet');
   
   const borderColor = estado === 'operativo' ? '#22c55e' : estado === 'averiado' ? '#f59e0b' : '#ef4444';
+  const iconColor = estado === 'operativo' ? '#22c55e' : estado === 'averiado' ? '#f59e0b' : '#ef4444';
   const shadowColor = estado === 'operativo' ? 'rgba(34, 197, 94, 0.4)' : estado === 'averiado' ? 'rgba(245, 158, 11, 0.4)' : 'rgba(239, 68, 68, 0.4)';
   
   return L.divIcon({
@@ -28,18 +29,19 @@ const createHidranteIcon = (tipo: string, estado: string) => {
     html: `
       <div style="
         position: relative;
-        width: 48px; 
-        height: 48px; 
+        width: 40px; 
+        height: 40px; 
         border-radius: 50%; 
-        border: 4px solid ${borderColor}; 
+        border: 3px solid ${borderColor}; 
         background: white;
         box-shadow: 0 4px 12px ${shadowColor}, 0 0 0 2px white; 
         display: flex; 
         align-items: center; 
         justify-content: center;
-        overflow: hidden;
       ">
-        <img src="/images/hidrante.png" alt="hidrante" style="width: 100%; height: 100%; object-fit: cover;" />
+        <span class="material-symbols-outlined" style="font-size: 28px; color: ${iconColor};">
+          fire_hydrant
+        </span>
       </div>
     `,
     iconSize: [48, 48],
