@@ -1774,12 +1774,12 @@ export default function IncendiosPage() {
                           required
                         >
                           <option value="">Seleccionar...</option>
-                          <option value="extintor">🧯 Extintor</option>
-                          <option value="bie">🚿 BIE</option>
-                          <option value="detector">🔔 Detector</option>
-                          <option value="pulsador">🔴 Pulsador</option>
-                          <option value="alarma">📢 Alarma/Sirena</option>
-                          <option value="señalizacion">🪧 Señalización</option>
+                          <option value="extintor">Extintor</option>
+                          <option value="bie">BIE (Manguera)</option>
+                          <option value="detector">Detector de Humo</option>
+                          <option value="pulsador">Pulsador de Alarma</option>
+                          <option value="alarma">Alarma/Sirena</option>
+                          <option value="señalizacion">Señalización de Emergencia</option>
                         </select>
                       </div>
                       <div>
@@ -2034,12 +2034,12 @@ export default function IncendiosPage() {
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">Tipo</label>
                   <select name="tipo" defaultValue={equipoSeleccionado.tipo} className="w-full border border-slate-300 rounded-lg p-2.5">
-                    <option value="extintor">🧯 Extintor</option>
-                    <option value="bie">🚿 BIE</option>
-                    <option value="detector">🔔 Detector</option>
-                    <option value="pulsador">🔴 Pulsador</option>
-                    <option value="alarma">📢 Alarma/Sirena</option>
-                    <option value="señalizacion">🪧 Señalización</option>
+                    <option value="extintor">Extintor</option>
+                    <option value="bie">BIE (Manguera)</option>
+                    <option value="detector">Detector de Humo</option>
+                    <option value="pulsador">Pulsador de Alarma</option>
+                    <option value="alarma">Alarma/Sirena</option>
+                    <option value="señalizacion">Señalización de Emergencia</option>
                   </select>
                 </div>
                 <div>
