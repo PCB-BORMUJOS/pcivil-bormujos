@@ -1,5 +1,4 @@
 'use client';
-
 import React, { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import 'leaflet/dist/leaflet.css';
@@ -8,6 +7,9 @@ import {
   Edit, Trash2, Eye, X, Save, ArrowLeft, ShoppingCart, Layers, Clock, Check, CheckCircle,
   Ban, Filter, User, Building, Calendar, History, Send
 } from 'lucide-react';
+
+// Iconos centralizados
+import { TIPOS_EQUIPO_ECI } from '@/lib/iconos-config';
 
 const MapContainer = dynamic(() => import('react-leaflet').then((mod) => mod.MapContainer), { ssr: false });
 const TileLayer = dynamic(() => import('react-leaflet').then((mod) => mod.TileLayer), { ssr: false });
@@ -45,9 +47,6 @@ const createHidranteIcon = (tipo: string, estado: string) => {
   });
 };
 
-const TIPOS_EQUIPO_ICONS: Record<string, string> = {
-  extintor: '🧯', bie: '🚿', detector: '🔔', pulsador: '🔴', alarma: '📢', señalizacion: '🪧',
-};
 
 const TIPOS_EQUIPO_LABELS: Record<string, string> = {
   extintor: 'Extintor', bie: 'BIE', detector: 'Detector', pulsador: 'Pulsador', 
@@ -763,7 +762,10 @@ export default function IncendiosPage() {
                         <tr key={eq.id} className="hover:bg-slate-50">
                           <td className="p-3">
                             <div className="flex items-center gap-2">
-                              <span className="text-2xl">{TIPOS_EQUIPO_ICONS[eq.tipo] || '📦'}</span>
+                              {(() => {
+                              const Icon = TIPOS_EQUIPO_ECI[eq.tipo] || Package;
+                              return <Icon size={28} className="text-red-600" />;
+                              })()}
                               <div>
                                 <p className="font-medium text-slate-800">{TIPOS_EQUIPO_LABELS[eq.tipo]}</p>
                                 {eq.subtipo && <p className="text-xs text-slate-500">{eq.subtipo}</p>}
@@ -935,7 +937,10 @@ export default function IncendiosPage() {
                     <tr key={eq.id} className="hover:bg-slate-50">
                       <td className="p-3">
                         <div className="flex items-center gap-2">
-                          <span className="text-xl">{TIPOS_EQUIPO_ICONS[eq.tipo] || '📦'}</span>
+                          {(() => {
+                          const Icon = TIPOS_EQUIPO_ECI[eq.tipo] || Package;
+                          return <Icon size={24} className="text-red-600" />;
+                          })()}
                           <div>
                             <p className="font-medium text-slate-800 text-sm">{TIPOS_EQUIPO_LABELS[eq.tipo]}</p>
                             {eq.subtipo && <p className="text-xs text-slate-500">{eq.subtipo}</p>}
@@ -1499,12 +1504,12 @@ export default function IncendiosPage() {
                   <label className="block text-sm font-medium text-slate-700 mb-2">Tipo *</label>
                   <select name="tipoEquipo" className="w-full border border-slate-300 rounded-lg p-2.5" required>
                     <option value="">Seleccionar...</option>
-                    <option value="extintor">🧯 Extintor</option>
-                    <option value="bie">🚿 BIE</option>
-                    <option value="detector">🔔 Detector</option>
-                    <option value="pulsador">🔴 Pulsador</option>
-                    <option value="alarma">📢 Alarma/Sirena</option>
-                    <option value="señalizacion">🪧 Señalización</option>
+                    <option value="extintor">Extintor</option>
+                    <option value="bie">BIE (Manguera)</option>
+                    <option value="detector">Detector de Humo</option>
+                    <option value="pulsador">Pulsador de Alarma</option>
+                    <option value="alarma">Alarma/Sirena</option>
+                    <option value="señalizacion">Señalización de Emergencia</option>
                   </select>
                 </div>
                 <div>
@@ -1643,7 +1648,10 @@ export default function IncendiosPage() {
                           <tr key={eq.id} className="hover:bg-slate-50">
                             <td className="p-3">
                               <div className="flex items-center gap-2">
-                                <span className="text-2xl">{TIPOS_EQUIPO_ICONS[eq.tipo] || '📦'}</span>
+                                {(() => {
+                                const Icon = TIPOS_EQUIPO_ECI[eq.tipo] || Package;
+                                return <Icon size={28} className="text-red-600" />;
+                                })()}
                                 <div>
                                   <p className="font-medium text-slate-800">{TIPOS_EQUIPO_LABELS[eq.tipo]}</p>
                                   {eq.subtipo && <p className="text-xs text-slate-500">{eq.subtipo}</p>}
