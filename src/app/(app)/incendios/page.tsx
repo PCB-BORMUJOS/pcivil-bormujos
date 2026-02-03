@@ -3,13 +3,20 @@ import React, { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import 'leaflet/dist/leaflet.css';
 import {
-  Flame, Package, Search, AlertTriangle, Plus, RefreshCw, Building2, Shield, Droplet, MapPin,
+  Flame, Package, Search, AlertTriangle, Plus, RefreshCw, Building2, Shield, MapPin,
   Edit, Trash2, Eye, X, Save, ArrowLeft, ShoppingCart, Layers, Clock, Check, CheckCircle,
   Ban, Filter, User, Building, Calendar, History, Send
 } from 'lucide-react';
 
 // Iconos centralizados
 import { TIPOS_EQUIPO_ECI } from '@/lib/iconos-config';
+
+// Icono de hidrante personalizado
+const HidranteIcon = ({ size = 22, className = '' }: { size?: number; className?: string }) => (
+  <span className={`material-symbols-outlined ${className}`} style={{ fontSize: size }}>
+    fire_hydrant
+  </span>
+)
 
 const MapContainer = dynamic(() => import('react-leaflet').then((mod) => mod.MapContainer), { ssr: false });
 const TileLayer = dynamic(() => import('react-leaflet').then((mod) => mod.TileLayer), { ssr: false });
@@ -386,7 +393,7 @@ export default function IncendiosPage() {
             Nuevo Artículo
           </button>
           <button onClick={() => setShowNuevoHidrante(true)} className="px-4 py-2.5 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 flex items-center gap-2 font-medium">
-            <Droplet size={18} />
+            <HidranteIcon size={20} />
             Nuevo Hidrante
           </button>
         </div>
@@ -439,7 +446,7 @@ export default function IncendiosPage() {
               <h3 className="text-3xl font-bold text-slate-800 mt-1">{hidrantesStats.total}</h3>
             </div>
             <div className="bg-cyan-100 p-2.5 rounded-xl">
-              <Droplet size={22} className="text-cyan-600" />
+              <HidranteIcon size={26} className="text-cyan-600" />
             </div>
           </div>
         </div>
@@ -464,7 +471,7 @@ export default function IncendiosPage() {
             { id: 'inventario', label: 'Inventario del Área', icon: Package },
             { id: 'eci-edificios', label: 'ECI Edificios', icon: Building2 },
             { id: 'inventario-eci', label: 'Inventario ECI', icon: Layers },
-            { id: 'hidrantes', label: 'Red de Hidrantes', icon: Droplet },
+            { id: 'hidrantes', label: 'Red de Hidrantes', icon: HidranteIcon },
           ].map(tab => (
             <button
               key={tab.id}
@@ -475,7 +482,7 @@ export default function IncendiosPage() {
                   : 'border-transparent text-slate-500 hover:text-slate-700'
               }`}
             >
-              <tab.icon size={18} />
+              <tab.icon size={20} />
               {tab.label}
             </button>
           ))}
@@ -1024,7 +1031,7 @@ export default function IncendiosPage() {
             <div className="p-4">
               {hidrantes.length === 0 ? (
                 <div className="text-center py-12 text-slate-400">
-                  <Droplet size={48} className="mx-auto mb-4 opacity-50" />
+                  <HidranteIcon size={48} className="mx-auto mb-4 opacity-50" />
                   <p>No hay hidrantes</p>
                 </div>
               ) : (
