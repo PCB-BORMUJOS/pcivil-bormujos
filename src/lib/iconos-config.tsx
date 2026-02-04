@@ -24,7 +24,6 @@ import { GiWalkieTalkie } from 'react-icons/gi'
 import LocalShippingIcon from '@mui/icons-material/LocalShipping'
 import DirectionsCarIcon from '@mui/icons-material/DirectionsCar'
 import StraightenIcon from '@mui/icons-material/Straighten'
-import EcgHeartIcon from '@mui/icons-material/EcgHeart'
 import DetectorSmokeIcon from '@mui/icons-material/Sensors' // Aproximado, puede que necesites otro
 import NestProtectIcon from '@mui/icons-material/Shield' // Aproximado
 import FireHydrantIcon from '@mui/icons-material/LocalFireDepartment' // Aproximado
