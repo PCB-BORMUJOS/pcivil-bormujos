@@ -1,4 +1,4 @@
-import { AuthOptions } from 'next-auth'
+import { AuthOptions, User } from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import { prisma } from '@/lib/db'
 import { compare } from 'bcryptjs'
@@ -11,7 +11,10 @@ export const authOptions: AuthOptions = {
         email: { label: 'Email', type: 'email' },
         password: { label: 'Password', type: 'password' }
       },
-      async authorize(credentials: Record<"email" | "password", string> | undefined) {
+      async authorize(
+        credentials: Record<"email" | "password", string> | undefined,
+        _req: any
+      ): Promise<User | null> {
         if (!credentials?.email || !credentials?.password) {
           throw new Error('Email y contraseña requeridos')
         }
@@ -41,7 +44,7 @@ export const authOptions: AuthOptions = {
           permisos: usuario.rol.permisos,
           servicioId: usuario.servicioId,
           numeroVoluntario: usuario.numeroVoluntario
-        } as any
+        }
       }
     })
   ],
