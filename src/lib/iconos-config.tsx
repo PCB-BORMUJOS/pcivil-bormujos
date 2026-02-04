@@ -104,6 +104,29 @@ export const ICONOS_GENERAL = {
 // MAPEO DE TIPOS DE EQUIPO ECI (INCENDIOS)
 // ============================================================================
 
+// Función para obtener el icono según tipo y subtipo
+export const getIconoEquipoECI = (tipo: string, subtipo?: string | null): any => {
+  if (tipo === 'extintor') {
+    // Diferenciar extintores por subtipo
+    if (subtipo?.toLowerCase().includes('co2')) {
+      return FaFireExtinguisher; // Extintor CO2 (sólido)
+    }
+    return PiFireExtinguisherLight; // Extintor ABC (outline)
+  }
+  
+  // Resto de equipos
+  const iconMap: Record<string, any> = {
+    bie: BIEIcon,
+    detector: DetectorIcon,
+    pulsador: PulsadorIcon,
+    alarma: SirenIcon,
+    señalizacion: EmergenciaIcon,
+  };
+  
+  return iconMap[tipo] || Package;
+};
+
+// Mantener compatibilidad con código antiguo
 export const TIPOS_EQUIPO_ECI: Record<string, any> = {
   extintor: PiFireExtinguisherLight,
   bie: BIEIcon,
@@ -111,7 +134,7 @@ export const TIPOS_EQUIPO_ECI: Record<string, any> = {
   pulsador: PulsadorIcon,
   alarma: SirenIcon,
   señalizacion: EmergenciaIcon,
-}
+};
 
 // ============================================================================
 // MAPEO DE TIPOS DE EQUIPO RADIO (TRANSMISIONES)
