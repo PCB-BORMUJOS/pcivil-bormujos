@@ -634,12 +634,20 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div onClick={() => setShowClima(true)} className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 cursor-pointer hover:shadow-md transition-all group">
+        <div onClick={() => setShowClima(true)} className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 cursor-pointer hover:shadow-md transition-all group relative overflow-hidden">
+          {clima?.alertas?.length > 0 && (
+            <div className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+          )}
           <div className="flex justify-between items-start">
             <div>
               <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1"><MapPin size={10}/> {clima?.municipio?.toUpperCase() || 'BORMUJOS'}</p>
               <h3 className="text-3xl font-bold text-slate-800 mt-1">{clima?.temperatura || '--'}°C</h3>
               <p className="text-slate-500 text-sm">{clima?.estadoCielo || 'Cargando...'}</p>
+              {clima?.alertas?.length > 0 && (
+                <p className="text-xs font-bold text-red-500 mt-1 flex items-center gap-1">
+                  <AlertTriangle size={12}/> {clima.alertas.length} alerta{clima.alertas.length > 1 ? 's' : ''}
+                </p>
+              )}
             </div>
             <div className="bg-yellow-100 p-2.5 rounded-xl text-2xl">{getWeatherIcon(clima?.proximosDias?.[0]?.icono || 'sun')}</div>
           </div>
@@ -903,6 +911,31 @@ export default function DashboardPage() {
               </div>
               <button onClick={() => setShowClima(false)} className="text-slate-400 hover:text-slate-600"><X size={24}/></button>
             </div>
+            
+            {/* Alerts Section */}
+            {clima.alertas && clima.alertas.length > 0 && (
+              <div className="mb-4 space-y-2">
+                {clima.alertas.map((alerta: any, i: number) => (
+                  <div 
+                    key={i}
+                    className={`p-3 rounded-lg border flex items-start gap-3 ${
+                      alerta.nivel === 'rojo' 
+                        ? 'bg-red-50 border-red-200 text-red-800' 
+                        : alerta.nivel === 'naranja'
+                        ? 'bg-orange-50 border-orange-200 text-orange-800'
+                        : 'bg-yellow-50 border-yellow-200 text-yellow-800'
+                    }`}
+                  >
+                    <AlertTriangle size={20} className="flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-bold text-sm">{alerta.tipo}</p>
+                      <p className="text-xs opacity-80">{alerta.descripcion}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            
             <div className="text-center py-4 bg-gradient-to-br from-yellow-50 to-orange-50 rounded-xl mb-4">
               <span className="text-6xl">{getWeatherIcon(clima.proximosDias?.[0]?.icono)}</span>
               <h4 className="text-4xl font-bold text-slate-800 mt-2">{clima.temperatura}°C</h4>
@@ -928,6 +961,9 @@ export default function DashboardPage() {
                 </div>
               </div>
             )}
+            <div className="mt-4 text-xs text-slate-400 text-center">
+              Fuente: {clima.fuente}
+            </div>
           </div>
         </div>
       )}

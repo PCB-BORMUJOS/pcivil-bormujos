@@ -1,24 +1,88 @@
 'use client';
 
-import { useState } from 'react';
-import { Settings, Shield, CreditCard, History, Users, TrendingUp, Download, Edit, Loader2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Settings, Shield, CreditCard, History, Users, TrendingUp, Download, Edit, Loader2, Plus, X, Eye, EyeOff, Trash2, Save, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
+
+interface Usuario {
+  id: string;
+  nombre: string;
+  apellidos: string;
+  email: string;
+  telefono?: string;
+  dni?: string;
+  numeroVoluntario?: string;
+  activo: boolean;
+  rol: {
+    id: string;
+    nombre: string;
+  };
+  servicio: {
+    id: string;
+    nombre: string;
+  };
+}
+
+interface Rol {
+  id: string;
+  nombre: string;
+  descripcion?: string;
+}
+
+interface Servicio {
+  id: string;
+  nombre: string;
+  codigo: string;
+}
 
 export default function ConfiguracionPage() {
-  const [activeTab, setActiveTab] = useState<'liquidaciones' | 'roles' | 'audit'>('liquidaciones');
+  const [activeTab, setActiveTab] = useState<'liquidaciones' | 'roles' | 'audit'>('roles');
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().substring(0, 7));
   const [loading, setLoading] = useState(false);
   const [reportData, setReportData] = useState<any[]>([]);
+
+  // Estados para usuarios
+  const [usuarios, setUsuarios] = useState<Usuario[]>([]);
+  const [roles, setRoles] = useState<Rol[]>([]);
+  const [servicios, setServicios] = useState<Servicio[]>([]);
+  const [loadingUsuarios, setLoadingUsuarios] = useState(false);
+  
+  // Modal states
+  const [showModal, setShowModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [editingUser, setEditingUser] = useState<Usuario | null>(null);
+  
+  // Estados para ordenación
+  const [sortBy, setSortBy] = useState<'nombre' | 'email' | 'voluntario' | 'rol' | 'estado'>('nombre');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  
+  // Form states
+  const [formData, setFormData] = useState({
+    nombre: '',
+    apellidos: '',
+    email: '',
+    telefono: '',
+    dni: '',
+    numeroVoluntario: '',
+    rolId: '',
+    servicioId: '',
+    password: '',
+  });
+  
+  const [passwordData, setPasswordData] = useState({
+    newPassword: '',
+    confirmPassword: '',
+  });
+  
+  const [formError, setFormError] = useState('');
+  const [formSuccess, setFormSuccess] = useState('');
+  const [editFormError, setEditFormError] = useState('');
+  const [editFormSuccess, setEditFormSuccess] = useState('');
 
   const dietRules = [
     { id: 'd1', minHours: 4, amount: 29, label: 'Tramo > 4h' },
     { id: 'd2', minHours: 8, amount: 45, label: 'Tramo > 8h' },
     { id: 'd3', minHours: 12, amount: 65, label: 'Tramo > 12h' }
-  ];
-
-  const volunteers = [
-    { id: 'j44', name: 'EMILIO SIMÓN', badgeNumber: 'J-44', area: 'JEFATURA', systemRole: 'superadmin', avatarUrl: 'https://ui-avatars.com/api/?name=ES&background=ea580c&color=fff' },
-    { id: 's01', name: 'TANYA GONZÁLEZ', badgeNumber: 'S-01', area: 'SOCORRISMO', systemRole: null, avatarUrl: 'https://ui-avatars.com/api/?name=TG&background=0ea5e9&color=fff' },
-    { id: 'b29', name: 'JOSE C. BAILÓN', badgeNumber: 'B-29', area: 'LOGÍSTICA', systemRole: 'admin', avatarUrl: 'https://ui-avatars.com/api/?name=JB&background=22c55e&color=fff' },
   ];
 
   const generateReport = () => {
@@ -31,6 +95,221 @@ export default function ConfiguracionPage() {
       ]);
       setLoading(false);
     }, 1500);
+  };
+
+  // Cargar usuarios, roles y servicios
+  const fetchData = async () => {
+    setLoadingUsuarios(true);
+    try {
+      const params = new URLSearchParams({ roles: 'true' });
+      const response = await fetch(`/api/admin/personal?${params}`);
+      const data = await response.json();
+      if (data.voluntarios) {
+        setUsuarios(data.voluntarios);
+      }
+      if (data.roles) {
+        setRoles(data.roles);
+      }
+      // Servicios hardcodeados por ahora
+      setServicios([
+        { id: '1', nombre: 'Protección Civil Bormujos', codigo: 'PCB' },
+      ]);
+    } catch (error) {
+      console.error('Error al cargar datos:', error);
+    } finally {
+      setLoadingUsuarios(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'roles') {
+      fetchData();
+    }
+  }, [activeTab]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setPasswordData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFormError('');
+    setFormSuccess('');
+
+    try {
+      const response = await fetch('/api/admin/personal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setFormError(data.error || 'Error al crear usuario');
+        return;
+      }
+
+      setFormSuccess('Usuario creado correctamente');
+      setShowModal(false);
+      setFormData({
+        nombre: '',
+        apellidos: '',
+        email: '',
+        telefono: '',
+        dni: '',
+        numeroVoluntario: '',
+        rolId: '',
+        servicioId: '',
+        password: '',
+      });
+      fetchData();
+    } catch (error) {
+      setFormError('Error de conexión');
+    }
+  };
+
+  const toggleUsuarioActivo = async (id: string, actual: boolean) => {
+    try {
+      const response = await fetch('/api/admin/personal', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, activo: !actual }),
+      });
+
+      if (response.ok) {
+        fetchData();
+      }
+    } catch (error) {
+      console.error('Error al actualizar usuario:', error);
+    }
+  };
+
+  const openEditModal = (usuario: Usuario) => {
+    setEditingUser(usuario);
+    setPasswordData({ newPassword: '', confirmPassword: '' });
+    setEditFormError('');
+    setEditFormSuccess('');
+    setShowEditModal(true);
+  };
+
+  const handleUpdatePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setEditFormError('');
+    setEditFormSuccess('');
+
+    if (!editingUser) return;
+
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      setEditFormError('Las contraseñas no coinciden');
+      return;
+    }
+
+    if (passwordData.newPassword.length < 6) {
+      setEditFormError('La contraseña debe tener al menos 6 caracteres');
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/admin/personal', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: editingUser.id,
+          accion: 'password',
+          password: passwordData.newPassword,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setEditFormError(data.error || 'Error al actualizar contraseña');
+        return;
+      }
+
+      setEditFormSuccess('Contraseña actualizada correctamente');
+      setTimeout(() => {
+        setShowEditModal(false);
+        setEditingUser(null);
+      }, 1500);
+    } catch (error) {
+      setEditFormError('Error de conexión');
+    }
+  };
+
+  const handleDeleteUser = async (id: string) => {
+    if (!confirm('¿Estás seguro de que quieres eliminar este usuario? Esta acción no se puede deshacer.')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/admin/personal?id=${id}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        fetchData();
+      } else {
+        const data = await response.json();
+        alert(data.error || 'Error al eliminar usuario');
+      }
+    } catch (error) {
+      console.error('Error al eliminar usuario:', error);
+    }
+  };
+
+  // Función para ordenar usuarios
+  const getSortedUsuarios = () => {
+    return [...usuarios].sort((a, b) => {
+      let comparison = 0;
+      switch (sortBy) {
+        case 'nombre':
+          comparison = `${a.nombre} ${a.apellidos}`.localeCompare(`${b.nombre} ${b.apellidos}`);
+          break;
+        case 'email':
+          comparison = a.email.localeCompare(b.email);
+          break;
+        case 'voluntario':
+          const aVol = a.numeroVoluntario || '';
+          const bVol = b.numeroVoluntario || '';
+          comparison = aVol.localeCompare(bVol);
+          break;
+        case 'rol':
+          comparison = a.rol.nombre.localeCompare(b.rol.nombre);
+          break;
+        case 'estado':
+          comparison = (a.activo ? 1 : 0) - (b.activo ? 1 : 0);
+          break;
+        default:
+          comparison = 0;
+      }
+      return sortOrder === 'asc' ? comparison : -comparison;
+    });
+  };
+
+  // Cambiar ordenación
+  const handleSort = (column: typeof sortBy) => {
+    if (sortBy === column) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(column);
+      setSortOrder('asc');
+    }
+  };
+
+  // Renderizar icono de ordenación
+  const renderSortIcon = (column: typeof sortBy) => {
+    if (sortBy !== column) {
+      return <ArrowUpDown size={14} className="text-slate-300 ml-1"/>;
+    }
+    return sortOrder === 'asc' ? <ArrowUp size={14} className="text-orange-600 ml-1"/> : <ArrowDown size={14} className="text-orange-600 ml-1"/>;
   };
 
   return (
@@ -138,31 +417,127 @@ export default function ConfiguracionPage() {
 
       {/* Roles */}
       {activeTab === 'roles' && (
-        <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
-          <div className="p-4 border-b bg-slate-50"><h3 className="font-bold text-slate-800">Control de Acceso y Privilegios</h3></div>
-          <table className="w-full text-left">
-            <thead className="bg-slate-50 border-b">
-              <tr>
-                <th className="p-4 text-xs font-bold text-slate-400 uppercase">Identidad</th>
-                <th className="p-4 text-xs font-bold text-slate-400 uppercase">Área</th>
-                <th className="p-4 text-xs font-bold text-slate-400 uppercase">Nivel Acceso</th>
-                <th className="p-4 text-xs font-bold text-slate-400 uppercase text-right">Modificar</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {volunteers.map(vol => (
-                <tr key={vol.id} className="hover:bg-slate-50">
-                  <td className="p-4 flex items-center gap-3">
-                    <img src={vol.avatarUrl} className="w-10 h-10 rounded-full" alt=""/>
-                    <div><div className="font-bold text-slate-800">{vol.name}</div><div className="text-xs text-slate-400 font-mono">{vol.badgeNumber}</div></div>
-                  </td>
-                  <td className="p-4 text-sm text-slate-600">{vol.area}</td>
-                  <td className="p-4"><span className={`px-3 py-1 rounded-lg text-xs font-bold ${vol.systemRole === 'superadmin' ? 'bg-indigo-100 text-indigo-700' : vol.systemRole === 'admin' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-400'}`}>{vol.systemRole || 'Básico'}</span></td>
-                  <td className="p-4 text-right"><button className="text-slate-400 hover:text-orange-600"><Edit size={18}/></button></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="space-y-6">
+          {/* Header con botón de crear */}
+          <div className="flex justify-between items-center">
+            <div>
+              <h3 className="text-xl font-bold text-slate-800">Gestión de Usuarios y Permisos</h3>
+              <p className="text-sm text-slate-500">Administra los usuarios del sistema y sus niveles de acceso</p>
+            </div>
+            <button onClick={() => setShowModal(true)} className="bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-orange-700 transition-colors">
+              <Plus size={18}/> Nuevo Usuario
+            </button>
+          </div>
+
+          {/* Tabla de usuarios */}
+          <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
+            <div className="p-4 border-b bg-slate-50 flex justify-between items-center">
+              <h3 className="font-bold text-slate-800">Usuarios del Sistema</h3>
+              <span className="text-xs text-slate-500">{usuarios.length} usuarios</span>
+            </div>
+            
+            {loadingUsuarios ? (
+              <div className="p-20 text-center">
+                <Loader2 size={32} className="mx-auto animate-spin text-orange-600"/>
+                <p className="text-sm text-slate-500 mt-4">Cargando usuarios...</p>
+              </div>
+            ) : (
+              <table className="w-full text-left">
+                <thead className="bg-slate-50 border-b">
+                  <tr>
+                    <th 
+                      className="p-4 text-xs font-bold text-slate-400 uppercase cursor-pointer hover:text-slate-600 transition-colors flex items-center"
+                      onClick={() => handleSort('nombre')}
+                    >
+                      Usuario {renderSortIcon('nombre')}
+                    </th>
+                    <th 
+                      className="p-4 text-xs font-bold text-slate-400 uppercase cursor-pointer hover:text-slate-600 transition-colors"
+                      onClick={() => handleSort('email')}
+                    >
+                      Email {renderSortIcon('email')}
+                    </th>
+                    <th 
+                      className="p-4 text-xs font-bold text-slate-400 uppercase cursor-pointer hover:text-slate-600 transition-colors"
+                      onClick={() => handleSort('voluntario')}
+                    >
+                      Voluntario {renderSortIcon('voluntario')}
+                    </th>
+                    <th 
+                      className="p-4 text-xs font-bold text-slate-400 uppercase cursor-pointer hover:text-slate-600 transition-colors"
+                      onClick={() => handleSort('rol')}
+                    >
+                      Rol {renderSortIcon('rol')}
+                    </th>
+                    <th 
+                      className="p-4 text-xs font-bold text-slate-400 uppercase cursor-pointer hover:text-slate-600 transition-colors"
+                      onClick={() => handleSort('estado')}
+                    >
+                      Estado {renderSortIcon('estado')}
+                    </th>
+                    <th className="p-4 text-xs font-bold text-slate-400 uppercase text-right">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {getSortedUsuarios().map(usuario => (
+                    <tr key={usuario.id} className="hover:bg-slate-50">
+                      <td className="p-4">
+                        <div className="font-bold text-slate-800">{usuario.nombre} {usuario.apellidos}</div>
+                        {usuario.telefono && <div className="text-xs text-slate-400">{usuario.telefono}</div>}
+                      </td>
+                      <td className="p-4 text-sm text-slate-600">{usuario.email}</td>
+                      <td className="p-4 font-mono text-sm text-slate-600">{usuario.numeroVoluntario || '-'}</td>
+                      <td className="p-4">
+                        <span className={`px-3 py-1 rounded-lg text-xs font-bold ${
+                          usuario.rol.nombre === 'superadmin' ? 'bg-indigo-100 text-indigo-700' :
+                          usuario.rol.nombre === 'admin' ? 'bg-blue-100 text-blue-700' :
+                          usuario.rol.nombre === 'operador' ? 'bg-green-100 text-green-700' :
+                          'bg-slate-100 text-slate-600'
+                        }`}>
+                          {usuario.rol.nombre}
+                        </span>
+                      </td>
+                      <td className="p-4">
+                        <span className={`px-3 py-1 rounded-lg text-xs font-bold ${usuario.activo ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                          {usuario.activo ? 'Activo' : 'Inactivo'}
+                        </span>
+                      </td>
+                      <td className="p-4 text-right flex justify-end gap-2">
+                        <button 
+                          onClick={() => openEditModal(usuario)}
+                          className="p-2 text-slate-400 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
+                          title="Cambiar contraseña"
+                        >
+                          <Edit size={18}/>
+                        </button>
+                        <button 
+                          onClick={() => toggleUsuarioActivo(usuario.id, usuario.activo)}
+                          className={`text-xs px-3 py-1 rounded-lg font-bold ${usuario.activo ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'bg-green-100 text-green-700 hover:bg-green-200'}`}
+                        >
+                          {usuario.activo ? 'Desactivar' : 'Activar'}
+                        </button>
+                        <button 
+                          onClick={() => handleDeleteUser(usuario.id)}
+                          className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          title="Eliminar usuario"
+                        >
+                          <Trash2 size={18}/>
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {usuarios.length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="p-20 text-center text-slate-400">
+                        <Users size={48} className="mx-auto mb-4 opacity-20"/>
+                        <p className="text-sm">No hay usuarios registrados</p>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            )}
+          </div>
         </div>
       )}
 
@@ -172,6 +547,276 @@ export default function ConfiguracionPage() {
           <History size={64} className="mx-auto mb-4 text-slate-200"/>
           <h3 className="font-bold text-slate-600 text-lg">Módulo de Seguridad Alta</h3>
           <p className="text-sm text-slate-400 mt-2 max-w-md mx-auto">Los logs de auditoría están siendo migrados a la bóveda de datos securizada. Disponible próximamente.</p>
+        </div>
+      )}
+
+      {/* Modal de creación de usuario */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b flex justify-between items-center">
+              <h3 className="text-xl font-bold text-slate-800">Crear Nuevo Usuario</h3>
+              <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600">
+                <X size={24}/>
+              </button>
+            </div>
+            
+            <form onSubmit={handleSubmit} className="p-6 space-y-6">
+              {formError && (
+                <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                  {formError}
+                </div>
+              )}
+              {formSuccess && (
+                <div className="p-4 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">
+                  {formSuccess}
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Nombre */}
+                <div className="col-span-1">
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Nombre *</label>
+                  <input
+                    type="text"
+                    name="nombre"
+                    value={formData.nombre}
+                    onChange={handleInputChange}
+                    required
+                    className="w-full border rounded-lg p-3 text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                    placeholder="Nombre del usuario"
+                  />
+                </div>
+
+                {/* Apellidos */}
+                <div className="col-span-1">
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Apellidos *</label>
+                  <input
+                    type="text"
+                    name="apellidos"
+                    value={formData.apellidos}
+                    onChange={handleInputChange}
+                    required
+                    className="w-full border rounded-lg p-3 text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                    placeholder="Apellidos"
+                  />
+                </div>
+
+                {/* Email */}
+                <div className="col-span-1">
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Email *</label>
+                  <input
+                    type="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    required
+                    className="w-full border rounded-lg p-3 text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                    placeholder="email@ejemplo.com"
+                  />
+                </div>
+
+                {/* Teléfono */}
+                <div className="col-span-1">
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Teléfono</label>
+                  <input
+                    type="tel"
+                    name="telefono"
+                    value={formData.telefono}
+                    onChange={handleInputChange}
+                    className="w-full border rounded-lg p-3 text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                    placeholder="666 666 666"
+                  />
+                </div>
+
+                {/* DNI */}
+                <div className="col-span-1">
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-2">DNI</label>
+                  <input
+                    type="text"
+                    name="dni"
+                    value={formData.dni}
+                    onChange={handleInputChange}
+                    className="w-full border rounded-lg p-3 text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                    placeholder="12345678A"
+                  />
+                </div>
+
+                {/* Número Voluntario */}
+                <div className="col-span-1">
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Número Voluntario</label>
+                  <input
+                    type="text"
+                    name="numeroVoluntario"
+                    value={formData.numeroVoluntario}
+                    onChange={handleInputChange}
+                    className="w-full border rounded-lg p-3 text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                    placeholder="J-01, S-02..."
+                  />
+                </div>
+
+                {/* Rol */}
+                <div className="col-span-1">
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Rol *</label>
+                  <select
+                    name="rolId"
+                    value={formData.rolId}
+                    onChange={handleInputChange}
+                    required
+                    className="w-full border rounded-lg p-3 text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  >
+                    <option value="">Seleccionar rol...</option>
+                    {roles.map(rol => (
+                      <option key={rol.id} value={rol.id}>{rol.nombre}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Servicio */}
+                <div className="col-span-1">
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Servicio *</label>
+                  <select
+                    name="servicioId"
+                    value={formData.servicioId}
+                    onChange={handleInputChange}
+                    required
+                    className="w-full border rounded-lg p-3 text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  >
+                    <option value="">Seleccionar servicio...</option>
+                    {servicios.map(servicio => (
+                      <option key={servicio.id} value={servicio.id}>{servicio.nombre}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Contraseña */}
+                <div className="col-span-2">
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Contraseña Inicial *</label>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      name="password"
+                      value={formData.password}
+                      onChange={handleInputChange}
+                      required
+                      minLength={6}
+                      className="w-full border rounded-lg p-3 text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 pr-12"
+                      placeholder="Mínimo 6 caracteres"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    >
+                      {showPassword ? <EyeOff size={20}/> : <Eye size={20}/>}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-4 pt-4 border-t">
+                <button
+                  type="button"
+                  onClick={() => setShowModal(false)}
+                  className="px-6 py-3 border border-slate-200 rounded-lg text-sm font-bold text-slate-600 hover:bg-slate-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-6 py-3 bg-orange-600 text-white rounded-lg text-sm font-bold hover:bg-orange-700"
+                >
+                  Crear Usuario
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de edición de contraseña */}
+      {showEditModal && editingUser && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full">
+            <div className="p-6 border-b flex justify-between items-center">
+              <div>
+                <h3 className="text-xl font-bold text-slate-800">Cambiar Contraseña</h3>
+                <p className="text-sm text-slate-500 mt-1">{editingUser.nombre} {editingUser.apellidos}</p>
+              </div>
+              <button onClick={() => setShowEditModal(false)} className="text-slate-400 hover:text-slate-600">
+                <X size={24}/>
+              </button>
+            </div>
+            
+            <form onSubmit={handleUpdatePassword} className="p-6 space-y-6">
+              {editFormError && (
+                <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                  {editFormError}
+                </div>
+              )}
+              {editFormSuccess && (
+                <div className="p-4 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">
+                  {editFormSuccess}
+                </div>
+              )}
+
+              <div className="space-y-4">
+                {/* Nueva contraseña */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Nueva Contraseña *</label>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      name="newPassword"
+                      value={passwordData.newPassword}
+                      onChange={handlePasswordChange}
+                      required
+                      minLength={6}
+                      className="w-full border rounded-lg p-3 text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 pr-12"
+                      placeholder="Mínimo 6 caracteres"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    >
+                      {showPassword ? <EyeOff size={20}/> : <Eye size={20}/>}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Confirmar contraseña */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Confirmar Contraseña *</label>
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    name="confirmPassword"
+                    value={passwordData.confirmPassword}
+                    onChange={handlePasswordChange}
+                    required
+                    className="w-full border rounded-lg p-3 text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                    placeholder="Repite la contraseña"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-4 pt-4 border-t">
+                <button
+                  type="button"
+                  onClick={() => setShowEditModal(false)}
+                  className="px-6 py-3 border border-slate-200 rounded-lg text-sm font-bold text-slate-600 hover:bg-slate-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-6 py-3 bg-orange-600 text-white rounded-lg text-sm font-bold hover:bg-orange-700 flex items-center gap-2"
+                >
+                  <Save size={18}/> Guardar Contraseña
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 
 const AEMET_API_KEY = process.env.AEMET_API_KEY || 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJwY2l2aWxAYm9ybXVqb3MubmV0IiwianRpIjoiODI3OTk0MTItMjE1NS00MDA0LWEyOWUtZjczYzZjMTE0M2I4IiwiaXNzIjoiQUVNRVQiLCJpYXQiOjE3NjcwMzYwODQsInVzZXJJZCI6IjgyNzk5NDEyLTIxNTUtNDAwNC1hMjllLWY3M2M2YzExNDNiOCIsInJvbGUiOiIifQ.AkoaqmfDjK9YI4pvzYet4xJwk3W7FL4v45Ced4eP7IQ'
 const MUNICIPIO_BORMUJOS = '41017'
+const AEMET_DOMINIO = 'and' // Andalucía
 
 // Coordenadas de Bormujos para Open-Meteo
 const BORMUJOS_LAT = 37.3719
@@ -70,6 +71,221 @@ function getNombreDia(fecha: Date, hoy: Date): string {
   return dias[fecha.getDay()]
 }
 
+// Función para generar alertas basadas en los datos meteorológicos
+function generarAlertas(datos: any, proximosDias: any[]): any[] {
+  const alertas: any[] = []
+  const hoy = new Date()
+  
+  // Alerta por viento fuerte (>= 50 km/h)
+  if (datos.viento && datos.viento.velocidad >= 50) {
+    alertas.push({
+      tipo: 'Vientos',
+      nivel: datos.viento.velocidad >= 70 ? 'naranja' : 'amarillo',
+      inicio: hoy.toISOString(),
+      fin: new Date(hoy.getTime() + 24 * 60 * 60 * 1000).toISOString(),
+      descripcion: `Riesgo por vientos de ${datos.viento.velocidad} km/h direction ${datos.viento.direccion}`
+    })
+  }
+  
+  // Alerta por lluvia (buscar en el estado del cielo de hoy y próximos días)
+  const estadosLluvia = ['lluvia', 'chubasco', 'aguanieve', 'llovizna']
+  const estadosTormenta = ['tormenta', 'storm']
+  
+  // Verificar hoy
+  const estadoHoy = (datos.estadoCielo || '').toLowerCase()
+  if (estadosLluvia.some(e => estadoHoy.includes(e))) {
+    alertas.push({
+      tipo: 'Lluvias',
+      nivel: 'amarillo',
+      inicio: hoy.toISOString(),
+      fin: new Date(hoy.getTime() + 24 * 60 * 60 * 1000).toISOString(),
+      descripcion: `Precipitaciones previstas en las próximas horas`
+    })
+  }
+  if (estadosTormenta.some(e => estadoHoy.includes(e))) {
+    alertas.push({
+      tipo: 'Tormentas',
+      nivel: 'amarillo',
+      inicio: hoy.toISOString(),
+      fin: new Date(hoy.getTime() + 24 * 60 * 60 * 1000).toISOString(),
+      descripcion: `Riesgo de tormentas`
+    })
+  }
+  
+  // Verificar próximos días
+  for (const dia of proximosDias) {
+    const estadoDia = (dia.estado || '').toLowerCase()
+    if (estadosTormenta.some(e => estadoDia.includes(e))) {
+      alertas.push({
+        tipo: 'Tormentas',
+        nivel: 'amarillo',
+        inicio: dia.fecha,
+        fin: new Date(new Date(dia.fecha).getTime() + 24 * 60 * 60 * 1000).toISOString(),
+        descripcion: `Tormentas previstas para ${dia.dia}`
+      })
+      break // Solo agregar una alerta de tormenta
+    }
+    if (estadosLluvia.some(e => estadoDia.includes(e))) {
+      alertas.push({
+        tipo: 'Lluvias',
+        nivel: 'amarillo',
+        inicio: dia.fecha,
+        fin: new Date(new Date(dia.fecha).getTime() + 24 * 60 * 60 * 1000).toISOString(),
+        descripcion: `Precipitaciones previstas para ${dia.dia}`
+      })
+      break // Solo agregar una alerta de lluvia
+    }
+  }
+  
+  // Alerta por ola de calor (temp >= 38°C) o frío extremo (temp <= 0°C)
+  if (datos.tempMaxima >= 38) {
+    alertas.push({
+      tipo: 'Ola de calor',
+      nivel: datos.tempMaxima >= 42 ? 'naranja' : 'amarillo',
+      inicio: hoy.toISOString(),
+      fin: new Date(hoy.getTime() + 72 * 60 * 60 * 1000).toISOString(),
+      descripcion: `Temperaturas máximas de ${datos.tempMaxima}°C. Recomendable hidratación y evitar exposición solar.`
+    })
+  }
+  if (datos.tempMinima <= 0) {
+    alertas.push({
+      tipo: 'Temperaturas extremas',
+      nivel: 'amarillo',
+      inicio: hoy.toISOString(),
+      fin: new Date(hoy.getTime() + 72 * 60 * 60 * 1000).toISOString(),
+      descripcion: `Temperaturas mínimas de ${datos.tempMinima}°C. Riesgo de heladas.`
+    })
+  }
+  
+  // Alerta por niebla
+  if (estadoHoy.includes('niebla') || estadoHoy.includes('bruma')) {
+    alertas.push({
+      tipo: 'Niebla',
+      nivel: 'amarillo',
+      inicio: hoy.toISOString(),
+      fin: new Date(hoy.getTime() + 12 * 60 * 60 * 1000).toISOString(),
+      descripcion: 'Visibilidad reducida por niebla. Conducción con precaución.'
+    })
+  }
+  
+  return alertas
+}
+
+// Función para obtener alertas de AEMET
+async function fetchAemetAlertas(): Promise<any[]> {
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 8000)
+  
+  try {
+    // Primero verificar si la API key funciona consultando el estado
+    const testResponse = await fetch(
+      `https://opendata.aemet.es/opendata/api/prediccion/especifica/municipio/diaria/${MUNICIPIO_BORMUJOS}`,
+      { 
+        headers: { 'api_key': AEMET_API_KEY },
+        signal: controller.signal,
+        cache: 'no-store'
+      }
+    )
+    clearTimeout(timeout)
+    
+    // Si el test falla, no intentamos consultar alertas
+    if (!testResponse.ok) {
+      console.warn('AEMET API no disponible, saltando alertas')
+      return []
+    }
+    
+    // Intentar obtener alertas solo si la API funciona
+    const controller2 = new AbortController()
+    const timeout2 = setTimeout(() => controller2.abort(), 5000)
+    
+    try {
+      const response = await fetch(
+        `https://opendata.aemet.es/opendata/api/prediccion/aviso/dominio/geografico/${AEMET_DOMINIO}`,
+        { 
+          headers: { 'api_key': AEMET_API_KEY },
+          signal: controller2.signal,
+          cache: 'no-store'
+        }
+      )
+      clearTimeout(timeout2)
+      
+      // Verificar si la respuesta es JSON válido
+      const contentType = response.headers.get('content-type')
+      if (!contentType || !contentType.includes('application/json')) {
+        console.warn('AEMET alertas: respuesta no es JSON, saltando')
+        return []
+      }
+      
+      const data = await response.json()
+      if (data.estado !== 200 || !data.datos) {
+        return []
+      }
+      
+      const datosResponse = await fetch(data.datos, { signal: AbortSignal.timeout(5000) })
+      const alertasData = await datosResponse.json()
+      
+      // Procesar alertas relevantes para protección civil
+      const alertasRelevantes: any[] = []
+      
+      if (alertasData && alertasData.datos) {
+        for (const zona of alertasData.datos) {
+          if (zona.avisos && zona.avisos.length > 0) {
+            for (const aviso of zona.avisos) {
+              if (aviso.nivel >= 1) { // Nivel amarillo o superior
+                const fenomeno = (aviso.fenomeno || '').toLowerCase()
+                const esRelevante = fenomeno.includes('tormenta') ||
+                  fenomeno.includes('lluv') ||
+                  fenomeno.includes('viento') ||
+                  fenomeno.includes('nev') ||
+                  fenomeno.includes('niebla') ||
+                  fenomeno.includes('granizo') ||
+                  fenomeno.includes('calor') ||
+                  fenomeno.includes('frio') ||
+                  fenomeno.includes('temperatura')
+                
+                if (esRelevante) {
+                  let nivel = 'amarillo'
+                  if (aviso.nivel >= 3) nivel = 'naranja'
+                  if (aviso.nivel >= 4) nivel = 'rojo'
+                  
+                  let nombreFenomeno = aviso.fenomeno || 'fenómeno meteorológico'
+                  if (fenomeno.includes('storm') || fenomeno.includes('tormenta')) nombreFenomeno = 'Tormentas'
+                  else if (fenomeno.includes('rain') || fenomeno.includes('lluv')) nombreFenomeno = 'Lluvias'
+                  else if (fenomeno.includes('wind') || fenomeno.includes('viento')) nombreFenomeno = 'Vientos'
+                  else if (fenomeno.includes('snow') || fenomeno.includes('nev')) nombreFenomeno = 'Nieve'
+                  else if (fenomeno.includes('fog') || fenomeno.includes('niebla')) nombreFenomeno = 'Niebla'
+                  else if (fenomeno.includes('heat') || fenomeno.includes('calor')) nombreFenomeno = 'Ola de calor'
+                  else if (fenomeno.includes('cold') || fenomeno.includes('frio') || fenomeno.includes('temperature')) nombreFenomeno = 'Temperaturas extremas'
+                  else if (fenomeno.includes('hail') || fenomeno.includes('granizo')) nombreFenomeno = 'Granizo'
+                  
+                  alertasRelevantes.push({
+                    tipo: nombreFenomeno,
+                    nivel,
+                    inicio: aviso.inicio || new Date().toISOString(),
+                    fin: aviso.fin || new Date().toISOString(),
+                    descripcion: aviso.descripcion || `Riesgo de ${nombreFenomeno.toLowerCase()}`
+                  })
+                }
+              }
+            }
+          }
+        }
+      }
+      
+      return alertasRelevantes
+    } catch (alertasError) {
+      clearTimeout(timeout2)
+      console.warn('Error al obtener alertas AEMET:', alertasError)
+      return []
+    }
+    
+  } catch (error) {
+    clearTimeout(timeout)
+    console.warn('Error en fetchAemetAlertas:', error)
+    return []
+  }
+}
+
 // Función para obtener datos de AEMET
 async function fetchAEMET(): Promise<any> {
   const controller = new AbortController()
@@ -97,6 +313,9 @@ async function fetchAEMET(): Promise<any> {
     if (!prediccion || !prediccion[0]) {
       throw new Error('AEMET: Sin datos de predicción')
     }
+    
+    // Obtener alertas en paralelo
+    const alertasPromise = fetchAemetAlertas()
     
     const dias = prediccion[0].prediccion.dia
     const hoyFecha = new Date()
@@ -162,6 +381,27 @@ async function fetchAEMET(): Promise<any> {
       }
     })
     
+    // Obtener alertas de AEMET (si disponibles) y generar alertas basadas en umbrales
+    const datosParaAlertas = {
+      temperatura: tempActual,
+      tempMaxima: hoy.temperatura.maxima,
+      tempMinima: hoy.temperatura.minima,
+      estadoCielo,
+      viento: { velocidad: viento.velocidad || 10, direccion: viento.direccion || 'N' }
+    }
+    
+    const [alertasAemet, alertasGeneradas] = await Promise.all([
+      fetchAemetAlertas(),
+      Promise.resolve(generarAlertas(datosParaAlertas, diasAMostrar.slice(0, 7).map((dia: any) => ({
+        dia: getNombreDia(new Date(dia.fecha), hoyFecha),
+        fecha: dia.fecha,
+        estado: dia.estadoCielo?.find((e: any) => e.periodo === '12-24' || e.periodo === '12-18')?.descripcion || 'Despejado'
+      }))))
+    ])
+    
+    // Combinar alertas de AEMET con las generadas (AEMET tiene prioridad)
+    const alertas = alertasAemet.length > 0 ? alertasAemet : alertasGeneradas
+    
     return {
       temperatura: tempActual,
       tempMaxima: hoy.temperatura.maxima,
@@ -173,6 +413,7 @@ async function fetchAEMET(): Promise<any> {
       municipio: prediccion[0].nombre,
       provincia: prediccion[0].provincia,
       proximosDias,
+      alertas,
       fuente: 'AEMET',
     }
   } catch (error) {
@@ -225,6 +466,7 @@ async function fetchOpenMeteo(): Promise<any> {
     municipio: 'Bormujos',
     provincia: 'Sevilla',
     proximosDias,
+    alertas: [],
     fuente: 'Open-Meteo',
   }
 }
@@ -258,6 +500,7 @@ export async function GET() {
         municipio: 'Bormujos',
         provincia: 'Sevilla',
         proximosDias: [],
+        alertas: [],
         error: true,
         fuente: 'Sin datos',
       })

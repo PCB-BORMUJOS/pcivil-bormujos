@@ -20,7 +20,8 @@ interface Voluntario {
   email: string;
   telefono: string;
   activo: boolean;
-  rol: { nombre: string };
+  rolId: string;
+  rol: { id: string; nombre: string };
   fichaVoluntario?: {
     areaAsignada?: string;
     categoria?: string;
@@ -185,6 +186,7 @@ export default function AdministracionPage() {
   
   // Estados para Personal
   const [voluntarios, setVoluntarios] = useState<Voluntario[]>([]);
+  const [roles, setRoles] = useState<any[]>([]);
   const [showFichaModal, setShowFichaModal] = useState(false);
   const [showNuevoVoluntario, setShowNuevoVoluntario] = useState(false);
   const [selectedVoluntario, setSelectedVoluntario] = useState<Voluntario | null>(null);
@@ -274,9 +276,10 @@ export default function AdministracionPage() {
   // ============================================
   const cargarVoluntarios = async () => {
     try {
-      const res = await fetch('/api/admin/personal');
+      const res = await fetch('/api/admin/personal?roles=true');
       const data = await res.json();
       setVoluntarios(data.voluntarios || []);
+      setRoles(data.roles || []);
     } catch (error) {
       console.error('Error cargando voluntarios:', error);
     }
@@ -341,18 +344,23 @@ export default function AdministracionPage() {
     try {
       const res = await fetch(`/api/admin/personal/${voluntario.id}/ficha`);
       const data = await res.json();
-      setFichaData(data.ficha || {
+      setFichaData({
+        ...data.ficha,
+        rolId: voluntario.rolId, // Inicializar con el rol actual
+        fechaAlta: data.ficha?.fechaAlta ? data.ficha.fechaAlta.split('T')[0] : new Date().toISOString().split('T')[0],
+        localidad: 'BORMUJOS',
+        provincia: 'SEVILLA',
+        areaAsignada: data.ficha?.areaAsignada || '',
+        categoria: data.ficha?.categoria || 'VOLUNTARIO'
+      });
+    } catch (error) {
+      setFichaData({
+        rolId: voluntario.rolId,
         fechaAlta: new Date().toISOString().split('T')[0],
         localidad: 'BORMUJOS',
         provincia: 'SEVILLA',
         areaAsignada: '',
         categoria: 'VOLUNTARIO'
-      });
-    } catch (error) {
-      setFichaData({
-        fechaAlta: new Date().toISOString().split('T')[0],
-        localidad: 'BORMUJOS',
-        provincia: 'SEVILLA'
       });
     }
     setShowFichaModal(true);
@@ -360,6 +368,8 @@ export default function AdministracionPage() {
 
   const handleGuardarFicha = async () => {
     if (!selectedVoluntario) return;
+    
+    // Primero guardar la ficha
     try {
       const res = await fetch(`/api/admin/personal/${selectedVoluntario.id}/ficha`, {
         method: 'POST',
@@ -367,7 +377,21 @@ export default function AdministracionPage() {
         body: JSON.stringify(fichaData)
       });
       const data = await res.json();
+      
       if (data.success) {
+        // Si el rol ha cambiado, actualizarlo también
+        if (selectedVoluntario.rolId && fichaData.rolId && selectedVoluntario.rolId !== fichaData.rolId) {
+          await fetch('/api/admin/personal', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+              id: selectedVoluntario.id, 
+              rolId: fichaData.rolId,
+              accion: 'rol'
+            })
+          });
+        }
+        
         alert('✅ Ficha guardada correctamente');
         setShowFichaModal(false);
         cargarVoluntarios();
@@ -1352,14 +1376,23 @@ export default function AdministracionPage() {
               </div>
             </div>
 
-            {/* Área y categoría */}
-            <div className="grid grid-cols-3 gap-4">
+            {/* Área, rol y categoría */}
+            <div className="grid grid-cols-4 gap-4">
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Email</label>
-                <input type="email" value={selectedVoluntario.email || ''} disabled className="w-full border border-slate-200 rounded-lg p-2.5 bg-slate-50 text-sm"/>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Rol</label>
+                <select 
+                  value={fichaData.rolId || selectedVoluntario?.rolId || ''} 
+                  onChange={e => setFichaData({...fichaData, rolId: e.target.value})}
+                  className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
+                >
+                  <option value="">Seleccionar...</option>
+                  {roles.map(r => (
+                    <option key={r.id} value={r.id}>{r.nombre}</option>
+                  ))}
+                </select>
               </div>
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Área Asignada *</label>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Área Asignada</label>
                 <select value={fichaData.areaAsignada || ''} onChange={e => setFichaData({...fichaData, areaAsignada: e.target.value})} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm">
                   <option value="">Seleccionar...</option>
                   {AREAS_SERVICIO.map(a => <option key={a.id} value={a.id}>{a.nombre}</option>)}
@@ -1368,6 +1401,10 @@ export default function AdministracionPage() {
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Categoría</label>
                 <input type="text" value={fichaData.categoria || 'VOLUNTARIO'} onChange={e => setFichaData({...fichaData, categoria: e.target.value})} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"/>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Email</label>
+                <input type="email" value={selectedVoluntario?.email || ''} disabled className="w-full border border-slate-200 rounded-lg p-2.5 bg-slate-50 text-sm"/>
               </div>
             </div>
 
