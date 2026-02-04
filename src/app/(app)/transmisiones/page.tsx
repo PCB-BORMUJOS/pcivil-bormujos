@@ -39,13 +39,6 @@ const ESTADOS_EQUIPO = [
   { value: 'mantenimiento', label: 'Mantenimiento' }
 ]
 
-const TIPOS_MANTENIMIENTO = [
-  { value: 'revision', label: 'Revisión' },
-  { value: 'reparacion', label: 'Reparación' },
-  { value: 'cambio_bateria', label: 'Cambio de Batería' },
-  { value: 'actualizacion_firmware', label: 'Actualización Firmware' }
-]
-
 export default function TransmisionesPage() {
   const [mainTab, setMainTab] = useState<'inventario' | 'equipos'>('inventario')
   const [inventoryTab, setInventoryTab] = useState<'stock' | 'peticiones' | 'movimientos'>('stock')
@@ -71,11 +64,6 @@ export default function TransmisionesPage() {
   const [equipoSeleccionado, setEquipoSeleccionado] = useState<any>(null)
   const [detalleTab, setDetalleTab] = useState<'ficha' | 'bateria' | 'ciclos'>('ficha')
   const [showEditarEquipo, setShowEditarEquipo] = useState(false)
-  
-  const [mantenimientos, setMantenimientos] = useState<any[]>([])
-  const [ciclosCarga, setCiclosCarga] = useState<any[]>([])
-  const [showNuevoMantenimiento, setShowNuevoMantenimiento] = useState(false)
-  const [mantenimientoSeleccionado, setMantenimientoSeleccionado] = useState<any>(null)
 
   const cargarDatos = async () => {
     try {
@@ -238,8 +226,8 @@ export default function TransmisionesPage() {
           numeroSerie: formData.get('numeroSerie'),
           configuracion: formData.get('configuracion'),
           estado: formData.get('estado'),
-          estadoBateria: formData.get('estadoBateria'),
-          fechaInstalacionBat: formData.get('fechaInstalacionBat'),
+          estadoBateria: formData.get('estadoBateria') ? parseInt(formData.get('estadoBateria') as string) : null,
+          fechaInstalacionBat: formData.get('fechaInstalacionBat') || null,
           ubicacion: formData.get('ubicacion'),
           observaciones: formData.get('observaciones')
         })
@@ -264,9 +252,10 @@ export default function TransmisionesPage() {
       const res = await fetch(`/api/logistica?tipo=equipo-radio&id=${id}`, {
         method: 'DELETE'
       })
-
       if (res.ok) {
         await cargarDatos()
+        setShowDetalleEquipo(false)
+        setEquipoSeleccionado(null)
         alert('Equipo eliminado')
       }
     } catch (error) {
@@ -289,7 +278,7 @@ export default function TransmisionesPage() {
     return 'text-red-600'
   }
 
-  const getBateriaAlert = (fechaInstalacion: Date | null) => {
+  const getBateriaAlert = (fechaInstalacion: Date | string | null) => {
     if (!fechaInstalacion) return null
     const años = (new Date().getTime() - new Date(fechaInstalacion).getTime()) / (1000 * 60 * 60 * 24 * 365)
     if (años > 2) return '⚠️ Batería antigua (>2 años)'
@@ -675,7 +664,7 @@ export default function TransmisionesPage() {
         )}
       </div>
 
- {/* MODAL NUEVO/EDITAR ARTÍCULO */}
+      {/* MODAL NUEVO/EDITAR ARTÍCULO */}
       {showNuevoArticulo && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000] p-4">
           <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
@@ -1002,7 +991,7 @@ export default function TransmisionesPage() {
                 <div>
                   <label className="block text-sm font-medium mb-1">Tipo *</label>
                   <select 
-                    name="tipo" 
+                    name="tipoEquipo" 
                     defaultValue={equipoSeleccionado?.tipo}
                     required 
                     className="w-full px-3 py-2 border rounded-lg"
@@ -1275,19 +1264,15 @@ export default function TransmisionesPage() {
                 <div>
                   <div className="bg-amber-50 rounded-lg p-4 border border-amber-200 mb-6">
                     <div className="flex items-center gap-3">
-                      <Battery className={`${
-                        equipoSeleccionado.estadoBateria >= 80 ? 'text-green-600' :
-                        equipoSeleccionado.estadoBateria >= 50 ? 'text-yellow-600' :
-                        'text-red-600'
-                      }`} size={48} />
+                      <Battery className={`${getBateriaColor(equipoSeleccionado.estadoBateria)}`} size={48} />
                       <div>
                         <h3 className="font-bold text-lg">Estado de Batería</h3>
                         <p className="text-2xl font-bold text-amber-900">
                           {equipoSeleccionado.estadoBateria || '-'}%
                         </p>
-                        {getBateriaAlerta(equipoSeleccionado.fechaInstalacionBat) && (
+                        {getBateriaAlert(equipoSeleccionado.fechaInstalacionBat) && (
                           <p className="text-sm text-orange-600 mt-1">
-                            {getBateriaAlerta(equipoSeleccionado.fechaInstalacionBat)}
+                            {getBateriaAlert(equipoSeleccionado.fechaInstalacionBat)}
                           </p>
                         )}
                       </div>
