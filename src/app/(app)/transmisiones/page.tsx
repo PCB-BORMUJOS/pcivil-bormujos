@@ -232,7 +232,7 @@ export default function TransmisionesPage() {
           tipo: 'equipo-radio',
           id: equipoSeleccionado?.id,
           codigo: formData.get('codigo'),
-          tipo: formData.get('tipoEquipo'),
+          tipoEquipo: formData.get('tipoEquipo'),
           marca: formData.get('marca'),
           modelo: formData.get('modelo'),
           numeroSerie: formData.get('numeroSerie'),
