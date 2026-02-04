@@ -11,7 +11,7 @@ export const authOptions: AuthOptions = {
         email: { label: 'Email', type: 'email' },
         password: { label: 'Password', type: 'password' }
       },
-      async authorize(credentials) {
+      async authorize(credentials: Record<"email" | "password", string> | undefined) {
         if (!credentials?.email || !credentials?.password) {
           throw new Error('Email y contraseña requeridos')
         }
@@ -41,7 +41,7 @@ export const authOptions: AuthOptions = {
           permisos: usuario.rol.permisos,
           servicioId: usuario.servicioId,
           numeroVoluntario: usuario.numeroVoluntario
-        }
+        } as any
       }
     })
   ],
@@ -58,27 +58,27 @@ export const authOptions: AuthOptions = {
       if (user) {
         token.id = user.id
         token.email = user.email
-        token.nombre = user.nombre
-        token.apellidos = user.apellidos
-        token.rol = user.rol
-        token.rolId = user.rolId
-        token.permisos = user.permisos
-        token.servicioId = user.servicioId
-        token.numeroVoluntario = user.numeroVoluntario
+        token.nombre = (user as any).nombre
+        token.apellidos = (user as any).apellidos
+        token.rol = (user as any).rol
+        token.rolId = (user as any).rolId
+        token.permisos = (user as any).permisos
+        token.servicioId = (user as any).servicioId
+        token.numeroVoluntario = (user as any).numeroVoluntario
       }
       return token
     },
     async session({ session, token }) {
       if (token && session.user) {
-        session.user.id = token.id as string
-        session.user.email = token.email as string
-        session.user.nombre = token.nombre as string
-        session.user.apellidos = token.apellidos as string
-        session.user.rol = token.rol as string
-        session.user.rolId = token.rolId as string
-        session.user.permisos = token.permisos as any
-        session.user.servicioId = token.servicioId as string
-        session.user.numeroVoluntario = token.numeroVoluntario as string
+        (session.user as any).id = token.id as string
+        (session.user as any).email = token.email as string
+        (session.user as any).nombre = token.nombre as string
+        (session.user as any).apellidos = token.apellidos as string
+        (session.user as any).rol = token.rol as string
+        (session.user as any).rolId = token.rolId as string
+        (session.user as any).permisos = token.permisos as any
+        (session.user as any).servicioId = token.servicioId as string
+        (session.user as any).numeroVoluntario = token.numeroVoluntario as string
       }
       return session
     }
