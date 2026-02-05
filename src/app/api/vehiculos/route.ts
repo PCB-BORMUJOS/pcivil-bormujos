@@ -214,12 +214,11 @@ export async function PUT(request: NextRequest) {
       }
 
       const vehiculo = await prisma.vehiculo.update({
+      const vehiculo = await prisma.vehiculo.update({
         where: { id },
         data: {
           estado: estado || undefined,
           kmActual: kilometraje ? parseInt(kilometraje) : undefined,
-          ubicacion: ubicacion || undefined,
-          observaciones: observaciones !== undefined ? observaciones : undefined,
         }
       })
 
