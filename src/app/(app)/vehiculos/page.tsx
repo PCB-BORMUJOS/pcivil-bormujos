@@ -158,11 +158,11 @@ export default function VehiculosPage() {
         setVehiculoSeleccionado(null)
         alert('Vehículo actualizado correctamente')
       } else {
-        alert(`Error: ${responseData.error || 'Error al actualizar vehículo'}`)
+        console.error("Error del servidor:", responseData)
         alert(`Error: ${responseData.error || 'Error al actualizar vehículo'}')
       }
     } catch (error) {
-      alert(`Error al actualizar vehículo: ${error.message}`)
+      console.error("Error:", error)
       alert(`Error al actualizar vehículo: ${error.message}')
     }
   }
