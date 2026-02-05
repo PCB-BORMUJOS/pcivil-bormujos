@@ -144,6 +144,7 @@ export default function VehiculosPage() {
 
     try {
       const res = await fetch('/api/vehiculos?tipo=vehiculo', {
+        credentials: 'include',
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
