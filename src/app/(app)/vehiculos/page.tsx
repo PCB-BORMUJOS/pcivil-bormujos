@@ -129,6 +129,40 @@ export default function VehiculosPage() {
     }
   }
 
+  const handleGuardarVehiculo = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    if (!vehiculoSeleccionado) return
+
+    const formData = new FormData(e.currentTarget)
+    const data = {
+      id: vehiculoSeleccionado.id,
+      estado: formData.get('estado') as string,
+      kilometraje: formData.get('kmActual') as string,
+      ubicacion: vehiculoSeleccionado.ubicacion,
+      observaciones: vehiculoSeleccionado.observaciones
+    }
+
+    try {
+      const res = await fetch('/api/vehiculos?tipo=vehiculo', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      })
+
+      if (res.ok) {
+        await cargarDatos()
+        setShowEditarVehiculo(false)
+        setVehiculoSeleccionado(null)
+        alert('Vehículo actualizado correctamente')
+      } else {
+        alert('Error al actualizar vehículo')
+      }
+    } catch (error) {
+      console.error('Error:', error)
+      alert('Error al actualizar vehículo')
+    }
+  }
+
   const handleVerDetalleVehiculo = (vehiculo: any) => {
     setVehiculoSeleccionado(vehiculo)
     setDetalleTab('ficha')
@@ -921,7 +955,7 @@ export default function VehiculosPage() {
         </div>
       </div>
 
-      <form className="p-4 md:p-6">
+      <form onSubmit={handleGuardarVehiculo} className="p-4 md:p-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium mb-1">Indicativo *</label>
