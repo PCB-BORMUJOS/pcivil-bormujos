@@ -217,7 +217,7 @@ export async function PUT(request: NextRequest) {
         where: { id },
         data: {
           estado: estado || undefined,
-          kilometraje: kilometraje ? parseInt(kilometraje) : undefined,
+          kmActual: kilometraje ? parseInt(kilometraje) : undefined,
           ubicacion: ubicacion || undefined,
           observaciones: observaciones !== undefined ? observaciones : undefined,
         }
