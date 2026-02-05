@@ -159,11 +159,11 @@ export default function VehiculosPage() {
         alert('Vehículo actualizado correctamente')
       } else {
         console.error("Error del servidor:", responseData)
-        alert(`Error: ${responseData.error || 'Error al actualizar vehículo'}')
+        alert(`Error: ${responseData.error || 'Error al actualizar vehículo'}`)
       }
     } catch (error) {
       console.error("Error:", error)
-      alert(`Error al actualizar vehículo: ${error.message}')
+      alert(`Error al actualizar vehículo: ${error.message}`)
     }
   }
     }
