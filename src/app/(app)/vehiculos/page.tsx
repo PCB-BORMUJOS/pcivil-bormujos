@@ -149,18 +149,23 @@ export default function VehiculosPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
       })
-
+      
+      const responseData = await res.json()
+      
       if (res.ok) {
         await cargarDatos()
         setShowEditarVehiculo(false)
         setVehiculoSeleccionado(null)
         alert('Vehículo actualizado correctamente')
       } else {
-        alert('Error al actualizar vehículo')
+        console.error('Error del servidor:', responseData)
+        alert(`Error: ${responseData.error || 'Error al actualizar vehículo'}`)
       }
     } catch (error) {
       console.error('Error:', error)
-      alert('Error al actualizar vehículo')
+      alert(`Error al actualizar vehículo: ${error.message}`)
+    }
+  }
     }
   }
 
