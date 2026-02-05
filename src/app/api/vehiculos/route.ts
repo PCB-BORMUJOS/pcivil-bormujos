@@ -187,7 +187,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// PUT - Actualizar mantenimiento
+// PUT - Actualizar vehículo o mantenimiento
 export async function PUT(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
@@ -197,6 +197,34 @@ export async function PUT(request: NextRequest) {
 
     const { searchParams } = new URL(request.url)
     const tipo = searchParams.get('tipo')
+
+    // PUT Actualizar vehículo
+    if (tipo === 'vehiculo') {
+      const body = await request.json()
+      const {
+        id,
+        estado,
+        kilometraje,
+        ubicacion,
+        observaciones
+      } = body
+
+      if (!id) {
+        return NextResponse.json({ error: 'ID requerido' }, { status: 400 })
+      }
+
+      const vehiculo = await prisma.vehiculo.update({
+        where: { id },
+        data: {
+          estado: estado || undefined,
+          kilometraje: kilometraje ? parseInt(kilometraje) : undefined,
+          ubicacion: ubicacion || undefined,
+          observaciones: observaciones !== undefined ? observaciones : undefined,
+        }
+      })
+
+      return NextResponse.json({ vehiculo })
+    }
 
     // PUT Actualizar mantenimiento
     if (tipo === 'mantenimiento') {
