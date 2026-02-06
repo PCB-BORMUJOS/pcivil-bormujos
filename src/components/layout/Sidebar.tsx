@@ -1,5 +1,4 @@
 'use client'
-
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -23,6 +22,11 @@ import {
   ChevronRight,
   Menu,
   X,
+  GraduationCap,
+  Users,
+  FileText,
+  BookOpen,
+  FlaskConical,
 } from 'lucide-react'
 
 interface NavItem {
@@ -43,7 +47,12 @@ const navigation: NavItem[] = [
   { name: 'Vehículos', href: '/vehiculos', icon: Truck },
   { name: 'Transmisiones', href: '/transmisiones', icon: Radio },
   { name: 'PMA', href: '/pma', icon: AlertTriangle },
+  { name: 'Formación', href: '/formacion', icon: GraduationCap },
+  { name: 'Acción Social', href: '/accion-social', icon: Users },
   { name: 'Configuración', href: '/configuracion', icon: Settings },
+  { name: 'Partes', href: '/partes', icon: FileText },
+  { name: 'Manuales', href: '/manuales', icon: BookOpen },
+  { name: 'Prácticas', href: '/practicas', icon: FlaskConical },
 ]
 
 export default function Sidebar() {
@@ -171,6 +180,7 @@ export default function Sidebar() {
             {filteredNavigation.map((item) => {
               const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
               const Icon = item.icon
+              
               return (
                 <li key={item.name}>
                   <Link 
