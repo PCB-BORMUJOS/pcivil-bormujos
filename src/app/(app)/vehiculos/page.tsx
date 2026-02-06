@@ -111,7 +111,7 @@ export default function VehiculosPage() {
 
   const cargarDocumentos = async (vehiculoId: string) => {
     try {
-      const res = await fetch(\`/api/vehiculos?tipo=documentos&vehiculoId=\${vehiculoId}\`)
+      const res = await fetch(\`/api/vehiculos?tipo=documentos&vehiculoId=${vehiculoId}`)
       const data = await res.json()
       setDocumentos(data.documentos || [])
     } catch (error) {
