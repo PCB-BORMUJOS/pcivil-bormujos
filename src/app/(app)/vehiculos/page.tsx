@@ -121,7 +121,7 @@ export default function VehiculosPage() {
 
   const cargarMantenimientos = async (vehiculoId: string) => {
     try {
-      const res = await fetch(`/api/vehiculos?tipo=mantenimientos&vehiculoId=${vehiculoId}')
+      const res = await fetch(`/api/vehiculos?tipo=mantenimientos      const res = await fetch(`/api/vehiculos?tipo=mantenimientos&vehiculoId=${vehiculoId}')vehiculoId=${vehiculoId}`)
       const data = await res.json()
       setMantenimientos(data.mantenimientos || [])
     } catch (error) {
@@ -158,14 +158,13 @@ export default function VehiculosPage() {
         setVehiculoSeleccionado(null)
         alert('Vehículo actualizado correctamente')
       } else {
+      } else {
         console.error("Error del servidor:", responseData)
         alert(`Error: ${responseData.error || 'Error al actualizar vehículo'}`)
       }
     } catch (error) {
       console.error("Error:", error)
       alert(`Error al actualizar vehículo: ${error.message}`)
-    }
-  }
     }
   }
 
