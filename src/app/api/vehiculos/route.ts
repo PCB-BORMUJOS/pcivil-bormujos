@@ -102,23 +102,19 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Datos incompletos' }, { status: 400 })
       }
 
-      // Validar que es PDF
       if (file.type !== 'application/pdf') {
         return NextResponse.json({ error: 'Solo se permiten archivos PDF' }, { status: 400 })
       }
 
-      // Validar tamaño (max 10MB)
       if (file.size > 10 * 1024 * 1024) {
         return NextResponse.json({ error: 'Archivo muy grande (máx 10MB)' }, { status: 400 })
       }
 
-      // Subir a Vercel Blob
       const blob = await put(`vehiculos/${vehiculoId}/${Date.now()}-${file.name}`, file, {
         access: 'public',
         addRandomSuffix: false
       })
 
-      // Guardar en BD
       const documento = await prisma.documentoVehiculo.create({
         data: {
           vehiculoId,
@@ -204,9 +200,7 @@ export async function PUT(request: NextRequest) {
       const {
         id,
         estado,
-        kilometraje,
-        ubicacion,
-        observaciones
+        kilometraje
       } = body
 
       if (!id) {
@@ -298,14 +292,12 @@ export async function DELETE(request: NextRequest) {
         return NextResponse.json({ error: 'Documento no encontrado' }, { status: 404 })
       }
 
-      // Eliminar de Vercel Blob
       try {
         await del(documento.blobKey)
       } catch (blobError) {
         console.error('Error eliminando de Blob:', blobError)
       }
 
-      // Eliminar de BD
       await prisma.documentoVehiculo.delete({
         where: { id }
       })
