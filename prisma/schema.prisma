@@ -53,6 +53,7 @@ model Usuario {
   documentosVehiculo    DocumentoVehiculo[]
   mantenimientosVehiculo MantenimientoVehiculo[]
 
+  manuales              Manual[]
   @@map("usuarios")
 }
 
@@ -915,4 +916,24 @@ model CicloCarga {
   equipo            EquipoRadio @relation(fields: [equipoId], references: [id], onDelete: Cascade)
   
   createdAt         DateTime  @default(now())
+}
+model Manual {
+  id          String   @id @default(cuid())
+  titulo      String
+  descripcion String?
+  categoria   String   // incendios, socorrismo, vehiculos, transmisiones, pma, general
+  tipo        String?  // manual_usuario, ficha_tecnica, procedimiento, guia_rapida
+  fabricante  String?
+  modelo      String?
+  url         String   // URL del blob
+  blobKey     String   // Key para eliminar de blob
+  nombreArchivo String @map("nombre_archivo")
+  tamano      Int      // Tamaño en bytes
+  usuarioId   String   @map("usuario_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  
+  usuario     Usuario  @relation(fields: [usuarioId], references: [id])
+  
+  @@map("manuales")
 }
