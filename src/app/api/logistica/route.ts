@@ -1,3 +1,4 @@
+import { put, del } from '@vercel/blob'
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { prisma } from '@/lib/db'
@@ -175,6 +176,52 @@ export async function GET(request: NextRequest) {
       })
       return NextResponse.json({ categoria })
     }
+
+    // GET Manuales
+    if (tipo === 'manuales') {
+      const categoria = searchParams.get('categoria')
+      const busqueda = searchParams.get('busqueda')
+
+      const where: any = {}
+      
+      if (categoria && categoria !== 'all') {
+        where.categoria = categoria
+      }
+      
+      if (busqueda) {
+        where.OR = [
+          { titulo: { contains: busqueda, mode: 'insensitive' } },
+          { descripcion: { contains: busqueda, mode: 'insensitive' } },
+          { fabricante: { contains: busqueda, mode: 'insensitive' } },
+          { modelo: { contains: busqueda, mode: 'insensitive' } },
+        ]
+      }
+
+      const manuales = await prisma.manual.findMany({
+        where,
+        include: {
+          usuario: {
+            select: { nombre: true, apellidos: true }
+          }
+        },
+        orderBy: { createdAt: 'desc' }
+      })
+
+      const stats = {
+        total: await prisma.manual.count(),
+        porCategoria: {
+          incendios: await prisma.manual.count({ where: { categoria: 'incendios' } }),
+          socorrismo: await prisma.manual.count({ where: { categoria: 'socorrismo' } }),
+          vehiculos: await prisma.manual.count({ where: { categoria: 'vehiculos' } }),
+          transmisiones: await prisma.manual.count({ where: { categoria: 'transmisiones' } }),
+          pma: await prisma.manual.count({ where: { categoria: 'pma' } }),
+          general: await prisma.manual.count({ where: { categoria: 'general' } }),
+        }
+      }
+
+      return NextResponse.json({ manuales, stats })
+    }
+
 
     // ===== INVENTARIO GENERAL =====
     const inventarioSlug = searchParams.get('inventario') || 'all'
@@ -748,6 +795,58 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json({ success: true, peticion })
     }
+    
+    // POST Subir manual
+    if (tipo === 'manual') {
+      const formData = await request.formData()
+      const file = formData.get('file') as File
+      const titulo = formData.get('titulo') as string
+      const descripcion = formData.get('descripcion') as string
+      const categoria = formData.get('categoria') as string
+      const tipoManual = formData.get('tipoManual') as string
+      const fabricante = formData.get('fabricante') as string
+      const modelo = formData.get('modelo') as string
+
+      if (!file || !titulo || !categoria) {
+        return NextResponse.json({ error: 'Datos incompletos' }, { status: 400 })
+      }
+
+      if (file.type !== 'application/pdf') {
+        return NextResponse.json({ error: 'Solo se permiten archivos PDF' }, { status: 400 })
+      }
+
+      if (file.size > 20 * 1024 * 1024) {
+        return NextResponse.json({ error: 'Archivo muy grande (máx 20MB)' }, { status: 400 })
+      }
+
+      const blob = await put(`manuales/${categoria}/${Date.now()}-${file.name}`, file, {
+        access: 'public',
+        addRandomSuffix: false
+      })
+
+      const manual = await prisma.manual.create({
+        data: {
+          titulo,
+          descripcion: descripcion || null,
+          categoria,
+          tipo: tipoManual || null,
+          fabricante: fabricante || null,
+          modelo: modelo || null,
+          url: blob.url,
+          blobKey: blob.pathname,
+          nombreArchivo: file.name,
+          tamano: file.size,
+          usuarioId: session.user.id
+        },
+        include: {
+          usuario: {
+            select: { nombre: true, apellidos: true }
+          }
+        }
+      })
+
+      return NextResponse.json({ manual })
+    }
 
     return NextResponse.json({ error: 'Tipo no válido' }, { status: 400 })
   } catch (error) {
@@ -973,13 +1072,11 @@ export async function DELETE(request: NextRequest) {
       const articulosCount = await prisma.articulo.count({
         where: { familiaId: id, activo: true }
       })
-
       if (articulosCount > 0) {
         return NextResponse.json({ 
           error: `No se puede eliminar. Hay ${articulosCount} artículos en esta familia.` 
         }, { status: 400 })
       }
-
       await prisma.familiaArticulo.delete({ where: { id } })
       return NextResponse.json({ success: true })
     }
@@ -989,13 +1086,11 @@ export async function DELETE(request: NextRequest) {
       const equiposCount = await prisma.equipoECI.count({
         where: { edificioId: id }
       })
-
       if (equiposCount > 0) {
         return NextResponse.json({ 
           error: `No se puede eliminar. Hay ${equiposCount} equipos en este edificio.` 
         }, { status: 400 })
       }
-
       await prisma.edificio.delete({ where: { id } })
       return NextResponse.json({ success: true })
     }
@@ -1023,33 +1118,29 @@ export async function DELETE(request: NextRequest) {
       await prisma.equipoRadio.delete({ where: { id } })
       return NextResponse.json({ success: true })
     }
-    
+
     // ===== BOTIQUIN =====
     if (tipo === 'botiquin') {
       const revisionesCount = await prisma.revisionBotiquin.count({
         where: { botiquinId: id }
       })
-      
       if (revisionesCount > 0) {
         return NextResponse.json({ 
           error: `No se puede eliminar. Este botiquín tiene ${revisionesCount} revisiones registradas.` 
         }, { status: 400 })
       }
-      
       await prisma.botiquinItem.deleteMany({ where: { botiquinId: id } })
       await prisma.botiquin.delete({ where: { id } })
       return NextResponse.json({ success: true })
     }
-    
+
     // ===== BOTIQUIN ITEM =====
     if (tipo === 'botiquin-item') {
-      // Obtener el item antes de eliminarlo para saber cuánto devolver al stock
       const item = await prisma.botiquinItem.findUnique({ where: { id } })
       if (!item) {
         return NextResponse.json({ error: 'Item no encontrado' }, { status: 404 })
       }
-      
-      // Eliminar item y decrementar stockAsignado en transacción
+
       await prisma.$transaction([
         prisma.botiquinItem.delete({ where: { id } }),
         ...(item.articuloId ? [
@@ -1059,7 +1150,29 @@ export async function DELETE(request: NextRequest) {
           })
         ] : [])
       ])
-      
+      return NextResponse.json({ success: true })
+    }
+
+    // DELETE Manual
+    if (tipo === 'manual') {
+      const manual = await prisma.manual.findUnique({
+        where: { id }
+      })
+
+      if (!manual) {
+        return NextResponse.json({ error: 'Manual no encontrado' }, { status: 404 })
+      }
+
+      try {
+        await del(manual.blobKey)
+      } catch (blobError) {
+        console.error('Error eliminando de Blob:', blobError)
+      }
+
+      await prisma.manual.delete({
+        where: { id }
+      })
+
       return NextResponse.json({ success: true })
     }
 
