@@ -54,6 +54,7 @@ model Usuario {
   mantenimientosVehiculo MantenimientoVehiculo[]
 
   manuales              Manual[]
+  partesPSI             PartePSI[]
   @@map("usuarios")
 }
 
@@ -937,3 +938,67 @@ model Manual {
   
   @@map("manuales")
 }
+
+model PartePSI {
+  id                String   @id @default(cuid())
+  numero            String   @unique
+  
+  // Temporal
+  fecha             DateTime
+  horaLlamada       String?
+  horaSalida        String?
+  horaLlegada       String?
+  horaTerminado     String?
+  horaDisponible    String?
+  
+  // Ubicación
+  lugar             String
+  
+  // Alertante y circulación
+  alertante         String?
+  circulacion       String?
+  
+  // Tipología del servicio
+  tipologia         String   // mantenimiento, practicas, suministros, preventivo, otros_tipo1
+  tipologiaDetalle  String?  // soporte_vital, incendios, inundaciones, etc.
+  motivo            String?
+  
+  // Vehículos y equipo
+  vehiculos         String[] // Array de indicativos
+  equipoWalkies     String?
+  
+  // Autoridades
+  policiaLocal      Boolean  @default(false)
+  guardiaCivil      Boolean  @default(false)
+  otrasAutoridades  String?
+  
+  // Accidentes de tráfico
+  matriculasImplicados String?
+  
+  // Resultado
+  heridos           Boolean  @default(false)
+  numHeridos        Int      @default(0)
+  fallecidos        Boolean  @default(false)
+  numFallecidos     Int      @default(0)
+  
+  // Observaciones
+  observaciones     String?
+  
+  // Responsables
+  indicativoInforma String?
+  responsableTurno  String?
+  vbJefeServicio    String?
+  
+  // Estado del parte
+  estado            String   @default("borrador") // borrador, completado, validado
+  
+  // Relaciones
+  creadorId         String   @map("creador_id")
+  creador           Usuario  @relation(fields: [creadorId], references: [id])
+  
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+  
+  @@map("partes_psi")
+}
+
