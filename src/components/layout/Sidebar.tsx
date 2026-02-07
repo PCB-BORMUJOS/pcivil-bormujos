@@ -20,6 +20,7 @@ import {
   ShieldCheck,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Menu,
   X,
   GraduationCap,
@@ -34,6 +35,7 @@ interface NavItem {
   href: string
   icon: React.ElementType
   adminOnly?: boolean
+  submenu?: Array<{ name: string; href: string }>
 }
 
 const navigation: NavItem[] = [
@@ -50,7 +52,23 @@ const navigation: NavItem[] = [
   { name: 'Formación', href: '/formacion', icon: GraduationCap },
   { name: 'Acción Social', href: '/accion-social', icon: Users },
   { name: 'Configuración', href: '/configuracion', icon: Settings },
-  { name: 'Partes', href: '/partes', icon: FileText },
+  { 
+    name: 'Partes', 
+    href: '/partes', 
+    icon: FileText,
+    submenu: [
+      { name: 'PSI - Servicio e Intervención', href: '/partes/psi' },
+      { name: 'PRV FSV - Revisión FSV', href: '/partes/prv-fsv' },
+      { name: 'PRV VIR - Revisión VIR', href: '/partes/prv-vir' },
+      { name: 'POT - Orden de Trabajo', href: '/partes/pot' },
+      { name: 'PRD - Revisión DEA', href: '/partes/prd' },
+      { name: 'PAS SVB - Asistencia SVB', href: '/partes/pas-svb' },
+      { name: 'PRH - Revisión Hidrantes', href: '/partes/prh' },
+      { name: 'RPAS - Libro de Vuelo', href: '/partes/rpas' },
+      { name: 'PCR - Carga Remolque', href: '/partes/pcr' },
+      { name: 'PRMB - Revisión Botiquín', href: '/partes/prmb' },
+    ]
+  },
   { name: 'Manuales', href: '/manuales', icon: BookOpen },
   { name: 'Prácticas', href: '/practicas', icon: FlaskConical },
 ]
@@ -63,6 +81,7 @@ export default function Sidebar() {
   
   const [collapsed, setCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [openSubmenu, setOpenSubmenu] = useState<string | null>(null)
 
   // Cerrar sidebar móvil al cambiar de ruta
   useEffect(() => {
@@ -89,6 +108,16 @@ export default function Sidebar() {
       document.body.style.overflow = ''
     }
   }, [mobileOpen])
+
+  // Abrir submenú si estamos en una de sus rutas
+  useEffect(() => {
+    const item = navigation.find(nav => 
+      nav.submenu?.some(sub => pathname.startsWith(sub.href))
+    )
+    if (item) {
+      setOpenSubmenu(item.name)
+    }
+  }, [pathname])
 
   const getInitials = (name: string) => {
     const parts = name.split(' ')
@@ -180,17 +209,62 @@ export default function Sidebar() {
             {filteredNavigation.map((item) => {
               const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
               const Icon = item.icon
+              const hasSubmenu = item.submenu && item.submenu.length > 0
+              const isSubmenuOpen = openSubmenu === item.name
               
               return (
                 <li key={item.name}>
-                  <Link 
-                    href={item.href} 
-                    className={cn('sidebar-link', isActive && 'active')}
-                    title={collapsed ? item.name : undefined}
-                  >
-                    <Icon className="w-5 h-5" />
-                    <span className="sidebar-text">{item.name}</span>
-                  </Link>
+                  {hasSubmenu ? (
+                    <div>
+                      <button
+                        onClick={() => setOpenSubmenu(isSubmenuOpen ? null : item.name)}
+                        className={cn(
+                          'sidebar-link w-full',
+                          isActive && 'active'
+                        )}
+                        title={collapsed ? item.name : undefined}
+                      >
+                        <Icon className="w-5 h-5" />
+                        <span className="sidebar-text flex-1 text-left">{item.name}</span>
+                        <ChevronDown 
+                          className={cn(
+                            "w-4 h-4 sidebar-text transition-transform",
+                            isSubmenuOpen && "rotate-180"
+                          )} 
+                        />
+                      </button>
+                      {isSubmenuOpen && !collapsed && (
+                        <div className="ml-8 mt-1 space-y-1">
+                          {item.submenu!.map((sub) => {
+                            const isSubActive = pathname === sub.href
+                            return (
+                              <Link
+                                key={sub.href}
+                                href={sub.href}
+                                className={cn(
+                                  'block px-3 py-2 text-sm rounded-lg transition-colors',
+                                  isSubActive 
+                                    ? 'bg-pc-primary-500 text-white' 
+                                    : 'text-gray-400 hover:text-white hover:bg-pc-dark-800'
+                                )}
+                              >
+                                {sub.name}
+                              </Link>
+                            )
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <Link 
+                      href={item.href} 
+                      className={cn('sidebar-link', isActive && 'active')}
+                      title={collapsed ? item.name : undefined}
+                    >
+                      <Icon className="w-5 h-5" />
+                      <span className="sidebar-text">{item.name}</span>
+                    </Link>
+                  )}
                 </li>
               )
             })}
