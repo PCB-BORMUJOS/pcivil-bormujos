@@ -1,13 +1,22 @@
 'use client';
-
 import React, { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import 'leaflet/dist/leaflet.css';
 import {
-  Flame, Package, Search, AlertTriangle, Plus, RefreshCw, Building2, Shield, Droplet, MapPin,
+  Flame, Package, Search, AlertTriangle, Plus, RefreshCw, Building2, Shield, MapPin,
   Edit, Trash2, Eye, X, Save, ArrowLeft, ShoppingCart, Layers, Clock, Check, CheckCircle,
   Ban, Filter, User, Building, Calendar, History, Send
 } from 'lucide-react';
+
+// Iconos centralizados
+import { TIPOS_EQUIPO_ECI } from '@/lib/iconos-config';
+
+// Icono de hidrante personalizado
+const HidranteIcon = ({ size = 22, className = '' }: { size?: number; className?: string }) => (
+  <span className={`material-symbols-outlined ${className}`} style={{ fontSize: size }}>
+    fire_hydrant
+  </span>
+)
 
 const MapContainer = dynamic(() => import('react-leaflet').then((mod) => mod.MapContainer), { ssr: false });
 const TileLayer = dynamic(() => import('react-leaflet').then((mod) => mod.TileLayer), { ssr: false });
@@ -19,6 +28,7 @@ const createHidranteIcon = (tipo: string, estado: string) => {
   const L = require('leaflet');
   
   const borderColor = estado === 'operativo' ? '#22c55e' : estado === 'averiado' ? '#f59e0b' : '#ef4444';
+  const iconColor = estado === 'operativo' ? '#22c55e' : estado === 'averiado' ? '#f59e0b' : '#ef4444';
   const shadowColor = estado === 'operativo' ? 'rgba(34, 197, 94, 0.4)' : estado === 'averiado' ? 'rgba(245, 158, 11, 0.4)' : 'rgba(239, 68, 68, 0.4)';
   
   return L.divIcon({
@@ -26,18 +36,19 @@ const createHidranteIcon = (tipo: string, estado: string) => {
     html: `
       <div style="
         position: relative;
-        width: 48px; 
-        height: 48px; 
+        width: 40px; 
+        height: 40px; 
         border-radius: 50%; 
-        border: 4px solid ${borderColor}; 
+        border: 3px solid ${borderColor}; 
         background: white;
         box-shadow: 0 4px 12px ${shadowColor}, 0 0 0 2px white; 
         display: flex; 
         align-items: center; 
         justify-content: center;
-        overflow: hidden;
       ">
-        <img src="/images/hidrante.png" alt="hidrante" style="width: 100%; height: 100%; object-fit: cover;" />
+        <span class="material-symbols-outlined" style="font-size: 28px; color: ${iconColor};">
+          fire_hydrant
+        </span>
       </div>
     `,
     iconSize: [48, 48],
@@ -45,9 +56,6 @@ const createHidranteIcon = (tipo: string, estado: string) => {
   });
 };
 
-const TIPOS_EQUIPO_ICONS: Record<string, string> = {
-  extintor: '🧯', bie: '🚿', detector: '🔔', pulsador: '🔴', alarma: '📢', señalizacion: '🪧',
-};
 
 const TIPOS_EQUIPO_LABELS: Record<string, string> = {
   extintor: 'Extintor', bie: 'BIE', detector: 'Detector', pulsador: 'Pulsador', 
@@ -124,7 +132,22 @@ export default function IncendiosPage() {
   const [showGestionFamilias, setShowGestionFamilias] = useState(false);
   const [showNuevoEdificio, setShowNuevoEdificio] = useState(false);
   const [showNuevoEquipo, setShowNuevoEquipo] = useState(false);
+  const [showEditorEquipos, setShowEditorEquipos] = useState(false);
+  const [edificioEditorId, setEdificioEditorId] = useState<string>('');
+  const [equiposEditor, setEquiposEditor] = useState<EquipoECI[]>([]);
+  const [modoEditorEquipo, setModoEditorEquipo] = useState<'lista' | 'crear' | 'editar'>('lista');
+  const [equipoEditandoEditor, setEquipoEditandoEditor] = useState<EquipoECI | null>(null);
   const [showNuevoHidrante, setShowNuevoHidrante] = useState(false);
+  const [nuevoHidrante, setNuevoHidrante] = useState({
+    codigo: '',
+    tipo: 'columna',
+    ubicacion: '',
+    latitud: 37.3710,
+    longitud: -6.0710,
+    presion: null as number | null,
+    caudal: null as number | null,
+    estado: 'operativo'
+  })
   const [mapReady, setMapReady] = useState(false);
   const [peticiones, setPeticiones] = useState<any[]>([]);
   const [filtroPeticiones, setFiltroPeticiones] = useState("all");
@@ -316,7 +339,7 @@ export default function IncendiosPage() {
       const res = await fetch('/api/logistica', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tipo: 'hidrante', id, ...formData })
+        body: JSON.stringify({ tipo: 'hidrante', id, tipoHidrante: formData.tipo, codigo: formData.codigo, ubicacion: formData.ubicacion, latitud: formData.latitud, longitud: formData.longitud, presion: formData.presion, caudal: formData.caudal, estado: formData.estado })
       })
       if (res.ok) { await cargarDatos(); return true }
       return false
@@ -380,7 +403,7 @@ export default function IncendiosPage() {
             Nuevo Artículo
           </button>
           <button onClick={() => setShowNuevoHidrante(true)} className="px-4 py-2.5 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 flex items-center gap-2 font-medium">
-            <Droplet size={18} />
+            <HidranteIcon size={20} />
             Nuevo Hidrante
           </button>
         </div>
@@ -433,7 +456,7 @@ export default function IncendiosPage() {
               <h3 className="text-3xl font-bold text-slate-800 mt-1">{hidrantesStats.total}</h3>
             </div>
             <div className="bg-cyan-100 p-2.5 rounded-xl">
-              <Droplet size={22} className="text-cyan-600" />
+              <HidranteIcon size={26} className="text-cyan-600" />
             </div>
           </div>
         </div>
@@ -458,7 +481,7 @@ export default function IncendiosPage() {
             { id: 'inventario', label: 'Inventario del Área', icon: Package },
             { id: 'eci-edificios', label: 'ECI Edificios', icon: Building2 },
             { id: 'inventario-eci', label: 'Inventario ECI', icon: Layers },
-            { id: 'hidrantes', label: 'Red de Hidrantes', icon: Droplet },
+            { id: 'hidrantes', label: 'Red de Hidrantes', icon: HidranteIcon },
           ].map(tab => (
             <button
               key={tab.id}
@@ -469,7 +492,7 @@ export default function IncendiosPage() {
                   : 'border-transparent text-slate-500 hover:text-slate-700'
               }`}
             >
-              <tab.icon size={18} />
+              <tab.icon size={20} />
               {tab.label}
             </button>
           ))}
@@ -758,7 +781,10 @@ export default function IncendiosPage() {
                         <tr key={eq.id} className="hover:bg-slate-50">
                           <td className="p-3">
                             <div className="flex items-center gap-2">
-                              <span className="text-2xl">{TIPOS_EQUIPO_ICONS[eq.tipo] || '📦'}</span>
+                              {(() => {
+                              const Icon = TIPOS_EQUIPO_ECI[eq.tipo] || Package;
+                              return <Icon size={28} className="text-red-600" />;
+                              })()}
                               <div>
                                 <p className="font-medium text-slate-800">{TIPOS_EQUIPO_LABELS[eq.tipo]}</p>
                                 {eq.subtipo && <p className="text-xs text-slate-500">{eq.subtipo}</p>}
@@ -801,10 +827,16 @@ export default function IncendiosPage() {
               <div>
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-lg font-bold text-slate-800">Edificios Municipales</h2>
-                  <button onClick={() => setShowNuevoEdificio(true)} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center gap-2">
-                    <Plus size={18} />
+                  <div className="flex gap-2">
+                  <button onClick={() => setShowEditorEquipos(true)} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2">
+                  <Layers size={18} />
+                   Editor de Equipos ECI
+                   </button>
+                    <button onClick={() => setShowNuevoEdificio(true)} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center gap-2">
+                   <Plus size={18} />
                     Nuevo Edificio
-                  </button>
+                   </button>
+                </div>
                 </div>
 
                 <div className="grid grid-cols-3 gap-4">
@@ -924,7 +956,10 @@ export default function IncendiosPage() {
                     <tr key={eq.id} className="hover:bg-slate-50">
                       <td className="p-3">
                         <div className="flex items-center gap-2">
-                          <span className="text-xl">{TIPOS_EQUIPO_ICONS[eq.tipo] || '📦'}</span>
+                          {(() => {
+                          const Icon = TIPOS_EQUIPO_ECI[eq.tipo] || Package;
+                          return <Icon size={24} className="text-red-600" />;
+                          })()}
                           <div>
                             <p className="font-medium text-slate-800 text-sm">{TIPOS_EQUIPO_LABELS[eq.tipo]}</p>
                             {eq.subtipo && <p className="text-xs text-slate-500">{eq.subtipo}</p>}
@@ -1006,7 +1041,7 @@ export default function IncendiosPage() {
             <div className="p-4">
               {hidrantes.length === 0 ? (
                 <div className="text-center py-12 text-slate-400">
-                  <Droplet size={48} className="mx-auto mb-4 opacity-50" />
+                  <HidranteIcon size={48} className="mx-auto mb-4 opacity-50" />
                   <p>No hay hidrantes</p>
                 </div>
               ) : (
@@ -1082,8 +1117,8 @@ export default function IncendiosPage() {
                 codigo: (form.elements.namedItem('codigo') as HTMLInputElement).value,
                 nombre: (form.elements.namedItem('nombre') as HTMLInputElement).value,
                 descripcion: (form.elements.namedItem('descripcion') as HTMLTextAreaElement).value,
-                stockActual: (form.elements.namedItem('stockActual') as HTMLInputElement).value,
-                stockMinimo: (form.elements.namedItem('stockMinimo') as HTMLInputElement).value,
+                stockActual: parseInt((form.elements.namedItem('stockActual') as HTMLInputElement).value),
+                stockMinimo: parseInt((form.elements.namedItem('stockMinimo') as HTMLInputElement).value),
                 unidad: (form.elements.namedItem('unidad') as HTMLSelectElement).value,
                 familiaId: (form.elements.namedItem('familiaId') as HTMLSelectElement).value
               }
@@ -1488,12 +1523,12 @@ export default function IncendiosPage() {
                   <label className="block text-sm font-medium text-slate-700 mb-2">Tipo *</label>
                   <select name="tipoEquipo" className="w-full border border-slate-300 rounded-lg p-2.5" required>
                     <option value="">Seleccionar...</option>
-                    <option value="extintor">🧯 Extintor</option>
-                    <option value="bie">🚿 BIE</option>
-                    <option value="detector">🔔 Detector</option>
-                    <option value="pulsador">🔴 Pulsador</option>
-                    <option value="alarma">📢 Alarma/Sirena</option>
-                    <option value="señalizacion">🪧 Señalización</option>
+                    <option value="extintor">Extintor</option>
+                    <option value="bie">BIE (Manguera)</option>
+                    <option value="detector">Detector de Humo</option>
+                    <option value="pulsador">Pulsador de Alarma</option>
+                    <option value="alarma">Alarma/Sirena</option>
+                    <option value="señalizacion">Señalización de Emergencia</option>
                   </select>
                 </div>
                 <div>
@@ -1531,6 +1566,339 @@ export default function IncendiosPage() {
           </div>
         </div>
       )}
+
+      {/* ======================================== MODAL: EDITOR DE EQUIPOS ECI ======================================== */}
+      {showEditorEquipos && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60" onClick={() => {
+          setShowEditorEquipos(false);
+          setModoEditorEquipo('lista');
+          setEdificioEditorId('');
+          setEquiposEditor([]);
+        }}>
+          <div className="bg-white rounded-xl w-full max-w-6xl max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="bg-blue-600 p-5 text-white flex justify-between items-center">
+              <h2 className="text-xl font-bold flex items-center gap-2">
+                <Layers size={24} />
+                Editor de Equipos ECI
+              </h2>
+              <button onClick={() => {
+                setShowEditorEquipos(false);
+                setModoEditorEquipo('lista');
+                setEdificioEditorId('');
+                setEquiposEditor([]);
+              }}>
+                <X size={24} />
+              </button>
+            </div>
+
+            {/* CONTENIDO DEL MODAL */}
+            <div className="flex-1 overflow-hidden flex flex-col">
+              {/* SELECTOR DE EDIFICIO */}
+              <div className="p-6 border-b border-slate-200 bg-slate-50">
+                <label className="block text-sm font-medium text-slate-700 mb-2">Seleccionar Edificio</label>
+                <select
+                  value={edificioEditorId}
+                  onChange={async (e) => {
+                    const id = e.target.value;
+                    setEdificioEditorId(id);
+                    setModoEditorEquipo('lista');
+                    setEquipoEditandoEditor(null);
+                    if (id) {
+                      const res = await fetch(`/api/logistica?tipo=equipos-eci&edificioId=${id}`);
+                      if (res.ok) {
+                        const data = await res.json();
+                        setEquiposEditor(data.equipos || []);
+                      }
+                    } else {
+                      setEquiposEditor([]);
+                    }
+                  }}
+                  className="w-full border border-slate-300 rounded-lg p-3 text-base"
+                >
+                  <option value="">-- Seleccione un edificio --</option>
+                  {edificios.map(ed => (
+                    <option key={ed.id} value={ed.id}>
+                      {ed.nombre} ({ed._count?.equiposECI || 0} equipos)
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* VISTA: LISTA DE EQUIPOS */}
+              {edificioEditorId && modoEditorEquipo === 'lista' && (
+                <div className="flex-1 overflow-y-auto p-6">
+                  <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-lg font-bold text-slate-800">
+                      Equipos del edificio ({equiposEditor.length})
+                    </h3>
+                    <button
+                      onClick={() => setModoEditorEquipo('crear')}
+                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
+                    >
+                      <Plus size={18} />
+                      Añadir Equipo
+                    </button>
+                  </div>
+
+                  {equiposEditor.length === 0 ? (
+                    <div className="text-center py-12 text-slate-400">
+                      <Shield size={48} className="mx-auto mb-4 opacity-50" />
+                      <p>No hay equipos en este edificio</p>
+                      <button
+                        onClick={() => setModoEditorEquipo('crear')}
+                        className="mt-4 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                      >
+                        Añadir el primer equipo
+                      </button>
+                    </div>
+                  ) : (
+                    <table className="w-full">
+                      <thead className="bg-slate-50 border-y border-slate-200">
+                        <tr>
+                          <th className="text-left p-3 text-xs font-semibold text-slate-500 uppercase">Tipo</th>
+                          <th className="text-left p-3 text-xs font-semibold text-slate-500 uppercase">Ubicación</th>
+                          <th className="text-left p-3 text-xs font-semibold text-slate-500 uppercase">N° Serie</th>
+                          <th className="text-center p-3 text-xs font-semibold text-slate-500 uppercase">Estado</th>
+                          <th className="text-center p-3 text-xs font-semibold text-slate-500 uppercase">Acciones</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {equiposEditor.map(eq => (
+                          <tr key={eq.id} className="hover:bg-slate-50">
+                            <td className="p-3">
+                              <div className="flex items-center gap-2">
+                                {(() => {
+                                const Icon = TIPOS_EQUIPO_ECI[eq.tipo] || Package;
+                                return <Icon size={28} className="text-red-600" />;
+                                })()}
+                                <div>
+                                  <p className="font-medium text-slate-800">{TIPOS_EQUIPO_LABELS[eq.tipo]}</p>
+                                  {eq.subtipo && <p className="text-xs text-slate-500">{eq.subtipo}</p>}
+                                </div>
+                              </div>
+                            </td>
+                            <td className="p-3 text-sm text-slate-600">{eq.ubicacion}</td>
+                            <td className="p-3 text-sm text-slate-600">{eq.numeroSerie || '-'}</td>
+                            <td className="p-3 text-center">
+                              <span className={`px-2 py-1 rounded text-xs font-bold ${
+                                eq.estado === 'operativo' ? 'bg-green-100 text-green-700' :
+                                eq.estado === 'revision_pendiente' ? 'bg-yellow-100 text-yellow-700' :
+                                'bg-red-100 text-red-700'
+                              }`}>
+                                {eq.estado === 'operativo' ? 'Operativo' :
+                                 eq.estado === 'revision_pendiente' ? 'Rev. Pendiente' :
+                                 'Fuera Servicio'}
+                              </span>
+                            </td>
+                            <td className="p-3">
+                              <div className="flex justify-center gap-2">
+                                <button
+                                  onClick={() => {
+                                    setEquipoEditandoEditor(eq);
+                                    setModoEditorEquipo('editar');
+                                  }}
+                                  className="p-1.5 text-blue-600 hover:bg-blue-50 rounded"
+                                  title="Editar equipo"
+                                >
+                                  <Edit size={16} />
+                                </button>
+                                <button
+                                  onClick={async () => {
+                                    if (confirm(`¿Eliminar equipo en "${eq.ubicacion}"?`)) {
+                                      const res = await fetch(`/api/logistica?tipo=equipo-eci&id=${eq.id}`, { method: 'DELETE' });
+                                      if (res.ok) {
+                                        setEquiposEditor(equiposEditor.filter(e => e.id !== eq.id));
+                                        await cargarDatos();
+                                      }
+                                    }
+                                  }}
+                                  className="p-1.5 text-red-600 hover:bg-red-50 rounded"
+                                  title="Eliminar"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              )}
+
+              {/* VISTA: CREAR/EDITAR EQUIPO */}
+              {edificioEditorId && (modoEditorEquipo === 'crear' || modoEditorEquipo === 'editar') && (
+                <div className="flex-1 overflow-y-auto p-6">
+                  <div className="flex items-center gap-3 mb-6">
+                    <button
+                      onClick={() => {
+                        setModoEditorEquipo('lista');
+                        setEquipoEditandoEditor(null);
+                      }}
+                      className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg"
+                    >
+                      <ArrowLeft size={20} />
+                    </button>
+                    <h3 className="text-lg font-bold text-slate-800">
+                      {modoEditorEquipo === 'crear' ? 'Nuevo Equipo ECI' : 'Editar Equipo ECI'}
+                    </h3>
+                  </div>
+
+                  <form
+                    onSubmit={async (e) => {
+                      e.preventDefault();
+                      const form = e.target as HTMLFormElement;
+                      const formData = {
+                        tipo: modoEditorEquipo === 'crear' ? 'equipo-eci' : 'equipo-eci',
+                        id: equipoEditandoEditor?.id,
+                        edificioId: edificioEditorId,
+                        tipoEquipo: (form.elements.namedItem('tipoEquipo') as HTMLSelectElement).value,
+                        subtipo: (form.elements.namedItem('subtipo') as HTMLInputElement).value,
+                        ubicacion: (form.elements.namedItem('ubicacion') as HTMLInputElement).value,
+                        numeroSerie: (form.elements.namedItem('numeroSerie') as HTMLInputElement).value,
+                        estado: (form.elements.namedItem('estado') as HTMLSelectElement).value,
+                        observaciones: (form.elements.namedItem('observaciones') as HTMLTextAreaElement).value
+                      };
+
+                      const method = modoEditorEquipo === 'crear' ? 'POST' : 'PUT';
+                      const res = await fetch('/api/logistica', {
+                        method,
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(formData)
+                      });
+
+                      if (res.ok) {
+                        // Recargar equipos del edificio
+                        const resEquipos = await fetch(`/api/logistica?tipo=equipos-eci&edificioId=${edificioEditorId}`);
+                        if (resEquipos.ok) {
+                          const data = await resEquipos.json();
+                          setEquiposEditor(data.equipos || []);
+                        }
+                        await cargarDatos();
+                        setModoEditorEquipo('lista');
+                        setEquipoEditandoEditor(null);
+                        form.reset();
+                      }
+                    }}
+                    className="space-y-5"
+                  >
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">Tipo *</label>
+                        <select
+                          name="tipoEquipo"
+                          defaultValue={equipoEditandoEditor?.tipo || ''}
+                          className="w-full border border-slate-300 rounded-lg p-2.5"
+                          required
+                        >
+                          <option value="">Seleccionar...</option>
+                          <option value="extintor">Extintor</option>
+                          <option value="bie">BIE (Manguera)</option>
+                          <option value="detector">Detector de Humo</option>
+                          <option value="pulsador">Pulsador de Alarma</option>
+                          <option value="alarma">Alarma/Sirena</option>
+                          <option value="señalizacion">Señalización de Emergencia</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">Subtipo</label>
+                        <input
+                          name="subtipo"
+                          type="text"
+                          defaultValue={equipoEditandoEditor?.subtipo || ''}
+                          className="w-full border border-slate-300 rounded-lg p-2.5"
+                          placeholder="Ej: CO2, Polvo ABC..."
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-2">Ubicación *</label>
+                      <input
+                        name="ubicacion"
+                        type="text"
+                        defaultValue={equipoEditandoEditor?.ubicacion || ''}
+                        className="w-full border border-slate-300 rounded-lg p-2.5"
+                        placeholder="Ej: Planta baja, pasillo principal"
+                        required
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">Número de Serie</label>
+                        <input
+                          name="numeroSerie"
+                          type="text"
+                          defaultValue={equipoEditandoEditor?.numeroSerie || ''}
+                          className="w-full border border-slate-300 rounded-lg p-2.5"
+                          placeholder="Número de serie"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">Estado *</label>
+                        <select
+                          name="estado"
+                          defaultValue={equipoEditandoEditor?.estado || 'operativo'}
+                          className="w-full border border-slate-300 rounded-lg p-2.5"
+                          required
+                        >
+                          <option value="operativo">Operativo</option>
+                          <option value="revision_pendiente">Revisión Pendiente</option>
+                          <option value="fuera_servicio">Fuera de Servicio</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-2">Observaciones</label>
+                      <textarea
+                        name="observaciones"
+                        defaultValue={''}
+                        className="w-full border border-slate-300 rounded-lg p-2.5"
+                        rows={3}
+                        placeholder="Observaciones adicionales..."
+                      />
+                    </div>
+
+                    <div className="flex justify-end gap-3 pt-4 border-t">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setModoEditorEquipo('lista');
+                          setEquipoEditandoEditor(null);
+                        }}
+                        className="px-5 py-2.5 text-slate-600 hover:bg-slate-100 rounded-lg font-medium"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type="submit"
+                        className="px-5 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium"
+                      >
+                        {modoEditorEquipo === 'crear' ? 'Crear Equipo' : 'Guardar Cambios'}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              )}
+
+              {/* MENSAJE: SELECCIONAR EDIFICIO */}
+              {!edificioEditorId && (
+                <div className="flex-1 flex items-center justify-center text-center p-12">
+                  <div>
+                    <Building2 size={64} className="mx-auto mb-4 text-slate-300" />
+                    <p className="text-lg font-medium text-slate-600 mb-2">Selecciona un edificio</p>
+                    <p className="text-sm text-slate-400">Elige un edificio del selector de arriba para gestionar sus equipos ECI</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
 
       {/* ======================================== MODAL: NUEVO HIDRANTE ======================================== */}
       {showNuevoHidrante && (
@@ -1685,12 +2053,12 @@ export default function IncendiosPage() {
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">Tipo</label>
                   <select name="tipo" defaultValue={equipoSeleccionado.tipo} className="w-full border border-slate-300 rounded-lg p-2.5">
-                    <option value="extintor">🧯 Extintor</option>
-                    <option value="bie">🚿 BIE</option>
-                    <option value="detector">🔔 Detector</option>
-                    <option value="pulsador">🔴 Pulsador</option>
-                    <option value="alarma">📢 Alarma/Sirena</option>
-                    <option value="señalizacion">🪧 Señalización</option>
+                    <option value="extintor">Extintor</option>
+                    <option value="bie">BIE (Manguera)</option>
+                    <option value="detector">Detector de Humo</option>
+                    <option value="pulsador">Pulsador de Alarma</option>
+                    <option value="alarma">Alarma/Sirena</option>
+                    <option value="señalizacion">Señalización de Emergencia</option>
                   </select>
                 </div>
                 <div>

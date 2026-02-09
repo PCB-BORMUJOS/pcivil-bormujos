@@ -1911,20 +1911,31 @@ export default function IncendiosPage() {
             <form onSubmit={async (e) => {
               e.preventDefault()
               const form = e.target as HTMLFormElement
+              
+              const latitudValue = (form.elements.namedItem('latitud') as HTMLInputElement).value
+              const longitudValue = (form.elements.namedItem('longitud') as HTMLInputElement).value
+              const presionValue = (form.elements.namedItem('presion') as HTMLInputElement).value
+              const caudalValue = (form.elements.namedItem('caudal') as HTMLInputElement).value
+              
               const formData = {
                 codigo: (form.elements.namedItem('codigo') as HTMLInputElement).value,
                 tipo: (form.elements.namedItem('tipo') as HTMLSelectElement).value,
                 ubicacion: (form.elements.namedItem('ubicacion') as HTMLInputElement).value,
-                latitud: (form.elements.namedItem('latitud') as HTMLInputElement).value,
-                longitud: (form.elements.namedItem('longitud') as HTMLInputElement).value,
-                presion: (form.elements.namedItem('presion') as HTMLInputElement).value,
-                caudal: (form.elements.namedItem('caudal') as HTMLInputElement).value,
+                latitud: latitudValue ? latitudValue : null,
+                longitud: longitudValue ? longitudValue : null,
+                presion: presionValue ? presionValue : null,
+                caudal: caudalValue ? caudalValue : null,
                 estado: (form.elements.namedItem('estado') as HTMLSelectElement).value
               }
+              
+              console.log("📤 FormData que se va a enviar:", formData)
               const success = await guardarHidrante(formData)
               if (success) {
                 setShowNuevoHidrante(false)
                 form.reset()
+                alert('Hidrante creado correctamente')
+              } else {
+                alert('Error al crear el hidrante')
               }
             }} className="p-6 overflow-y-auto space-y-5">
               <div className="grid grid-cols-3 gap-4">

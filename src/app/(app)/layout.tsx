@@ -8,8 +8,6 @@ export default function AppLayout({
 }) {
   return (
     <>
-        strategy="beforeInteractive"
-      />
       <div className="min-h-screen bg-slate-50">
         <Sidebar />
         <div className="page-container">

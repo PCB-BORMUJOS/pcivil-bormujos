@@ -523,7 +523,7 @@ export async function POST(request: NextRequest) {
         data: {
           edificioId,
           tipo: tipoEquipo,
-          subtipo,
+          subtipo: tipo_hidrante,
           ubicacion,
           numeroSerie,
           estado: estado || 'operativo',
@@ -537,21 +537,21 @@ export async function POST(request: NextRequest) {
 
     // ===== HIDRANTE =====
     if (tipo === 'hidrante') {
-      const { codigo, tipo, ubicacion, latitud, longitud, presion, caudal, estado } = body
+      const { codigo, tipo: tipo_hidrante, ubicacion, latitud, longitud, presion, caudal, estado } = body
 
-      if (!codigo || !tipo || !ubicacion) {
+      if (!codigo || !tipo_hidrante || !ubicacion) {
         return NextResponse.json({ error: 'Código, tipo y ubicación son requeridos' }, { status: 400 })
       }
 
       const hidrante = await prisma.hidrante.create({
         data: {
           codigo,
-          tipo,
+          tipo: tipo_hidrante,
           ubicacion,
-          latitud: latitud ? parseFloat(latitud) : null,
-          longitud: longitud ? parseFloat(longitud) : null,
-          presion: presion ? parseFloat(presion) : null,
-          caudal: caudal ? parseInt(caudal) : null,
+          latitud: (latitud && latitud !== "") ? parseFloat(latitud) : null,
+          longitud: (longitud && longitud !== "") ? parseFloat(longitud) : null,
+          presion: (presion && presion !== "") ? parseFloat(presion) : null,
+          caudal: (caudal && caudal !== "") ? parseInt(caudal) : null,
           estado: estado || 'operativo'
         }
       })
@@ -575,8 +575,8 @@ export async function POST(request: NextRequest) {
       modelo,
       numeroSerie,
       ubicacion,
-      latitud: latitud ? parseFloat(latitud) : null,
-      longitud: longitud ? parseFloat(longitud) : null,
+      latitud: (latitud && latitud !== "") ? parseFloat(latitud) : null,
+      longitud: (longitud && longitud !== "") ? parseFloat(longitud) : null,
       estado: estado || 'operativo',
       accesible24h: accesible24h === true,
       caducidadBateria: caducidadBateria ? new Date(caducidadBateria) : null,
@@ -933,10 +933,10 @@ export async function PUT(request: NextRequest) {
           codigo,
           tipo: tipoHidrante,
           ubicacion,
-          latitud: latitud ? parseFloat(latitud) : null,
-          longitud: longitud ? parseFloat(longitud) : null,
-          presion: presion ? parseFloat(presion) : null,
-          caudal: caudal ? parseInt(caudal) : null,
+          latitud: (latitud && latitud !== "") ? parseFloat(latitud) : null,
+          longitud: (longitud && longitud !== "") ? parseFloat(longitud) : null,
+          presion: (presion && presion !== "") ? parseFloat(presion) : null,
+          caudal: (caudal && caudal !== "") ? parseInt(caudal) : null,
           estado
         }
       })
@@ -961,8 +961,8 @@ export async function PUT(request: NextRequest) {
       modelo,
       numeroSerie,
       ubicacion,
-      latitud: latitud ? parseFloat(latitud) : null,
-      longitud: longitud ? parseFloat(longitud) : null,
+      latitud: (latitud && latitud !== "") ? parseFloat(latitud) : null,
+      longitud: (longitud && longitud !== "") ? parseFloat(longitud) : null,
       estado: estado || 'operativo',
       accesible24h: accesible24h === true,
       caducidadBateria: caducidadBateria ? new Date(caducidadBateria) : null,
