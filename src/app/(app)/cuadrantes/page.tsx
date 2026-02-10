@@ -66,6 +66,9 @@ export default function CuadrantesPage() {
   const [selectedShift, setSelectedShift] = useState<Shift | null>(null);
   const [showExtraModal, setShowExtraModal] = useState(false);
   const [voluntarios, setVoluntarios] = useState<Voluntario[]>([]);
+  const [voluntariosDisponibles, setVoluntariosDisponibles] = useState<Voluntario[]>([]);
+  const [turnosAsignados, setTurnosAsignados] = useState<Record<string, number>>({});
+  const [loadingDisponibles, setLoadingDisponibles] = useState(false);
   const [loadingGuardias, setLoadingGuardias] = useState(false);
   const [showSugerencias, setShowSugerencias] = useState(false);
   const [sugerencias, setSugerencias] = useState<Sugerencia[]>([]);
@@ -152,6 +155,37 @@ export default function CuadrantesPage() {
     const newDate = new Date(currentWeekStart);
     newDate.setDate(newDate.getDate() + (dir === 'next' ? 7 : -7));
     setCurrentWeekStart(newDate);
+  };
+
+  // Cargar voluntarios disponibles para un turno específico
+  const cargarDisponiblesPorTurno = async (fecha: string, turno: 'mañana' | 'tarde') => {
+    setLoadingDisponibles(true);
+    try {
+      // Llamar a la API de disponibilidad por turno
+      const res = await fetch(`/api/disponibilidad/por-turno?fecha=${fecha}&turno=${turno}`);
+      const data = await res.json();
+
+      if (data.voluntarios) {
+        setVoluntariosDisponibles(data.voluntarios);
+      } else {
+        setVoluntariosDisponibles([]);
+      }
+
+      // Calcular turnos asignados en la semana para cada voluntario
+      const conteo: Record<string, number> = {};
+      shifts.forEach(shift => {
+        if (shift.assignment) {
+          const volId = shift.assignment.volunteerId;
+          conteo[volId] = (conteo[volId] || 0) + 1;
+        }
+      });
+      setTurnosAsignados(conteo);
+    } catch (error) {
+      console.error('Error cargando disponibles:', error);
+      setVoluntariosDisponibles([]);
+    } finally {
+      setLoadingDisponibles(false);
+    }
   };
 
   const handleAsignarVoluntario = async (shift: Shift, volunteerId: string) => {
@@ -313,7 +347,10 @@ export default function CuadrantesPage() {
                   {dayShifts.map(shift => (
                     <div
                       key={`${shift.date}-${shift.turno}`}
-                      onClick={() => setSelectedShift(shift)}
+                      onClick={() => {
+                        cargarDisponiblesPorTurno(shift.date, shift.turno);
+                        setSelectedShift(shift);
+                      }}
                       className={`p-2 rounded-lg border text-xs cursor-pointer mb-2 transition-all hover:shadow-md ${shift.isComplete ? 'bg-green-50 border-green-200' : 'bg-white border-slate-200 border-l-4 border-l-orange-400'
                         }`}
                     >
@@ -371,24 +408,51 @@ export default function CuadrantesPage() {
                 </div>
               )}
 
-              <h4 className="font-bold text-slate-700 mb-3 text-sm uppercase">Voluntarios Disponibles</h4>
+              <h4 className="font-bold text-slate-700 mb-3 text-sm uppercase flex items-center gap-2">
+                Voluntarios Disponibles
+                {loadingDisponibles && <span className="text-xs text-orange-600">(Cargando...)</span>}
+                {!loadingDisponibles && <span className="text-xs text-green-600">({voluntariosDisponibles.length} disponibles)</span>}
+              </h4>
               <div className="space-y-2 max-h-[400px] overflow-y-auto">
-                {voluntarios.map(vol => (
-                  <div key={vol.id} className="bg-slate-50 p-3 rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="font-bold text-sm text-slate-800">{vol.numeroVoluntario}</div>
-                        <div className="text-xs text-slate-500">{vol.nombre} {vol.apellidos}</div>
-                      </div>
-                      <button
-                        onClick={() => handleAsignarVoluntario(selectedShift, vol.id)}
-                        className="px-4 py-2 bg-orange-500 text-white rounded-lg text-sm font-bold hover:bg-orange-600"
-                      >
-                        Asignar
-                      </button>
-                    </div>
+                {voluntariosDisponibles.length === 0 && !loadingDisponibles ? (
+                  <div className="p-6 text-center text-slate-400">
+                    <p className="text-sm">No hay voluntarios disponibles para este turno</p>
+                    <p className="text-xs mt-2">Los voluntarios deben registrar su disponibilidad primero</p>
                   </div>
-                ))}
+                ) : (
+                  voluntariosDisponibles.map(vol => {
+                    const turnosYaAsignados = turnosAsignados[vol.id] || 0;
+                    return (
+                      <div key={vol.id} className="bg-green-50 p-3 rounded-lg border border-green-200 hover:bg-green-100 transition-colors">
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <div className="font-bold text-sm text-slate-800">{vol.numeroVoluntario}</div>
+                              {vol.responsableTurno && (
+                                <span className="px-2 py-0.5 bg-indigo-100 text-indigo-700 text-xs rounded font-bold">🎯 Responsable</span>
+                              )}
+                              {vol.carnetConducir && (
+                                <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded font-bold">🚗</span>
+                              )}
+                            </div>
+                            <div className="text-xs text-slate-500">{vol.nombre} {vol.apellidos}</div>
+                            {turnosYaAsignados > 0 && (
+                              <div className="text-xs text-orange-600 mt-1">
+                                Ya tiene {turnosYaAsignados} turno{turnosYaAsignados !== 1 ? 's' : ''} esta semana
+                              </div>
+                            )}
+                          </div>
+                          <button
+                            onClick={() => handleAsignarVoluntario(selectedShift, vol.id)}
+                            className="px-4 py-2 bg-orange-500 text-white rounded-lg text-sm font-bold hover:bg-orange-600"
+                          >
+                            Asignar
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
               </div>
             </div>
           </div>
