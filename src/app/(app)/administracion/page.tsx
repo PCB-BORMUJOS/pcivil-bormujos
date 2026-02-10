@@ -519,6 +519,27 @@ export default function AdministracionPage() {
     setSemanaDisp(fecha.toISOString().split('T')[0]);
   };
 
+  const toggleNoDisponible = async (id: string, noDisponible: boolean) => {
+    try {
+      const res = await fetch('/api/admin/disponibilidades', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ disponibilidadId: id, noDisponible })
+      });
+      
+      if (res.ok) {
+        // Actualizar el estado local
+        setDisponibilidades(prev => 
+          prev.map(d => 
+            d.id === id ? { ...d, noDisponible } : d
+          )
+        );
+      }
+    } catch (error) {
+      console.error('Error al actualizar disponibilidad:', error);
+    }
+  };
+
   const formatearSemana = (fecha: string) => {
     const inicio = new Date(fecha);
     const fin = new Date(inicio);
@@ -781,11 +802,17 @@ export default function AdministracionPage() {
                             </div>
                           </td>
                           <td className="py-3 px-4">
-                            {d.noDisponible ? (
-                              <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-red-100 text-red-700">NO DISPONIBLE</span>
-                            ) : (
-                              <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-green-100 text-green-700">DISPONIBLE</span>
-                            )}
+                            <button
+                              onClick={() => toggleNoDisponible(d.id, !d.noDisponible)}
+                              className={`px-2.5 py-1 rounded-full text-xs font-bold cursor-pointer transition-all ${
+                                d.noDisponible
+                                  ? 'bg-red-100 text-red-700 hover:bg-red-200'
+                                  : 'bg-green-100 text-green-700 hover:bg-green-200'
+                              }`}
+                              title="Click para cambiar estado"
+                            >
+                              {d.noDisponible ? 'NO DISPONIBLE' : 'DISPONIBLE'}
+                            </button>
                           </td>
                           <td className="py-3 px-4 text-sm text-slate-600 max-w-[300px]">
                             {d.noDisponible ? '-' : getDetallesFranjas(d.detalles)}

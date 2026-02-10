@@ -41,3 +41,43 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
   }
 }
+
+export async function PUT(request: NextRequest) {
+  try {
+    const session = await getServerSession()
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    }
+
+    const body = await request.json()
+    const { disponibilidadId, noDisponible, turnosDeseados, notas } = body
+
+    if (!disponibilidadId) {
+      return NextResponse.json({ error: 'ID de disponibilidad requerido' }, { status: 400 })
+    }
+
+    const disponibilidad = await prisma.disponibilidad.update({
+      where: { id: disponibilidadId },
+      data: {
+        noDisponible: noDisponible ?? false,
+        turnosDeseados: turnosDeseados ?? 1,
+        notas: notas ?? null
+      },
+      include: {
+        usuario: {
+          select: {
+            id: true,
+            numeroVoluntario: true,
+            nombre: true,
+            apellidos: true
+          }
+        }
+      }
+    })
+
+    return NextResponse.json({ success: true, disponibilidad })
+  } catch (error) {
+    console.error('Error al actualizar disponibilidad:', error)
+    return NextResponse.json({ error: 'Error interno' }, { status: 500 })
+  }
+}
