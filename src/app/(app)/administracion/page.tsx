@@ -111,10 +111,10 @@ const TIPOS_POLIZA = [
 // ============================================
 // COMPONENTE MODAL
 // ============================================
-function Modal({ title, children, onClose, size = 'md' }: { 
-  title: string; 
-  children: React.ReactNode; 
-  onClose: () => void; 
+function Modal({ title, children, onClose, size = 'md' }: {
+  title: string;
+  children: React.ReactNode;
+  onClose: () => void;
   size?: 'sm' | 'md' | 'lg' | 'xl';
 }) {
   const sizeClasses = {
@@ -123,17 +123,17 @@ function Modal({ title, children, onClose, size = 'md' }: {
     lg: 'max-w-3xl',
     xl: 'max-w-5xl'
   };
-  
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={onClose}>
-      <div 
-        className={`bg-white rounded-2xl shadow-2xl w-full ${sizeClasses[size]} max-h-[90vh] overflow-hidden`} 
+      <div
+        className={`bg-white rounded-2xl shadow-2xl w-full ${sizeClasses[size]} max-h-[90vh] overflow-hidden`}
         onClick={e => e.stopPropagation()}
       >
         <div className="bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-4 flex justify-between items-center">
           <h3 className="font-bold text-white text-lg">{title}</h3>
           <button onClick={onClose} className="text-white/80 hover:text-white transition-colors">
-            <X size={24}/>
+            <X size={24} />
           </button>
         </div>
         <div className="p-6 overflow-y-auto max-h-[calc(90vh-80px)]">{children}</div>
@@ -156,11 +156,10 @@ function TabButton({ active, onClick, icon: Icon, label, count, alert }: {
   return (
     <button
       onClick={onClick}
-      className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-all whitespace-nowrap ${
-        active 
-          ? 'border-orange-500 text-orange-600 bg-orange-50/50' 
-          : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300 hover:bg-slate-50'
-      }`}
+      className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-all whitespace-nowrap ${active
+        ? 'border-orange-500 text-orange-600 bg-orange-50/50'
+        : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300 hover:bg-slate-50'
+        }`}
     >
       <Icon size={18} />
       <span>{label}</span>
@@ -183,7 +182,7 @@ export default function AdministracionPage() {
   const [activeTab, setActiveTab] = useState<'personal' | 'disponibilidad' | 'dietas' | 'caja' | 'combustible' | 'polizas' | 'areas'>('personal');
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  
+
   // Estados para Personal
   const [voluntarios, setVoluntarios] = useState<Voluntario[]>([]);
   const [roles, setRoles] = useState<any[]>([]);
@@ -191,26 +190,26 @@ export default function AdministracionPage() {
   const [showNuevoVoluntario, setShowNuevoVoluntario] = useState(false);
   const [selectedVoluntario, setSelectedVoluntario] = useState<Voluntario | null>(null);
   const [fichaData, setFichaData] = useState<any>({});
-  
+
   // Estados para Disponibilidad
   const [disponibilidades, setDisponibilidades] = useState<DisponibilidadAdmin[]>([]);
   const [semanaDisp, setSemanaDisp] = useState('');
-  
+
   // Estados para Dietas
   const [mesDietas, setMesDietas] = useState('');
   const [resumenDietas, setResumenDietas] = useState<any[]>([]);
-  
+
   // Estados para Caja
   const [movimientosCaja, setMovimientosCaja] = useState<MovimientoCaja[]>([]);
   const [saldoActual, setSaldoActual] = useState(0);
   const [showNuevoMovimiento, setShowNuevoMovimiento] = useState(false);
   const [nuevoMovimiento, setNuevoMovimiento] = useState({ tipo: 'entrada', concepto: '', descripcion: '', importe: 0, categoria: '' });
-  
+
   // Estados para Combustible
   const [ticketsCombustible, setTicketsCombustible] = useState<TicketCombustible[]>([]);
   const [mesCombustible, setMesCombustible] = useState('');
   const [showNuevoTicket, setShowNuevoTicket] = useState(false);
-  const [nuevoTicket, setNuevoTicket] = useState({ 
+  const [nuevoTicket, setNuevoTicket] = useState({
     fecha: '', hora: '', estacion: '', destino: 'MAQUINARIA', concepto: 'EFITEC 95',
     litros: 0, precioLitro: 0, importeFinal: 0, vehiculoDestino: '', notas: ''
   });
@@ -230,7 +229,7 @@ export default function AdministracionPage() {
     const mesActual = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}`;
     setMesDietas(mesActual);
     setMesCombustible(mesActual);
-    
+
     const diaSemana = hoy.getDay();
     const diasHastaLunes = diaSemana === 0 ? 6 : diaSemana - 1;
     const lunes = new Date(hoy);
@@ -373,11 +372,11 @@ export default function AdministracionPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ activo })
       });
-      
+
       if (res.ok) {
         // Actualizar el estado local
-        setVoluntarios(prev => 
-          prev.map(v => 
+        setVoluntarios(prev =>
+          prev.map(v =>
             v.id === voluntarioId ? { ...v, activo } : v
           )
         );
@@ -389,7 +388,7 @@ export default function AdministracionPage() {
 
   const handleGuardarFicha = async () => {
     if (!selectedVoluntario) return;
-    
+
     // Primero guardar la ficha
     try {
       const res = await fetch(`/api/admin/personal/${selectedVoluntario.id}/ficha`, {
@@ -398,21 +397,21 @@ export default function AdministracionPage() {
         body: JSON.stringify(fichaData)
       });
       const data = await res.json();
-      
+
       if (data.success) {
         // Si el rol ha cambiado, actualizarlo también
         if (selectedVoluntario.rolId && fichaData.rolId && selectedVoluntario.rolId !== fichaData.rolId) {
           await fetch('/api/admin/personal', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-              id: selectedVoluntario.id, 
+            body: JSON.stringify({
+              id: selectedVoluntario.id,
               rolId: fichaData.rolId,
               accion: 'rol'
             })
           });
         }
-        
+
         alert('✅ Ficha guardada correctamente');
         setShowFichaModal(false);
         cargarVoluntarios();
@@ -479,7 +478,7 @@ export default function AdministracionPage() {
       const data = await res.json();
       if (data.success) {
         setShowNuevoTicket(false);
-        setNuevoTicket({ 
+        setNuevoTicket({
           fecha: '', hora: '', estacion: '', destino: 'MAQUINARIA', concepto: 'EFITEC 95',
           litros: 0, precioLitro: 0, importeFinal: 0, vehiculoDestino: '', notas: ''
         });
@@ -547,11 +546,11 @@ export default function AdministracionPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ disponibilidadId: id, noDisponible })
       });
-      
+
       if (res.ok) {
         // Actualizar el estado local
-        setDisponibilidades(prev => 
-          prev.map(d => 
+        setDisponibilidades(prev =>
+          prev.map(d =>
             d.id === id ? { ...d, noDisponible } : d
           )
         );
@@ -601,8 +600,8 @@ export default function AdministracionPage() {
   const voluntariosFiltrados = voluntarios.filter(v => {
     const term = searchTerm.toLowerCase();
     return v.numeroVoluntario?.toLowerCase().includes(term) ||
-           v.nombre?.toLowerCase().includes(term) ||
-           v.apellidos?.toLowerCase().includes(term);
+      v.nombre?.toLowerCase().includes(term) ||
+      v.apellidos?.toLowerCase().includes(term);
   });
 
   // Agrupar voluntarios por área
@@ -628,26 +627,47 @@ export default function AdministracionPage() {
           <p className="text-slate-500 text-sm">Gestión del Registro de Voluntarios (FRI) y Disponibilidad.</p>
         </div>
         <div className="flex items-center gap-3">
-          <button 
-            onClick={() => {/* Implementar exportación */}}
+          <button
+            onClick={() => {/* Implementar exportación */ }}
             className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-slate-700 hover:bg-slate-50 transition-colors"
           >
             <Download size={18} /> Exportar Listado
           </button>
-          <button 
+          <button
             onClick={() => {
-              if (activeTab === 'personal') setShowNuevoVoluntario(true);
+              if (activeTab === 'personal') {
+                // Crear voluntario temporal para nueva ficha
+                setSelectedVoluntario({
+                  id: '',
+                  numeroVoluntario: '',
+                  nombre: '',
+                  apellidos: '',
+                  email: '',
+                  telefono: '',
+                  activo: true,
+                  rolId: '',
+                  rol: { id: '', nombre: '' }
+                } as Voluntario);
+                setFichaData({
+                  fechaAlta: new Date().toISOString().split('T')[0],
+                  localidad: 'BORMUJOS',
+                  provincia: 'SEVILLA',
+                  areaAsignada: '',
+                  categoria: 'VOLUNTARIO'
+                });
+                setShowFichaModal(true);
+              }
               else if (activeTab === 'polizas') setShowNuevaPoliza(true);
               else if (activeTab === 'caja') setShowNuevoMovimiento(true);
               else if (activeTab === 'combustible') setShowNuevoTicket(true);
             }}
             className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
           >
-            <Plus size={18} /> 
-            {activeTab === 'personal' ? 'Nueva Ficha' : 
-             activeTab === 'polizas' ? 'Nueva Póliza' :
-             activeTab === 'caja' ? 'Nuevo Movimiento' :
-             activeTab === 'combustible' ? 'Nuevo Ticket' : 'Nuevo'}
+            <Plus size={18} />
+            {activeTab === 'personal' ? 'Nueva Ficha' :
+              activeTab === 'polizas' ? 'Nueva Póliza' :
+                activeTab === 'caja' ? 'Nuevo Movimiento' :
+                  activeTab === 'combustible' ? 'Nuevo Ticket' : 'Nuevo'}
           </button>
         </div>
       </div>
@@ -681,7 +701,7 @@ export default function AdministracionPage() {
                     className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
                   />
                 </div>
-                <button 
+                <button
                   onClick={cargarVoluntarios}
                   className="p-2.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
                 >
@@ -730,11 +750,10 @@ export default function AdministracionPage() {
                           <td className="py-3 px-4">
                             <button
                               onClick={() => toggleActivo(v.id, !v.activo)}
-                              className={`px-2.5 py-1 rounded-full text-xs font-bold cursor-pointer transition-all ${
-                                v.activo
-                                  ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                                  : 'bg-red-100 text-red-700 hover:bg-red-200'
-                              }`}
+                              className={`px-2.5 py-1 rounded-full text-xs font-bold cursor-pointer transition-all ${v.activo
+                                ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                                : 'bg-red-100 text-red-700 hover:bg-red-200'
+                                }`}
                               title="Click para cambiar estado"
                             >
                               {v.activo ? 'ACTIVO' : 'BAJA'}
@@ -742,7 +761,7 @@ export default function AdministracionPage() {
                           </td>
                           <td className="py-3 px-4">
                             <div className="flex items-center justify-end gap-2">
-                              <button 
+                              <button
                                 onClick={() => handleEditarFicha(v)}
                                 className="text-orange-600 hover:text-orange-700 text-sm font-medium flex items-center gap-1 px-3 py-1.5 hover:bg-orange-50 rounded-lg transition-colors"
                               >
@@ -833,11 +852,10 @@ export default function AdministracionPage() {
                           <td className="py-3 px-4">
                             <button
                               onClick={() => toggleNoDisponible(d.id, !d.noDisponible)}
-                              className={`px-2.5 py-1 rounded-full text-xs font-bold cursor-pointer transition-all ${
-                                d.noDisponible
-                                  ? 'bg-red-100 text-red-700 hover:bg-red-200'
-                                  : 'bg-green-100 text-green-700 hover:bg-green-200'
-                              }`}
+                              className={`px-2.5 py-1 rounded-full text-xs font-bold cursor-pointer transition-all ${d.noDisponible
+                                ? 'bg-red-100 text-red-700 hover:bg-red-200'
+                                : 'bg-green-100 text-green-700 hover:bg-green-200'
+                                }`}
                               title="Click para cambiar estado"
                             >
                               {d.noDisponible ? 'NO DISPONIBLE' : 'DISPONIBLE'}
@@ -969,7 +987,7 @@ export default function AdministracionPage() {
                   <p className="text-green-100 text-sm">Saldo Actual</p>
                   <p className="text-3xl font-bold">{saldoActual.toFixed(2)} €</p>
                 </div>
-                <button 
+                <button
                   onClick={() => setShowNuevoMovimiento(true)}
                   className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
                 >
@@ -1006,7 +1024,7 @@ export default function AdministracionPage() {
                           <td className="py-3 px-4 text-sm text-slate-600">{new Date(m.fecha).toLocaleDateString('es-ES')}</td>
                           <td className="py-3 px-4">
                             <span className={`flex items-center gap-1 text-sm font-medium ${m.tipo === 'entrada' ? 'text-green-600' : 'text-red-600'}`}>
-                              {m.tipo === 'entrada' ? <TrendingUp size={16}/> : <TrendingDown size={16}/>}
+                              {m.tipo === 'entrada' ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
                               {m.tipo.toUpperCase()}
                             </span>
                           </td>
@@ -1019,7 +1037,7 @@ export default function AdministracionPage() {
                           <td className="py-3 px-4 text-center">
                             {m.adjuntoUrl ? (
                               <a href={m.adjuntoUrl} target="_blank" className="text-orange-600 hover:text-orange-700">
-                                <FileText size={18}/>
+                                <FileText size={18} />
                               </a>
                             ) : <span className="text-slate-300">-</span>}
                           </td>
@@ -1059,7 +1077,7 @@ export default function AdministracionPage() {
                   <button className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors">
                     <Printer size={18} /> Generar Informe
                   </button>
-                  <button 
+                  <button
                     onClick={() => setShowNuevoTicket(true)}
                     className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
                   >
@@ -1103,7 +1121,7 @@ export default function AdministracionPage() {
                           <td className="py-3 px-4 text-center">
                             {t.ticketUrl ? (
                               <a href={t.ticketUrl} target="_blank" className="text-orange-600 hover:text-orange-700">
-                                <Receipt size={18}/>
+                                <Receipt size={18} />
                               </a>
                             ) : <span className="text-slate-300">-</span>}
                           </td>
@@ -1134,7 +1152,7 @@ export default function AdministracionPage() {
 
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-lg font-bold text-slate-800">Listado de Pólizas</h3>
-                <button 
+                <button
                   onClick={() => setShowNuevaPoliza(true)}
                   className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
                 >
@@ -1157,16 +1175,15 @@ export default function AdministracionPage() {
                     const estado = getEstadoPoliza(p.estado);
                     const tipoInfo = TIPOS_POLIZA.find(t => t.id === p.tipo);
                     const IconoTipo = tipoInfo?.icono || Shield;
-                    
+
                     return (
                       <div key={p.id} className="bg-white border border-slate-200 rounded-xl p-4 hover:shadow-md transition-shadow">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-4">
-                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                              p.estado === 'vigente' ? 'bg-green-100 text-green-600' :
+                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${p.estado === 'vigente' ? 'bg-green-100 text-green-600' :
                               p.estado === 'por_vencer' ? 'bg-yellow-100 text-yellow-600' :
-                              'bg-red-100 text-red-600'
-                            }`}>
+                                'bg-red-100 text-red-600'
+                              }`}>
                               <IconoTipo size={24} />
                             </div>
                             <div>
@@ -1187,7 +1204,7 @@ export default function AdministracionPage() {
                             {p.primaAnual && <p className="text-sm text-slate-600">{Number(p.primaAnual).toFixed(2)} €/año</p>}
                           </div>
                           <div className="flex items-center gap-2 ml-4">
-                            <button 
+                            <button
                               onClick={() => {
                                 setPolizaEditando(p);
                                 setShowNuevaPoliza(true);
@@ -1196,7 +1213,7 @@ export default function AdministracionPage() {
                             >
                               <Edit size={18} />
                             </button>
-                            <button 
+                            <button
                               onClick={() => handleEliminarPoliza(p.id)}
                               className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                             >
@@ -1222,7 +1239,7 @@ export default function AdministracionPage() {
                   <h3 className="text-lg font-bold text-slate-800">Distribución por Áreas</h3>
                   <p className="text-sm text-slate-500">{voluntarios.length} voluntarios activos • {sinArea.length} sin área asignada</p>
                 </div>
-                <button 
+                <button
                   onClick={cargarVoluntarios}
                   className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors"
                 >
@@ -1290,7 +1307,7 @@ export default function AdministracionPage() {
                                 <p className="text-sm font-medium text-slate-700 truncate">{v.nombre} {v.apellidos}</p>
                                 <p className="text-xs text-slate-500">{v.numeroVoluntario}</p>
                               </div>
-                              <button 
+                              <button
                                 onClick={() => handleEditarFicha(v)}
                                 className="text-xs text-orange-600 hover:text-orange-700 font-medium"
                               >
@@ -1314,7 +1331,7 @@ export default function AdministracionPage() {
       {/* ============================================ */}
 
       {/* Modal: Ficha FRI */}
-      {showFichaModal && selectedVoluntario && (
+      {showFichaModal && (
         <Modal title="Ficha de Registro Individual (FRI)" onClose={() => setShowFichaModal(false)} size="xl">
           <div className="space-y-6">
             {/* Header FRI */}
@@ -1335,19 +1352,19 @@ export default function AdministracionPage() {
             <div className="grid grid-cols-4 gap-4">
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Indicativo 1</label>
-                <input type="text" value={selectedVoluntario.numeroVoluntario || ''} disabled className="w-full border border-slate-200 rounded-lg p-2.5 bg-slate-50 text-sm"/>
+                <input type="text" value={selectedVoluntario?.numeroVoluntario || ''} disabled className="w-full border border-slate-200 rounded-lg p-2.5 bg-slate-50 text-sm" />
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Indicativo 2</label>
-                <input type="text" value={fichaData.indicativo2 || ''} onChange={e => setFichaData({...fichaData, indicativo2: e.target.value})} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"/>
+                <input type="text" value={fichaData.indicativo2 || ''} onChange={e => setFichaData({ ...fichaData, indicativo2: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm" />
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Fecha de Alta</label>
-                <input type="date" value={fichaData.fechaAlta?.split('T')[0] || ''} onChange={e => setFichaData({...fichaData, fechaAlta: e.target.value})} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"/>
+                <input type="date" value={fichaData.fechaAlta?.split('T')[0] || ''} onChange={e => setFichaData({ ...fichaData, fechaAlta: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm" />
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Fecha de Baja</label>
-                <input type="date" value={fichaData.fechaBaja?.split('T')[0] || ''} onChange={e => setFichaData({...fichaData, fechaBaja: e.target.value})} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"/>
+                <input type="date" value={fichaData.fechaBaja?.split('T')[0] || ''} onChange={e => setFichaData({ ...fichaData, fechaBaja: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm" />
               </div>
             </div>
 
@@ -1355,21 +1372,36 @@ export default function AdministracionPage() {
             <div className="grid grid-cols-6 gap-4">
               <div className="col-span-2">
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Nombre</label>
-                <input type="text" value={selectedVoluntario.nombre || ''} disabled className="w-full border border-slate-200 rounded-lg p-2.5 bg-slate-50 text-sm"/>
+                <input type="text" value={selectedVoluntario?.nombre || ''} disabled className="w-full border border-slate-200 rounded-lg p-2.5 bg-slate-50 text-sm" />
               </div>
               <div className="col-span-2">
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Apellidos</label>
-                <input type="text" value={selectedVoluntario.apellidos || ''} disabled className="w-full border border-slate-200 rounded-lg p-2.5 bg-slate-50 text-sm"/>
+                <input type="text" value={selectedVoluntario?.apellidos || ''} disabled className="w-full border border-slate-200 rounded-lg p-2.5 bg-slate-50 text-sm" />
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Edad</label>
-                <input type="number" value={fichaData.edad || ''} onChange={e => setFichaData({...fichaData, edad: parseInt(e.target.value)})} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"/>
+                <input
+                  type="number"
+                  value={fichaData.fechaNacimiento ? (() => {
+                    const hoy = new Date();
+                    const nacimiento = new Date(fichaData.fechaNacimiento);
+                    let edad = hoy.getFullYear() - nacimiento.getFullYear();
+                    const mes = hoy.getMonth() - nacimiento.getMonth();
+                    if (mes < 0 || (mes === 0 && hoy.getDate() < nacimiento.getDate())) {
+                      edad--;
+                    }
+                    return edad;
+                  })() : ''}
+                  disabled
+                  className="w-full border border-slate-200 rounded-lg p-2.5 bg-slate-100 text-sm font-bold text-slate-600"
+                  placeholder="Automático"
+                />
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Sexo</label>
                 <div className="flex gap-2">
-                  <button type="button" onClick={() => setFichaData({...fichaData, sexo: 'H'})} className={`flex-1 py-2 rounded-lg text-sm font-medium ${fichaData.sexo === 'H' ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-600'}`}>H</button>
-                  <button type="button" onClick={() => setFichaData({...fichaData, sexo: 'M'})} className={`flex-1 py-2 rounded-lg text-sm font-medium ${fichaData.sexo === 'M' ? 'bg-pink-500 text-white' : 'bg-slate-100 text-slate-600'}`}>M</button>
+                  <button type="button" onClick={() => setFichaData({ ...fichaData, sexo: 'H' })} className={`flex-1 py-2 rounded-lg text-sm font-medium ${fichaData.sexo === 'H' ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-600'}`}>H</button>
+                  <button type="button" onClick={() => setFichaData({ ...fichaData, sexo: 'M' })} className={`flex-1 py-2 rounded-lg text-sm font-medium ${fichaData.sexo === 'M' ? 'bg-pink-500 text-white' : 'bg-slate-100 text-slate-600'}`}>M</button>
                 </div>
               </div>
             </div>
@@ -1380,7 +1412,7 @@ export default function AdministracionPage() {
               <div className="grid grid-cols-4 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Fecha Nacimiento</label>
-                  <input type="date" value={fichaData.fechaNacimiento?.split('T')[0] || ''} onChange={e => setFichaData({...fichaData, fechaNacimiento: e.target.value})} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"/>
+                  <input type="date" value={fichaData.fechaNacimiento?.split('T')[0] || ''} onChange={e => setFichaData({ ...fichaData, fechaNacimiento: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm" />
                 </div>
               </div>
             </div>
@@ -1389,46 +1421,46 @@ export default function AdministracionPage() {
             <div className="grid grid-cols-7 gap-4">
               <div className="col-span-2">
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Domicilio</label>
-                <input type="text" value={fichaData.domicilio || ''} onChange={e => setFichaData({...fichaData, domicilio: e.target.value})} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"/>
+                <input type="text" value={fichaData.domicilio || ''} onChange={e => setFichaData({ ...fichaData, domicilio: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm" />
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Nº</label>
-                <input type="text" value={fichaData.numero || ''} onChange={e => setFichaData({...fichaData, numero: e.target.value})} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"/>
+                <input type="text" value={fichaData.numero || ''} onChange={e => setFichaData({ ...fichaData, numero: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm" />
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Blq</label>
-                <input type="text" value={fichaData.bloque || ''} onChange={e => setFichaData({...fichaData, bloque: e.target.value})} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"/>
+                <input type="text" value={fichaData.bloque || ''} onChange={e => setFichaData({ ...fichaData, bloque: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm" />
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Piso</label>
-                <input type="text" value={fichaData.piso || ''} onChange={e => setFichaData({...fichaData, piso: e.target.value})} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"/>
+                <input type="text" value={fichaData.piso || ''} onChange={e => setFichaData({ ...fichaData, piso: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm" />
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Puerta</label>
-                <input type="text" value={fichaData.puerta || ''} onChange={e => setFichaData({...fichaData, puerta: e.target.value})} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"/>
+                <input type="text" value={fichaData.puerta || ''} onChange={e => setFichaData({ ...fichaData, puerta: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm" />
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">CP</label>
-                <input type="text" value={fichaData.codigoPostal || ''} onChange={e => setFichaData({...fichaData, codigoPostal: e.target.value})} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"/>
+                <input type="text" value={fichaData.codigoPostal || ''} onChange={e => setFichaData({ ...fichaData, codigoPostal: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm" />
               </div>
             </div>
 
             <div className="grid grid-cols-4 gap-4">
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Localidad</label>
-                <input type="text" value={fichaData.localidad || 'BORMUJOS'} onChange={e => setFichaData({...fichaData, localidad: e.target.value})} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"/>
+                <input type="text" value={fichaData.localidad || 'BORMUJOS'} onChange={e => setFichaData({ ...fichaData, localidad: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm" />
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Provincia</label>
-                <input type="text" value={fichaData.provincia || 'SEVILLA'} onChange={e => setFichaData({...fichaData, provincia: e.target.value})} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"/>
+                <input type="text" value={fichaData.provincia || 'SEVILLA'} onChange={e => setFichaData({ ...fichaData, provincia: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm" />
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">DNI/NIE</label>
-                <input type="text" value={fichaData.dniNie || ''} onChange={e => setFichaData({...fichaData, dniNie: e.target.value})} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"/>
+                <input type="text" value={fichaData.dniNie || ''} onChange={e => setFichaData({ ...fichaData, dniNie: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm" />
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Teléfono</label>
-                <input type="text" value={fichaData.telefonoFijo || selectedVoluntario.telefono || ''} onChange={e => setFichaData({...fichaData, telefonoFijo: e.target.value})} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"/>
+                <input type="text" value={fichaData.telefonoFijo || selectedVoluntario.telefono || ''} onChange={e => setFichaData({ ...fichaData, telefonoFijo: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm" />
               </div>
             </div>
 
@@ -1436,9 +1468,9 @@ export default function AdministracionPage() {
             <div className="grid grid-cols-4 gap-4">
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Rol</label>
-                <select 
-                  value={fichaData.rolId || selectedVoluntario?.rolId || ''} 
-                  onChange={e => setFichaData({...fichaData, rolId: e.target.value})}
+                <select
+                  value={fichaData.rolId || selectedVoluntario?.rolId || ''}
+                  onChange={e => setFichaData({ ...fichaData, rolId: e.target.value })}
                   className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
                 >
                   <option value="">Seleccionar...</option>
@@ -1449,18 +1481,18 @@ export default function AdministracionPage() {
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Área Asignada</label>
-                <select value={fichaData.areaAsignada || ''} onChange={e => setFichaData({...fichaData, areaAsignada: e.target.value})} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm">
+                <select value={fichaData.areaAsignada || ''} onChange={e => setFichaData({ ...fichaData, areaAsignada: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm">
                   <option value="">Seleccionar...</option>
                   {AREAS_SERVICIO.map(a => <option key={a.id} value={a.id}>{a.nombre}</option>)}
                 </select>
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Categoría</label>
-                <input type="text" value={fichaData.categoria || 'VOLUNTARIO'} onChange={e => setFichaData({...fichaData, categoria: e.target.value})} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"/>
+                <input type="text" value={fichaData.categoria || 'VOLUNTARIO'} onChange={e => setFichaData({ ...fichaData, categoria: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm" />
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Email</label>
-                <input type="email" value={selectedVoluntario?.email || ''} disabled className="w-full border border-slate-200 rounded-lg p-2.5 bg-slate-50 text-sm"/>
+                <input type="email" value={selectedVoluntario?.email || ''} disabled className="w-full border border-slate-200 rounded-lg p-2.5 bg-slate-50 text-sm" />
               </div>
             </div>
 
@@ -1468,15 +1500,15 @@ export default function AdministracionPage() {
             <div className="grid grid-cols-3 gap-4">
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Permiso Conducir (Clase)</label>
-                <input type="text" value={fichaData.permisoConducir || ''} onChange={e => setFichaData({...fichaData, permisoConducir: e.target.value})} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm" placeholder="Ej: B, B+E, C"/>
+                <input type="text" value={fichaData.permisoConducir || ''} onChange={e => setFichaData({ ...fichaData, permisoConducir: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm" placeholder="Ej: B, B+E, C" />
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Fecha de Exped.</label>
-                <input type="date" value={fichaData.fechaExpedicion?.split('T')[0] || ''} onChange={e => setFichaData({...fichaData, fechaExpedicion: e.target.value})} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"/>
+                <input type="date" value={fichaData.fechaExpedicion?.split('T')[0] || ''} onChange={e => setFichaData({ ...fichaData, fechaExpedicion: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm" />
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Validez</label>
-                <input type="date" value={fichaData.fechaValidez?.split('T')[0] || ''} onChange={e => setFichaData({...fichaData, fechaValidez: e.target.value})} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"/>
+                <input type="date" value={fichaData.fechaValidez?.split('T')[0] || ''} onChange={e => setFichaData({ ...fichaData, fechaValidez: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm" />
               </div>
             </div>
 
@@ -1484,11 +1516,11 @@ export default function AdministracionPage() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Formación</label>
-                <input type="text" value={fichaData.formacionProfesional || ''} onChange={e => setFichaData({...fichaData, formacionProfesional: e.target.value})} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"/>
+                <input type="text" value={fichaData.formacionProfesional || ''} onChange={e => setFichaData({ ...fichaData, formacionProfesional: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm" />
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Ocupación Actual</label>
-                <input type="text" value={fichaData.ocupacionActual || ''} onChange={e => setFichaData({...fichaData, ocupacionActual: e.target.value})} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"/>
+                <input type="text" value={fichaData.ocupacionActual || ''} onChange={e => setFichaData({ ...fichaData, ocupacionActual: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm" />
               </div>
             </div>
 
@@ -1496,310 +1528,317 @@ export default function AdministracionPage() {
             <div className="grid grid-cols-3 gap-4">
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Minusvalía Reconocida</label>
-                <input type="text" value={fichaData.minusvaliaReconocida || ''} onChange={e => setFichaData({...fichaData, minusvaliaReconocida: e.target.value})} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"/>
+                <input type="text" value={fichaData.minusvaliaReconocida || ''} onChange={e => setFichaData({ ...fichaData, minusvaliaReconocida: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm" />
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Contacto Emergencia</label>
-                <input type="text" value={fichaData.contactoEmergencia || ''} onChange={e => setFichaData({...fichaData, contactoEmergencia: e.target.value})} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"/>
+                <input type="text" value={fichaData.contactoEmergencia || ''} onChange={e => setFichaData({ ...fichaData, contactoEmergencia: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm" />
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Tlfn Emergencia</label>
-                <input type="text" value={fichaData.telefonoEmergencia || ''} onChange={e => setFichaData({...fichaData, telefonoEmergencia: e.target.value})} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"/>
+                <input type="text" value={fichaData.telefonoEmergencia || ''} onChange={e => setFichaData({ ...fichaData, telefonoEmergencia: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm" />
               </div>
+            </div>
+            {/* Alergias */}
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <label className="block text-xs font-bold text-red-600 uppercase mb-2">Datos Destacados / Alergias</label>
+              <textarea value={fichaData.datosAlergias || ''} onChange={e => setFichaData({ ...fichaData, datosAlergias: e.target.value })} rows={2} className="w-full border border-red-200 rounded-lg p-2.5 text-sm" />
+            </div>
+
+            {/* Formación PC */}
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Formación P. Civil</label>
+              <div className="grid grid-cols-3 gap-2">
+                {FORMACION_PC.map(f => {
+                  const formacionActual = fichaData.formacionPC || [];
+                  const checked = formacionActual.includes(f);
+                  return (
+                    <label key={f} className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer hover:bg-slate-50 p-2 rounded-lg">
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => {
+                          const nueva = checked
+                            ? formacionActual.filter((x: string) => x !== f)
+                            : [...formacionActual, f];
+                          setFichaData({ ...fichaData, formacionPC: nueva });
+                        }}
+                        className="w-4 h-4 rounded border-slate-300 text-orange-500 focus:ring-orange-500"
+                      />
+                      {f}
+                    </label>
+                  );
+                })}
               </div>
-              {/* Alergias */}
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <label className="block text-xs font-bold text-red-600 uppercase mb-2">Datos Destacados / Alergias</label>
-          <textarea value={fichaData.datosAlergias || ''} onChange={e => setFichaData({...fichaData, datosAlergias: e.target.value})} rows={2} className="w-full border border-red-200 rounded-lg p-2.5 text-sm"/>
-        </div>
-
-        {/* Formación PC */}
-        <div>
-          <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Formación P. Civil</label>
-          <div className="grid grid-cols-3 gap-2">
-            {FORMACION_PC.map(f => {
-              const formacionActual = fichaData.formacionPC || [];
-              const checked = formacionActual.includes(f);
-              return (
-                <label key={f} className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer hover:bg-slate-50 p-2 rounded-lg">
-                  <input 
-                    type="checkbox" 
-                    checked={checked}
-                    onChange={() => {
-                      const nueva = checked 
-                        ? formacionActual.filter((x: string) => x !== f)
-                        : [...formacionActual, f];
-                      setFichaData({...fichaData, formacionPC: nueva});
-                    }}
-                    className="w-4 h-4 rounded border-slate-300 text-orange-500 focus:ring-orange-500"
-                  />
-                  {f}
-                </label>
-              );
-            })}
-          </div>
-          <div className="mt-2">
-            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Otras Titulaciones</label>
-            <input type="text" value={fichaData.otrasTitulaciones || ''} onChange={e => setFichaData({...fichaData, otrasTitulaciones: e.target.value})} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm" placeholder="Añadir curso..."/>
-          </div>
-        </div>
-
-        {/* Documentos */}
-        <div className="grid grid-cols-3 gap-4">
-          <label className="flex items-center gap-3 p-3 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-50">
-            <input type="checkbox" checked={fichaData.acuerdoIndividual || false} onChange={e => setFichaData({...fichaData, acuerdoIndividual: e.target.checked})} className="w-5 h-5 rounded"/>
-            <div>
-              <p className="text-sm font-medium text-slate-700">Acuerdo Individual</p>
-              <button type="button" className="text-xs text-orange-600">📎 Adjuntar</button>
+              <div className="mt-2">
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Otras Titulaciones</label>
+                <input type="text" value={fichaData.otrasTitulaciones || ''} onChange={e => setFichaData({ ...fichaData, otrasTitulaciones: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm" placeholder="Añadir curso..." />
+              </div>
             </div>
-          </label>
-          <label className="flex items-center gap-3 p-3 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-50">
-            <input type="checkbox" checked={fichaData.certificadoTitularidad || false} onChange={e => setFichaData({...fichaData, certificadoTitularidad: e.target.checked})} className="w-5 h-5 rounded"/>
-            <div>
-              <p className="text-sm font-medium text-slate-700">Certificado Titularidad</p>
-              <button type="button" className="text-xs text-orange-600">📎 Adjuntar</button>
+
+            {/* Documentos */}
+            <div className="grid grid-cols-2 gap-4">
+              <label className="flex items-center gap-3 p-3 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-50">
+                <input type="checkbox" checked={fichaData.acuerdoIndividual || false} onChange={e => setFichaData({ ...fichaData, acuerdoIndividual: e.target.checked })} className="w-5 h-5 rounded" />
+                <div>
+                  <p className="text-sm font-medium text-slate-700">Acuerdo Individual</p>
+                  <button type="button" className="text-xs text-orange-600">📎 Adjuntar</button>
+                </div>
+              </label>
+              <label className="flex items-center gap-3 p-3 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-50">
+                <input type="checkbox" checked={fichaData.certificadoTitularidad || false} onChange={e => setFichaData({ ...fichaData, certificadoTitularidad: e.target.checked })} className="w-5 h-5 rounded" />
+                <div>
+                  <p className="text-sm font-medium text-slate-700">Certificado Titularidad</p>
+                  <button type="button" className="text-xs text-orange-600">📎 Adjuntar</button>
+                </div>
+              </label>
+              <label className="flex items-center gap-3 p-3 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-50">
+                <input type="checkbox" checked={fichaData.modelo145 || false} onChange={e => setFichaData({ ...fichaData, modelo145: e.target.checked })} className="w-5 h-5 rounded" />
+                <div>
+                  <p className="text-sm font-medium text-slate-700">Modelo 145</p>
+                  <button type="button" className="text-xs text-orange-600">📎 Adjuntar</button>
+                </div>
+              </label>
+              <label className="flex items-center gap-3 p-3 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-50">
+                <input type="checkbox" checked={fichaData.dniAdjuntado || false} onChange={e => setFichaData({ ...fichaData, dniAdjuntado: e.target.checked })} className="w-5 h-5 rounded" />
+                <div>
+                  <p className="text-sm font-medium text-slate-700">DNI (Anverso y Reverso)</p>
+                  <button type="button" className="text-xs text-orange-600">📎 Adjuntar</button>
+                </div>
+              </label>
             </div>
-          </label>
-          <label className="flex items-center gap-3 p-3 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-50">
-            <input type="checkbox" checked={fichaData.modelo145 || false} onChange={e => setFichaData({...fichaData, modelo145: e.target.checked})} className="w-5 h-5 rounded"/>
-            <div>
-              <p className="text-sm font-medium text-slate-700">Modelo 145</p>
-              <button type="button" className="text-xs text-orange-600">📎 Adjuntar</button>
+
+            {/* Botones */}
+            <div className="flex gap-3 pt-4 border-t border-slate-200">
+              <button type="button" onClick={() => setShowFichaModal(false)} className="flex-1 py-3 border border-slate-300 text-slate-700 rounded-lg font-medium hover:bg-slate-50 transition-colors">
+                Cancelar
+              </button>
+              <button type="button" onClick={handleGuardarFicha} className="flex-1 py-3 bg-green-500 text-white rounded-lg font-medium hover:bg-green-600 transition-colors flex items-center justify-center gap-2">
+                <Save size={18} /> GUARDAR
+              </button>
             </div>
-          </label>
-        </div>
+          </div>
+        </Modal>
+      )}
 
-        {/* Botones */}
-        <div className="flex gap-3 pt-4 border-t border-slate-200">
-          <button type="button" onClick={() => setShowFichaModal(false)} className="flex-1 py-3 border border-slate-300 text-slate-700 rounded-lg font-medium hover:bg-slate-50 transition-colors">
-            Cancelar
-          </button>
-          <button type="button" onClick={handleGuardarFicha} className="flex-1 py-3 bg-green-500 text-white rounded-lg font-medium hover:bg-green-600 transition-colors flex items-center justify-center gap-2">
-            <Save size={18}/> GUARDAR
-          </button>
-        </div>
-      </div>
-    </Modal>
-  )}
+      {/* Modal: Nuevo Movimiento Caja */}
+      {showNuevoMovimiento && (
+        <Modal title="Nuevo Movimiento de Caja" onClose={() => setShowNuevoMovimiento(false)} size="md">
+          <div className="space-y-4">
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Tipo</label>
+              <div className="flex gap-2">
+                <button type="button" onClick={() => setNuevoMovimiento({ ...nuevoMovimiento, tipo: 'entrada' })} className={`flex-1 py-2.5 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors ${nuevoMovimiento.tipo === 'entrada' ? 'bg-green-500 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+                  <TrendingUp size={18} /> Entrada
+                </button>
+                <button type="button" onClick={() => setNuevoMovimiento({ ...nuevoMovimiento, tipo: 'salida' })} className={`flex-1 py-2.5 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors ${nuevoMovimiento.tipo === 'salida' ? 'bg-red-500 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+                  <TrendingDown size={18} /> Salida
+                </button>
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Concepto *</label>
+              <input type="text" value={nuevoMovimiento.concepto} onChange={e => setNuevoMovimiento({ ...nuevoMovimiento, concepto: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm" placeholder="Ej: Compra material" />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Descripción</label>
+              <textarea value={nuevoMovimiento.descripcion} onChange={e => setNuevoMovimiento({ ...nuevoMovimiento, descripcion: e.target.value })} rows={2} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm" />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Importe (€) *</label>
+              <input type="number" step="0.01" value={nuevoMovimiento.importe || ''} onChange={e => setNuevoMovimiento({ ...nuevoMovimiento, importe: parseFloat(e.target.value) || 0 })} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm" />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Categoría</label>
+              <select value={nuevoMovimiento.categoria} onChange={e => setNuevoMovimiento({ ...nuevoMovimiento, categoria: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm">
+                <option value="">Sin categoría</option>
+                <option value="material">Material</option>
+                <option value="equipamiento">Equipamiento</option>
+                <option value="formacion">Formación</option>
+                <option value="transporte">Transporte</option>
+                <option value="otros">Otros</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Adjuntar Documento</label>
+              <div className="border-2 border-dashed border-slate-200 rounded-lg p-6 text-center hover:border-orange-300 transition-colors cursor-pointer">
+                <Upload size={32} className="mx-auto text-slate-300 mb-2" />
+                <p className="text-sm text-slate-500">Arrastra un archivo o haz clic para seleccionar</p>
+              </div>
+            </div>
+            <div className="flex gap-3 pt-2">
+              <button type="button" onClick={() => setShowNuevoMovimiento(false)} className="flex-1 py-2.5 border border-slate-300 text-slate-700 rounded-lg font-medium hover:bg-slate-50 transition-colors">Cancelar</button>
+              <button type="button" onClick={handleGuardarMovimientoCaja} className="flex-1 py-2.5 bg-orange-500 text-white rounded-lg font-medium hover:bg-orange-600 transition-colors">Guardar</button>
+            </div>
+          </div>
+        </Modal>
+      )}
 
-  {/* Modal: Nuevo Movimiento Caja */}
-  {showNuevoMovimiento && (
-    <Modal title="Nuevo Movimiento de Caja" onClose={() => setShowNuevoMovimiento(false)} size="md">
-      <div className="space-y-4">
-        <div>
-          <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Tipo</label>
-          <div className="flex gap-2">
-            <button type="button" onClick={() => setNuevoMovimiento({...nuevoMovimiento, tipo: 'entrada'})} className={`flex-1 py-2.5 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors ${nuevoMovimiento.tipo === 'entrada' ? 'bg-green-500 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
-              <TrendingUp size={18}/> Entrada
-            </button>
-            <button type="button" onClick={() => setNuevoMovimiento({...nuevoMovimiento, tipo: 'salida'})} className={`flex-1 py-2.5 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors ${nuevoMovimiento.tipo === 'salida' ? 'bg-red-500 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
-              <TrendingDown size={18}/> Salida
-            </button>
+      {/* Modal: Nuevo Ticket Combustible */}
+      {showNuevoTicket && (
+        <Modal title="Nuevo Ticket Combustible" onClose={() => setShowNuevoTicket(false)} size="lg">
+          <div className="space-y-4">
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Fecha *</label>
+                <input type="date" value={nuevoTicket.fecha} onChange={e => setNuevoTicket({ ...nuevoTicket, fecha: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Hora</label>
+                <input type="time" value={nuevoTicket.hora} onChange={e => setNuevoTicket({ ...nuevoTicket, hora: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Estación</label>
+                <input type="text" value={nuevoTicket.estacion} onChange={e => setNuevoTicket({ ...nuevoTicket, estacion: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm" placeholder="Ej: CAMPSA CIUDAD UNIVERSITARIA" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Destino *</label>
+                <select value={nuevoTicket.destino} onChange={e => setNuevoTicket({ ...nuevoTicket, destino: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm">
+                  <option value="MAQUINARIA">MAQUINARIA</option>
+                  <option value="VIR">VIR</option>
+                  <option value="GRUPO ELECTRÓGENO">GRUPO ELECTRÓGENO</option>
+                  <option value="MOTOBOMBA">MOTOBOMBA</option>
+                  <option value="MOTOSIERRA">MOTOSIERRA</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Concepto *</label>
+                <select value={nuevoTicket.concepto} onChange={e => setNuevoTicket({ ...nuevoTicket, concepto: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm">
+                  <option value="EFITEC 95">EFITEC 95</option>
+                  <option value="EFITEC 98">EFITEC 98</option>
+                  <option value="DIESEL">DIESEL</option>
+                  <option value="DIESEL+">DIESEL+</option>
+                </select>
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Litros *</label>
+                <input type="number" step="0.01" value={nuevoTicket.litros || ''} onChange={e => setNuevoTicket({ ...nuevoTicket, litros: parseFloat(e.target.value) || 0 })} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">€/Litro *</label>
+                <input type="number" step="0.001" value={nuevoTicket.precioLitro || ''} onChange={e => setNuevoTicket({ ...nuevoTicket, precioLitro: parseFloat(e.target.value) || 0 })} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Importe Final *</label>
+                <input type="number" step="0.01" value={nuevoTicket.importeFinal || ''} onChange={e => setNuevoTicket({ ...nuevoTicket, importeFinal: parseFloat(e.target.value) || 0 })} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm" />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Notas</label>
+              <textarea value={nuevoTicket.notas} onChange={e => setNuevoTicket({ ...nuevoTicket, notas: e.target.value })} rows={2} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm" />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Adjuntar Ticket</label>
+              <div className="border-2 border-dashed border-slate-200 rounded-lg p-6 text-center hover:border-orange-300 transition-colors cursor-pointer">
+                <Receipt size={32} className="mx-auto text-slate-300 mb-2" />
+                <p className="text-sm text-slate-500">Arrastra el ticket escaneado o haz clic para seleccionar</p>
+              </div>
+            </div>
+            <div className="flex gap-3 pt-2">
+              <button type="button" onClick={() => setShowNuevoTicket(false)} className="flex-1 py-2.5 border border-slate-300 text-slate-700 rounded-lg font-medium hover:bg-slate-50 transition-colors">Cancelar</button>
+              <button type="button" onClick={handleGuardarTicket} className="flex-1 py-2.5 bg-orange-500 text-white rounded-lg font-medium hover:bg-orange-600 transition-colors">Guardar</button>
+            </div>
           </div>
-        </div>
-        <div>
-          <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Concepto *</label>
-          <input type="text" value={nuevoMovimiento.concepto} onChange={e => setNuevoMovimiento({...nuevoMovimiento, concepto: e.target.value})} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm" placeholder="Ej: Compra material"/>
-        </div>
-        <div>
-          <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Descripción</label>
-          <textarea value={nuevoMovimiento.descripcion} onChange={e => setNuevoMovimiento({...nuevoMovimiento, descripcion: e.target.value})} rows={2} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"/>
-        </div>
-        <div>
-          <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Importe (€) *</label>
-          <input type="number" step="0.01" value={nuevoMovimiento.importe || ''} onChange={e => setNuevoMovimiento({...nuevoMovimiento, importe: parseFloat(e.target.value) || 0})} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"/>
-        </div>
-        <div>
-          <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Categoría</label>
-          <select value={nuevoMovimiento.categoria} onChange={e => setNuevoMovimiento({...nuevoMovimiento, categoria: e.target.value})} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm">
-            <option value="">Sin categoría</option>
-            <option value="material">Material</option>
-            <option value="equipamiento">Equipamiento</option>
-            <option value="formacion">Formación</option>
-            <option value="transporte">Transporte</option>
-            <option value="otros">Otros</option>
-          </select>
-        </div>
-        <div>
-          <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Adjuntar Documento</label>
-          <div className="border-2 border-dashed border-slate-200 rounded-lg p-6 text-center hover:border-orange-300 transition-colors cursor-pointer">
-            <Upload size={32} className="mx-auto text-slate-300 mb-2"/>
-            <p className="text-sm text-slate-500">Arrastra un archivo o haz clic para seleccionar</p>
-          </div>
-        </div>
-        <div className="flex gap-3 pt-2">
-          <button type="button" onClick={() => setShowNuevoMovimiento(false)} className="flex-1 py-2.5 border border-slate-300 text-slate-700 rounded-lg font-medium hover:bg-slate-50 transition-colors">Cancelar</button>
-          <button type="button" onClick={handleGuardarMovimientoCaja} className="flex-1 py-2.5 bg-orange-500 text-white rounded-lg font-medium hover:bg-orange-600 transition-colors">Guardar</button>
-        </div>
-      </div>
-    </Modal>
-  )}
+        </Modal>
+      )}
 
-  {/* Modal: Nuevo Ticket Combustible */}
-  {showNuevoTicket && (
-    <Modal title="Nuevo Ticket Combustible" onClose={() => setShowNuevoTicket(false)} size="lg">
-      <div className="space-y-4">
-        <div className="grid grid-cols-3 gap-4">
-          <div>
-            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Fecha *</label>
-            <input type="date" value={nuevoTicket.fecha} onChange={e => setNuevoTicket({...nuevoTicket, fecha: e.target.value})} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"/>
+      {/* Modal: Nueva/Editar Póliza */}
+      {showNuevaPoliza && (
+        <Modal title={polizaEditando ? 'Editar Póliza' : 'Nueva Póliza de Seguro'} onClose={() => { setShowNuevaPoliza(false); setPolizaEditando(null); }} size="lg">
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Tipo de Póliza *</label>
+                <select
+                  value={polizaEditando?.tipo || nuevaPoliza.tipo}
+                  onChange={e => polizaEditando ? setPolizaEditando({ ...polizaEditando, tipo: e.target.value }) : setNuevaPoliza({ ...nuevaPoliza, tipo: e.target.value })}
+                  className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
+                >
+                  {TIPOS_POLIZA.map(t => <option key={t.id} value={t.id}>{t.nombre}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Número de Póliza</label>
+                <input
+                  type="text"
+                  value={polizaEditando?.numero || nuevaPoliza.numero}
+                  onChange={e => polizaEditando ? setPolizaEditando({ ...polizaEditando, numero: e.target.value }) : setNuevaPoliza({ ...nuevaPoliza, numero: e.target.value })}
+                  className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Compañía Aseguradora *</label>
+              <input
+                type="text"
+                value={polizaEditando?.compania || nuevaPoliza.compania}
+                onChange={e => polizaEditando ? setPolizaEditando({ ...polizaEditando, compania: e.target.value }) : setNuevaPoliza({ ...nuevaPoliza, compania: e.target.value })}
+                className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
+                placeholder="Ej: Mapfre, Allianz, AXA..."
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Descripción</label>
+              <textarea
+                value={polizaEditando?.descripcion || nuevaPoliza.descripcion}
+                onChange={e => polizaEditando ? setPolizaEditando({ ...polizaEditando, descripcion: e.target.value }) : setNuevaPoliza({ ...nuevaPoliza, descripcion: e.target.value })}
+                rows={2}
+                className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
+                placeholder="Detalles de la cobertura..."
+              />
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Fecha Inicio *</label>
+                <input
+                  type="date"
+                  value={(polizaEditando?.fechaInicio || nuevaPoliza.fechaInicio)?.split('T')[0] || ''}
+                  onChange={e => polizaEditando ? setPolizaEditando({ ...polizaEditando, fechaInicio: e.target.value }) : setNuevaPoliza({ ...nuevaPoliza, fechaInicio: e.target.value })}
+                  className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Fecha Vencimiento *</label>
+                <input
+                  type="date"
+                  value={(polizaEditando?.fechaVencimiento || nuevaPoliza.fechaVencimiento)?.split('T')[0] || ''}
+                  onChange={e => polizaEditando ? setPolizaEditando({ ...polizaEditando, fechaVencimiento: e.target.value }) : setNuevaPoliza({ ...nuevaPoliza, fechaVencimiento: e.target.value })}
+                  className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Prima Anual (€)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={polizaEditando?.primaAnual || nuevaPoliza.primaAnual || ''}
+                  onChange={e => polizaEditando ? setPolizaEditando({ ...polizaEditando, primaAnual: parseFloat(e.target.value) || 0 }) : setNuevaPoliza({ ...nuevaPoliza, primaAnual: parseFloat(e.target.value) || 0 })}
+                  className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Notas</label>
+              <textarea
+                value={polizaEditando?.notas || nuevaPoliza.notas}
+                onChange={e => polizaEditando ? setPolizaEditando({ ...polizaEditando, notas: e.target.value }) : setNuevaPoliza({ ...nuevaPoliza, notas: e.target.value })}
+                rows={2}
+                className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
+              />
+            </div>
+            <div className="flex gap-3 pt-2">
+              <button type="button" onClick={() => { setShowNuevaPoliza(false); setPolizaEditando(null); }} className="flex-1 py-2.5 border border-slate-300 text-slate-700 rounded-lg font-medium hover:bg-slate-50 transition-colors">Cancelar</button>
+              <button type="button" onClick={handleGuardarPoliza} className="flex-1 py-2.5 bg-orange-500 text-white rounded-lg font-medium hover:bg-orange-600 transition-colors">
+                {polizaEditando ? 'Actualizar' : 'Guardar'}
+              </button>
+            </div>
           </div>
-          <div>
-            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Hora</label>
-            <input type="time" value={nuevoTicket.hora} onChange={e => setNuevoTicket({...nuevoTicket, hora: e.target.value})} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"/>
-          </div>
-          <div>
-            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Estación</label>
-            <input type="text" value={nuevoTicket.estacion} onChange={e => setNuevoTicket({...nuevoTicket, estacion: e.target.value})} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm" placeholder="Ej: CAMPSA CIUDAD UNIVERSITARIA"/>
-          </div>
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Destino *</label>
-            <select value={nuevoTicket.destino} onChange={e => setNuevoTicket({...nuevoTicket, destino: e.target.value})} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm">
-              <option value="MAQUINARIA">MAQUINARIA</option>
-              <option value="VIR">VIR</option>
-              <option value="GRUPO ELECTRÓGENO">GRUPO ELECTRÓGENO</option>
-              <option value="MOTOBOMBA">MOTOBOMBA</option>
-              <option value="MOTOSIERRA">MOTOSIERRA</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Concepto *</label>
-            <select value={nuevoTicket.concepto} onChange={e => setNuevoTicket({...nuevoTicket, concepto: e.target.value})} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm">
-              <option value="EFITEC 95">EFITEC 95</option>
-              <option value="EFITEC 98">EFITEC 98</option>
-              <option value="DIESEL">DIESEL</option>
-              <option value="DIESEL+">DIESEL+</option>
-            </select>
-          </div>
-        </div>
-        <div className="grid grid-cols-3 gap-4">
-          <div>
-            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Litros *</label>
-            <input type="number" step="0.01" value={nuevoTicket.litros || ''} onChange={e => setNuevoTicket({...nuevoTicket, litros: parseFloat(e.target.value) || 0})} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"/>
-          </div>
-          <div>
-            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">€/Litro *</label>
-            <input type="number" step="0.001" value={nuevoTicket.precioLitro || ''} onChange={e => setNuevoTicket({...nuevoTicket, precioLitro: parseFloat(e.target.value) || 0})} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"/>
-          </div>
-          <div>
-            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Importe Final *</label>
-            <input type="number" step="0.01" value={nuevoTicket.importeFinal || ''} onChange={e => setNuevoTicket({...nuevoTicket, importeFinal: parseFloat(e.target.value) || 0})} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"/>
-          </div>
-        </div>
-        <div>
-          <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Notas</label>
-          <textarea value={nuevoTicket.notas} onChange={e => setNuevoTicket({...nuevoTicket, notas: e.target.value})} rows={2} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"/>
-        </div>
-        <div>
-          <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Adjuntar Ticket</label>
-          <div className="border-2 border-dashed border-slate-200 rounded-lg p-6 text-center hover:border-orange-300 transition-colors cursor-pointer">
-            <Receipt size={32} className="mx-auto text-slate-300 mb-2"/>
-            <p className="text-sm text-slate-500">Arrastra el ticket escaneado o haz clic para seleccionar</p>
-          </div>
-        </div>
-        <div className="flex gap-3 pt-2">
-          <button type="button" onClick={() => setShowNuevoTicket(false)} className="flex-1 py-2.5 border border-slate-300 text-slate-700 rounded-lg font-medium hover:bg-slate-50 transition-colors">Cancelar</button>
-          <button type="button" onClick={handleGuardarTicket} className="flex-1 py-2.5 bg-orange-500 text-white rounded-lg font-medium hover:bg-orange-600 transition-colors">Guardar</button>
-        </div>
-      </div>
-    </Modal>
-  )}
-
-  {/* Modal: Nueva/Editar Póliza */}
-  {showNuevaPoliza && (
-    <Modal title={polizaEditando ? 'Editar Póliza' : 'Nueva Póliza de Seguro'} onClose={() => { setShowNuevaPoliza(false); setPolizaEditando(null); }} size="lg">
-      <div className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Tipo de Póliza *</label>
-            <select 
-              value={polizaEditando?.tipo || nuevaPoliza.tipo} 
-              onChange={e => polizaEditando ? setPolizaEditando({...polizaEditando, tipo: e.target.value}) : setNuevaPoliza({...nuevaPoliza, tipo: e.target.value})} 
-              className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
-            >
-              {TIPOS_POLIZA.map(t => <option key={t.id} value={t.id}>{t.nombre}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Número de Póliza</label>
-            <input 
-              type="text" 
-              value={polizaEditando?.numero || nuevaPoliza.numero} 
-              onChange={e => polizaEditando ? setPolizaEditando({...polizaEditando, numero: e.target.value}) : setNuevaPoliza({...nuevaPoliza, numero: e.target.value})} 
-              className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
-            />
-          </div>
-        </div>
-        <div>
-          <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Compañía Aseguradora *</label>
-          <input 
-            type="text" 
-            value={polizaEditando?.compania || nuevaPoliza.compania} 
-            onChange={e => polizaEditando ? setPolizaEditando({...polizaEditando, compania: e.target.value}) : setNuevaPoliza({...nuevaPoliza, compania: e.target.value})} 
-            className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
-            placeholder="Ej: Mapfre, Allianz, AXA..."
-          />
-        </div>
-        <div>
-          <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Descripción</label>
-          <textarea 
-            value={polizaEditando?.descripcion || nuevaPoliza.descripcion} 
-            onChange={e => polizaEditando ? setPolizaEditando({...polizaEditando, descripcion: e.target.value}) : setNuevaPoliza({...nuevaPoliza, descripcion: e.target.value})} 
-            rows={2} 
-            className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
-            placeholder="Detalles de la cobertura..."
-          />
-        </div>
-        <div className="grid grid-cols-3 gap-4">
-          <div>
-            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Fecha Inicio *</label>
-            <input 
-              type="date" 
-              value={(polizaEditando?.fechaInicio || nuevaPoliza.fechaInicio)?.split('T')[0] || ''} 
-              onChange={e => polizaEditando ? setPolizaEditando({...polizaEditando, fechaInicio: e.target.value}) : setNuevaPoliza({...nuevaPoliza, fechaInicio: e.target.value})} 
-              className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Fecha Vencimiento *</label>
-            <input 
-              type="date" 
-              value={(polizaEditando?.fechaVencimiento || nuevaPoliza.fechaVencimiento)?.split('T')[0] || ''} 
-              onChange={e => polizaEditando ? setPolizaEditando({...polizaEditando, fechaVencimiento: e.target.value}) : setNuevaPoliza({...nuevaPoliza, fechaVencimiento: e.target.value})} 
-              className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Prima Anual (€)</label>
-            <input 
-              type="number" 
-              step="0.01"
-              value={polizaEditando?.primaAnual || nuevaPoliza.primaAnual || ''} 
-              onChange={e => polizaEditando ? setPolizaEditando({...polizaEditando, primaAnual: parseFloat(e.target.value) || 0}) : setNuevaPoliza({...nuevaPoliza, primaAnual: parseFloat(e.target.value) || 0})} 
-              className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
-            />
-          </div>
-        </div>
-        <div>
-          <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Notas</label>
-          <textarea 
-            value={polizaEditando?.notas || nuevaPoliza.notas} 
-            onChange={e => polizaEditando ? setPolizaEditando({...polizaEditando, notas: e.target.value}) : setNuevaPoliza({...nuevaPoliza, notas: e.target.value})} 
-            rows={2} 
-            className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
-          />
-        </div>
-        <div className="flex gap-3 pt-2">
-          <button type="button" onClick={() => { setShowNuevaPoliza(false); setPolizaEditando(null); }} className="flex-1 py-2.5 border border-slate-300 text-slate-700 rounded-lg font-medium hover:bg-slate-50 transition-colors">Cancelar</button>
-          <button type="button" onClick={handleGuardarPoliza} className="flex-1 py-2.5 bg-orange-500 text-white rounded-lg font-medium hover:bg-orange-600 transition-colors">
-            {polizaEditando ? 'Actualizar' : 'Guardar'}
-          </button>
-        </div>
-      </div>
-    </Modal>
-  )}
-</div>
-);
+        </Modal>
+      )}
+    </div>
+  );
 }
