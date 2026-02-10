@@ -1460,7 +1460,7 @@ export default function AdministracionPage() {
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Teléfono</label>
-                <input type="text" value={fichaData.telefonoFijo || selectedVoluntario.telefono || ''} onChange={e => setFichaData({ ...fichaData, telefonoFijo: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm" />
+                <input type="text" value={fichaData.telefonoFijo || selectedVoluntario?.telefono || ''} onChange={e => setFichaData({ ...fichaData, telefonoFijo: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm" />
               </div>
             </div>
 
