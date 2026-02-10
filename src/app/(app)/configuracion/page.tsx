@@ -12,6 +12,10 @@ interface Usuario {
   dni?: string;
   numeroVoluntario?: string;
   activo: boolean;
+  responsableTurno?: boolean;
+  carnetConducir?: boolean;
+  experiencia?: string;
+  nivelCompromiso?: string;
   rol: {
     id: string;
     nombre: string;
@@ -122,7 +126,7 @@ export default function ConfiguracionPage() {
   };
 
   useEffect(() => {
-    if (activeTab === 'roles') {
+    if (activeTab === 'roles' || activeTab === 'criterios') {
       fetchData();
     }
   }, [activeTab]);
@@ -332,6 +336,9 @@ export default function ConfiguracionPage() {
         <button onClick={() => setActiveTab('roles')} className={`pb-4 px-2 text-xs font-bold uppercase tracking-widest flex items-center gap-2 ${activeTab === 'roles' ? 'text-orange-600 border-b-4 border-orange-600' : 'text-slate-400'}`}>
           <Users size={16} /> Roles y Permisos
         </button>
+        <button onClick={() => setActiveTab('criterios')} className={`pb-4 px-2 text-xs font-bold uppercase tracking-widest flex items-center gap-2 ${activeTab === 'criterios' ? 'text-orange-600 border-b-4 border-orange-600' : 'text-slate-400'}`}>
+          <TrendingUp size={16} /> Criterios de Personal
+        </button>
         <button onClick={() => setActiveTab('audit')} className={`pb-4 px-2 text-xs font-bold uppercase tracking-widest flex items-center gap-2 ${activeTab === 'audit' ? 'text-orange-600 border-b-4 border-orange-600' : 'text-slate-400'}`}>
           <History size={16} /> Trazabilidad
         </button>
@@ -489,9 +496,9 @@ export default function ConfiguracionPage() {
                       <td className="p-4 font-mono text-sm text-slate-600">{usuario.numeroVoluntario || '-'}</td>
                       <td className="p-4">
                         <span className={`px-3 py-1 rounded-lg text-xs font-bold ${usuario.rol.nombre === 'superadmin' ? 'bg-indigo-100 text-indigo-700' :
-                            usuario.rol.nombre === 'admin' ? 'bg-blue-100 text-blue-700' :
-                              usuario.rol.nombre === 'operador' ? 'bg-green-100 text-green-700' :
-                                'bg-slate-100 text-slate-600'
+                          usuario.rol.nombre === 'admin' ? 'bg-blue-100 text-blue-700' :
+                            usuario.rol.nombre === 'operador' ? 'bg-green-100 text-green-700' :
+                              'bg-slate-100 text-slate-600'
                           }`}>
                           {usuario.rol.nombre}
                         </span>
@@ -536,6 +543,188 @@ export default function ConfiguracionPage() {
                 </tbody>
               </table>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Criterios de Personal */}
+      {activeTab === 'criterios' && (
+        <div className="space-y-6">
+          <div>
+            <h3 className="text-xl font-bold text-slate-800">Criterios de Generación Automática</h3>
+            <p className="text-sm text-slate-500">Configura los criterios que el algoritmo usará para generar los cuadrantes automáticamente</p>
+          </div>
+
+          <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
+            <div className="p-4 border-b bg-slate-50">
+              <h3 className="font-bold text-slate-800">Voluntarios y Criterios</h3>
+            </div>
+
+            {loadingUsuarios ? (
+              <div className="p-20 text-center">
+                <Loader2 size={32} className="mx-auto animate-spin text-orange-600" />
+                <p className="text-sm text-slate-500 mt-4">Cargando voluntarios...</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead className="bg-slate-50 border-b">
+                    <tr>
+                      <th className="p-4 text-xs font-bold text-slate-400 uppercase">Indicativo</th>
+                      <th className="p-4 text-xs font-bold text-slate-400 uppercase">Nombre</th>
+                      <th className="p-4 text-xs font-bold text-slate-400 uppercase text-center">Responsable</th>
+                      <th className="p-4 text-xs font-bold text-slate-400 uppercase text-center">Conductor</th>
+                      <th className="p-4 text-xs font-bold text-slate-400 uppercase">Experiencia</th>
+                      <th className="p-4 text-xs font-bold text-slate-400 uppercase">Compromiso</th>
+                      <th className="p-4 text-xs font-bold text-slate-400 uppercase text-center">Estado</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {usuarios.map(usuario => (
+                      <tr key={usuario.id} className="hover:bg-slate-50">
+                        <td className="p-4 font-mono font-bold text-slate-700">{usuario.numeroVoluntario || '-'}</td>
+                        <td className="p-4">
+                          <div className="font-bold text-slate-800">{usuario.nombre} {usuario.apellidos}</div>
+                        </td>
+                        <td className="p-4 text-center">
+                          <input
+                            type="checkbox"
+                            checked={usuario.responsableTurno || false}
+                            onChange={async (e) => {
+                              const newValue = e.target.checked;
+                              try {
+                                await fetch(`/api/admin/personal/${usuario.id}`, {
+                                  method: 'PUT',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ responsableTurno: newValue })
+                                });
+                                fetchData();
+                              } catch (error) {
+                                console.error('Error updating:', error);
+                              }
+                            }}
+                            className="w-5 h-5 text-orange-600 rounded focus:ring-2 focus:ring-orange-500"
+                          />
+                        </td>
+                        <td className="p-4 text-center">
+                          <input
+                            type="checkbox"
+                            checked={usuario.carnetConducir || false}
+                            onChange={async (e) => {
+                              const newValue = e.target.checked;
+                              try {
+                                await fetch(`/api/admin/personal/${usuario.id}`, {
+                                  method: 'PUT',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ carnetConducir: newValue })
+                                });
+                                fetchData();
+                              } catch (error) {
+                                console.error('Error updating:', error);
+                              }
+                            }}
+                            className="w-5 h-5 text-orange-600 rounded focus:ring-2 focus:ring-orange-500"
+                          />
+                        </td>
+                        <td className="p-4">
+                          <select
+                            value={usuario.experiencia || 'MEDIA'}
+                            onChange={async (e) => {
+                              const newValue = e.target.value;
+                              try {
+                                await fetch(`/api/admin/personal/${usuario.id}`, {
+                                  method: 'PUT',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ experiencia: newValue })
+                                });
+                                fetchData();
+                              } catch (error) {
+                                console.error('Error updating:', error);
+                              }
+                            }}
+                            className="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-orange-500"
+                          >
+                            <option value="BAJA">Baja</option>
+                            <option value="MEDIA">Media</option>
+                            <option value="ALTA">Alta</option>
+                          </select>
+                        </td>
+                        <td className="p-4">
+                          <select
+                            value={usuario.nivelCompromiso || 'MEDIO'}
+                            onChange={async (e) => {
+                              const newValue = e.target.value;
+                              try {
+                                await fetch(`/api/admin/personal/${usuario.id}`, {
+                                  method: 'PUT',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ nivelCompromiso: newValue })
+                                });
+                                fetchData();
+                              } catch (error) {
+                                console.error('Error updating:', error);
+                              }
+                            }}
+                            className="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-orange-500"
+                          >
+                            <option value="BAJO">Bajo</option>
+                            <option value="MEDIO">Medio</option>
+                            <option value="ALTO">Alto</option>
+                          </select>
+                        </td>
+                        <td className="p-4 text-center">
+                          <span className={`px-3 py-1 rounded-lg text-xs font-bold ${usuario.activo ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                            {usuario.activo ? 'Activo' : 'Inactivo'}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                    {usuarios.length === 0 && (
+                      <tr>
+                        <td colSpan={7} className="p-20 text-center text-slate-400">
+                          <Users size={48} className="mx-auto mb-4 opacity-20" />
+                          <p className="text-sm">No hay voluntarios registrados</p>
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {/* Información de puntuación */}
+          <div className="bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200 rounded-xl p-6">
+            <h4 className="font-bold text-slate-800 mb-3 flex items-center gap-2">
+              <TrendingUp size={18} className="text-orange-600" />
+              Sistema de Puntuación Automática
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+              <div className="flex justify-between items-center">
+                <span className="text-slate-600">🎯 Responsable de turno:</span>
+                <span className="font-bold text-orange-600">+10 puntos</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-600">⭐ Experiencia ALTA:</span>
+                <span className="font-bold text-orange-600">+5 puntos</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-600">💪 Compromiso ALTO:</span>
+                <span className="font-bold text-orange-600">+5 puntos</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-600">🚗 Conductor:</span>
+                <span className="font-bold text-orange-600">+3 puntos</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-600">⚖️ Equidad (por turno):</span>
+                <span className="font-bold text-slate-600">-2 puntos</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-600">📅 Turnos deseados:</span>
+                <span className="font-bold text-green-600">+1 punto</span>
+              </div>
+            </div>
           </div>
         </div>
       )}

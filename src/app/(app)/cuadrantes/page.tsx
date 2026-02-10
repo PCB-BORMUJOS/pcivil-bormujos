@@ -175,7 +175,8 @@ export default function CuadrantesPage() {
 
       if (res.ok) {
         await cargarGuardias();
-        setSelectedShift(null);
+        // NO cerrar modal para permitir múltiples asignaciones
+        // setSelectedShift(null);
       } else {
         alert('Error al asignar voluntario');
       }
