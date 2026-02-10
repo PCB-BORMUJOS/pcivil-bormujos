@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { 
-  Users, Car, MapPin, Sun, Wind, 
-  ChevronLeft, ChevronRight, Clock, 
-  CheckSquare, Square, Save, Droplets, 
+import {
+  Users, Car, MapPin, Sun, Wind,
+  ChevronLeft, ChevronRight, Clock,
+  CheckSquare, Square, Save, Droplets,
   Calendar as CalendarIcon, X, AlertTriangle,
   Search, Bell, ChevronDown, Thermometer,
   CloudRain, Cloud, CloudSun, Plus, Lock, Globe
@@ -19,7 +19,7 @@ function Modal({ title, children, onClose, wide }: { title: string; children: Re
       <div className={`bg-white rounded-xl shadow-2xl w-full ${wide ? 'max-w-2xl' : 'max-w-md'} max-h-[90vh] overflow-hidden`} onClick={e => e.stopPropagation()}>
         <div className="bg-slate-50 p-4 border-b border-slate-100 flex justify-between items-center">
           <h3 className="font-bold text-slate-800">{title}</h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X size={20}/></button>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
         </div>
         <div className="p-4 overflow-y-auto max-h-[70vh]">{children}</div>
       </div>
@@ -60,7 +60,7 @@ function AvailabilityForm({ onClose }: { onClose: () => void }) {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [semanaSeleccionada, setSemanaSeleccionada] = useState('');
-  const [semanasDisponibles, setSemanasDisponibles] = useState<{value: string, label: string}[]>([]);
+  const [semanasDisponibles, setSemanasDisponibles] = useState<{ value: string, label: string }[]>([]);
   const [noDisponible, setNoDisponible] = useState(false);
   const [detalles, setDetalles] = useState<Record<string, string[]>>({
     lunes: [], martes: [], miercoles: [], jueves: [], viernes: [], sabado: [], domingo: []
@@ -81,24 +81,24 @@ function AvailabilityForm({ onClose }: { onClose: () => void }) {
 
   // Generar próximas 4 semanas
   useEffect(() => {
-    const semanas: {value: string, label: string}[] = [];
+    const semanas: { value: string, label: string }[] = [];
     const hoy = new Date();
-    
+
     for (let i = 0; i < 4; i++) {
       const inicioSemana = new Date(hoy);
       const diasHastaLunes = (8 - hoy.getDay()) % 7 || 7;
       inicioSemana.setDate(hoy.getDate() + diasHastaLunes + (i * 7));
-      
+
       const finSemana = new Date(inicioSemana);
       finSemana.setDate(inicioSemana.getDate() + 6);
-      
+
       const formatoCorto = (fecha: Date) => `${fecha.getDate()}/${fecha.getMonth() + 1}`;
       const value = inicioSemana.toISOString().split('T')[0];
       const label = `Del ${formatoCorto(inicioSemana)} al ${formatoCorto(finSemana)}/${finSemana.getFullYear().toString().slice(-2)}`;
-      
+
       semanas.push({ value, label });
     }
-    
+
     setSemanasDisponibles(semanas);
     if (semanas.length > 0) {
       setSemanaSeleccionada(semanas[0].value);
@@ -108,7 +108,7 @@ function AvailabilityForm({ onClose }: { onClose: () => void }) {
   // Cargar disponibilidad existente cuando cambia la semana
   useEffect(() => {
     if (!semanaSeleccionada) return;
-    
+
     setLoading(true);
     fetch(`/api/disponibilidad?semana=${semanaSeleccionada}`)
       .then(res => res.json())
@@ -138,8 +138,8 @@ function AvailabilityForm({ onClose }: { onClose: () => void }) {
   const toggleTurno = (dia: string, turno: string) => {
     if (noDisponible) return;
     const actual = detalles[dia] || [];
-    const nuevo = actual.includes(turno) 
-      ? actual.filter(t => t !== turno) 
+    const nuevo = actual.includes(turno)
+      ? actual.filter(t => t !== turno)
       : [...actual, turno];
     setDetalles({ ...detalles, [dia]: nuevo });
   };
@@ -151,7 +151,7 @@ function AvailabilityForm({ onClose }: { onClose: () => void }) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
-    
+
     try {
       const response = await fetch('/api/disponibilidad', {
         method: 'POST',
@@ -165,9 +165,9 @@ function AvailabilityForm({ onClose }: { onClose: () => void }) {
           notas
         })
       });
-      
+
       const data = await response.json();
-      
+
       if (data.success) {
         alert('✅ Disponibilidad guardada correctamente');
         onClose();
@@ -197,7 +197,7 @@ function AvailabilityForm({ onClose }: { onClose: () => void }) {
 
       <div>
         <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Semana Referencia</label>
-        <select 
+        <select
           className="w-full border border-slate-300 rounded-lg p-2.5 text-sm font-medium"
           value={semanaSeleccionada}
           onChange={e => setSemanaSeleccionada(e.target.value)}
@@ -208,16 +208,14 @@ function AvailabilityForm({ onClose }: { onClose: () => void }) {
         </select>
       </div>
 
-      <div 
-        className={`border p-3 rounded-lg flex items-center gap-3 cursor-pointer transition-colors ${
-          noDisponible ? 'border-red-300 bg-red-50' : 'border-slate-200 hover:bg-slate-50'
-        }`}
+      <div
+        className={`border p-3 rounded-lg flex items-center gap-3 cursor-pointer transition-colors ${noDisponible ? 'border-red-300 bg-red-50' : 'border-slate-200 hover:bg-slate-50'
+          }`}
         onClick={() => setNoDisponible(!noDisponible)}
       >
-        <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
-          noDisponible ? 'bg-red-500 border-red-500 text-white' : 'border-slate-300'
-        }`}>
-          {noDisponible && <CheckSquare size={14}/>}
+        <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${noDisponible ? 'bg-red-500 border-red-500 text-white' : 'border-slate-300'
+          }`}>
+          {noDisponible && <CheckSquare size={14} />}
         </div>
         <span className={`text-sm font-bold ${noDisponible ? 'text-red-700' : 'text-slate-700'}`}>
           MARCAR COMO NO DISPONIBLE
@@ -237,24 +235,22 @@ function AvailabilityForm({ onClose }: { onClose: () => void }) {
             return (
               <div key={key} className="grid grid-cols-3 border-t border-slate-200 hover:bg-slate-50">
                 <div className="p-3 text-sm font-medium text-slate-700 border-r border-slate-200">{label}</div>
-                <div 
+                <div
                   className="p-3 flex justify-center border-r border-slate-200 cursor-pointer"
                   onClick={() => toggleTurno(key, 'mañana')}
                 >
-                  <div className={`w-6 h-6 rounded border-2 flex items-center justify-center transition-colors ${
-                    turnos.includes('mañana') ? 'bg-green-500 border-green-500 text-white' : 'border-slate-300 hover:border-green-400'
-                  }`}>
-                    {turnos.includes('mañana') && <CheckSquare size={14}/>}
+                  <div className={`w-6 h-6 rounded border-2 flex items-center justify-center transition-colors ${turnos.includes('mañana') ? 'bg-green-500 border-green-500 text-white' : 'border-slate-300 hover:border-green-400'
+                    }`}>
+                    {turnos.includes('mañana') && <CheckSquare size={14} />}
                   </div>
                 </div>
-                <div 
+                <div
                   className="p-3 flex justify-center cursor-pointer"
                   onClick={() => toggleTurno(key, 'tarde')}
                 >
-                  <div className={`w-6 h-6 rounded border-2 flex items-center justify-center transition-colors ${
-                    turnos.includes('tarde') ? 'bg-blue-500 border-blue-500 text-white' : 'border-slate-300 hover:border-blue-400'
-                  }`}>
-                    {turnos.includes('tarde') && <CheckSquare size={14}/>}
+                  <div className={`w-6 h-6 rounded border-2 flex items-center justify-center transition-colors ${turnos.includes('tarde') ? 'bg-blue-500 border-blue-500 text-white' : 'border-slate-300 hover:border-blue-400'
+                    }`}>
+                    {turnos.includes('tarde') && <CheckSquare size={14} />}
                   </div>
                 </div>
               </div>
@@ -263,16 +259,14 @@ function AvailabilityForm({ onClose }: { onClose: () => void }) {
         </div>
       </div>
 
-      <div 
-        className={`border p-3 rounded-lg flex items-center gap-3 cursor-pointer transition-colors ${
-          noDisponible ? 'opacity-40 pointer-events-none' : ''
-        } ${puedeDobleturno ? 'border-blue-300 bg-blue-50' : 'border-slate-200 hover:bg-slate-50'}`}
+      <div
+        className={`border p-3 rounded-lg flex items-center gap-3 cursor-pointer transition-colors ${noDisponible ? 'opacity-40 pointer-events-none' : ''
+          } ${puedeDobleturno ? 'border-blue-300 bg-blue-50' : 'border-slate-200 hover:bg-slate-50'}`}
         onClick={() => !noDisponible && setPuedeDobleturno(!puedeDobleturno)}
       >
-        <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
-          puedeDobleturno ? 'bg-blue-500 border-blue-500 text-white' : 'border-slate-300'
-        }`}>
-          {puedeDobleturno && <CheckSquare size={14}/>}
+        <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${puedeDobleturno ? 'bg-blue-500 border-blue-500 text-white' : 'border-slate-300'
+          }`}>
+          {puedeDobleturno && <CheckSquare size={14} />}
         </div>
         <span className="text-sm font-medium text-slate-700">
           Disponible para Doblar Turno (M+T)
@@ -281,7 +275,7 @@ function AvailabilityForm({ onClose }: { onClose: () => void }) {
 
       <div className={`transition-opacity ${noDisponible ? 'opacity-40 pointer-events-none' : ''}`}>
         <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Turnos Deseados (Semanal)</label>
-        <select 
+        <select
           className="w-full border border-slate-300 rounded-lg p-2.5 text-sm"
           value={turnosDeseados}
           onChange={e => setTurnosDeseados(parseInt(e.target.value))}
@@ -293,8 +287,8 @@ function AvailabilityForm({ onClose }: { onClose: () => void }) {
         </select>
       </div>
 
-      <button 
-        type="submit" 
+      <button
+        type="submit"
         disabled={saving}
         className="w-full bg-orange-500 hover:bg-orange-600 text-white py-3 rounded-lg font-bold flex justify-center items-center gap-2 transition-colors disabled:opacity-50"
       >
@@ -305,7 +299,7 @@ function AvailabilityForm({ onClose }: { onClose: () => void }) {
           </>
         ) : (
           <>
-            <Save size={18}/> Guardar Disponibilidad
+            <Save size={18} /> Guardar Disponibilidad
           </>
         )}
       </button>
@@ -314,8 +308,8 @@ function AvailabilityForm({ onClose }: { onClose: () => void }) {
 }
 
 // Calendar Component with Events, Guardias and Drag & Drop
-function CalendarView({ eventos, guardias, onEventClick, onDayClick, onGuardiaClick, onEventDrop, userRole }: { 
-  eventos: any[]; 
+function CalendarView({ eventos, guardias, onEventClick, onDayClick, onGuardiaClick, onEventDrop, userRole }: {
+  eventos: any[];
   guardias: any[];
   onEventClick: (evento: any) => void;
   onDayClick: (date: string) => void;
@@ -327,20 +321,20 @@ function CalendarView({ eventos, guardias, onEventClick, onDayClick, onGuardiaCl
   const [draggedEvent, setDraggedEvent] = useState<any>(null);
   const [dragOverDate, setDragOverDate] = useState<string | null>(null);
   const daysOfWeek = ['LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB', 'DOM'];
-  
+
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
   const daysCount = new Date(year, month + 1, 0).getDate();
   const firstDay = new Date(year, month, 1).getDay();
   const firstDayIndex = firstDay === 0 ? 6 : firstDay - 1;
-  
+
   const days: { num: number; date: string; current: boolean }[] = [];
   for (let i = 0; i < firstDayIndex; i++) days.push({ num: 0, date: '', current: false });
   for (let i = 1; i <= daysCount; i++) {
     const date = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
     days.push({ num: i, date, current: true });
   }
-  
+
   const monthName = currentDate.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
   const changeMonth = (dir: 'prev' | 'next') => setCurrentDate(new Date(year, month + (dir === 'next' ? 1 : -1), 1));
   const today = new Date();
@@ -392,7 +386,7 @@ function CalendarView({ eventos, guardias, onEventClick, onDayClick, onGuardiaCl
     <div className="bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col">
       <div className="p-4 border-b border-slate-100 flex justify-between items-center">
         <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-          <span className="bg-orange-100 p-1.5 rounded-lg text-orange-600"><CalendarIcon size={18}/></span>
+          <span className="bg-orange-100 p-1.5 rounded-lg text-orange-600"><CalendarIcon size={18} /></span>
           Calendario Operativo
         </h2>
         <div className="flex items-center gap-4">
@@ -400,12 +394,12 @@ function CalendarView({ eventos, guardias, onEventClick, onDayClick, onGuardiaCl
             <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500"></span> Mañana</span>
             <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-500"></span> Tarde</span>
             <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-pink-500"></span> Evento</span>
-            <span className="flex items-center gap-1"><Lock size={10} className="text-slate-400"/> Privado</span>
+            <span className="flex items-center gap-1"><Lock size={10} className="text-slate-400" /> Privado</span>
           </div>
           <div className="flex items-center gap-2 bg-slate-50 rounded-lg p-1">
-            <button onClick={() => changeMonth('prev')} className="p-1.5 hover:bg-white rounded-lg transition-colors"><ChevronLeft size={18} className="text-slate-500"/></button>
+            <button onClick={() => changeMonth('prev')} className="p-1.5 hover:bg-white rounded-lg transition-colors"><ChevronLeft size={18} className="text-slate-500" /></button>
             <span className="text-sm font-semibold text-slate-700 px-3 capitalize min-w-[160px] text-center">{monthName}</span>
-            <button onClick={() => changeMonth('next')} className="p-1.5 hover:bg-white rounded-lg transition-colors"><ChevronRight size={18} className="text-slate-500"/></button>
+            <button onClick={() => changeMonth('next')} className="p-1.5 hover:bg-white rounded-lg transition-colors"><ChevronRight size={18} className="text-slate-500" /></button>
           </div>
         </div>
       </div>
@@ -419,13 +413,12 @@ function CalendarView({ eventos, guardias, onEventClick, onDayClick, onGuardiaCl
           const guardiasMañana = guardiasDelDia.filter(g => g.turno === 'mañana');
           const guardiasTarde = guardiasDelDia.filter(g => g.turno === 'tarde');
           const isDragOver = dragOverDate === day.date;
-          
+
           return (
-            <div 
-              key={idx} 
-              className={`min-h-[110px] border-b border-r border-slate-100 p-1.5 relative transition-colors ${
-                day.current ? 'bg-white hover:bg-slate-50 cursor-pointer' : 'bg-slate-50/50'
-              } ${isDragOver ? 'bg-orange-50 ring-2 ring-orange-300 ring-inset' : ''}`}
+            <div
+              key={idx}
+              className={`min-h-[110px] border-b border-r border-slate-100 p-1.5 relative transition-colors ${day.current ? 'bg-white hover:bg-slate-50 cursor-pointer' : 'bg-slate-50/50'
+                } ${isDragOver ? 'bg-orange-50 ring-2 ring-orange-300 ring-inset' : ''}`}
               onClick={() => day.current && onDayClick(day.date)}
               onDragOver={(e) => day.current && handleDragOver(e, day.date)}
               onDragLeave={handleDragLeave}
@@ -438,7 +431,7 @@ function CalendarView({ eventos, guardias, onEventClick, onDayClick, onGuardiaCl
               )}
               <div className="mt-8 space-y-1">
                 {guardiasMañana.length > 0 && (
-                  <div 
+                  <div
                     className="text-[9px] px-1.5 py-1 rounded bg-green-100 text-green-700 border-l-2 border-green-500 cursor-pointer hover:bg-green-200"
                     onClick={(e) => { e.stopPropagation(); onGuardiaClick(day.date, 'mañana', guardiasMañana); }}
                   >
@@ -446,7 +439,7 @@ function CalendarView({ eventos, guardias, onEventClick, onDayClick, onGuardiaCl
                   </div>
                 )}
                 {guardiasTarde.length > 0 && (
-                  <div 
+                  <div
                     className="text-[9px] px-1.5 py-1 rounded bg-blue-100 text-blue-700 border-l-2 border-blue-500 cursor-pointer hover:bg-blue-200"
                     onClick={(e) => { e.stopPropagation(); onGuardiaClick(day.date, 'tarde', guardiasTarde); }}
                   >
@@ -454,21 +447,20 @@ function CalendarView({ eventos, guardias, onEventClick, onDayClick, onGuardiaCl
                   </div>
                 )}
                 {eventosDelDia.slice(0, 2).map((evento, i) => (
-                  <div 
+                  <div
                     key={evento.id || i}
                     draggable={canDragEvent(evento)}
                     onDragStart={(e) => canDragEvent(evento) && handleDragStart(e, evento)}
                     onClick={(e) => { e.stopPropagation(); onEventClick(evento); }}
-                    className={`text-[10px] p-1.5 rounded-md cursor-pointer hover:opacity-80 transition-opacity truncate flex items-center gap-1 ${
-                      canDragEvent(evento) ? 'cursor-grab active:cursor-grabbing' : ''
-                    }`}
-                    style={{ 
+                    className={`text-[10px] p-1.5 rounded-md cursor-pointer hover:opacity-80 transition-opacity truncate flex items-center gap-1 ${canDragEvent(evento) ? 'cursor-grab active:cursor-grabbing' : ''
+                      }`}
+                    style={{
                       backgroundColor: `${getEventColor(evento.tipo, evento.color)}20`,
                       borderLeft: `3px solid ${getEventColor(evento.tipo, evento.color)}`,
                       color: getEventColor(evento.tipo, evento.color)
                     }}
                   >
-                    {evento.privado && <Lock size={10}/>}
+                    {evento.privado && <Lock size={10} />}
                     <span className="font-bold">{evento.horaInicio}</span> {evento.titulo}
                   </div>
                 ))}
@@ -492,7 +484,7 @@ export default function DashboardPage() {
   const [showClima, setShowClima] = useState(false);
   const [showEventDetail, setShowEventDetail] = useState<any>(null);
   const [showCreateEvent, setShowCreateEvent] = useState(false);
-  const [showGuardiaDetail, setShowGuardiaDetail] = useState<{date: string, turno: string, guardias: any[]} | null>(null);
+  const [showGuardiaDetail, setShowGuardiaDetail] = useState<{ date: string, turno: string, guardias: any[] } | null>(null);
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [userRole, setUserRole] = useState<string>('');
   const [userId, setUserId] = useState<string>('');
@@ -504,13 +496,18 @@ export default function DashboardPage() {
   const [loadingVol, setLoadingVol] = useState(true);
   const [eventos, setEventos] = useState<any[]>([]);
   const [guardias, setGuardias] = useState<any[]>([]);
+
+  // Estados para disponibilidad contextual
+  const [turnoSeleccionado, setTurnoSeleccionado] = useState<{ fecha: string; turno: string; diaSemanaNombre: string } | null>(null);
+  const [loadingDisponibilidad, setLoadingDisponibilidad] = useState(false);
+
   const [newEvent, setNewEvent] = useState({
     titulo: '', descripcion: '', tipo: 'preventivo', horaInicio: '09:00', horaFin: '14:00',
     ubicacion: '', color: '#EC4899', voluntariosMin: 0, voluntariosMax: 0, visible: true, privado: false
   });
 
   const cargarEventos = () => {
-    fetch('/api/eventos?privados=true').then(res => res.json()).then(data => setEventos(data.eventos || [])).catch(() => {});
+    fetch('/api/eventos?privados=true').then(res => res.json()).then(data => setEventos(data.eventos || [])).catch(() => { });
   };
 
   useEffect(() => {
@@ -523,18 +520,18 @@ export default function DashboardPage() {
     fetch('/api/vehiculos').then(res => res.json()).then(data => {
       setVehiculos(data.vehiculos || []);
       setStatsVeh(data.stats || { total: 0, disponibles: 0, enServicio: 0, mantenimiento: 0 });
-    }).catch(() => {});
+    }).catch(() => { });
 
-    fetch('/api/clima').then(res => res.json()).then(data => setClima(data)).catch(() => {});
+    fetch('/api/clima').then(res => res.json()).then(data => setClima(data)).catch(() => { });
     cargarEventos();
-    fetch('/api/guardias').then(res => res.json()).then(data => setGuardias(data.guardias || [])).catch(() => {});
+    fetch('/api/guardias').then(res => res.json()).then(data => setGuardias(data.guardias || [])).catch(() => { });
   }, []);
 
   useEffect(() => {
     fetch('/api/auth/session').then(res => res.json()).then(data => {
       if (data?.user?.rol) setUserRole(data.user.rol);
       if (data?.user?.id) setUserId(data.user.id);
-    }).catch(() => {});
+    }).catch(() => { });
   }, []);
 
   const handleEventClick = (evento: any) => setShowEventDetail(evento);
@@ -543,10 +540,10 @@ export default function DashboardPage() {
     if (userRole) {
       setSelectedDate(date);
       const esAdmin = ['superadmin', 'admin', 'coordinador'].includes(userRole);
-      setNewEvent({ 
-        titulo: '', descripcion: '', tipo: 'preventivo', horaInicio: '09:00', horaFin: '14:00', 
-        ubicacion: '', color: '#EC4899', voluntariosMin: 0, voluntariosMax: 0, 
-        visible: esAdmin, privado: !esAdmin 
+      setNewEvent({
+        titulo: '', descripcion: '', tipo: 'preventivo', horaInicio: '09:00', horaFin: '14:00',
+        ubicacion: '', color: '#EC4899', voluntariosMin: 0, voluntariosMax: 0,
+        visible: esAdmin, privado: !esAdmin
       });
       setShowCreateEvent(true);
     }
@@ -554,6 +551,9 @@ export default function DashboardPage() {
 
   const handleGuardiaClick = (date: string, turno: string, guardias: any[]) => {
     setShowGuardiaDetail({ date, turno, guardias });
+
+    // Cargar disponibilidad para este turno específico
+    cargarDisponibilidadPorTurno(date, turno);
   };
 
   const handleEventDrop = async (eventoId: string, nuevaFecha: string) => {
@@ -594,6 +594,45 @@ export default function DashboardPage() {
     }
   };
 
+  // Nueva función para cargar disponibilidad por turno
+  const cargarDisponibilidadPorTurno = async (fecha: string, turno: string) => {
+    setLoadingDisponibilidad(true);
+    setTurnoSeleccionado({ fecha, turno, diaSemanaNombre: '' });
+
+    try {
+      const res = await fetch(`/api/disponibilidad/por-turno?fecha=${fecha}&turno=${turno}`);
+      const data = await res.json();
+
+      if (res.ok) {
+        setVoluntarios(data.voluntarios || []);
+        setStats(data.stats || { total: 0, responsablesTurno: 0, conCarnet: 0, experienciaAlta: 0 });
+        setTurnoSeleccionado({ fecha, turno, diaSemanaNombre: data.diaSemanaNombre });
+        setShowPersonnel(true); // Abrir modal automáticamente
+      } else {
+        console.error('Error al cargar disponibilidad:', data.error);
+        // En caso de error, cargar todos los voluntarios como fallback
+        cargarTodosVoluntarios();
+      }
+    } catch (error) {
+      console.error('Error en cargarDisponibilidadPorTurno:', error);
+      cargarTodosVoluntarios();
+    } finally {
+      setLoadingDisponibilidad(false);
+    }
+  };
+
+  // Función para cargar todos los voluntarios (modo genérico)
+  const cargarTodosVoluntarios = () => {
+    setTurnoSeleccionado(null);
+    fetch('/api/voluntarios')
+      .then(res => res.json())
+      .then(data => {
+        setVoluntarios(data.voluntarios || []);
+        setStats(data.stats || { total: 0, responsablesTurno: 0, conCarnet: 0, experienciaAlta: 0 });
+      })
+      .catch(() => { });
+  };
+
   const esAdmin = ['superadmin', 'admin', 'coordinador'].includes(userRole);
 
   return (
@@ -607,30 +646,49 @@ export default function DashboardPage() {
               <p className="text-orange-100 text-[10px] font-bold uppercase tracking-wider">Acción Requerida</p>
               <h3 className="text-lg font-bold mt-1">Enviar Disponibilidad</h3>
             </div>
-            <div className="bg-white/20 p-2 rounded-lg"><CalendarIcon size={20}/></div>
+            <div className="bg-white/20 p-2 rounded-lg"><CalendarIcon size={20} /></div>
           </div>
           <button className="mt-4 bg-white/20 px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-2 hover:bg-white/30 transition-colors">
-            <CalendarIcon size={14}/> Próxima Semana
+            <CalendarIcon size={14} /> Próxima Semana
           </button>
         </div>
-        
-        <div onClick={() => setShowPersonnel(true)} className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 cursor-pointer hover:shadow-md transition-all group">
+
+        <div
+          onClick={() => { cargarTodosVoluntarios(); setShowPersonnel(true); }}
+          className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 cursor-pointer hover:shadow-md transition-all group"
+        >
           <div className="flex justify-between items-start">
             <div>
-              <p className="text-slate-500 text-xs font-medium flex items-center gap-1">Personal Activo<ChevronDown size={14} className="text-slate-400"/></p>
-              <h3 className="text-3xl font-bold text-slate-800 mt-1">{loadingVol ? '...' : stats.total}<span className="text-base text-slate-400 font-normal ml-1">/ {stats.total}</span></h3>
+              <p className="text-slate-500 text-xs font-medium flex items-center gap-1">
+                {turnoSeleccionado ? (
+                  <>
+                    Disponibles <span className="font-bold text-slate-700">{turnoSeleccionado.diaSemanaNombre?.charAt(0).toUpperCase() + turnoSeleccionado.diaSemanaNombre?.slice(1)} {turnoSeleccionado.turno === 'mañana' ? '🌅' : '🌆'}</span>
+                  </>
+                ) : (
+                  <>Personal Activo<ChevronDown size={14} className="text-slate-400" /></>
+                )}
+              </p>
+              <h3 className="text-3xl font-bold text-slate-800 mt-1">
+                {loadingVol || loadingDisponibilidad ? '...' : stats.total}
+                <span className="text-base text-slate-400 font-normal ml-1">
+                  {turnoSeleccionado ? 'disponibles' : `/ ${stats.total}`}
+                </span>
+              </h3>
             </div>
-            <div className="bg-slate-100 group-hover:bg-orange-100 p-2.5 rounded-xl text-slate-500 group-hover:text-orange-600 transition-colors"><Users size={22}/></div>
+            <div className={`bg-slate-100 group-hover:bg-orange-100 p-2.5 rounded-xl text-slate-500 group-hover:text-orange-600 transition-colors ${turnoSeleccionado ? 'ring-2 ring-orange-400' : ''
+              }`}>
+              <Users size={22} />
+            </div>
           </div>
         </div>
-        
+
         <div onClick={() => setShowVehicles(true)} className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 cursor-pointer hover:shadow-md transition-all group">
           <div className="flex justify-between items-start">
             <div>
-              <p className="text-slate-500 text-xs font-medium flex items-center gap-1">Vehículos Disp.<ChevronDown size={14} className="text-slate-400"/></p>
+              <p className="text-slate-500 text-xs font-medium flex items-center gap-1">Vehículos Disp.<ChevronDown size={14} className="text-slate-400" /></p>
               <h3 className="text-3xl font-bold text-slate-800 mt-1">{statsVeh.disponibles}<span className="text-base text-slate-400 font-normal ml-1">/ {statsVeh.total}</span></h3>
             </div>
-            <div className="bg-slate-100 group-hover:bg-green-100 p-2.5 rounded-xl text-slate-500 group-hover:text-green-600 transition-colors"><Car size={22}/></div>
+            <div className="bg-slate-100 group-hover:bg-green-100 p-2.5 rounded-xl text-slate-500 group-hover:text-green-600 transition-colors"><Car size={22} /></div>
           </div>
         </div>
 
@@ -640,12 +698,12 @@ export default function DashboardPage() {
           )}
           <div className="flex justify-between items-start">
             <div>
-              <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1"><MapPin size={10}/> {clima?.municipio?.toUpperCase() || 'BORMUJOS'}</p>
+              <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1"><MapPin size={10} /> {clima?.municipio?.toUpperCase() || 'BORMUJOS'}</p>
               <h3 className="text-3xl font-bold text-slate-800 mt-1">{clima?.temperatura || '--'}°C</h3>
               <p className="text-slate-500 text-sm">{clima?.estadoCielo || 'Cargando...'}</p>
               {clima?.alertas?.length > 0 && (
                 <p className="text-xs font-bold text-red-500 mt-1 flex items-center gap-1">
-                  <AlertTriangle size={12}/> {clima.alertas.length} alerta{clima.alertas.length > 1 ? 's' : ''}
+                  <AlertTriangle size={12} /> {clima.alertas.length} alerta{clima.alertas.length > 1 ? 's' : ''}
                 </p>
               )}
             </div>
@@ -655,11 +713,11 @@ export default function DashboardPage() {
       </div>
 
       {/* Calendar */}
-      <CalendarView 
-        eventos={eventos} 
-        guardias={guardias} 
-        onEventClick={handleEventClick} 
-        onDayClick={handleDayClick} 
+      <CalendarView
+        eventos={eventos}
+        guardias={guardias}
+        onEventClick={handleEventClick}
+        onDayClick={handleDayClick}
         onGuardiaClick={handleGuardiaClick}
         onEventDrop={handleEventDrop}
         userRole={userRole}
@@ -679,8 +737,8 @@ export default function DashboardPage() {
           <div className="flex items-center gap-6">
             <div className="relative w-32 h-32">
               <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                <circle cx="50" cy="50" r="40" fill="none" stroke="#e2e8f0" strokeWidth="12"/>
-                <circle cx="50" cy="50" r="40" fill="none" stroke="#22c55e" strokeWidth="12" strokeDasharray={`${(statsVeh.disponibles / (statsVeh.total || 1)) * 251.2} 251.2`} strokeLinecap="round"/>
+                <circle cx="50" cy="50" r="40" fill="none" stroke="#e2e8f0" strokeWidth="12" />
+                <circle cx="50" cy="50" r="40" fill="none" stroke="#22c55e" strokeWidth="12" strokeDasharray={`${(statsVeh.disponibles / (statsVeh.total || 1)) * 251.2} 251.2`} strokeLinecap="round" />
               </svg>
               <div className="absolute inset-0 flex items-center justify-center">
                 <span className="text-2xl font-bold text-slate-800">{statsVeh.disponibles}/{statsVeh.total}</span>
@@ -703,7 +761,7 @@ export default function DashboardPage() {
               <span className="px-3 py-1 rounded-full text-xs font-bold text-white" style={{ backgroundColor: getEventColor(showEventDetail.tipo, showEventDetail.color) }}>{showEventDetail.tipo?.toUpperCase()}</span>
               <span className={`px-3 py-1 rounded-full text-xs font-bold ${showEventDetail.estado === 'programado' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}`}>{showEventDetail.estado?.toUpperCase()}</span>
               {showEventDetail.privado && (
-                <span className="px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700 flex items-center gap-1"><Lock size={12}/> PRIVADO</span>
+                <span className="px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700 flex items-center gap-1"><Lock size={12} /> PRIVADO</span>
               )}
             </div>
             <div className="bg-slate-50 p-4 rounded-lg">
@@ -713,8 +771,8 @@ export default function DashboardPage() {
                   <div className="text-sm text-slate-500 capitalize">{new Date(showEventDetail.fecha).toLocaleDateString('es-ES', { month: 'short' })}</div>
                 </div>
                 <div className="flex-1">
-                  <div className="flex items-center gap-2 text-slate-700"><Clock size={16}/><span className="font-medium">{showEventDetail.horaInicio}</span>{showEventDetail.horaFin && <><span className="text-slate-400">→</span><span className="font-medium">{showEventDetail.horaFin}</span></>}</div>
-                  {showEventDetail.ubicacion && <div className="flex items-center gap-2 text-slate-500 mt-1"><MapPin size={16}/><span>{showEventDetail.ubicacion}</span></div>}
+                  <div className="flex items-center gap-2 text-slate-700"><Clock size={16} /><span className="font-medium">{showEventDetail.horaInicio}</span>{showEventDetail.horaFin && <><span className="text-slate-400">→</span><span className="font-medium">{showEventDetail.horaFin}</span></>}</div>
+                  {showEventDetail.ubicacion && <div className="flex items-center gap-2 text-slate-500 mt-1"><MapPin size={16} /><span>{showEventDetail.ubicacion}</span></div>}
                 </div>
               </div>
             </div>
@@ -731,38 +789,36 @@ export default function DashboardPage() {
               <div className="flex gap-2 p-1 bg-slate-100 rounded-lg">
                 <button
                   type="button"
-                  onClick={() => setNewEvent({...newEvent, privado: false, visible: true})}
-                  className={`flex-1 py-2 px-3 rounded-md text-sm font-medium flex items-center justify-center gap-2 transition-colors ${
-                    !newEvent.privado ? 'bg-white shadow text-slate-800' : 'text-slate-500 hover:text-slate-700'
-                  }`}
+                  onClick={() => setNewEvent({ ...newEvent, privado: false, visible: true })}
+                  className={`flex-1 py-2 px-3 rounded-md text-sm font-medium flex items-center justify-center gap-2 transition-colors ${!newEvent.privado ? 'bg-white shadow text-slate-800' : 'text-slate-500 hover:text-slate-700'
+                    }`}
                 >
-                  <Globe size={16}/> Público
+                  <Globe size={16} /> Público
                 </button>
                 <button
                   type="button"
-                  onClick={() => setNewEvent({...newEvent, privado: true, visible: false})}
-                  className={`flex-1 py-2 px-3 rounded-md text-sm font-medium flex items-center justify-center gap-2 transition-colors ${
-                    newEvent.privado ? 'bg-white shadow text-slate-800' : 'text-slate-500 hover:text-slate-700'
-                  }`}
+                  onClick={() => setNewEvent({ ...newEvent, privado: true, visible: false })}
+                  className={`flex-1 py-2 px-3 rounded-md text-sm font-medium flex items-center justify-center gap-2 transition-colors ${newEvent.privado ? 'bg-white shadow text-slate-800' : 'text-slate-500 hover:text-slate-700'
+                    }`}
                 >
-                  <Lock size={16}/> Privado
+                  <Lock size={16} /> Privado
                 </button>
               </div>
             )}
-            
+
             {!esAdmin && (
               <div className="bg-slate-50 p-3 rounded-lg text-sm text-slate-600 flex items-center gap-2">
-                <Lock size={16}/> Este evento será privado y solo visible para ti
+                <Lock size={16} /> Este evento será privado y solo visible para ti
               </div>
             )}
-            
+
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Título *</label>
-              <input type="text" required className="w-full border border-slate-300 rounded-lg p-2.5 text-sm" value={newEvent.titulo} onChange={e => setNewEvent({...newEvent, titulo: e.target.value})} placeholder="Ej: Dispositivo Feria"/>
+              <input type="text" required className="w-full border border-slate-300 rounded-lg p-2.5 text-sm" value={newEvent.titulo} onChange={e => setNewEvent({ ...newEvent, titulo: e.target.value })} placeholder="Ej: Dispositivo Feria" />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Descripción</label>
-              <textarea className="w-full border border-slate-300 rounded-lg p-2.5 text-sm" rows={2} value={newEvent.descripcion} onChange={e => setNewEvent({...newEvent, descripcion: e.target.value})}/>
+              <textarea className="w-full border border-slate-300 rounded-lg p-2.5 text-sm" rows={2} value={newEvent.descripcion} onChange={e => setNewEvent({ ...newEvent, descripcion: e.target.value })} />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -775,7 +831,7 @@ export default function DashboardPage() {
                   if (tipo === 'reunion') color = '#F59E0B';
                   if (tipo === 'simulacro') color = '#EF4444';
                   if (tipo === 'emergencia') color = '#DC2626';
-                  setNewEvent({...newEvent, tipo, color});
+                  setNewEvent({ ...newEvent, tipo, color });
                 }}>
                   <option value="preventivo">🚨 Preventivo</option>
                   <option value="formacion">📚 Formación</option>
@@ -787,23 +843,23 @@ export default function DashboardPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Ubicación</label>
-                <input type="text" className="w-full border border-slate-300 rounded-lg p-2.5 text-sm" value={newEvent.ubicacion} onChange={e => setNewEvent({...newEvent, ubicacion: e.target.value})}/>
+                <input type="text" className="w-full border border-slate-300 rounded-lg p-2.5 text-sm" value={newEvent.ubicacion} onChange={e => setNewEvent({ ...newEvent, ubicacion: e.target.value })} />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Hora Inicio *</label>
-                <input type="time" required className="w-full border border-slate-300 rounded-lg p-2.5 text-sm" value={newEvent.horaInicio} onChange={e => setNewEvent({...newEvent, horaInicio: e.target.value})}/>
+                <input type="time" required className="w-full border border-slate-300 rounded-lg p-2.5 text-sm" value={newEvent.horaInicio} onChange={e => setNewEvent({ ...newEvent, horaInicio: e.target.value })} />
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Hora Fin</label>
-                <input type="time" className="w-full border border-slate-300 rounded-lg p-2.5 text-sm" value={newEvent.horaFin} onChange={e => setNewEvent({...newEvent, horaFin: e.target.value})}/>
+                <input type="time" className="w-full border border-slate-300 rounded-lg p-2.5 text-sm" value={newEvent.horaFin} onChange={e => setNewEvent({ ...newEvent, horaFin: e.target.value })} />
               </div>
             </div>
             <div className="flex gap-3 pt-2">
               <button type="button" onClick={() => setShowCreateEvent(false)} className="flex-1 py-2.5 border border-slate-300 text-slate-700 rounded-lg font-medium hover:bg-slate-50">Cancelar</button>
               <button type="submit" className="flex-1 py-2.5 bg-orange-600 text-white rounded-lg font-medium hover:bg-orange-700 flex items-center justify-center gap-2">
-                <Plus size={18}/> Crear {newEvent.privado ? 'Evento Privado' : 'Evento'}
+                <Plus size={18} /> Crear {newEvent.privado ? 'Evento Privado' : 'Evento'}
               </button>
             </div>
           </form>
@@ -822,9 +878,9 @@ export default function DashboardPage() {
                 </span>
               </div>
             </div>
-            
+
             <h4 className="text-sm font-bold text-slate-500 uppercase">Personal Asignado ({showGuardiaDetail.guardias.length})</h4>
-            
+
             <div className="space-y-2">
               {showGuardiaDetail.guardias.map((g, i) => (
                 <div key={i} className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-slate-100">
@@ -850,7 +906,13 @@ export default function DashboardPage() {
 
       {/* Modal Personnel */}
       {showPersonnel && (
-        <Modal title={`Personal Activo (${stats.total})`} onClose={() => setShowPersonnel(false)}>
+        <Modal
+          title={turnoSeleccionado
+            ? `Disponibles ${turnoSeleccionado.diaSemanaNombre?.charAt(0).toUpperCase() + turnoSeleccionado.diaSemanaNombre?.slice(1)} - Turno ${turnoSeleccionado.turno === 'mañana' ? 'Mañana 🌅' : 'Tarde 🌆'} (${stats.total})`
+            : `Personal Activo (${stats.total})`
+          }
+          onClose={() => { setShowPersonnel(false); setTurnoSeleccionado(null); }}
+        >
           <div className="mb-4 grid grid-cols-3 gap-2 text-center">
             <div className="bg-green-50 p-2 rounded-lg"><div className="text-xl font-bold text-green-600">{stats.responsablesTurno}</div><div className="text-[10px] text-green-700">Resp. Turno</div></div>
             <div className="bg-blue-50 p-2 rounded-lg"><div className="text-xl font-bold text-blue-600">{stats.conCarnet}</div><div className="text-[10px] text-blue-700">Con Carnet</div></div>
@@ -879,7 +941,7 @@ export default function DashboardPage() {
           <div className="space-y-2">
             {vehiculos.map(v => (
               <div key={v.id} className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-slate-100">
-                <div className={`p-2 rounded-lg ${v.estado === 'disponible' ? 'bg-green-100 text-green-600' : v.estado === 'en_servicio' ? 'bg-orange-100 text-orange-600' : 'bg-red-100 text-red-600'}`}><Car size={24}/></div>
+                <div className={`p-2 rounded-lg ${v.estado === 'disponible' ? 'bg-green-100 text-green-600' : v.estado === 'en_servicio' ? 'bg-orange-100 text-orange-600' : 'bg-red-100 text-red-600'}`}><Car size={24} /></div>
                 <div className="flex-1">
                   <div className="flex justify-between items-center">
                     <h4 className="font-bold text-slate-800">{v.indicativo}</h4>
@@ -907,24 +969,23 @@ export default function DashboardPage() {
             <div className="flex justify-between items-start mb-4">
               <div>
                 <h3 className="text-xl font-bold text-slate-800">Previsión del Tiempo</h3>
-                <p className="text-slate-500 text-sm flex items-center gap-1"><MapPin size={14}/> {clima.municipio}, {clima.provincia}</p>
+                <p className="text-slate-500 text-sm flex items-center gap-1"><MapPin size={14} /> {clima.municipio}, {clima.provincia}</p>
               </div>
-              <button onClick={() => setShowClima(false)} className="text-slate-400 hover:text-slate-600"><X size={24}/></button>
+              <button onClick={() => setShowClima(false)} className="text-slate-400 hover:text-slate-600"><X size={24} /></button>
             </div>
-            
+
             {/* Alerts Section */}
             {clima.alertas && clima.alertas.length > 0 && (
               <div className="mb-4 space-y-2">
                 {clima.alertas.map((alerta: any, i: number) => (
-                  <div 
+                  <div
                     key={i}
-                    className={`p-3 rounded-lg border flex items-start gap-3 ${
-                      alerta.nivel === 'rojo' 
-                        ? 'bg-red-50 border-red-200 text-red-800' 
-                        : alerta.nivel === 'naranja'
+                    className={`p-3 rounded-lg border flex items-start gap-3 ${alerta.nivel === 'rojo'
+                      ? 'bg-red-50 border-red-200 text-red-800'
+                      : alerta.nivel === 'naranja'
                         ? 'bg-orange-50 border-orange-200 text-orange-800'
                         : 'bg-yellow-50 border-yellow-200 text-yellow-800'
-                    }`}
+                      }`}
                   >
                     <AlertTriangle size={20} className="flex-shrink-0 mt-0.5" />
                     <div>
@@ -935,14 +996,14 @@ export default function DashboardPage() {
                 ))}
               </div>
             )}
-            
+
             <div className="text-center py-4 bg-gradient-to-br from-yellow-50 to-orange-50 rounded-xl mb-4">
               <span className="text-6xl">{getWeatherIcon(clima.proximosDias?.[0]?.icono)}</span>
               <h4 className="text-4xl font-bold text-slate-800 mt-2">{clima.temperatura}°C</h4>
               <p className="text-slate-600">{clima.estadoCielo}</p>
               <div className="flex justify-center gap-6 mt-4 text-sm text-slate-500">
-                <span className="flex items-center gap-1"><Droplets size={16}/> {clima.humedad}%</span>
-                <span className="flex items-center gap-1"><Wind size={16}/> {clima.viento?.velocidad} km/h</span>
+                <span className="flex items-center gap-1"><Droplets size={16} /> {clima.humedad}%</span>
+                <span className="flex items-center gap-1"><Wind size={16} /> {clima.viento?.velocidad} km/h</span>
               </div>
             </div>
             {clima.proximosDias?.length > 0 && (

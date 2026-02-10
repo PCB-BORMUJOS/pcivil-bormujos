@@ -35,7 +35,7 @@ interface Servicio {
 }
 
 export default function ConfiguracionPage() {
-  const [activeTab, setActiveTab] = useState<'liquidaciones' | 'roles' | 'audit'>('roles');
+  const [activeTab, setActiveTab] = useState<'liquidaciones' | 'roles' | 'criterios' | 'audit'>('roles');
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().substring(0, 7));
   const [loading, setLoading] = useState(false);
   const [reportData, setReportData] = useState<any[]>([]);
@@ -45,17 +45,17 @@ export default function ConfiguracionPage() {
   const [roles, setRoles] = useState<Rol[]>([]);
   const [servicios, setServicios] = useState<Servicio[]>([]);
   const [loadingUsuarios, setLoadingUsuarios] = useState(false);
-  
+
   // Modal states
   const [showModal, setShowModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [editingUser, setEditingUser] = useState<Usuario | null>(null);
-  
+
   // Estados para ordenación
   const [sortBy, setSortBy] = useState<'nombre' | 'email' | 'voluntario' | 'rol' | 'estado'>('nombre');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
-  
+
   // Form states
   const [formData, setFormData] = useState({
     nombre: '',
@@ -68,12 +68,12 @@ export default function ConfiguracionPage() {
     servicioId: '',
     password: '',
   });
-  
+
   const [passwordData, setPasswordData] = useState({
     newPassword: '',
     confirmPassword: '',
   });
-  
+
   const [formError, setFormError] = useState('');
   const [formSuccess, setFormSuccess] = useState('');
   const [editFormError, setEditFormError] = useState('');
@@ -307,16 +307,16 @@ export default function ConfiguracionPage() {
   // Renderizar icono de ordenación
   const renderSortIcon = (column: typeof sortBy) => {
     if (sortBy !== column) {
-      return <ArrowUpDown size={14} className="text-slate-300 ml-1"/>;
+      return <ArrowUpDown size={14} className="text-slate-300 ml-1" />;
     }
-    return sortOrder === 'asc' ? <ArrowUp size={14} className="text-orange-600 ml-1"/> : <ArrowDown size={14} className="text-orange-600 ml-1"/>;
+    return sortOrder === 'asc' ? <ArrowUp size={14} className="text-orange-600 ml-1" /> : <ArrowDown size={14} className="text-orange-600 ml-1" />;
   };
 
   return (
     <div className="space-y-8">
       <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
         <div className="flex items-center gap-6">
-          <div className="bg-slate-900 p-4 rounded-2xl text-white shadow-xl"><Shield size={32}/></div>
+          <div className="bg-slate-900 p-4 rounded-2xl text-white shadow-xl"><Shield size={32} /></div>
           <div>
             <h2 className="text-3xl font-black text-slate-800 uppercase tracking-tighter">Panel de Gestión Administrativa</h2>
             <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-2">Configuración de dietas, kilometraje y auditoría</p>
@@ -327,13 +327,13 @@ export default function ConfiguracionPage() {
       {/* Tabs */}
       <div className="flex gap-6 border-b border-slate-200 pb-px">
         <button onClick={() => setActiveTab('liquidaciones')} className={`pb-4 px-2 text-xs font-bold uppercase tracking-widest flex items-center gap-2 ${activeTab === 'liquidaciones' ? 'text-orange-600 border-b-4 border-orange-600' : 'text-slate-400'}`}>
-          <CreditCard size={16}/> Liquidaciones
+          <CreditCard size={16} /> Liquidaciones
         </button>
         <button onClick={() => setActiveTab('roles')} className={`pb-4 px-2 text-xs font-bold uppercase tracking-widest flex items-center gap-2 ${activeTab === 'roles' ? 'text-orange-600 border-b-4 border-orange-600' : 'text-slate-400'}`}>
-          <Users size={16}/> Roles y Permisos
+          <Users size={16} /> Roles y Permisos
         </button>
         <button onClick={() => setActiveTab('audit')} className={`pb-4 px-2 text-xs font-bold uppercase tracking-widest flex items-center gap-2 ${activeTab === 'audit' ? 'text-orange-600 border-b-4 border-orange-600' : 'text-slate-400'}`}>
-          <History size={16}/> Trazabilidad
+          <History size={16} /> Trazabilidad
         </button>
       </div>
 
@@ -342,14 +342,14 @@ export default function ConfiguracionPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="space-y-6">
             <div className="bg-white p-6 rounded-xl border shadow-sm">
-              <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2"><TrendingUp size={18} className="text-orange-600"/> Baremo de Dietas</h3>
+              <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2"><TrendingUp size={18} className="text-orange-600" /> Baremo de Dietas</h3>
               <div className="space-y-4">
                 {dietRules.map(rule => (
                   <div key={rule.id} className="p-4 bg-slate-50 rounded-lg border">
                     <label className="text-xs text-slate-400 font-bold block mb-2">{rule.label}</label>
                     <div className="flex gap-4">
-                      <div className="flex-1"><span className="text-xs text-slate-500">Min. Horas</span><input type="number" className="w-full border rounded p-2 text-sm" defaultValue={rule.minHours}/></div>
-                      <div className="flex-1"><span className="text-xs text-slate-500">Importe €</span><input type="number" className="w-full border rounded p-2 text-sm" defaultValue={rule.amount}/></div>
+                      <div className="flex-1"><span className="text-xs text-slate-500">Min. Horas</span><input type="number" className="w-full border rounded p-2 text-sm" defaultValue={rule.minHours} /></div>
+                      <div className="flex-1"><span className="text-xs text-slate-500">Importe €</span><input type="number" className="w-full border rounded p-2 text-sm" defaultValue={rule.amount} /></div>
                     </div>
                   </div>
                 ))}
@@ -361,9 +361,9 @@ export default function ConfiguracionPage() {
             <div className="p-4 border-b bg-slate-50 flex justify-between items-center">
               <h3 className="font-bold text-slate-800">Generador de Informe Mensual</h3>
               <div className="flex gap-4">
-                <input type="month" className="border rounded p-2 text-sm" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)}/>
+                <input type="month" className="border rounded p-2 text-sm" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} />
                 <button onClick={generateReport} disabled={loading} className="bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 disabled:opacity-50">
-                  {loading ? <Loader2 size={16} className="animate-spin"/> : null} Generar
+                  {loading ? <Loader2 size={16} className="animate-spin" /> : null} Generar
                 </button>
               </div>
             </div>
@@ -397,7 +397,7 @@ export default function ConfiguracionPage() {
               </table>
             ) : (
               <div className="p-20 text-center text-slate-400">
-                <CreditCard size={48} className="mx-auto mb-4 opacity-20"/>
+                <CreditCard size={48} className="mx-auto mb-4 opacity-20" />
                 <p className="text-sm">Seleccione periodo y genere el informe</p>
               </div>
             )}
@@ -408,7 +408,7 @@ export default function ConfiguracionPage() {
                   <p className="text-xs text-slate-400 uppercase">Total {selectedMonth}</p>
                   <p className="text-3xl font-bold">{reportData.reduce((acc, r) => acc + r.total, 0).toFixed(2)} €</p>
                 </div>
-                <button className="bg-white text-slate-900 px-6 py-3 rounded-xl font-bold flex items-center gap-2"><Download size={18}/> Exportar PDF</button>
+                <button className="bg-white text-slate-900 px-6 py-3 rounded-xl font-bold flex items-center gap-2"><Download size={18} /> Exportar PDF</button>
               </div>
             )}
           </div>
@@ -425,7 +425,7 @@ export default function ConfiguracionPage() {
               <p className="text-sm text-slate-500">Administra los usuarios del sistema y sus niveles de acceso</p>
             </div>
             <button onClick={() => setShowModal(true)} className="bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-orange-700 transition-colors">
-              <Plus size={18}/> Nuevo Usuario
+              <Plus size={18} /> Nuevo Usuario
             </button>
           </div>
 
@@ -435,41 +435,41 @@ export default function ConfiguracionPage() {
               <h3 className="font-bold text-slate-800">Usuarios del Sistema</h3>
               <span className="text-xs text-slate-500">{usuarios.length} usuarios</span>
             </div>
-            
+
             {loadingUsuarios ? (
               <div className="p-20 text-center">
-                <Loader2 size={32} className="mx-auto animate-spin text-orange-600"/>
+                <Loader2 size={32} className="mx-auto animate-spin text-orange-600" />
                 <p className="text-sm text-slate-500 mt-4">Cargando usuarios...</p>
               </div>
             ) : (
               <table className="w-full text-left">
                 <thead className="bg-slate-50 border-b">
                   <tr>
-                    <th 
+                    <th
                       className="p-4 text-xs font-bold text-slate-400 uppercase cursor-pointer hover:text-slate-600 transition-colors flex items-center"
                       onClick={() => handleSort('nombre')}
                     >
                       Usuario {renderSortIcon('nombre')}
                     </th>
-                    <th 
+                    <th
                       className="p-4 text-xs font-bold text-slate-400 uppercase cursor-pointer hover:text-slate-600 transition-colors"
                       onClick={() => handleSort('email')}
                     >
                       Email {renderSortIcon('email')}
                     </th>
-                    <th 
+                    <th
                       className="p-4 text-xs font-bold text-slate-400 uppercase cursor-pointer hover:text-slate-600 transition-colors"
                       onClick={() => handleSort('voluntario')}
                     >
                       Voluntario {renderSortIcon('voluntario')}
                     </th>
-                    <th 
+                    <th
                       className="p-4 text-xs font-bold text-slate-400 uppercase cursor-pointer hover:text-slate-600 transition-colors"
                       onClick={() => handleSort('rol')}
                     >
                       Rol {renderSortIcon('rol')}
                     </th>
-                    <th 
+                    <th
                       className="p-4 text-xs font-bold text-slate-400 uppercase cursor-pointer hover:text-slate-600 transition-colors"
                       onClick={() => handleSort('estado')}
                     >
@@ -488,12 +488,11 @@ export default function ConfiguracionPage() {
                       <td className="p-4 text-sm text-slate-600">{usuario.email}</td>
                       <td className="p-4 font-mono text-sm text-slate-600">{usuario.numeroVoluntario || '-'}</td>
                       <td className="p-4">
-                        <span className={`px-3 py-1 rounded-lg text-xs font-bold ${
-                          usuario.rol.nombre === 'superadmin' ? 'bg-indigo-100 text-indigo-700' :
-                          usuario.rol.nombre === 'admin' ? 'bg-blue-100 text-blue-700' :
-                          usuario.rol.nombre === 'operador' ? 'bg-green-100 text-green-700' :
-                          'bg-slate-100 text-slate-600'
-                        }`}>
+                        <span className={`px-3 py-1 rounded-lg text-xs font-bold ${usuario.rol.nombre === 'superadmin' ? 'bg-indigo-100 text-indigo-700' :
+                            usuario.rol.nombre === 'admin' ? 'bg-blue-100 text-blue-700' :
+                              usuario.rol.nombre === 'operador' ? 'bg-green-100 text-green-700' :
+                                'bg-slate-100 text-slate-600'
+                          }`}>
                           {usuario.rol.nombre}
                         </span>
                       </td>
@@ -503,25 +502,25 @@ export default function ConfiguracionPage() {
                         </span>
                       </td>
                       <td className="p-4 text-right flex justify-end gap-2">
-                        <button 
+                        <button
                           onClick={() => openEditModal(usuario)}
                           className="p-2 text-slate-400 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
                           title="Cambiar contraseña"
                         >
-                          <Edit size={18}/>
+                          <Edit size={18} />
                         </button>
-                        <button 
+                        <button
                           onClick={() => toggleUsuarioActivo(usuario.id, usuario.activo)}
                           className={`text-xs px-3 py-1 rounded-lg font-bold ${usuario.activo ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'bg-green-100 text-green-700 hover:bg-green-200'}`}
                         >
                           {usuario.activo ? 'Desactivar' : 'Activar'}
                         </button>
-                        <button 
+                        <button
                           onClick={() => handleDeleteUser(usuario.id)}
                           className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                           title="Eliminar usuario"
                         >
-                          <Trash2 size={18}/>
+                          <Trash2 size={18} />
                         </button>
                       </td>
                     </tr>
@@ -529,7 +528,7 @@ export default function ConfiguracionPage() {
                   {usuarios.length === 0 && (
                     <tr>
                       <td colSpan={6} className="p-20 text-center text-slate-400">
-                        <Users size={48} className="mx-auto mb-4 opacity-20"/>
+                        <Users size={48} className="mx-auto mb-4 opacity-20" />
                         <p className="text-sm">No hay usuarios registrados</p>
                       </td>
                     </tr>
@@ -544,7 +543,7 @@ export default function ConfiguracionPage() {
       {/* Audit */}
       {activeTab === 'audit' && (
         <div className="bg-white rounded-xl border shadow-sm p-20 text-center">
-          <History size={64} className="mx-auto mb-4 text-slate-200"/>
+          <History size={64} className="mx-auto mb-4 text-slate-200" />
           <h3 className="font-bold text-slate-600 text-lg">Módulo de Seguridad Alta</h3>
           <p className="text-sm text-slate-400 mt-2 max-w-md mx-auto">Los logs de auditoría están siendo migrados a la bóveda de datos securizada. Disponible próximamente.</p>
         </div>
@@ -557,10 +556,10 @@ export default function ConfiguracionPage() {
             <div className="p-6 border-b flex justify-between items-center">
               <h3 className="text-xl font-bold text-slate-800">Crear Nuevo Usuario</h3>
               <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600">
-                <X size={24}/>
+                <X size={24} />
               </button>
             </div>
-            
+
             <form onSubmit={handleSubmit} className="p-6 space-y-6">
               {formError && (
                 <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
@@ -708,7 +707,7 @@ export default function ConfiguracionPage() {
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
                     >
-                      {showPassword ? <EyeOff size={20}/> : <Eye size={20}/>}
+                      {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                     </button>
                   </div>
                 </div>
@@ -744,10 +743,10 @@ export default function ConfiguracionPage() {
                 <p className="text-sm text-slate-500 mt-1">{editingUser.nombre} {editingUser.apellidos}</p>
               </div>
               <button onClick={() => setShowEditModal(false)} className="text-slate-400 hover:text-slate-600">
-                <X size={24}/>
+                <X size={24} />
               </button>
             </div>
-            
+
             <form onSubmit={handleUpdatePassword} className="p-6 space-y-6">
               {editFormError && (
                 <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
@@ -780,7 +779,7 @@ export default function ConfiguracionPage() {
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
                     >
-                      {showPassword ? <EyeOff size={20}/> : <Eye size={20}/>}
+                      {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                     </button>
                   </div>
                 </div>
@@ -812,7 +811,7 @@ export default function ConfiguracionPage() {
                   type="submit"
                   className="px-6 py-3 bg-orange-600 text-white rounded-lg text-sm font-bold hover:bg-orange-700 flex items-center gap-2"
                 >
-                  <Save size={18}/> Guardar Contraseña
+                  <Save size={18} /> Guardar Contraseña
                 </button>
               </div>
             </form>

@@ -42,6 +42,8 @@ export async function POST(request: NextRequest) {
                         numeroVoluntario: true,
                         responsableTurno: true,
                         carnetConducir: true,
+                        experiencia: true,
+                        nivelCompromiso: true,
                         servicioId: true
                     }
                 }
@@ -93,51 +95,94 @@ export async function POST(request: NextRequest) {
                     return
                 }
 
-                // Ordenar por:
-                // 1. Menor número de asignaciones actuales (distribución equitativa)
-                // 2. Mayor número de turnos deseados
-                // 3. Responsable de turno (prioridad para responsables)
-                disponiblesParaTurno.sort((a, b) => {
-                    const asignacionesA = conteoAsignaciones[a.usuarioId] || 0
-                    const asignacionesB = conteoAsignaciones[b.usuarioId] || 0
+                // Sistema de puntuación mejorado
+                const candidatosConPuntuacion = disponiblesParaTurno.map(d => {
+                    let puntos = 0
 
-                    if (asignacionesA !== asignacionesB) {
-                        return asignacionesA - asignacionesB
+                    // 1. Responsable de turno (+10 puntos)
+                    if (d.usuario.responsableTurno) {
+                        puntos += 10
                     }
 
-                    if (a.turnosDeseados !== b.turnosDeseados) {
-                        return b.turnosDeseados - a.turnosDeseados
+                    // 2. Experiencia (ALTA: +5, MEDIA: +2, BAJA: 0)
+                    if (d.usuario.experiencia === 'ALTA') {
+                        puntos += 5
+                    } else if (d.usuario.experiencia === 'MEDIA') {
+                        puntos += 2
                     }
 
-                    if (a.usuario.responsableTurno !== b.usuario.responsableTurno) {
-                        return a.usuario.responsableTurno ? -1 : 1
+                    // 3. Nivel de compromiso (ALTO: +5, MEDIO: +2, BAJO: 0)
+                    if (d.usuario.nivelCompromiso === 'ALTO') {
+                        puntos += 5
+                    } else if (d.usuario.nivelCompromiso === 'MEDIO') {
+                        puntos += 2
                     }
 
-                    return 0
+                    // 4. Conductor (+3 puntos)
+                    if (d.usuario.carnetConducir) {
+                        puntos += 3
+                    }
+
+                    // 5. Equidad (-2 por cada turno ya asignado)
+                    const asignacionesActuales = conteoAsignaciones[d.usuarioId] || 0
+                    puntos -= asignacionesActuales * 2
+
+                    // 6. Turnos deseados (si solicita más turnos, +1 punto)
+                    if (d.turnosDeseados > asignacionesActuales) {
+                        puntos += 1
+                    }
+
+                    return {
+                        ...d,
+                        puntuacion: puntos
+                    }
                 })
 
-                // Asignar el mejor candidato
-                const seleccionado = disponiblesParaTurno[0]
+                // Ordenar por puntuación descendente
+                candidatosConPuntuacion.sort((a, b) => b.puntuacion - a.puntuacion)
 
-                sugerencias.push({
-                    fecha: fechaDia.toISOString().split('T')[0],
-                    turno,
-                    usuarioId: seleccionado.usuarioId,
-                    usuario: {
-                        id: seleccionado.usuario.id,
-                        nombre: seleccionado.usuario.nombre,
-                        apellidos: seleccionado.usuario.apellidos,
-                        numeroVoluntario: seleccionado.usuario.numeroVoluntario,
-                        responsableTurno: seleccionado.usuario.responsableTurno,
-                        carnetConducir: seleccionado.usuario.carnetConducir
-                    },
-                    servicioId: seleccionado.usuario.servicioId,
-                    tipo: 'programada',
-                    estado: 'programada'
+                // Asignar los mejores candidatos (hasta 2-3 por turno)
+                const numAsignaciones = Math.min(2, candidatosConPuntuacion.length)
+
+                // Asegurar que al menos haya 1 responsable si es posible
+                const responsables = candidatosConPuntuacion.filter(c => c.usuario.responsableTurno)
+                const seleccionados: any[] = []
+
+                if (responsables.length > 0) {
+                    seleccionados.push(responsables[0])
+                }
+
+                // Completar hasta el número deseado con los mejor puntuados
+                candidatosConPuntuacion
+                    .filter(c => !seleccionados.includes(c))
+                    .slice(0, numAsignaciones - seleccionados.length)
+                    .forEach(c => seleccionados.push(c))
+
+                // Crear sugerencias para cada seleccionado
+                seleccionados.forEach(seleccionado => {
+                    sugerencias.push({
+                        fecha: fechaDia.toISOString().split('T')[0],
+                        turno,
+                        usuarioId: seleccionado.usuarioId,
+                        usuario: {
+                            id: seleccionado.usuario.id,
+                            nombre: seleccionado.usuario.nombre,
+                            apellidos: seleccionado.usuario.apellidos,
+                            numeroVoluntario: seleccionado.usuario.numeroVoluntario,
+                            responsableTurno: seleccionado.usuario.responsableTurno,
+                            carnetConducir: seleccionado.usuario.carnetConducir,
+                            experiencia: seleccionado.usuario.experiencia,
+                            nivelCompromiso: seleccionado.usuario.nivelCompromiso
+                        },
+                        servicioId: seleccionado.usuario.servicioId,
+                        tipo: 'programada',
+                        estado: 'programada',
+                        puntuacion: seleccionado.puntuacion // Para debugging
+                    })
+
+                    usuariosAsignados.add(seleccionado.usuarioId)
+                    conteoAsignaciones[seleccionado.usuarioId]++
                 })
-
-                usuariosAsignados.add(seleccionado.usuarioId)
-                conteoAsignaciones[seleccionado.usuarioId]++
             })
         })
 

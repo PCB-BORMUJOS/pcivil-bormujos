@@ -21,6 +21,7 @@ model Usuario {
   responsableTurno       Boolean               @default(false) @map("responsable_turno")
   carnetConducir         Boolean               @default(false) @map("carnet_conducir")
   experiencia            String                @default("MEDIA")
+  nivelCompromiso        String                @default("MEDIO") @map("nivel_compromiso")
   activo                 Boolean               @default(true)
   rolId                  String                @map("rol_id")
   servicioId             String                @map("servicio_id")
