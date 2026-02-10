@@ -1,28 +1,41 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Calendar, ChevronLeft, ChevronRight, Plus, AlertCircle, CheckCircle2, User, X, Trash2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Calendar, ChevronLeft, ChevronRight, Plus, AlertCircle, CheckCircle2, User, X, Trash2, Sparkles, Download } from 'lucide-react';
 
 // Tipos
 enum ShiftType { MORNING = 'Mañana', AFTERNOON = 'Tarde', EXTRA = 'Extra' }
 
 interface Shift {
-  id: string;
+  id?: string;
   date: string;
   type: ShiftType;
+  turno: 'mañana' | 'tarde';
   startTime: string;
   endTime: string;
-  assignments: { volunteerId: string; role: string }[];
+  assignment?: { volunteerId: string; nombre: string; numeroVoluntario: string };
   isComplete: boolean;
 }
 
-// Mock volunteers
-const MOCK_VOLUNTEERS = [
-  { id: 'j44', name: 'EMILIO', surname: 'SIMÓN', badgeNumber: 'J-44', canLead: true, canDrive: true },
-  { id: 's01', name: 'TANYA', surname: 'GONZÁLEZ', badgeNumber: 'S-01', canLead: true, canDrive: true },
-  { id: 'b29', name: 'JOSE CARLOS', surname: 'BAILÓN', badgeNumber: 'B-29', canLead: true, canDrive: true },
-  { id: 's02', name: 'ANA MARÍA', surname: 'FERNÁNDEZ', badgeNumber: 'S-02', canLead: true, canDrive: false },
-];
+interface Voluntario {
+  id: string;
+  nombre: string;
+  apellidos: string;
+  numeroVoluntario: string;
+  responsableTurno?: boolean;
+  carnetConducir?: boolean;
+}
+
+interface Sugerencia {
+  fecha: string;
+  turno: string;
+  usuarioId: string;
+  usuario: {
+    nombre: string;
+    apellidos: string;
+    numeroVoluntario: string;
+  };
+}
 
 // Helpers
 const getNextMonday = (date: Date) => {
@@ -52,41 +65,88 @@ export default function CuadrantesPage() {
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [selectedShift, setSelectedShift] = useState<Shift | null>(null);
   const [showExtraModal, setShowExtraModal] = useState(false);
+  const [voluntarios, setVoluntarios] = useState<Voluntario[]>([]);
+  const [loadingGuardias, setLoadingGuardias] = useState(false);
+  const [showSugerencias, setShowSugerencias] = useState(false);
+  const [sugerencias, setSugerencias] = useState<Sugerencia[]>([]);
+  const [loadingSugerencias, setLoadingSugerencias] = useState(false);
 
-  // Generar turnos para la semana si no existen
-  React.useEffect(() => {
-    const weekDays = getWeekDays(currentWeekStart);
-    const existingDates = shifts.map(s => s.date);
-    const newShifts: Shift[] = [];
+  // Cargar voluntarios
+  useEffect(() => {
+    fetch('/api/voluntarios')
+      .then(res => res.json())
+      .then(data => setVoluntarios(data.voluntarios || []))
+      .catch(err => console.error('Error cargando voluntarios:', err));
+  }, []);
 
-    weekDays.forEach(day => {
-      const dateStr = day.toISOString().split('T')[0];
-      if (!existingDates.includes(dateStr)) {
+  // Cargar guardias de la semana
+  useEffect(() => {
+    cargarGuardias();
+  }, [currentWeekStart]);
+
+  const cargarGuardias = async () => {
+    setLoadingGuardias(true);
+    try {
+      const semanaStr = currentWeekStart.toISOString().split('T')[0];
+      const res = await fetch(`/api/cuadrantes?semana=${semanaStr}`);
+      const data = await res.json();
+
+      // Generar estructura de turnos vacía para toda la semana
+      const weekDays = getWeekDays(currentWeekStart);
+      const newShifts: Shift[] = [];
+
+      weekDays.forEach(day => {
+        const dateStr = day.toISOString().split('T')[0];
+
+        // Buscar guardias existentes para este día
+        const guardiasMañana = data.guardias?.filter((g: any) =>
+          new Date(g.fecha).toISOString().split('T')[0] === dateStr && g.turno === 'mañana'
+        ) || [];
+
+        const guardiasTarde = data.guardias?.filter((g: any) =>
+          new Date(g.fecha).toISOString().split('T')[0] === dateStr && g.turno === 'tarde'
+        ) || [];
+
+        // Turno mañana
         newShifts.push({
-          id: `${dateStr}-m`,
+          id: guardiasMañana[0]?.id,
           date: dateStr,
           type: ShiftType.MORNING,
+          turno: 'mañana',
           startTime: '09:00',
           endTime: '14:00',
-          assignments: [],
-          isComplete: false
+          assignment: guardiasMañana[0] ? {
+            volunteerId: guardiasMañana[0].usuario.id,
+            nombre: `${guardiasMañana[0].usuario.nombre} ${guardiasMañana[0].usuario.apellidos}`,
+            numeroVoluntario: guardiasMañana[0].usuario.numeroVoluntario
+          } : undefined,
+          isComplete: guardiasMañana.length > 0
         });
+
+        // Turno tarde
         newShifts.push({
-          id: `${dateStr}-a`,
+          id: guardiasTarde[0]?.id,
           date: dateStr,
           type: ShiftType.AFTERNOON,
+          turno: 'tarde',
           startTime: '17:00',
           endTime: '22:00',
-          assignments: [],
-          isComplete: false
+          assignment: guardiasTarde[0] ? {
+            volunteerId: guardiasTarde[0].usuario.id,
+            nombre: `${guardiasTarde[0].usuario.nombre} ${guardiasTarde[0].usuario.apellidos}`,
+            numeroVoluntario: guardiasTarde[0].usuario.numeroVoluntario
+          } : undefined,
+          isComplete: guardiasTarde.length > 0
         });
-      }
-    });
+      });
 
-    if (newShifts.length > 0) {
-      setShifts(prev => [...prev, ...newShifts]);
+      setShifts(newShifts);
+    } catch (error) {
+      console.error('Error cargando guardias:', error);
+    } finally {
+      setLoadingGuardias(false);
     }
-  }, [currentWeekStart]);
+  };
 
   const changeWeek = (dir: 'prev' | 'next') => {
     const newDate = new Date(currentWeekStart);
@@ -94,46 +154,105 @@ export default function CuadrantesPage() {
     setCurrentWeekStart(newDate);
   };
 
+  const handleAsignarVoluntario = async (shift: Shift, volunteerId: string) => {
+    try {
+      // Si ya existe una guardia, eliminarla primero
+      if (shift.id) {
+        await fetch(`/api/cuadrantes?id=${shift.id}`, { method: 'DELETE' });
+      }
+
+      // Crear nueva guardia
+      const res = await fetch('/api/cuadrantes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fecha: shift.date,
+          turno: shift.turno,
+          usuarioId: volunteerId,
+          tipo: 'programada'
+        })
+      });
+
+      if (res.ok) {
+        await cargarGuardias();
+        setSelectedShift(null);
+      } else {
+        alert('Error al asignar voluntario');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Error al asignar voluntario');
+    }
+  };
+
+  const handleEliminarAsignacion = async (shiftId: string) => {
+    if (!confirm('¿Eliminar esta asignación?')) return;
+
+    try {
+      const res = await fetch(`/api/cuadrantes?id=${shiftId}`, { method: 'DELETE' });
+      if (res.ok) {
+        await cargarGuardias();
+        setSelectedShift(null);
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Error al eliminar asignación');
+    }
+  };
+
+  const handleGenerarAutomatico = async () => {
+    setLoadingSugerencias(true);
+    try {
+      const semanaStr = currentWeekStart.toISOString().split('T')[0];
+      const res = await fetch('/api/cuadrantes/generar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ semanaInicio: semanaStr })
+      });
+
+      const data = await res.json();
+
+      if (data.sugerencias && data.sugerencias.length > 0) {
+        setSugerencias(data.sugerencias);
+        setShowSugerencias(true);
+      } else {
+        alert('No hay disponibilidades registradas para esta semana. Pide a los voluntarios que registren su disponibilidad en el Dashboard.');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Error al generar cuadrante automático');
+    } finally {
+      setLoadingSugerencias(false);
+    }
+  };
+
+  const handleAplicarSugerencias = async () => {
+    try {
+      // Crear todas las guardias sugeridas
+      for (const sug of sugerencias) {
+        await fetch('/api/cuadrantes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            fecha: sug.fecha,
+            turno: sug.turno,
+            usuarioId: sug.usuarioId,
+            tipo: 'programada'
+          })
+        });
+      }
+
+      alert('✅ Cuadrante generado correctamente');
+      setShowSugerencias(false);
+      await cargarGuardias();
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Error al aplicar sugerencias');
+    }
+  };
+
   const weekDays = getWeekDays(currentWeekStart);
   const dayNames = ['LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB', 'DOM'];
-
-  const handleAssignment = (shiftId: string, volunteerId: string, role: string) => {
-    setShifts(prev => prev.map(s => {
-      if (s.id !== shiftId) return s;
-      const existing = s.assignments.find(a => a.volunteerId === volunteerId);
-      if (existing) return s;
-      const newAssignments = [...s.assignments, { volunteerId, role }];
-      const isComplete = newAssignments.filter(a => a.role === 'RESPONSABLE').length >= 1 &&
-                         newAssignments.filter(a => a.role === 'CONDUCTOR').length >= 2;
-      return { ...s, assignments: newAssignments, isComplete };
-    }));
-    
-    // Actualizar selectedShift si es el que estamos editando
-    if (selectedShift?.id === shiftId) {
-      setSelectedShift(prev => {
-        if (!prev) return null;
-        const newAssignments = [...prev.assignments, { volunteerId, role }];
-        const isComplete = newAssignments.filter(a => a.role === 'RESPONSABLE').length >= 1 &&
-                           newAssignments.filter(a => a.role === 'CONDUCTOR').length >= 2;
-        return { ...prev, assignments: newAssignments, isComplete };
-      });
-    }
-  };
-
-  const handleRemoveAssignment = (shiftId: string, volunteerId: string) => {
-    setShifts(prev => prev.map(s => {
-      if (s.id !== shiftId) return s;
-      const newAssignments = s.assignments.filter(a => a.volunteerId !== volunteerId);
-      return { ...s, assignments: newAssignments, isComplete: false };
-    }));
-    
-    if (selectedShift?.id === shiftId) {
-      setSelectedShift(prev => {
-        if (!prev) return null;
-        return { ...prev, assignments: prev.assignments.filter(a => a.volunteerId !== volunteerId), isComplete: false };
-      });
-    }
-  };
 
   return (
     <div className="space-y-6">
@@ -146,21 +265,22 @@ export default function CuadrantesPage() {
           <p className="text-slate-500 text-sm">Gestión operativa de servicios.</p>
         </div>
         <div className="flex items-center gap-4">
-          <button 
-            onClick={() => setShowExtraModal(true)}
-            className="bg-purple-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-purple-700 flex items-center gap-2"
+          <button
+            onClick={handleGenerarAutomatico}
+            disabled={loadingSugerencias}
+            className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:from-purple-700 hover:to-indigo-700 flex items-center gap-2 disabled:opacity-50"
           >
-            <Plus size={16}/> Turno Extra
+            <Sparkles size={16} /> {loadingSugerencias ? 'Generando...' : 'Generar desde Disponibilidad'}
           </button>
           <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg p-1">
             <button onClick={() => changeWeek('prev')} className="p-2 hover:bg-slate-100 rounded">
-              <ChevronLeft size={18}/>
+              <ChevronLeft size={18} />
             </button>
             <span className="text-sm font-medium px-2 min-w-[200px] text-center">
               {formatDateRange(currentWeekStart)}
             </span>
             <button onClick={() => changeWeek('next')} className="p-2 hover:bg-slate-100 rounded">
-              <ChevronRight size={18}/>
+              <ChevronRight size={18} />
             </button>
           </div>
         </div>
@@ -179,40 +299,45 @@ export default function CuadrantesPage() {
         </div>
 
         {/* Shifts */}
-        <div className="grid grid-cols-7">
-          {weekDays.map((day, dayIdx) => {
-            const dateStr = day.toISOString().split('T')[0];
-            const dayShifts = shifts.filter(s => s.date === dateStr);
+        {loadingGuardias ? (
+          <div className="text-center py-12 text-slate-500">Cargando guardias...</div>
+        ) : (
+          <div className="grid grid-cols-7">
+            {weekDays.map((day, dayIdx) => {
+              const dateStr = day.toISOString().split('T')[0];
+              const dayShifts = shifts.filter(s => s.date === dateStr);
 
-            return (
-              <div key={dayIdx} className="border-r border-slate-100 last:border-r-0 min-h-[200px] p-2">
-                {dayShifts.map(shift => (
-                  <div
-                    key={shift.id}
-                    onClick={() => setSelectedShift(shift)}
-                    className={`p-2 rounded-lg border text-xs cursor-pointer mb-2 transition-all hover:shadow-md ${
-                      shift.type === ShiftType.EXTRA ? 'bg-purple-50 border-purple-200' :
-                      shift.isComplete ? 'bg-green-50 border-green-200' : 'bg-white border-slate-200 border-l-4 border-l-orange-400'
-                    }`}
-                  >
-                    <div className="flex justify-between items-center mb-1">
-                      <span className="font-bold text-slate-700">{shift.startTime} - {shift.endTime}</span>
-                      {shift.isComplete ? <CheckCircle2 size={12} className="text-green-600"/> : <AlertCircle size={12} className="text-orange-400"/>}
+              return (
+                <div key={dayIdx} className="border-r border-slate-100 last:border-r-0 min-h-[200px] p-2">
+                  {dayShifts.map(shift => (
+                    <div
+                      key={`${shift.date}-${shift.turno}`}
+                      onClick={() => setSelectedShift(shift)}
+                      className={`p-2 rounded-lg border text-xs cursor-pointer mb-2 transition-all hover:shadow-md ${shift.isComplete ? 'bg-green-50 border-green-200' : 'bg-white border-slate-200 border-l-4 border-l-orange-400'
+                        }`}
+                    >
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="font-bold text-slate-700">{shift.startTime} - {shift.endTime}</span>
+                        {shift.isComplete ? <CheckCircle2 size={12} className="text-green-600" /> : <AlertCircle size={12} className="text-orange-400" />}
+                      </div>
+                      {shift.assignment ? (
+                        <div className="text-slate-700 font-medium">{shift.assignment.numeroVoluntario}</div>
+                      ) : (
+                        <div className="text-slate-400">Sin asignar</div>
+                      )}
                     </div>
-                    <div className="text-slate-500">{shift.assignments.length} Asignados</div>
-                  </div>
-                ))}
-              </div>
-            );
-          })}
-        </div>
+                  ))}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
-      {/* Shift Detail Modal */}
+      {/* Modal de asignación */}
       {selectedShift && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setSelectedShift(null)}>
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden" onClick={e => e.stopPropagation()}>
-            {/* Modal Header */}
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden" onClick={e => e.stopPropagation()}>
             <div className="bg-slate-900 p-4 text-white flex justify-between items-center">
               <div>
                 <h3 className="text-lg font-bold">
@@ -220,127 +345,118 @@ export default function CuadrantesPage() {
                 </h3>
                 <p className="text-slate-400 text-sm">{selectedShift.startTime} - {selectedShift.endTime}</p>
               </div>
-              <button onClick={() => setSelectedShift(null)} className="text-slate-400 hover:text-white"><X size={24}/></button>
+              <button onClick={() => setSelectedShift(null)} className="text-slate-400 hover:text-white"><X size={24} /></button>
             </div>
 
-            {/* Modal Content */}
-            <div className="flex h-[500px]">
-              {/* Left: Available Personnel */}
-              <div className="w-1/2 p-4 border-r border-slate-200 overflow-y-auto bg-slate-50">
-                <h4 className="font-bold text-slate-700 mb-3 text-sm uppercase">Personal Disponible</h4>
-                <div className="space-y-2">
-                  {MOCK_VOLUNTEERS.filter(v => !selectedShift.assignments.find(a => a.volunteerId === v.id)).map(vol => (
-                    <div key={vol.id} className="bg-white p-3 rounded-lg border border-slate-200">
-                      <div className="flex items-center gap-3 mb-2">
-                        <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold">{vol.badgeNumber.split('-')[0]}</div>
-                        <div>
-                          <div className="font-bold text-sm text-slate-800">{vol.badgeNumber}</div>
-                          <div className="text-xs text-slate-500">{vol.name} {vol.surname}</div>
-                        </div>
-                      </div>
-                      <div className="flex gap-2">
-                        {vol.canLead && (
-                          <button onClick={() => handleAssignment(selectedShift.id, vol.id, 'RESPONSABLE')} className="text-[10px] bg-blue-100 text-blue-800 px-2 py-0.5 rounded font-bold hover:bg-blue-200">RESP</button>
-                        )}
-                        {vol.canDrive && (
-                          <button onClick={() => handleAssignment(selectedShift.id, vol.id, 'CONDUCTOR')} className="text-[10px] bg-green-100 text-green-800 px-2 py-0.5 rounded font-bold hover:bg-green-200">COND</button>
-                        )}
-                        <button onClick={() => handleAssignment(selectedShift.id, vol.id, 'CECOPAL')} className="text-[10px] bg-orange-100 text-orange-800 px-2 py-0.5 rounded font-bold hover:bg-orange-200">CECO</button>
-                        <button onClick={() => handleAssignment(selectedShift.id, vol.id, 'APOYO')} className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-bold hover:bg-slate-200">APOYO</button>
-                      </div>
+            <div className="p-6">
+              {selectedShift.assignment ? (
+                <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <div className="text-sm text-green-600 font-bold">ASIGNADO</div>
+                      <div className="text-lg font-bold text-slate-800">{selectedShift.assignment.numeroVoluntario} - {selectedShift.assignment.nombre}</div>
                     </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Right: Current Assignments */}
-              <div className="w-1/2 p-4 overflow-y-auto">
-                <h4 className="font-bold text-slate-700 mb-3 text-sm uppercase flex justify-between">
-                  Equipo Asignado
-                  <span className={`text-xs px-2 py-0.5 rounded ${selectedShift.isComplete ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                    {selectedShift.isComplete ? 'COMPLETO' : 'INCOMPLETO'}
-                  </span>
-                </h4>
-
-                {/* Requirements */}
-                <div className="grid grid-cols-3 gap-2 mb-4">
-                  <div className={`text-center p-2 rounded border ${selectedShift.assignments.filter(a => a.role === 'RESPONSABLE').length >= 1 ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
-                    <div className="text-[10px] text-slate-500 uppercase font-bold">Responsable</div>
-                    <div className="text-lg font-bold">{selectedShift.assignments.filter(a => a.role === 'RESPONSABLE').length}/1</div>
-                  </div>
-                  <div className={`text-center p-2 rounded border ${selectedShift.assignments.filter(a => a.role === 'CONDUCTOR').length >= 2 ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
-                    <div className="text-[10px] text-slate-500 uppercase font-bold">Conductores</div>
-                    <div className="text-lg font-bold">{selectedShift.assignments.filter(a => a.role === 'CONDUCTOR').length}/2</div>
-                  </div>
-                  <div className={`text-center p-2 rounded border ${selectedShift.assignments.filter(a => a.role === 'CECOPAL').length >= 1 ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
-                    <div className="text-[10px] text-slate-500 uppercase font-bold">Cecopal</div>
-                    <div className="text-lg font-bold">{selectedShift.assignments.filter(a => a.role === 'CECOPAL').length}/1</div>
+                    <button
+                      onClick={() => selectedShift.id && handleEliminarAsignacion(selectedShift.id)}
+                      className="p-2 text-red-600 hover:bg-red-100 rounded-lg"
+                    >
+                      <Trash2 size={20} />
+                    </button>
                   </div>
                 </div>
+              ) : (
+                <div className="mb-6 p-4 bg-orange-50 border border-orange-200 rounded-lg text-center">
+                  <p className="text-orange-700 font-medium">Este turno no tiene asignación. Selecciona un voluntario.</p>
+                </div>
+              )}
 
-                {/* Assigned List */}
-                <div className="space-y-2">
-                  {selectedShift.assignments.map((assignment, idx) => {
-                    const vol = MOCK_VOLUNTEERS.find(v => v.id === assignment.volunteerId);
-                    return (
-                      <div key={idx} className="flex items-center justify-between p-2 bg-white border border-slate-200 rounded">
-                        <div className="flex items-center gap-3">
-                          <span className={`text-[10px] font-bold px-2 py-1 rounded w-20 text-center ${
-                            assignment.role === 'RESPONSABLE' ? 'bg-blue-100 text-blue-700' :
-                            assignment.role === 'CONDUCTOR' ? 'bg-green-100 text-green-700' :
-                            assignment.role === 'CECOPAL' ? 'bg-orange-100 text-orange-700' : 'bg-slate-200 text-slate-700'
-                          }`}>
-                            {assignment.role}
-                          </span>
-                          <span className="font-bold text-sm text-slate-800">{vol?.badgeNumber} - {vol?.name}</span>
-                        </div>
-                        <button onClick={() => handleRemoveAssignment(selectedShift.id, assignment.volunteerId)} className="text-slate-400 hover:text-red-500">
-                          <Trash2 size={16}/>
-                        </button>
+              <h4 className="font-bold text-slate-700 mb-3 text-sm uppercase">Voluntarios Disponibles</h4>
+              <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                {voluntarios.map(vol => (
+                  <div key={vol.id} className="bg-slate-50 p-3 rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="font-bold text-sm text-slate-800">{vol.numeroVoluntario}</div>
+                        <div className="text-xs text-slate-500">{vol.nombre} {vol.apellidos}</div>
                       </div>
-                    );
-                  })}
-                  {selectedShift.assignments.length === 0 && (
-                    <div className="text-center py-8 text-slate-400 border-2 border-dashed border-slate-200 rounded-lg">
-                      Usa los botones de la izquierda para asignar personal
+                      <button
+                        onClick={() => handleAsignarVoluntario(selectedShift, vol.id)}
+                        className="px-4 py-2 bg-orange-500 text-white rounded-lg text-sm font-bold hover:bg-orange-600"
+                      >
+                        Asignar
+                      </button>
                     </div>
-                  )}
-                </div>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* Extra Shift Modal */}
-      {showExtraModal && (
+      {/* Modal de sugerencias */}
+      {showSugerencias && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
-            <h3 className="text-lg font-bold text-slate-800 mb-4">Crear Turno Extraordinario</h3>
-            <form onSubmit={(e) => { e.preventDefault(); setShowExtraModal(false); alert('Turno creado'); }} className="space-y-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
+            <div className="bg-gradient-to-r from-purple-600 to-indigo-600 p-4 text-white flex justify-between items-center">
               <div>
-                <label className="text-xs font-bold text-slate-600 block mb-1">Fecha</label>
-                <input type="date" required className="w-full border p-2 rounded" />
+                <h3 className="text-lg font-bold flex items-center gap-2">
+                  <Sparkles size={20} /> Cuadrante Generado Automáticamente
+                </h3>
+                <p className="text-purple-200 text-sm">Revisa las asignaciones antes de aplicar</p>
               </div>
-              <div className="flex gap-4">
-                <div className="flex-1">
-                  <label className="text-xs font-bold text-slate-600 block mb-1">Inicio</label>
-                  <input type="time" required className="w-full border p-2 rounded" />
-                </div>
-                <div className="flex-1">
-                  <label className="text-xs font-bold text-slate-600 block mb-1">Fin</label>
-                  <input type="time" required className="w-full border p-2 rounded" />
-                </div>
+              <button onClick={() => setShowSugerencias(false)} className="text-purple-200 hover:text-white"><X size={24} /></button>
+            </div>
+
+            <div className="p-6 max-h-[600px] overflow-y-auto">
+              <div className="grid grid-cols-7 gap-2 mb-4">
+                {dayNames.map((dia, idx) => (
+                  <div key={idx} className="text-center text-xs font-bold text-slate-500">{dia}</div>
+                ))}
               </div>
-              <div>
-                <label className="text-xs font-bold text-slate-600 block mb-1">Descripción / Evento</label>
-                <input type="text" required placeholder="Ej: Refuerzo Feria" className="w-full border p-2 rounded" />
+
+              {weekDays.map((day, dayIdx) => {
+                const dateStr = day.toISOString().split('T')[0];
+                const sugsDia = sugerencias.filter(s => s.fecha === dateStr);
+
+                return (
+                  <div key={dayIdx} className="grid grid-cols-7 gap-2 mb-2">
+                    {dayIdx === 0 && <div className="col-span-7 text-sm font-bold text-slate-700 mt-2">Turnos Propuestos</div>}
+                    <div className="col-span-7 grid grid-cols-7 gap-2">
+                      {weekDays.map((d, i) => {
+                        const ds = d.toISOString().split('T')[0];
+                        const s = sugerencias.filter(sg => sg.fecha === ds);
+                        return (
+                          <div key={i} className="space-y-1">
+                            {s.map((sug, idx) => (
+                              <div key={idx} className="bg-purple-50 border border-purple-200 rounded p-2 text-xs">
+                                <div className="font-bold text-purple-700">{sug.turno === 'mañana' ? '🌅 M' : '🌆 T'}</div>
+                                <div className="text-slate-700 font-medium">{sug.usuario.numeroVoluntario}</div>
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+
+              <div className="mt-6 flex gap-3">
+                <button
+                  onClick={() => setShowSugerencias(false)}
+                  className="flex-1 py-3 bg-slate-100 rounded-lg text-slate-600 font-bold hover:bg-slate-200"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleAplicarSugerencias}
+                  className="flex-1 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-lg text-white font-bold hover:from-purple-700 hover:to-indigo-700"
+                >
+                  ✅ Aplicar Cuadrante
+                </button>
               </div>
-              <div className="flex gap-3 pt-4">
-                <button type="button" onClick={() => setShowExtraModal(false)} className="flex-1 py-2 bg-slate-100 rounded text-slate-600 font-bold">Cancelar</button>
-                <button type="submit" className="flex-1 py-2 bg-purple-600 rounded text-white font-bold hover:bg-purple-700">Crear Turno</button>
-              </div>
-            </form>
+            </div>
           </div>
         </div>
       )}
