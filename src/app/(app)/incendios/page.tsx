@@ -26,11 +26,28 @@ const Popup = dynamic(() => import('react-leaflet').then((mod) => mod.Popup), { 
 const createHidranteIcon = (tipo: string, estado: string) => {
   if (typeof window === 'undefined') return null;
   const L = require('leaflet');
-  
-  const borderColor = estado === 'operativo' ? '#22c55e' : estado === 'averiado' ? '#f59e0b' : '#ef4444';
-  const iconColor = estado === 'operativo' ? '#22c55e' : estado === 'averiado' ? '#f59e0b' : '#ef4444';
-  const shadowColor = estado === 'operativo' ? 'rgba(34, 197, 94, 0.4)' : estado === 'averiado' ? 'rgba(245, 158, 11, 0.4)' : 'rgba(239, 68, 68, 0.4)';
-  
+
+  // Normalizar el estado a minúsculas y eliminar espacios/guiones
+  const estadoNormalizado = (estado || 'operativo')
+    .toLowerCase()
+    .replace(/\s+/g, '_')  // Convertir espacios a guiones bajos
+    .trim();
+
+  // Determinar el color según el estado normalizado
+  let borderColor = '#22c55e';  // Verde por defecto (operativo)
+  let iconColor = '#22c55e';
+  let shadowColor = 'rgba(34, 197, 94, 0.4)';
+
+  if (estadoNormalizado === 'averiado') {
+    borderColor = '#f59e0b';  // Naranja
+    iconColor = '#f59e0b';
+    shadowColor = 'rgba(245, 158, 11, 0.4)';
+  } else if (estadoNormalizado === 'fuera_servicio' || estadoNormalizado === 'fuera_de_servicio' || estadoNormalizado === 'inoperativo') {
+    borderColor = '#ef4444';  // Rojo
+    iconColor = '#ef4444';
+    shadowColor = 'rgba(239, 68, 68, 0.4)';
+  }
+
   return L.divIcon({
     className: 'custom-hidrante-icon',
     html: `
@@ -58,7 +75,7 @@ const createHidranteIcon = (tipo: string, estado: string) => {
 
 
 const TIPOS_EQUIPO_LABELS: Record<string, string> = {
-  extintor: 'Extintor', bie: 'BIE', detector: 'Detector', pulsador: 'Pulsador', 
+  extintor: 'Extintor', bie: 'BIE', detector: 'Detector', pulsador: 'Pulsador',
   alarma: 'Alarma/Sirena', señalizacion: 'Señalización',
 };
 
@@ -105,7 +122,7 @@ const AREAS_NOMBRE: Record<string, string> = {
 export default function IncendiosPage() {
   const [mainTab, setMainTab] = useState<'inventario' | 'eci-edificios' | 'inventario-eci' | 'hidrantes'>('inventario');
   const [inventoryTab, setInventoryTab] = useState<'stock' | 'peticiones' | 'movimientos'>('stock');
-  
+
   const [articulos, setArticulos] = useState<Articulo[]>([]);
   const [familias, setFamilias] = useState<Familia[]>([]);
   const [edificios, setEdificios] = useState<Edificio[]>([]);
@@ -113,19 +130,19 @@ export default function IncendiosPage() {
   const [todosEquiposECI, setTodosEquiposECI] = useState<EquipoECI[]>([]);
   const [hidrantes, setHidrantes] = useState<Hidrante[]>([]);
   const [selectedEdificio, setSelectedEdificio] = useState<Edificio | null>(null);
-  
+
   const [categoriaIncendios, setCategoriaIncendios] = useState<string | null>(null);
   const [statsArticulos, setStatsArticulos] = useState({ totalArticulos: 0, stockBajo: 0 });
   const [equiposStats, setEquiposStats] = useState({ total: 0, operativos: 0, revisionPendiente: 0 });
   const [hidrantesStats, setHidrantesStats] = useState({ total: 0, operativos: 0 });
-  
+
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFamiliaFilter, setSelectedFamiliaFilter] = useState('all');
   const [filterTipoEquipo, setFilterTipoEquipo] = useState('all');
   const [filterEdificio, setFilterEdificio] = useState('all');
   const [filterEstado, setFilterEstado] = useState('all');
   const [searchEquipos, setSearchEquipos] = useState('');
-  
+
   const [loading, setLoading] = useState(true);
   const [showNuevoArticulo, setShowNuevoArticulo] = useState(false);
   const [showNuevaPeticion, setShowNuevaPeticion] = useState(false);
@@ -152,7 +169,7 @@ export default function IncendiosPage() {
   const [peticiones, setPeticiones] = useState<any[]>([]);
   const [filtroPeticiones, setFiltroPeticiones] = useState("all");
   const [peticionStats, setPeticionStats] = useState({ total: 0, pendientes: 0, aprobadas: 0, enCompra: 0, recibidas: 0, rechazadas: 0 });
-  
+
   const [articuloSeleccionado, setArticuloSeleccionado] = useState<Articulo | null>(null);
   const [edificioSeleccionado, setEdificioSeleccionado] = useState<Edificio | null>(null);
   const [equipoSeleccionado, setEquipoSeleccionado] = useState<EquipoECI | null>(null);
@@ -184,7 +201,7 @@ export default function IncendiosPage() {
       const dataEq = await resEq.json();
       const dataHid = await resHid.json();
       const dataCat = await resCat.json();
-      
+
       setArticulos(dataArt.articulos || []);
       setFamilias(dataArt.familias || []);
       if (dataCat.categoria?.id) {
@@ -281,10 +298,27 @@ export default function IncendiosPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tipo: 'hidrante', ...formData })
       })
-      if (res.ok) { await cargarDatos(); return true }
+
+      if (res.ok) {
+        await cargarDatos()
+        return true
+      }
+
+      // Manejar errores específicos
+      const errorData = await res.json().catch(() => ({ error: 'Error desconocido' }))
+
+      if (res.status === 400) {
+        alert(`Error: ${errorData.error || 'Datos inválidos'}`)
+      } else if (res.status === 500) {
+        alert('Error del servidor. Es posible que el código ya exista o haya un problema con los datos.')
+      } else {
+        alert(`Error ${res.status}: ${errorData.error || 'No se pudo crear el hidrante'}`)
+      }
+
       return false
     } catch (error) {
       console.error('Error:', error)
+      alert('Error de conexión. Por favor, verifica tu conexión a internet.')
       return false
     }
   }
@@ -361,13 +395,13 @@ export default function IncendiosPage() {
   }
 
   const centerPosition: [number, number] = [37.3710, -6.0710];
-  
+
   const articulosFiltrados = articulos.filter(a => {
     const matchSearch = searchTerm === '' || a.nombre.toLowerCase().includes(searchTerm.toLowerCase()) || a.codigo.toLowerCase().includes(searchTerm.toLowerCase());
     const matchFamilia = selectedFamiliaFilter === 'all' || a.familia.id === selectedFamiliaFilter;
     return matchSearch && matchFamilia;
   });
-  
+
   const equiposFiltrados = todosEquiposECI.filter(eq => {
     const matchTipo = filterTipoEquipo === 'all' || eq.tipo === filterTipoEquipo;
     const matchEdificio = filterEdificio === 'all' || eq.edificioId === filterEdificio;
@@ -486,11 +520,10 @@ export default function IncendiosPage() {
             <button
               key={tab.id}
               onClick={() => setMainTab(tab.id as any)}
-              className={`flex items-center gap-2 px-6 py-3 text-sm font-medium border-b-2 transition-all ${
-                mainTab === tab.id 
-                  ? 'border-red-500 text-red-600 bg-red-50' 
-                  : 'border-transparent text-slate-500 hover:text-slate-700'
-              }`}
+              className={`flex items-center gap-2 px-6 py-3 text-sm font-medium border-b-2 transition-all ${mainTab === tab.id
+                ? 'border-red-500 text-red-600 bg-red-50'
+                : 'border-transparent text-slate-500 hover:text-slate-700'
+                }`}
             >
               <tab.icon size={20} />
               {tab.label}
@@ -510,11 +543,10 @@ export default function IncendiosPage() {
                 <button
                   key={tab.id}
                   onClick={() => { setInventoryTab(tab.id as any); if (tab.id === 'peticiones') cargarPeticiones(); }}
-                  className={`flex items-center gap-2 px-6 py-3 text-sm font-medium border-b-2 transition-all ${
-                    inventoryTab === tab.id 
-                      ? 'border-purple-500 text-purple-600 bg-white' 
-                      : 'border-transparent text-slate-500 hover:text-slate-700'
-                  }`}
+                  className={`flex items-center gap-2 px-6 py-3 text-sm font-medium border-b-2 transition-all ${inventoryTab === tab.id
+                    ? 'border-purple-500 text-purple-600 bg-white'
+                    : 'border-transparent text-slate-500 hover:text-slate-700'
+                    }`}
                 >
                   <tab.icon size={16} />
                   {tab.label}
@@ -600,7 +632,7 @@ export default function IncendiosPage() {
                                 <button onClick={() => setArticuloSeleccionado(art)} className="p-1.5 text-slate-600 hover:bg-slate-100 rounded" title="Editar">
                                   <Edit size={16} />
                                 </button>
-                                <button onClick={async () => { if(confirm(`¿Eliminar "${art.nombre}"?`)) { await eliminarItem('articulo', art.id); } }} className="p-1.5 text-red-600 hover:bg-red-50 rounded" title="Eliminar">
+                                <button onClick={async () => { if (confirm(`¿Eliminar "${art.nombre}"?`)) { await eliminarItem('articulo', art.id); } }} className="p-1.5 text-red-600 hover:bg-red-50 rounded" title="Eliminar">
                                   <Trash2 size={16} />
                                 </button>
                               </div>
@@ -782,8 +814,8 @@ export default function IncendiosPage() {
                           <td className="p-3">
                             <div className="flex items-center gap-2">
                               {(() => {
-                              const Icon = TIPOS_EQUIPO_ECI[eq.tipo] || Package;
-                              return <Icon size={28} className="text-red-600" />;
+                                const Icon = TIPOS_EQUIPO_ECI[eq.tipo] || Package;
+                                return <Icon size={28} className="text-red-600" />;
                               })()}
                               <div>
                                 <p className="font-medium text-slate-800">{TIPOS_EQUIPO_LABELS[eq.tipo]}</p>
@@ -794,14 +826,13 @@ export default function IncendiosPage() {
                           <td className="p-3 text-sm text-slate-600">{eq.ubicacion}</td>
                           <td className="p-3 text-sm text-slate-600">{eq.numeroSerie || '-'}</td>
                           <td className="p-3 text-center">
-                            <span className={`px-2 py-1 rounded text-xs font-bold ${
-                              eq.estado === 'operativo' ? 'bg-green-100 text-green-700' :
+                            <span className={`px-2 py-1 rounded text-xs font-bold ${eq.estado === 'operativo' ? 'bg-green-100 text-green-700' :
                               eq.estado === 'revision_pendiente' ? 'bg-yellow-100 text-yellow-700' :
-                              'bg-red-100 text-red-700'
-                            }`}>
+                                'bg-red-100 text-red-700'
+                              }`}>
                               {eq.estado === 'operativo' ? 'Operativo' :
-                               eq.estado === 'revision_pendiente' ? 'Rev. Pendiente' :
-                               'Fuera Servicio'}
+                                eq.estado === 'revision_pendiente' ? 'Rev. Pendiente' :
+                                  'Fuera Servicio'}
                             </span>
                           </td>
                           <td className="p-3 text-center text-sm text-slate-600">
@@ -812,7 +843,7 @@ export default function IncendiosPage() {
                               <button onClick={() => setEquipoSeleccionado(eq)} className="p-1.5 text-slate-600 hover:bg-slate-100 rounded" title="Editar equipo">
                                 <Edit size={16} />
                               </button>
-                              <button onClick={() => { if(confirm(`¿Eliminar equipo en "${eq.ubicacion}"?`)) alert('Eliminando...'); }} className="p-1.5 text-red-600 hover:bg-red-50 rounded" title="Eliminar">
+                              <button onClick={() => { if (confirm(`¿Eliminar equipo en "${eq.ubicacion}"?`)) alert('Eliminando...'); }} className="p-1.5 text-red-600 hover:bg-red-50 rounded" title="Eliminar">
                                 <Trash2 size={16} />
                               </button>
                             </div>
@@ -828,15 +859,15 @@ export default function IncendiosPage() {
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-lg font-bold text-slate-800">Edificios Municipales</h2>
                   <div className="flex gap-2">
-                  <button onClick={() => setShowEditorEquipos(true)} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2">
-                  <Layers size={18} />
-                   Editor de Equipos ECI
-                   </button>
+                    <button onClick={() => setShowEditorEquipos(true)} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2">
+                      <Layers size={18} />
+                      Editor de Equipos ECI
+                    </button>
                     <button onClick={() => setShowNuevoEdificio(true)} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center gap-2">
-                   <Plus size={18} />
-                    Nuevo Edificio
-                   </button>
-                </div>
+                      <Plus size={18} />
+                      Nuevo Edificio
+                    </button>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-3 gap-4">
@@ -857,7 +888,7 @@ export default function IncendiosPage() {
                               </span>
                             </div>
                             <div className="flex gap-1">
-                              <button 
+                              <button
                                 onClick={() => { setSelectedEdificio(ed); cargarEquiposEdificio(ed.id); }}
                                 className="p-1.5 text-slate-600 hover:bg-slate-100 rounded"
                                 title="Ver equipos"
@@ -867,7 +898,7 @@ export default function IncendiosPage() {
                               <button onClick={() => setEdificioSeleccionado(ed)} className="p-1.5 text-slate-600 hover:bg-slate-100 rounded" title="Editar">
                                 <Edit size={14} />
                               </button>
-                              <button onClick={() => { if(confirm(`¿Eliminar edificio "${ed.nombre}"?`)) alert('Eliminando...'); }} className="p-1.5 text-red-600 hover:bg-red-50 rounded" title="Eliminar">
+                              <button onClick={() => { if (confirm(`¿Eliminar edificio "${ed.nombre}"?`)) alert('Eliminando...'); }} className="p-1.5 text-red-600 hover:bg-red-50 rounded" title="Eliminar">
                                 <Trash2 size={14} />
                               </button>
                             </div>
@@ -957,8 +988,8 @@ export default function IncendiosPage() {
                       <td className="p-3">
                         <div className="flex items-center gap-2">
                           {(() => {
-                          const Icon = TIPOS_EQUIPO_ECI[eq.tipo] || Package;
-                          return <Icon size={24} className="text-red-600" />;
+                            const Icon = TIPOS_EQUIPO_ECI[eq.tipo] || Package;
+                            return <Icon size={24} className="text-red-600" />;
                           })()}
                           <div>
                             <p className="font-medium text-slate-800 text-sm">{TIPOS_EQUIPO_LABELS[eq.tipo]}</p>
@@ -972,14 +1003,13 @@ export default function IncendiosPage() {
                       <td className="p-3 text-sm text-slate-600">{eq.ubicacion}</td>
                       <td className="p-3 text-sm text-slate-600">{eq.numeroSerie || '-'}</td>
                       <td className="p-3 text-center">
-                        <span className={`px-2 py-1 rounded text-xs font-bold ${
-                          eq.estado === 'operativo' ? 'bg-green-100 text-green-700' :
+                        <span className={`px-2 py-1 rounded text-xs font-bold ${eq.estado === 'operativo' ? 'bg-green-100 text-green-700' :
                           eq.estado === 'revision_pendiente' ? 'bg-yellow-100 text-yellow-700' :
-                          'bg-red-100 text-red-700'
-                        }`}>
+                            'bg-red-100 text-red-700'
+                          }`}>
                           {eq.estado === 'operativo' ? 'Operativo' :
-                           eq.estado === 'revision_pendiente' ? 'Rev. Pend.' :
-                           'Fuera Servicio'}
+                            eq.estado === 'revision_pendiente' ? 'Rev. Pend.' :
+                              'Fuera Servicio'}
                         </span>
                       </td>
                       <td className="p-3 text-center text-sm text-slate-600">
@@ -1017,8 +1047,8 @@ export default function IncendiosPage() {
                       url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                     />
                     {hidrantes.filter(h => h.latitud && h.longitud).map((hid) => (
-                      <Marker 
-                        key={hid.id} 
+                      <Marker
+                        key={hid.id}
                         position={[hid.latitud!, hid.longitud!]}
                         icon={createHidranteIcon(hid.tipo, hid.estado) || undefined}
                       >
@@ -1074,11 +1104,10 @@ export default function IncendiosPage() {
                         <td className="p-3 text-center text-sm">{hid.presion ? `${hid.presion} bar` : '-'}</td>
                         <td className="p-3 text-center text-sm">{hid.caudal ? `${hid.caudal} l/min` : '-'}</td>
                         <td className="p-3 text-center">
-                          <span className={`px-2 py-1 rounded text-xs font-bold ${
-                            hid.estado === 'operativo' ? 'bg-green-100 text-green-700' : 
-                            hid.estado === 'averiado' ? 'bg-yellow-100 text-yellow-700' : 
-                            'bg-red-100 text-red-700'
-                          }`}>
+                          <span className={`px-2 py-1 rounded text-xs font-bold ${hid.estado === 'operativo' ? 'bg-green-100 text-green-700' :
+                            hid.estado === 'averiado' ? 'bg-yellow-100 text-yellow-700' :
+                              'bg-red-100 text-red-700'
+                            }`}>
                             {hid.estado}
                           </span>
                         </td>
@@ -1087,7 +1116,7 @@ export default function IncendiosPage() {
                             <button onClick={() => setHidranteSeleccionado(hid)} className="p-1.5 text-slate-600 hover:bg-slate-100 rounded" title="Editar hidrante">
                               <Edit size={16} />
                             </button>
-                            <button onClick={() => { if(confirm(`¿Eliminar hidrante "${hid.codigo}"?`)) alert('Eliminando...'); }} className="p-1.5 text-red-600 hover:bg-red-50 rounded" title="Eliminar">
+                            <button onClick={() => { if (confirm(`¿Eliminar hidrante "${hid.codigo}"?`)) alert('Eliminando...'); }} className="p-1.5 text-red-600 hover:bg-red-50 rounded" title="Eliminar">
                               <Trash2 size={16} />
                             </button>
                           </div>
@@ -1112,61 +1141,54 @@ export default function IncendiosPage() {
             </div>
             <form onSubmit={async (e) => {
               e.preventDefault()
-              const form = e.target as HTMLFormElement
-              const formData = {
-                codigo: (form.elements.namedItem('codigo') as HTMLInputElement).value,
-                nombre: (form.elements.namedItem('nombre') as HTMLInputElement).value,
-                descripcion: (form.elements.namedItem('descripcion') as HTMLTextAreaElement).value,
-                stockActual: parseInt((form.elements.namedItem('stockActual') as HTMLInputElement).value),
-                stockMinimo: parseInt((form.elements.namedItem('stockMinimo') as HTMLInputElement).value),
-                unidad: (form.elements.namedItem('unidad') as HTMLSelectElement).value,
-                familiaId: (form.elements.namedItem('familiaId') as HTMLSelectElement).value
-              }
-              const success = await guardarArticulo(formData)
-              if (success) {
-                setShowNuevoArticulo(false)
-                form.reset()
-              }
-            }} className="p-6 overflow-y-auto space-y-4">
+              const fd = new FormData(e.currentTarget)
+              const success = await guardarArticulo({
+                codigo: fd.get('codigo'),
+                nombre: fd.get('nombre'),
+                descripcion: fd.get('descripcion'),
+                stockActual: fd.get('stockActual'),
+                stockMinimo: fd.get('stockMinimo'),
+                unidad: fd.get('unidad'),
+                familiaId: fd.get('familiaId')
+              })
+              if (success) { setShowNuevoArticulo(false); e.currentTarget.reset(); alert('Artículo creado') }
+            }} className="p-6 overflow-y-auto space-y-5">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">Código</label>
-                  <input name="codigo" type="text" className="w-full border border-slate-300 rounded-lg p-2.5" placeholder="Ej: EXT-001" />
+                  <input name="codigo" type="text" className="w-full border border-slate-300 rounded-lg p-2.5" placeholder="ART-001" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Familia *</label>
-                  <select name="familiaId" className="w-full border border-slate-300 rounded-lg p-2.5" required>
-                    <option value="">Seleccionar familia...</option>
-                    {familias.map(f => <option key={f.id} value={f.id}>{f.nombre}</option>)}
-                  </select>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Nombre *</label>
+                  <input name="nombre" type="text" className="w-full border border-slate-300 rounded-lg p-2.5" placeholder="Nombre del artículo" required />
                 </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Nombre *</label>
-                <input name="nombre" type="text" className="w-full border border-slate-300 rounded-lg p-2.5" placeholder="Nombre del artículo" required />
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">Descripción</label>
-                <textarea name="descripcion" className="w-full border border-slate-300 rounded-lg p-2.5" rows={3} placeholder="Descripción opcional..."></textarea>
+                <textarea name="descripcion" className="w-full border border-slate-300 rounded-lg p-2.5" rows={3} placeholder="Descripción del artículo"></textarea>
               </div>
               <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Stock Inicial</label>
-                  <input name="stockActual" type="number" defaultValue="0" className="w-full border border-slate-300 rounded-lg p-2.5" />
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Stock Actual</label>
+                  <input name="stockActual" type="number" className="w-full border border-slate-300 rounded-lg p-2.5" placeholder="0" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">Stock Mínimo</label>
-                  <input name="stockMinimo" type="number" defaultValue="5" className="w-full border border-slate-300 rounded-lg p-2.5" />
+                  <input name="stockMinimo" type="number" className="w-full border border-slate-300 rounded-lg p-2.5" placeholder="0" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">Unidad</label>
-                  <select name="unidad" className="w-full border border-slate-300 rounded-lg p-2.5">
-                    <option>Unidad</option>
-                    <option>Pack</option>
-                    <option>Caja</option>
-                    <option>Saco</option>
-                  </select>
+                  <input name="unidad" type="text" className="w-full border border-slate-300 rounded-lg p-2.5" placeholder="unidad" />
                 </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Familia *</label>
+                <select name="familiaId" className="w-full border border-slate-300 rounded-lg p-2.5" required>
+                  <option value="">Seleccionar familia...</option>
+                  {familias.map(fam => (
+                    <option key={fam.id} value={fam.id}>{fam.nombre}</option>
+                  ))}
+                </select>
               </div>
               <div className="flex justify-end gap-3 pt-4 border-t">
                 <button type="button" onClick={() => setShowNuevoArticulo(false)} className="px-5 py-2.5 text-slate-600 hover:bg-slate-100 rounded-lg font-medium">Cancelar</button>
@@ -1176,729 +1198,6 @@ export default function IncendiosPage() {
           </div>
         </div>
       )}
-
-      {/* ======================================== MODAL: VER/EDITAR ARTÍCULO ======================================== */}
-      {articuloSeleccionado && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60" onClick={() => setArticuloSeleccionado(null)}>
-          <div className="bg-white rounded-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
-            <div className="bg-purple-600 p-5 text-white flex justify-between items-center">
-              <h2 className="text-xl font-bold">Editar Artículo</h2>
-              <button onClick={() => setArticuloSeleccionado(null)}><X size={24} /></button>
-            </div>
-            <form onSubmit={async (e) => {
-              e.preventDefault()
-              const form = e.target as HTMLFormElement
-              const formData = {
-                codigo: (form.elements.namedItem('codigo') as HTMLInputElement).value,
-                nombre: (form.elements.namedItem('nombre') as HTMLInputElement).value,
-                descripcion: (form.elements.namedItem('descripcion') as HTMLTextAreaElement).value,
-                stockActual: parseInt((form.elements.namedItem('stockActual') as HTMLInputElement).value),
-                stockMinimo: parseInt((form.elements.namedItem('stockMinimo') as HTMLInputElement).value),
-                unidad: (form.elements.namedItem('unidad') as HTMLSelectElement).value,
-                familiaId: (form.elements.namedItem('familiaId') as HTMLSelectElement).value
-              }
-              const success = await editarArticulo(articuloSeleccionado.id, formData)
-              if (success) setArticuloSeleccionado(null)
-            }} className="p-6 overflow-y-auto space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Código</label>
-                  <input name="codigo" type="text" defaultValue={articuloSeleccionado.codigo} className="w-full border border-slate-300 rounded-lg p-2.5" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Familia *</label>
-                  <select name="familiaId" defaultValue={articuloSeleccionado.familia.id} className="w-full border border-slate-300 rounded-lg p-2.5" required>
-                    <option value="">Seleccionar familia...</option>
-                    {familias.map(f => <option key={f.id} value={f.id}>{f.nombre}</option>)}
-                  </select>
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Nombre *</label>
-                <input name="nombre" type="text" defaultValue={articuloSeleccionado.nombre} className="w-full border border-slate-300 rounded-lg p-2.5" required />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Descripción</label>
-                <textarea name="descripcion" defaultValue={articuloSeleccionado.descripcion || ''} className="w-full border border-slate-300 rounded-lg p-2.5" rows={3}></textarea>
-              </div>
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Stock Actual</label>
-                  <input name="stockActual" type="number" defaultValue={articuloSeleccionado.stockActual} className="w-full border border-slate-300 rounded-lg p-2.5" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Stock Mínimo</label>
-                  <input name="stockMinimo" type="number" defaultValue={articuloSeleccionado.stockMinimo} className="w-full border border-slate-300 rounded-lg p-2.5" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Unidad</label>
-                  <select name="unidad" defaultValue={articuloSeleccionado.unidad} className="w-full border border-slate-300 rounded-lg p-2.5">
-                    <option>Unidad</option>
-                    <option>Pack</option>
-                    <option>Caja</option>
-                    <option>Saco</option>
-                  </select>
-                </div>
-              </div>
-              <div className="flex justify-end gap-3 pt-4 border-t">
-                <button type="button" onClick={() => setArticuloSeleccionado(null)} className="px-5 py-2.5 text-slate-600 hover:bg-slate-100 rounded-lg font-medium">Cancelar</button>
-                <button type="submit" className="px-5 py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium">Guardar Cambios</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ======================================== MODAL: NUEVA PETICIÓN ======================================== */}
-      {showNuevaPeticion && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60" onClick={() => setShowNuevaPeticion(false)}>
-          <div className="bg-white rounded-xl w-full max-w-2xl" onClick={e => e.stopPropagation()}>
-            <div className="bg-blue-600 p-5 text-white flex justify-between items-center">
-              <h2 className="text-xl font-bold">Nueva Petición</h2>
-              <button onClick={() => setShowNuevaPeticion(false)}><X size={24} /></button>
-            </div>
-            <form onSubmit={async (e) => {
-              e.preventDefault()
-              const form = e.target as HTMLFormElement
-              const articuloIdInput = (form.elements.namedItem('articuloId') as HTMLSelectElement)
-              const articuloSeleccionado = articulos.find(a => a.id === articuloIdInput.value)
-              const formData = {
-                articuloId: articuloIdInput.value,
-                nombreArticulo: articuloSeleccionado?.nombre || 'Material solicitado',
-                cantidad: parseInt((form.elements.namedItem('cantidad') as HTMLInputElement).value),
-                prioridad: (form.elements.namedItem('prioridad') as HTMLSelectElement).value,
-                motivo: (form.elements.namedItem('motivo') as HTMLTextAreaElement).value,
-                areaOrigen: 'incendios'
-              }
-              try {
-                const res = await fetch('/api/logistica', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ tipo: 'peticion', ...formData })
-                })
-                if (res.ok) {
-                  setShowNuevaPeticion(false)
-                  form.reset()
-                  alert('Petición creada correctamente')
-                }
-              } catch (error) {
-                console.error('Error:', error)
-              }
-            }} className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Artículo *</label>
-                <select name="articuloId" className="w-full border border-slate-300 rounded-lg p-2.5" required>
-                  <option value="">Seleccionar artículo...</option>
-                  {articulos.map(art => (
-                    <option key={art.id} value={art.id}>{art.nombre} (Stock: {art.stockActual})</option>
-                  ))}
-                </select>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Cantidad *</label>
-                  <input name="cantidad" type="number" min="1" defaultValue="1" className="w-full border border-slate-300 rounded-lg p-2.5" required />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Prioridad</label>
-                  <select name="prioridad" className="w-full border border-slate-300 rounded-lg p-2.5">
-                    <option value="normal">Normal</option>
-                    <option value="urgente">Urgente</option>
-                    <option value="critica">Crítica</option>
-                  </select>
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Motivo</label>
-                <textarea name="motivo" className="w-full border border-slate-300 rounded-lg p-2.5" rows={3} placeholder="Razón de la petición..."></textarea>
-              </div>
-              <div className="flex justify-end gap-3 pt-4 border-t">
-                <button type="button" onClick={() => setShowNuevaPeticion(false)} className="px-5 py-2.5 text-slate-600 hover:bg-slate-100 rounded-lg font-medium">Cancelar</button>
-                <button type="submit" className="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">Crear Petición</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ======================================== MODAL: GESTIÓN DE FAMILIAS ======================================== */}
-      {showGestionFamilias && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60" onClick={() => setShowGestionFamilias(false)}>
-          <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
-            <div className="bg-slate-700 p-5 text-white flex justify-between items-center">
-              <h2 className="text-xl font-bold">Gestión de Familias</h2>
-              <button onClick={() => setShowGestionFamilias(false)}><X size={24} /></button>
-            </div>
-            <div className="p-6 overflow-y-auto">
-              <form onSubmit={async (e) => {
-                e.preventDefault()
-                const form = e.target as HTMLFormElement
-                const nombreInput = form.elements.namedItem('nombreFamilia') as HTMLInputElement
-                const nombre = nombreInput.value.trim()
-                
-                if (!nombre) return
-                if (!categoriaIncendios) {
-                  alert("Error: No se pudo cargar la categoría de incendios")
-                  return
-                }
-                
-                try {
-                  const res = await fetch('/api/logistica', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ tipo: 'familia', nombre, categoriaId: categoriaIncendios })
-                  })
-                  if (res.ok) {
-                    await cargarDatos()
-                    nombreInput.value = ''
-                  }
-                } catch (error) {
-                  console.error('Error:', error)
-                }
-              }} className="mb-6 flex gap-2">
-                <input 
-                  name="nombreFamilia"
-                  type="text" 
-                  placeholder="Nueva familia..." 
-                  className="flex-1 border border-slate-300 rounded-lg p-2.5"
-                />
-                <button type="submit" className="px-4 py-2.5 bg-slate-600 text-white rounded-lg hover:bg-slate-700 flex items-center gap-2">
-                  <Plus size={18} />
-                  Añadir
-                </button>
-              </form>
-
-              <div className="space-y-2">
-                {familias.map(fam => (
-                  <div key={fam.id} className="p-3 border border-slate-200 rounded-lg hover:bg-slate-50 flex justify-between items-center">
-                    <div className="flex-1">
-                      <span className="font-medium text-slate-700">{fam.nombre}</span>
-                      <span className="text-sm text-slate-500 ml-2">
-                        ({articulos.filter(a => a.familia.id === fam.id).length} artículos)
-                      </span>
-                    </div>
-                    <div className="flex gap-2">
-                      <button 
-                        onClick={async () => {
-                          const nuevoNombre = prompt('Nuevo nombre de la familia:', fam.nombre)
-                          if (nuevoNombre && nuevoNombre.trim() !== fam.nombre) {
-                            try {
-                              const res = await fetch('/api/logistica', {
-                                method: 'PUT',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ tipo: 'familia', id: fam.id, nombre: nuevoNombre.trim() })
-                              })
-                              if (res.ok) await cargarDatos()
-                            } catch (error) {
-                              console.error('Error:', error)
-                            }
-                          }
-                        }}
-                        className="p-1.5 text-slate-600 hover:bg-slate-100 rounded" 
-                        title="Editar"
-                      >
-                        <Edit size={16} />
-                      </button>
-                      <button 
-                        onClick={async () => {
-                          const articulosEnFamilia = articulos.filter(a => a.familia.id === fam.id).length
-                          if (articulosEnFamilia > 0) {
-                            alert(`No se puede eliminar. Hay ${articulosEnFamilia} artículos en esta familia.`)
-                            return
-                          }
-                          if (confirm(`¿Eliminar familia "${fam.nombre}"?`)) {
-                            try {
-                              const res = await fetch(`/api/logistica?tipo=familia&id=${fam.id}`, {
-                                method: 'DELETE'
-                              })
-                              if (res.ok) await cargarDatos()
-                            } catch (error) {
-                              console.error('Error:', error)
-                            }
-                          }
-                        }}
-                        className="p-1.5 text-red-600 hover:bg-red-50 rounded" 
-                        title="Eliminar"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="mt-6 pt-4 border-t">
-                <button onClick={() => setShowGestionFamilias(false)} className="w-full px-5 py-2.5 bg-slate-600 text-white rounded-lg hover:bg-slate-700 font-medium">Cerrar</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ======================================== MODAL: NUEVO EDIFICIO ======================================== */}
-      {showNuevoEdificio && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60" onClick={() => setShowNuevoEdificio(false)}>
-          <div className="bg-white rounded-xl w-full max-w-2xl" onClick={e => e.stopPropagation()}>
-            <div className="bg-red-600 p-5 text-white flex justify-between items-center">
-              <h2 className="text-xl font-bold">Nuevo Edificio Municipal</h2>
-              <button onClick={() => setShowNuevoEdificio(false)}><X size={24} /></button>
-            </div>
-            <form onSubmit={async (e) => {
-              e.preventDefault()
-              const form = e.target as HTMLFormElement
-              const formData = {
-                nombre: (form.elements.namedItem('nombre') as HTMLInputElement).value,
-                direccion: (form.elements.namedItem('direccion') as HTMLInputElement).value,
-                responsable: (form.elements.namedItem('responsable') as HTMLInputElement).value,
-                telefono: (form.elements.namedItem('telefono') as HTMLInputElement).value
-              }
-              const success = await guardarEdificio(formData)
-              if (success) {
-                setShowNuevoEdificio(false)
-                form.reset()
-              }
-            }} className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Nombre del Edificio *</label>
-                <input name="nombre" type="text" className="w-full border border-slate-300 rounded-lg p-2.5" placeholder="Ej: Ayuntamiento" required />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Dirección</label>
-                <input name="direccion" type="text" className="w-full border border-slate-300 rounded-lg p-2.5" placeholder="Calle, número..." />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Responsable</label>
-                  <input name="responsable" type="text" className="w-full border border-slate-300 rounded-lg p-2.5" placeholder="Nombre responsable" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Teléfono</label>
-                  <input name="telefono" type="tel" className="w-full border border-slate-300 rounded-lg p-2.5" placeholder="Teléfono contacto" />
-                </div>
-              </div>
-              <div className="flex justify-end gap-3 pt-4 border-t">
-                <button type="button" onClick={() => setShowNuevoEdificio(false)} className="px-5 py-2.5 text-slate-600 hover:bg-slate-100 rounded-lg font-medium">Cancelar</button>
-                <button type="submit" className="px-5 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium">Crear Edificio</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ======================================== MODAL: NUEVO EQUIPO ECI ======================================== */}
-      {showNuevoEquipo && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60" onClick={() => setShowNuevoEquipo(false)}>
-          <div className="bg-white rounded-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
-            <div className="bg-red-600 p-5 text-white flex justify-between items-center">
-              <h2 className="text-xl font-bold">Nuevo Equipo ECI</h2>
-              <button onClick={() => setShowNuevoEquipo(false)}><X size={24} /></button>
-            </div>
-            <form onSubmit={async (e) => {
-              e.preventDefault()
-              const form = e.target as HTMLFormElement
-              const formData = {
-                edificioId: (form.elements.namedItem('edificioId') as HTMLSelectElement).value,
-                tipoEquipo: (form.elements.namedItem('tipoEquipo') as HTMLSelectElement).value,
-                subtipo: (form.elements.namedItem('subtipo') as HTMLInputElement).value,
-                ubicacion: (form.elements.namedItem('ubicacion') as HTMLInputElement).value,
-                numeroSerie: (form.elements.namedItem('numeroSerie') as HTMLInputElement).value,
-                estado: (form.elements.namedItem('estado') as HTMLSelectElement).value,
-                observaciones: (form.elements.namedItem('observaciones') as HTMLTextAreaElement).value
-              }
-              const success = await guardarEquipoECI(formData)
-              if (success) {
-                setShowNuevoEquipo(false)
-                form.reset()
-              }
-            }} className="p-6 overflow-y-auto space-y-5">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Edificio *</label>
-                <select name="edificioId" className="w-full border border-slate-300 rounded-lg p-2.5" required>
-                  <option value="">Seleccionar edificio...</option>
-                  {edificios.map(ed => <option key={ed.id} value={ed.id}>{ed.nombre}</option>)}
-                </select>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Tipo *</label>
-                  <select name="tipoEquipo" className="w-full border border-slate-300 rounded-lg p-2.5" required>
-                    <option value="">Seleccionar...</option>
-                    <option value="extintor">Extintor</option>
-                    <option value="bie">BIE (Manguera)</option>
-                    <option value="detector">Detector de Humo</option>
-                    <option value="pulsador">Pulsador de Alarma</option>
-                    <option value="alarma">Alarma/Sirena</option>
-                    <option value="señalizacion">Señalización de Emergencia</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Subtipo</label>
-                  <input name="subtipo" type="text" className="w-full border border-slate-300 rounded-lg p-2.5" placeholder="Ej: CO2, Polvo ABC..." />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Ubicación *</label>
-                <input name="ubicacion" type="text" className="w-full border border-slate-300 rounded-lg p-2.5" placeholder="Planta, pasillo, sala..." required />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Nº Serie</label>
-                  <input name="numeroSerie" type="text" className="w-full border border-slate-300 rounded-lg p-2.5" placeholder="Número de serie" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Estado</label>
-                  <select name="estado" className="w-full border border-slate-300 rounded-lg p-2.5">
-                    <option value="operativo">Operativo</option>
-                    <option value="revision_pendiente">Revisión Pendiente</option>
-                    <option value="fuera_servicio">Fuera de Servicio</option>
-                  </select>
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Observaciones</label>
-                <textarea name="observaciones" className="w-full border border-slate-300 rounded-lg p-2.5" rows={2} placeholder="Notas adicionales..."></textarea>
-              </div>
-              <div className="flex justify-end gap-3 pt-4 border-t">
-                <button type="button" onClick={() => setShowNuevoEquipo(false)} className="px-5 py-2.5 text-slate-600 hover:bg-slate-100 rounded-lg font-medium">Cancelar</button>
-                <button type="submit" className="px-5 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium">Crear Equipo</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ======================================== MODAL: EDITOR DE EQUIPOS ECI ======================================== */}
-      {showEditorEquipos && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60" onClick={() => {
-          setShowEditorEquipos(false);
-          setModoEditorEquipo('lista');
-          setEdificioEditorId('');
-          setEquiposEditor([]);
-        }}>
-          <div className="bg-white rounded-xl w-full max-w-6xl max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
-            <div className="bg-blue-600 p-5 text-white flex justify-between items-center">
-              <h2 className="text-xl font-bold flex items-center gap-2">
-                <Layers size={24} />
-                Editor de Equipos ECI
-              </h2>
-              <button onClick={() => {
-                setShowEditorEquipos(false);
-                setModoEditorEquipo('lista');
-                setEdificioEditorId('');
-                setEquiposEditor([]);
-              }}>
-                <X size={24} />
-              </button>
-            </div>
-
-            {/* CONTENIDO DEL MODAL */}
-            <div className="flex-1 overflow-hidden flex flex-col">
-              {/* SELECTOR DE EDIFICIO */}
-              <div className="p-6 border-b border-slate-200 bg-slate-50">
-                <label className="block text-sm font-medium text-slate-700 mb-2">Seleccionar Edificio</label>
-                <select
-                  value={edificioEditorId}
-                  onChange={async (e) => {
-                    const id = e.target.value;
-                    setEdificioEditorId(id);
-                    setModoEditorEquipo('lista');
-                    setEquipoEditandoEditor(null);
-                    if (id) {
-                      const res = await fetch(`/api/logistica?tipo=equipos-eci&edificioId=${id}`);
-                      if (res.ok) {
-                        const data = await res.json();
-                        setEquiposEditor(data.equipos || []);
-                      }
-                    } else {
-                      setEquiposEditor([]);
-                    }
-                  }}
-                  className="w-full border border-slate-300 rounded-lg p-3 text-base"
-                >
-                  <option value="">-- Seleccione un edificio --</option>
-                  {edificios.map(ed => (
-                    <option key={ed.id} value={ed.id}>
-                      {ed.nombre} ({ed._count?.equiposECI || 0} equipos)
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* VISTA: LISTA DE EQUIPOS */}
-              {edificioEditorId && modoEditorEquipo === 'lista' && (
-                <div className="flex-1 overflow-y-auto p-6">
-                  <div className="flex justify-between items-center mb-6">
-                    <h3 className="text-lg font-bold text-slate-800">
-                      Equipos del edificio ({equiposEditor.length})
-                    </h3>
-                    <button
-                      onClick={() => setModoEditorEquipo('crear')}
-                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
-                    >
-                      <Plus size={18} />
-                      Añadir Equipo
-                    </button>
-                  </div>
-
-                  {equiposEditor.length === 0 ? (
-                    <div className="text-center py-12 text-slate-400">
-                      <Shield size={48} className="mx-auto mb-4 opacity-50" />
-                      <p>No hay equipos en este edificio</p>
-                      <button
-                        onClick={() => setModoEditorEquipo('crear')}
-                        className="mt-4 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-                      >
-                        Añadir el primer equipo
-                      </button>
-                    </div>
-                  ) : (
-                    <table className="w-full">
-                      <thead className="bg-slate-50 border-y border-slate-200">
-                        <tr>
-                          <th className="text-left p-3 text-xs font-semibold text-slate-500 uppercase">Tipo</th>
-                          <th className="text-left p-3 text-xs font-semibold text-slate-500 uppercase">Ubicación</th>
-                          <th className="text-left p-3 text-xs font-semibold text-slate-500 uppercase">N° Serie</th>
-                          <th className="text-center p-3 text-xs font-semibold text-slate-500 uppercase">Estado</th>
-                          <th className="text-center p-3 text-xs font-semibold text-slate-500 uppercase">Acciones</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {equiposEditor.map(eq => (
-                          <tr key={eq.id} className="hover:bg-slate-50">
-                            <td className="p-3">
-                              <div className="flex items-center gap-2">
-                                {(() => {
-                                const Icon = TIPOS_EQUIPO_ECI[eq.tipo] || Package;
-                                return <Icon size={28} className="text-red-600" />;
-                                })()}
-                                <div>
-                                  <p className="font-medium text-slate-800">{TIPOS_EQUIPO_LABELS[eq.tipo]}</p>
-                                  {eq.subtipo && <p className="text-xs text-slate-500">{eq.subtipo}</p>}
-                                </div>
-                              </div>
-                            </td>
-                            <td className="p-3 text-sm text-slate-600">{eq.ubicacion}</td>
-                            <td className="p-3 text-sm text-slate-600">{eq.numeroSerie || '-'}</td>
-                            <td className="p-3 text-center">
-                              <span className={`px-2 py-1 rounded text-xs font-bold ${
-                                eq.estado === 'operativo' ? 'bg-green-100 text-green-700' :
-                                eq.estado === 'revision_pendiente' ? 'bg-yellow-100 text-yellow-700' :
-                                'bg-red-100 text-red-700'
-                              }`}>
-                                {eq.estado === 'operativo' ? 'Operativo' :
-                                 eq.estado === 'revision_pendiente' ? 'Rev. Pendiente' :
-                                 'Fuera Servicio'}
-                              </span>
-                            </td>
-                            <td className="p-3">
-                              <div className="flex justify-center gap-2">
-                                <button
-                                  onClick={() => {
-                                    setEquipoEditandoEditor(eq);
-                                    setModoEditorEquipo('editar');
-                                  }}
-                                  className="p-1.5 text-blue-600 hover:bg-blue-50 rounded"
-                                  title="Editar equipo"
-                                >
-                                  <Edit size={16} />
-                                </button>
-                                <button
-                                  onClick={async () => {
-                                    if (confirm(`¿Eliminar equipo en "${eq.ubicacion}"?`)) {
-                                      const res = await fetch(`/api/logistica?tipo=equipo-eci&id=${eq.id}`, { method: 'DELETE' });
-                                      if (res.ok) {
-                                        setEquiposEditor(equiposEditor.filter(e => e.id !== eq.id));
-                                        await cargarDatos();
-                                      }
-                                    }
-                                  }}
-                                  className="p-1.5 text-red-600 hover:bg-red-50 rounded"
-                                  title="Eliminar"
-                                >
-                                  <Trash2 size={16} />
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  )}
-                </div>
-              )}
-
-              {/* VISTA: CREAR/EDITAR EQUIPO */}
-              {edificioEditorId && (modoEditorEquipo === 'crear' || modoEditorEquipo === 'editar') && (
-                <div className="flex-1 overflow-y-auto p-6">
-                  <div className="flex items-center gap-3 mb-6">
-                    <button
-                      onClick={() => {
-                        setModoEditorEquipo('lista');
-                        setEquipoEditandoEditor(null);
-                      }}
-                      className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg"
-                    >
-                      <ArrowLeft size={20} />
-                    </button>
-                    <h3 className="text-lg font-bold text-slate-800">
-                      {modoEditorEquipo === 'crear' ? 'Nuevo Equipo ECI' : 'Editar Equipo ECI'}
-                    </h3>
-                  </div>
-
-                  <form
-                    onSubmit={async (e) => {
-                      e.preventDefault();
-                      const form = e.target as HTMLFormElement;
-                      const formData = {
-                        tipo: modoEditorEquipo === 'crear' ? 'equipo-eci' : 'equipo-eci',
-                        id: equipoEditandoEditor?.id,
-                        edificioId: edificioEditorId,
-                        tipoEquipo: (form.elements.namedItem('tipoEquipo') as HTMLSelectElement).value,
-                        subtipo: (form.elements.namedItem('subtipo') as HTMLInputElement).value,
-                        ubicacion: (form.elements.namedItem('ubicacion') as HTMLInputElement).value,
-                        numeroSerie: (form.elements.namedItem('numeroSerie') as HTMLInputElement).value,
-                        estado: (form.elements.namedItem('estado') as HTMLSelectElement).value,
-                        observaciones: (form.elements.namedItem('observaciones') as HTMLTextAreaElement).value
-                      };
-
-                      const method = modoEditorEquipo === 'crear' ? 'POST' : 'PUT';
-                      const res = await fetch('/api/logistica', {
-                        method,
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(formData)
-                      });
-
-                      if (res.ok) {
-                        // Recargar equipos del edificio
-                        const resEquipos = await fetch(`/api/logistica?tipo=equipos-eci&edificioId=${edificioEditorId}`);
-                        if (resEquipos.ok) {
-                          const data = await resEquipos.json();
-                          setEquiposEditor(data.equipos || []);
-                        }
-                        await cargarDatos();
-                        setModoEditorEquipo('lista');
-                        setEquipoEditandoEditor(null);
-                        form.reset();
-                      }
-                    }}
-                    className="space-y-5"
-                  >
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-2">Tipo *</label>
-                        <select
-                          name="tipoEquipo"
-                          defaultValue={equipoEditandoEditor?.tipo || ''}
-                          className="w-full border border-slate-300 rounded-lg p-2.5"
-                          required
-                        >
-                          <option value="">Seleccionar...</option>
-                          <option value="extintor">Extintor</option>
-                          <option value="bie">BIE (Manguera)</option>
-                          <option value="detector">Detector de Humo</option>
-                          <option value="pulsador">Pulsador de Alarma</option>
-                          <option value="alarma">Alarma/Sirena</option>
-                          <option value="señalizacion">Señalización de Emergencia</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-2">Subtipo</label>
-                        <input
-                          name="subtipo"
-                          type="text"
-                          defaultValue={equipoEditandoEditor?.subtipo || ''}
-                          className="w-full border border-slate-300 rounded-lg p-2.5"
-                          placeholder="Ej: CO2, Polvo ABC..."
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-2">Ubicación *</label>
-                      <input
-                        name="ubicacion"
-                        type="text"
-                        defaultValue={equipoEditandoEditor?.ubicacion || ''}
-                        className="w-full border border-slate-300 rounded-lg p-2.5"
-                        placeholder="Ej: Planta baja, pasillo principal"
-                        required
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-2">Número de Serie</label>
-                        <input
-                          name="numeroSerie"
-                          type="text"
-                          defaultValue={equipoEditandoEditor?.numeroSerie || ''}
-                          className="w-full border border-slate-300 rounded-lg p-2.5"
-                          placeholder="Número de serie"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-2">Estado *</label>
-                        <select
-                          name="estado"
-                          defaultValue={equipoEditandoEditor?.estado || 'operativo'}
-                          className="w-full border border-slate-300 rounded-lg p-2.5"
-                          required
-                        >
-                          <option value="operativo">Operativo</option>
-                          <option value="revision_pendiente">Revisión Pendiente</option>
-                          <option value="fuera_servicio">Fuera de Servicio</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-2">Observaciones</label>
-                      <textarea
-                        name="observaciones"
-                        defaultValue={''}
-                        className="w-full border border-slate-300 rounded-lg p-2.5"
-                        rows={3}
-                        placeholder="Observaciones adicionales..."
-                      />
-                    </div>
-
-                    <div className="flex justify-end gap-3 pt-4 border-t">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setModoEditorEquipo('lista');
-                          setEquipoEditandoEditor(null);
-                        }}
-                        className="px-5 py-2.5 text-slate-600 hover:bg-slate-100 rounded-lg font-medium"
-                      >
-                        Cancelar
-                      </button>
-                      <button
-                        type="submit"
-                        className="px-5 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium"
-                      >
-                        {modoEditorEquipo === 'crear' ? 'Crear Equipo' : 'Guardar Cambios'}
-                      </button>
-                    </div>
-                  </form>
-                </div>
-              )}
-
-              {/* MENSAJE: SELECCIONAR EDIFICIO */}
-              {!edificioEditorId && (
-                <div className="flex-1 flex items-center justify-center text-center p-12">
-                  <div>
-                    <Building2 size={64} className="mx-auto mb-4 text-slate-300" />
-                    <p className="text-lg font-medium text-slate-600 mb-2">Selecciona un edificio</p>
-                    <p className="text-sm text-slate-400">Elige un edificio del selector de arriba para gestionar sus equipos ECI</p>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
 
       {/* ======================================== MODAL: NUEVO HIDRANTE ======================================== */}
       {showNuevoHidrante && (
@@ -1910,21 +1209,22 @@ export default function IncendiosPage() {
             </div>
             <form onSubmit={async (e) => {
               e.preventDefault()
-              const form = e.target as HTMLFormElement
-              const formData = {
-                codigo: (form.elements.namedItem('codigo') as HTMLInputElement).value,
-                tipo: (form.elements.namedItem('tipo') as HTMLSelectElement).value,
-                ubicacion: (form.elements.namedItem('ubicacion') as HTMLInputElement).value,
-                latitud: (form.elements.namedItem('latitud') as HTMLInputElement).value,
-                longitud: (form.elements.namedItem('longitud') as HTMLInputElement).value,
-                presion: (form.elements.namedItem('presion') as HTMLInputElement).value,
-                caudal: (form.elements.namedItem('caudal') as HTMLInputElement).value,
-                estado: (form.elements.namedItem('estado') as HTMLSelectElement).value
-              }
-              const success = await guardarHidrante(formData)
+              const form = e.currentTarget
+              const fd = new FormData(form)
+              const success = await guardarHidrante({
+                codigo: fd.get('codigo'),
+                tipoHidrante: fd.get('tipoHidrante'),
+                ubicacion: fd.get('ubicacion'),
+                latitud: fd.get('latitud') || null,
+                longitud: fd.get('longitud') || null,
+                presion: fd.get('presion') || null,
+                caudal: fd.get('caudal') || null,
+                estado: fd.get('estado')
+              })
               if (success) {
                 setShowNuevoHidrante(false)
                 form.reset()
+                alert('Hidrante creado correctamente')
               }
             }} className="p-6 overflow-y-auto space-y-5">
               <div className="grid grid-cols-3 gap-4">
@@ -1934,7 +1234,7 @@ export default function IncendiosPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">Tipo *</label>
-                  <select name="tipo" className="w-full border border-slate-300 rounded-lg p-2.5" required>
+                  <select name="tipoHidrante" className="w-full border border-slate-300 rounded-lg p-2.5" required>
                     <option value="columna">Columna</option>
                     <option value="arqueta">Arqueta</option>
                   </select>
