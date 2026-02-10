@@ -366,6 +366,27 @@ export default function AdministracionPage() {
     setShowFichaModal(true);
   };
 
+  const toggleActivo = async (voluntarioId: string, activo: boolean) => {
+    try {
+      const res = await fetch(`/api/admin/personal/${voluntarioId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ activo })
+      });
+      
+      if (res.ok) {
+        // Actualizar el estado local
+        setVoluntarios(prev => 
+          prev.map(v => 
+            v.id === voluntarioId ? { ...v, activo } : v
+          )
+        );
+      }
+    } catch (error) {
+      console.error('Error al actualizar estado:', error);
+    }
+  };
+
   const handleGuardarFicha = async () => {
     if (!selectedVoluntario) return;
     
@@ -707,9 +728,17 @@ export default function AdministracionPage() {
                           </td>
                           <td className="py-3 px-4 text-slate-600">{v.telefono || '-'}</td>
                           <td className="py-3 px-4">
-                            <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${v.activo ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                            <button
+                              onClick={() => toggleActivo(v.id, !v.activo)}
+                              className={`px-2.5 py-1 rounded-full text-xs font-bold cursor-pointer transition-all ${
+                                v.activo
+                                  ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                                  : 'bg-red-100 text-red-700 hover:bg-red-200'
+                              }`}
+                              title="Click para cambiar estado"
+                            >
                               {v.activo ? 'ACTIVO' : 'BAJA'}
-                            </span>
+                            </button>
                           </td>
                           <td className="py-3 px-4">
                             <div className="flex items-center justify-end gap-2">
