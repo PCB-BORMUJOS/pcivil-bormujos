@@ -74,6 +74,10 @@ export default function CuadrantesPage() {
   const [sugerencias, setSugerencias] = useState<Sugerencia[]>([]);
   const [loadingSugerencias, setLoadingSugerencias] = useState(false);
 
+  // Estados para cuadrante manual
+  const [showCuadranteManual, setShowCuadranteManual] = useState(false);
+  const [asignacionesManual, setAsignacionesManual] = useState<Array<{ volunteerId: string, rol: string }>>([]);
+
   // Cargar voluntarios
   useEffect(() => {
     fetch('/api/voluntarios')
@@ -227,7 +231,14 @@ export default function CuadrantesPage() {
       const res = await fetch(`/api/cuadrantes?id=${shiftId}`, { method: 'DELETE' });
       if (res.ok) {
         await cargarGuardias();
-        setSelectedShift(null);
+        // Recargar disponibles si hay un shift seleccionado
+        if (selectedShift) {
+          await cargarDisponiblesPorTurno(selectedShift.date, selectedShift.turno);
+        }
+        // NO cerrar modal para seguir gestionando el turno
+        // setSelectedShift(null);
+      } else {
+        alert('Error al eliminar asignación');
       }
     } catch (error) {
       console.error('Error:', error);
@@ -306,6 +317,12 @@ export default function CuadrantesPage() {
             className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:from-purple-700 hover:to-indigo-700 flex items-center gap-2 disabled:opacity-50"
           >
             <Sparkles size={16} /> {loadingSugerencias ? 'Generando...' : 'Generar desde Disponibilidad'}
+          </button>
+          <button
+            onClick={() => setShowCuadranteManual(true)}
+            className="bg-gradient-to-r from-orange-600 to-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:from-orange-700 hover:to-red-700 flex items-center gap-2"
+          >
+            <User size={16} /> Cuadrante Manual
           </button>
           <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg p-1">
             <button onClick={() => changeWeek('prev')} className="p-2 hover:bg-slate-100 rounded">
@@ -519,6 +536,124 @@ export default function CuadrantesPage() {
                   className="flex-1 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-lg text-white font-bold hover:from-purple-700 hover:to-indigo-700"
                 >
                   ✅ Aplicar Cuadrante
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Cuadrante Manual */}
+      {showCuadranteManual && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-orange-600 to-red-600 p-6 text-white">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h2 className="text-2xl font-bold flex items-center gap-2">
+                    <User size={28} /> Cuadrante Manual
+                  </h2>
+                  <p className="text-orange-100 text-sm">Selecciona voluntarios y asigna roles</p>
+                </div>
+                <button onClick={() => setShowCuadranteManual(false)} className="text-white hover:bg-white/20 p-2 rounded">
+                  <X size={24} />
+                </button>
+              </div>
+            </div>
+
+            {/* Body */}
+            <div className="flex-1 overflow-y-auto p-6">
+              {/* Info */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                <p className="text-sm text-blue-800">
+                  <strong>Instrucciones:</strong> Selecciona voluntarios y asígna les un rol. Luego haz click en "Guardar Cuadrante" para aplicar asignaciones a toda la semana.
+                </p>
+              </div>
+
+              {/* Lista de voluntarios */}
+              <div className="space-y-2">
+                {voluntarios.map(vol => {
+                  const asignacion = asignacionesManual.find(a => a.volunteerId === vol.id);
+                  const isSelected = !!asignacion;
+
+                  return (
+                    <div key={vol.id} className={`p-4 rounded-lg border-2 transition ${isSelected ? 'bg-orange-50 border-orange-400' : 'bg-white border-slate-200'}`}>
+                      <div className="flex items-center gap-4">
+                        {/* Checkbox */}
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setAsignacionesManual([...asignacionesManual, { volunteerId: vol.id, rol: 'Interviniente' }]);
+                            } else {
+                              setAsignacionesManual(asignacionesManual.filter(a => a.volunteerId !== vol.id));
+                            }
+                          }}
+                          className="w-5 h-5 text-orange-600 rounded"
+                        />
+
+                        {/* Info voluntario */}
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-slate-800">{vol.numeroVoluntario}</span>
+                            <span className="text-slate-600">{vol.nombre} {vol.apellidos}</span>
+                            {vol.responsableTurno && <span className="px-2 py-0.5 bg-indigo-100 text-indigo-700 text-xs rounded font-bold">🎯 Responsable</span>}
+                            {vol.carnetConducir && <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded font-bold">🚗</span>}
+                          </div>
+                        </div>
+
+                        {/* Selector de rol */}
+                        {isSelected && (
+                          <select
+                            value={asignacion.rol}
+                            onChange={(e) => {
+                              setAsignacionesManual(asignacionesManual.map(a =>
+                                a.volunteerId === vol.id ? { ...a, rol: e.target.value } : a
+                              ));
+                            }}
+                            className="border-2 border-orange-300 rounded-lg px-4 py-2 text-sm font-bold focus:ring-2 focus:ring-orange-500"
+                          >
+                            <option value="Conductor">Conductor</option>
+                            <option value="Responsable">Responsable</option>
+                            <option value="Interviniente">Interviniente</option>
+                            <option value="Apoyo/Cecopal">Apoyo/Cecopal</option>
+                            <option value="Cecopal">Cecopal</option>
+                          </select>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="border-t bg-slate-50 p-6 flex justify-between items-center">
+              <div className="text-sm text-slate-600">
+                <strong>{asignacionesManual.length}</strong> voluntarios seleccionados
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setAsignacionesManual([]);
+                    setShowCuadranteManual(false);
+                  }}
+                  className="px-6 py-2 bg-slate-200 text-slate-700 rounded-lg font-bold hover:bg-slate-300"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={async () => {
+                    // TODO: Implementar guardado de cuadrante manual
+                    alert('Funcionalidad en desarrollo: Guardaría ' + asignacionesManual.length + ' asignaciones');
+                    setShowCuadranteManual(false);
+                  }}
+                  disabled={asignacionesManual.length === 0}
+                  className="px-6 py-2 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-lg font-bold hover:from-orange-700 hover:to-red-700 disabled:opacity-50"
+                >
+                  Guardar Cuadrante
                 </button>
               </div>
             </div>
