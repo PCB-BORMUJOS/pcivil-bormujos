@@ -246,6 +246,60 @@ export default function CuadrantesPage() {
     }
   };
 
+  const handleGuardarCuadranteManual = async () => {
+    if (asignacionesManual.length === 0) {
+      alert('Selecciona al menos un voluntario');
+      return;
+    }
+
+    if (!confirm(`¿Asignar ${asignacionesManual.length} voluntarios a TODA la semana?`)) {
+      return;
+    }
+
+    try {
+      // Crear asignaciones para TODOS los turnos de la semana
+      const promises = [];
+
+      for (const shift of shifts) {
+        for (const asignacion of asignacionesManual) {
+          const payload = {
+            fecha: shift.date,
+            turno: shift.turno,
+            usuarioId: asignacion.volunteerId,
+            rol: asignacion.rol, // Nuevo campo: el rol del voluntario
+          };
+
+          promises.push(
+            fetch('/api/cuadrantes', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload),
+            })
+          );
+        }
+      }
+
+      // Ejecutar todas las peticiones
+      const results = await Promise.all(promises);
+      const exitosas = results.filter(r => r.ok).length;
+      const fallidas = results.length - exitosas;
+
+      if (fallidas > 0) {
+        alert(`⚠️ Asignaciones: ${exitosas} exitosas, ${fallidas} fallidas`);
+      } else {
+        alert(`✅ ${exitosas} asignaciones creadas correctamente`);
+      }
+
+      // Limpiar y cerrar
+      setAsignacionesManual([]);
+      setShowCuadranteManual(false);
+      await cargarGuardias();
+    } catch (error) {
+      console.error('Error guardando cuadrante:', error);
+      alert('Error al guardar cuadrante manual');
+    }
+  };
+
   const handleGenerarAutomatico = async () => {
     setLoadingSugerencias(true);
     try {
@@ -645,11 +699,7 @@ export default function CuadrantesPage() {
                   Cancelar
                 </button>
                 <button
-                  onClick={async () => {
-                    // TODO: Implementar guardado de cuadrante manual
-                    alert('Funcionalidad en desarrollo: Guardaría ' + asignacionesManual.length + ' asignaciones');
-                    setShowCuadranteManual(false);
-                  }}
+                  onClick={handleGuardarCuadranteManual}
                   disabled={asignacionesManual.length === 0}
                   className="px-6 py-2 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-lg font-bold hover:from-orange-700 hover:to-red-700 disabled:opacity-50"
                 >

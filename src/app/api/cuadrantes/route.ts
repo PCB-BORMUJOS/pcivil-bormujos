@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
         }
 
         const body = await request.json()
-        const { fecha, turno, usuarioId, tipo, notas, servicioId } = body
+        const { fecha, turno, usuarioId, tipo, notas, servicioId, rol } = body
 
         if (!fecha || !turno || !usuarioId) {
             return NextResponse.json({
@@ -104,6 +104,7 @@ export async function POST(request: NextRequest) {
             data: {
                 fecha: new Date(fecha),
                 turno,
+                rol: rol || null,  // Nuevo campo: rol del voluntario
                 tipo: tipo || 'programada',
                 notas: notas || '',
                 usuarioId,

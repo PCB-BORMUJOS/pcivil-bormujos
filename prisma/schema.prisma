@@ -297,6 +297,7 @@ model Guardia {
   id         String   @id @default(cuid())
   fecha      DateTime @db.Date
   turno      String
+  rol        String?  // Rol del voluntario: Conductor, Responsable, Interviniente, Apoyo/Cecopal, Cecopal
   tipo       String
   notas      String?
   usuarioId  String   @map("usuario_id")
