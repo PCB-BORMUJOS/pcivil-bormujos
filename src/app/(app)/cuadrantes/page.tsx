@@ -77,6 +77,8 @@ export default function CuadrantesPage() {
   // Estados para cuadrante manual
   const [showCuadranteManual, setShowCuadranteManual] = useState(false);
   const [asignacionesManual, setAsignacionesManual] = useState<Array<{ volunteerId: string, rol: string }>>([]);
+  const [diasSeleccionados, setDiasSeleccionados] = useState<string[]>(['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo']);
+  const [turnosSeleccionados, setTurnosSeleccionados] = useState<string[]>(['mañana', 'tarde']);
 
   // Cargar voluntarios
   useEffect(() => {
@@ -252,21 +254,44 @@ export default function CuadrantesPage() {
       return;
     }
 
-    if (!confirm(`¿Asignar ${asignacionesManual.length} voluntarios a TODA la semana?`)) {
+    if (diasSeleccionados.length === 0) {
+      alert('Selecciona al menos un día');
+      return;
+    }
+
+    if (turnosSeleccionados.length === 0) {
+      alert('Selecciona al menos un turno');
+      return;
+    }
+
+    const totalAsignaciones = asignacionesManual.length * diasSeleccionados.length * turnosSeleccionados.length;
+    if (!confirm(`¿Crear ${totalAsignaciones} asignaciones?\n${asignacionesManual.length} voluntarios × ${diasSeleccionados.length} días × ${turnosSeleccionados.length} turnos`)) {
       return;
     }
 
     try {
-      // Crear asignaciones para TODOS los turnos de la semana
       const promises = [];
+      const nombresDias = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'];
 
+      // Filtrar shifts según días y turnos seleccionados
       for (const shift of shifts) {
+        const fechaObj = new Date(shift.date + 'T12:00:00');
+        const diaSemana = fechaObj.getDay(); // 0=domingo, 1=lunes, ..., 6=sábado
+        const nombreDia = diaSemana === 0 ? 'domingo' : nombresDias[diaSemana - 1];
+
+        // Verificar si este día está seleccionado
+        if (!diasSeleccionados.includes(nombreDia)) continue;
+
+        // Verificar si este turno está seleccionado
+        if (!turnosSeleccionados.includes(shift.turno)) continue;
+
+        // Crear asignación para cada voluntario seleccionado
         for (const asignacion of asignacionesManual) {
           const payload = {
             fecha: shift.date,
             turno: shift.turno,
             usuarioId: asignacion.volunteerId,
-            rol: asignacion.rol, // Nuevo campo: el rol del voluntario
+            rol: asignacion.rol,
           };
 
           promises.push(
@@ -466,8 +491,9 @@ export default function CuadrantesPage() {
                       <div className="text-lg font-bold text-slate-800">{selectedShift.assignment.numeroVoluntario} - {selectedShift.assignment.nombre}</div>
                     </div>
                     <button
-                      onClick={() => selectedShift.id && handleEliminarAsignacion(selectedShift.id)}
+                      onClick={() => selectedShift.assignment && selectedShift.id && handleEliminarAsignacion(selectedShift.id)}
                       className="p-2 text-red-600 hover:bg-red-100 rounded-lg"
+                      title="Eliminar asignación"
                     >
                       <Trash2 size={20} />
                     </button>
@@ -621,9 +647,74 @@ export default function CuadrantesPage() {
               {/* Info */}
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
                 <p className="text-sm text-blue-800">
-                  <strong>Instrucciones:</strong> Selecciona voluntarios y asígna les un rol. Luego haz click en "Guardar Cuadrante" para aplicar asignaciones a toda la semana.
+                  <strong>Instrucciones:</strong> 1) Selecciona días y turnos. 2) Selecciona voluntarios y asigna roles. 3) Guardar cuadrante.
                 </p>
               </div>
+
+              {/* Selector de Días y Turnos */}
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                {/* Días */}
+                <div className="bg-slate-50 rounded-lg p-4">
+                  <h3 className="font-bold text-slate-700 mb-3">📅 Días de la Semana</h3>
+                  <div className="grid grid-cols-2 gap-2">
+                    {['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'].map(dia => (
+                      <label key={dia} className="flex items-center gap-2 cursor-pointer hover:bg-white p-2 rounded">
+                        <input
+                          type="checkbox"
+                          checked={diasSeleccionados.includes(dia)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setDiasSeleccionados([...diasSeleccionados, dia]);
+                            } else {
+                              setDiasSeleccionados(diasSeleccionados.filter(d => d !== dia));
+                            }
+                          }}
+                          className="w-4 h-4 text-orange-600 rounded"
+                        />
+                        <span className="text-sm capitalize">{dia}</span>
+                      </label>
+                    ))}
+                  </div>
+                  <button
+                    onClick={() => setDiasSeleccionados(['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'])}
+                    className="mt-2 text-xs text-blue-600 hover:underline"
+                  >
+                    Seleccionar todos
+                  </button>
+                </div>
+
+                {/* Turnos */}
+                <div className="bg-slate-50 rounded-lg p-4">
+                  <h3 className="font-bold text-slate-700 mb-3">⏰ Turnos</h3>
+                  <div className="space-y-2">
+                    {['mañana', 'tarde'].map(turno => (
+                      <label key={turno} className="flex items-center gap-2 cursor-pointer hover:bg-white p-2 rounded">
+                        <input
+                          type="checkbox"
+                          checked={turnosSeleccionados.includes(turno)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setTurnosSeleccionados([...turnosSeleccionados, turno]);
+                            } else {
+                              setTurnosSeleccionados(turnosSeleccionados.filter(t => t !== turno));
+                            }
+                          }}
+                          className="w-4 h-4 text-orange-600 rounded"
+                        />
+                        <span className="text-sm capitalize">{turno}</span>
+                      </label>
+                    ))}
+                  </div>
+                  <button
+                    onClick={() => setTurnosSeleccionados(['mañana', 'tarde'])}
+                    className="mt-2 text-xs text-blue-600 hover:underline"
+                  >
+                    Seleccionar ambos
+                  </button>
+                </div>
+              </div>
+
+              <hr className="my-6" />
 
               {/* Lista de voluntarios */}
               <div className="space-y-2">
