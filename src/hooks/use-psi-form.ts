@@ -1,7 +1,13 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { PsiFormState, INITIAL_PSI_STATE, TimeKey } from '@/types/psi'
-import { ImagenParte } from '@prisma/client'
+
+// Simple type for images (no longer using ImagenParte model)
+type ImagenParte = {
+    id: string
+    url: string
+    descripcion?: string
+}
 
 export function usePsiForm() {
     const router = useRouter()
