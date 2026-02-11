@@ -16,11 +16,8 @@ export async function GET(
         const parte = await prisma.partePSI.findUnique({
             where: { id: params.id },
             include: {
-                creador: {
-                    select: { nombre: true, email: true }
-                },
-                imagenes: {
-                    orderBy: { orden: 'asc' }
+                creadoPor: {
+                    select: { nombre: true, apellidos: true, numeroVoluntario: true }
                 }
             }
         })
