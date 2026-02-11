@@ -983,16 +983,22 @@ model PartePSI {
   fallecidos        Boolean  @default(false)
   numFallecidos     Int      @default(0)
   
-  // Observaciones
+  // Observaciones y Extras
   observaciones     String?
+  informacionExtra  Json?    // Campos adicionales flexibles y expandibles
+  
+  // Archivos y PDF
+  imagenes          ImagenParte[]
+  pdfGeneradoUrl    String?
   
   // Responsables
   indicativoInforma String?
   responsableTurno  String?
   vbJefeServicio    String?
+  indicativoCumplimenta String?
   
   // Estado del parte
-  estado            String   @default("borrador") // borrador, completado, validado
+  estado            String   @default("borrador") // borrador, finalizado, validado
   
   // Relaciones
   creadorId         String   @map("creador_id")
@@ -1002,5 +1008,20 @@ model PartePSI {
   updatedAt         DateTime @updatedAt @map("updated_at")
   
   @@map("partes_psi")
+}
+
+model ImagenParte {
+  id          String   @id @default(cuid())
+  parteId     String   @map("parte_id")
+  url         String
+  blobKey     String
+  descripcion String?
+  orden       Int      @default(0)
+  createdAt   DateTime @default(now()) @map("created_at")
+  
+  parte       PartePSI @relation(fields: [parteId], references: [id], onDelete: Cascade)
+  
+  @@index([parteId])
+  @@map("imagenes_parte")
 }
 
