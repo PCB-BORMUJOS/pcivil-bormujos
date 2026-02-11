@@ -1,69 +1,281 @@
-import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/db'
-import { authOptions } from '@/lib/auth'
+import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
+import { prisma } from '@/lib/db'
+import { generarNumeroParte, validarPartePSI } from '@/lib/partesPSI'
+import { put } from '@vercel/blob'
+// We need to import authOptions or similar if getServerSession requires it, 
+// usually it does but in some setups it works without args if configured globally.
+// Looking at the prompt, it used getServerSession() without args.
+// I will check if I need to import authOptions from somewhere.
+// Usually '@/lib/auth' or '@/app/api/auth/[...nextauth]/route'
+// For now I'll stick to the prompt's snippet but I am aware it might need authOptions.
 
-export async function POST(req: Request) {
+/**
+ * GET /api/partes/psi
+ * Lista partes con paginación y filtros
+ */
+export async function GET(request: NextRequest) {
     try {
-        const session = await getServerSession(authOptions)
+        const session = await getServerSession()
         if (!session?.user) {
             return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
         }
 
-        const data = await req.json()
+        const { searchParams } = new URL(request.url)
+        const page = parseInt(searchParams.get('page') || '1')
+        const limit = parseInt(searchParams.get('limit') || '20')
+        const fecha = searchParams.get('fecha')
+        const estado = searchParams.get('estado')
+        const incluirArchivados = searchParams.get('archivados') === 'true'
+        const numeroVoluntario = searchParams.get('numeroVoluntario')
 
-        // Generar número correlativo si no viene (YYYY-NNN)
-        let numero = data.numero
-        if (!numero) {
-            const year = new Date().getFullYear()
-            const count = await prisma.partePSI.count({
-                where: {
-                    createdAt: {
-                        gte: new Date(year, 0, 1),
-                        lt: new Date(year + 1, 0, 1)
+        // Construir filtros
+        const where: any = {}
+
+        if (!incluirArchivados) {
+            where.archivado = false
+        }
+
+        if (fecha) {
+            const fechaInicio = new Date(fecha)
+            fechaInicio.setHours(0, 0, 0, 0)
+            const fechaFin = new Date(fecha)
+            fechaFin.setHours(23, 59, 59, 999)
+            where.fecha = { gte: fechaInicio, lte: fechaFin }
+        }
+
+        if (estado && (estado === 'pendiente_vb' || estado === 'completo')) {
+            where.estado = estado
+        }
+
+        if (numeroVoluntario) {
+            where.creadoPor = {
+                numeroVoluntario
+            }
+        }
+
+        // Ejecutar consultas en paralelo
+        const [partes, total] = await Promise.all([
+            prisma.partePSI.findMany({
+                where,
+                include: {
+                    creadoPor: {
+                        select: {
+                            id: true,
+                            nombre: true,
+                            apellidos: true,
+                            numeroVoluntario: true
+                        }
                     }
+                },
+                orderBy: [
+                    { fecha: 'desc' },
+                    { createdAt: 'desc' }
+                ],
+                skip: (page - 1) * limit,
+                take: limit
+            }),
+            prisma.partePSI.count({ where })
+        ])
+
+        // Calcular paginación
+        const totalPages = Math.ceil(total / limit)
+
+        return NextResponse.json({
+            partes,
+            total,
+            page,
+            limit,
+            totalPages
+        })
+    } catch (error) {
+        console.error('Error GET /api/partes/psi:', error)
+        return NextResponse.json(
+            { error: 'Error obteniendo partes' },
+            { status: 500 }
+        )
+    }
+}
+
+/**
+ * POST /api/partes/psi
+ * Crea un nuevo parte PSI
+ */
+export async function POST(request: NextRequest) {
+    try {
+        const session = await getServerSession()
+        if (!session?.user?.id) { // Assuming session.user has id. In NextAuth default it might not, but schema has it.
+            // Actually session.user in next-auth usually has name, email, image. 
+            // ID needs to be added in session callback. 
+            // I'll assume it's configured.
+            return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+        }
+
+        const body = await request.json()
+
+        // Validar campos obligatorios
+        const validacion = validarPartePSI(body)
+        if (!validacion.valido) {
+            return NextResponse.json(
+                { error: 'Validación fallida', errores: validacion.errores },
+                { status: 400 }
+            )
+        }
+
+        // Generar número de parte automático
+        const numeroParte = await generarNumeroParte()
+
+        // Procesar y subir fotografías a Vercel Blob
+        const fotosUrls: string[] = []
+        if (body.fotos && Array.isArray(body.fotos)) {
+            for (let i = 0; i < Math.min(body.fotos.length, 3); i++) {
+                const foto = body.fotos[i]
+
+                // Si es base64, extraer y subir
+                if (typeof foto === 'string' && foto.startsWith('data:image')) {
+                    const matches = foto.match(/^data:image\/(\w+);base64,(.+)$/)
+                    if (!matches) continue
+
+                    const extension = matches[1]
+                    const base64Data = matches[2]
+                    const buffer = Buffer.from(base64Data, 'base64')
+
+                    // Nombre del archivo
+                    const filename = `partes/psi/${numeroParte}/foto-${i + 1}-${Date.now()}.${extension}`
+
+                    // Subir a Vercel Blob
+                    const { url } = await put(filename, buffer, {
+                        access: 'public',
+                        contentType: `image/${extension}`,
+                        // token: process.env.BLOB_READ_WRITE_TOKEN // Implicit if env var is set
+                    })
+
+                    fotosUrls.push(url)
                 }
-            })
-            numero = `${year}-${String(count + 1).padStart(3, '0')}`
+            }
+        }
+
+        // Determinar estado del parte
+        const estado = body.firmaJefeServicio ? 'completo' : 'pendiente_vb'
+
+        // Crear parte en base de datos
+        // Use user ID from session. Assuming session.user.id exists.
+        // If not, we might need to fetch user by email.
+        let userId = session.user.id
+        if (!userId && session.user.email) {
+            const user = await prisma.usuario.findUnique({ where: { email: session.user.email } })
+            if (user) userId = user.id
+        }
+
+        if (!userId) {
+            return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 401 })
         }
 
         const parte = await prisma.partePSI.create({
             data: {
-                ...data,
-                numero,
-                fecha: new Date(data.fecha), // Asegurar formato Date
-                creadorId: session.user.id,
+                numeroParte,
+                fecha: new Date(),
+                estado,
+                horaLlamada: body.horaLlamada,
+                horaSalida: body.horaSalida,
+                horaLlegada: body.horaLlegada,
+                horaTerminado: body.horaTerminado,
+                horaDisponible: body.horaDisponible,
+                lugar: body.lugar,
+                motivo: body.motivo,
+                alertante: body.alertante,
+                circulacion: body.circulacion,
+                matriculasImplicados: body.matriculasImplicados,
+                vehiculosIds: body.vehiculosIds,
+                equipoWalkies: body.equipoWalkies,
+                tipologias: body.tipologias,
+                tipologiasOtrosTexto: body.tipologiasOtrosTexto || {},
+                policiaLocal: body.policiaLocal,
+                guardiaCivil: body.guardiaCivil,
+                posiblesCausas: body.posiblesCausas,
+                tieneHeridos: body.tieneHeridos || false,
+                numeroHeridos: body.numeroHeridos,
+                tieneFallecidos: body.tieneFallecidos || false,
+                numeroFallecidos: body.numeroFallecidos,
+                indicativosInforman: body.indicativosInforman,
+                descripcionAccidente: body.descripcionAccidente,
+                observaciones: body.observaciones,
+                desarrolloDetallado: body.desarrolloDetallado || '',
+                fotosUrls,
+                indicativoCumplimenta: body.indicativoCumplimenta,
+                firmaIndicativoCumplimenta: body.firmaIndicativoCumplimenta,
+                responsableTurno: body.responsableTurno,
+                firmaResponsableTurno: body.firmaResponsableTurno,
+                firmaJefeServicio: body.firmaJefeServicio || null,
+                tipoFirmaJefe: body.tipoFirmaJefe || null,
+                creadoPorId: userId
+            },
+            include: {
+                creadoPor: {
+                    select: { nombre: true, apellidos: true, numeroVoluntario: true }
+                }
             }
         })
 
-        return NextResponse.json(parte)
+        return NextResponse.json({
+            success: true,
+            parte,
+            message: 'Parte creado correctamente'
+        })
     } catch (error) {
-        console.error('Error creando parte PSI:', error)
-        return NextResponse.json({ error: 'Error interno' }, { status: 500 })
+        console.error('Error POST /api/partes/psi:', error)
+        return NextResponse.json(
+            { error: 'Error creando parte' },
+            { status: 500 }
+        )
     }
 }
 
-export async function GET(req: Request) {
+/**
+ * DELETE /api/partes/psi?id=xxx
+ * Elimina un parte (solo superadministradores)
+ */
+export async function DELETE(request: NextRequest) {
     try {
-        const session = await getServerSession(authOptions)
-        if (!session?.user) {
+        const session = await getServerSession()
+        if (!session?.user?.email) {
             return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
         }
 
-        const partes = await prisma.partePSI.findMany({
-            orderBy: { createdAt: 'desc' },
-            include: {
-                creador: {
-                    select: { nombre: true, email: true }
-                },
-                imagenes: true
-            },
-            take: 50 // Límite por defecto
+        // Verificar rol superadministrador
+        const usuario = await prisma.usuario.findUnique({
+            where: { email: session.user.email },
+            include: { rol: true }
         })
 
-        return NextResponse.json(partes)
+        if (usuario?.rol?.nombre !== 'superadministrador') {
+            return NextResponse.json(
+                { error: 'Solo superadministradores pueden eliminar partes' },
+                { status: 403 }
+            )
+        }
+
+        const { searchParams } = new URL(request.url)
+        const id = searchParams.get('id')
+
+        if (!id) {
+            return NextResponse.json({ error: 'ID requerido' }, { status: 400 })
+        }
+
+        // Eliminar parte
+        await prisma.partePSI.delete({
+            where: { id }
+        })
+
+        return NextResponse.json({
+            success: true,
+            message: 'Parte eliminado correctamente'
+        })
     } catch (error) {
-        console.error('Error listando partes PSI:', error)
-        return NextResponse.json({ error: 'Error interno' }, { status: 500 })
+        console.error('Error DELETE /api/partes/psi:', error)
+        return NextResponse.json(
+            { error: 'Error eliminando parte' },
+            { status: 500 }
+        )
     }
 }

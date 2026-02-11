@@ -941,87 +941,76 @@ model Manual {
   @@map("manuales")
 }
 
+
+
+
 model PartePSI {
-  id                String   @id @default(cuid())
-  numero            String   @unique
+  id                        String    @id @default(cuid())
+  numeroParte               String    @unique // 20260211-001
+  fecha                     DateTime  @default(now())
+  estado                    String    @default("pendiente_vb") // "pendiente_vb" | "completo"
+  archivado                 Boolean   @default(false)
   
-  // Temporal
-  fecha             DateTime
-  horaLlamada       String?
-  horaSalida        String?
-  horaLlegada       String?
-  horaTerminado     String?
-  horaDisponible    String?
+  // Pautas de tiempo (formato HH:mm como String)
+  horaLlamada               String?
+  horaSalida                String?
+  horaLlegada               String?
+  horaTerminado             String?
+  horaDisponible            String?
   
-  // Ubicación
-  lugar             String
+  // Datos principales
+  lugar                     String
+  motivo                    String?
+  alertante                 String?
+  circulacion               String? // "prevencion" | "intervencion" | "otros"
+  matriculasImplicados      String?
   
-  // Alertante y circulación
-  alertante         String?
-  circulacion       String?
-  
-  // Tipología del servicio
-  tipologia         String   // mantenimiento, practicas, suministros, preventivo, otros_tipo1
-  tipologiaDetalle  String?  // soporte_vital, incendios, inundaciones, etc.
-  motivo            String?
-  
-  // Vehículos y equipo
-  vehiculos         String[] // Array de indicativos
-  equipoWalkies     String?
+  // Arrays JSON
+  vehiculosIds              Json // ["vehiculoId1", "vehiculoId2"]
+  equipoWalkies             Json // [{equipo: "B-13", walkie: "W-01"}, {equipo: "B-15", walkie: "W-02"}]
+  tipologias                Json // ["mantenimiento", "soporte_vital", "otros_grupo1"]
+  tipologiasOtrosTexto      Json // {grupo1: "Texto otros grupo 1", grupo2: "", grupo3: ""}
   
   // Autoridades
-  policiaLocal      Boolean  @default(false)
-  guardiaCivil      Boolean  @default(false)
-  otrasAutoridades  String?
+  policiaLocal              String? // Texto del campo "Policía Local de..."
+  guardiaCivil              String? // Texto del campo "Guardia Civil de..."
   
-  // Accidentes de tráfico
-  matriculasImplicados String?
+  // Accidente
+  posiblesCausas            String?
+  tieneHeridos              Boolean   @default(false)
+  numeroHeridos             Int?
+  tieneFallecidos           Boolean   @default(false)
+  numeroFallecidos          Int?
+  indicativosInforman       String?
+  descripcionAccidente      String?
   
-  // Resultado
-  heridos           Boolean  @default(false)
-  numHeridos        Int      @default(0)
-  fallecidos        Boolean  @default(false)
-  numFallecidos     Int      @default(0)
+  // Contenido
+  observaciones             String @db.Text // Página 1 - Resumen
+  desarrolloDetallado       String @db.Text // Página 2 - Detalle completo
+  fotosUrls                 Json // ["https://blob.vercel.com/foto1.jpg", "..."] - Página 3
   
-  // Observaciones y Extras
-  observaciones     String?
-  informacionExtra  Json?    // Campos adicionales flexibles y expandibles
+  // Firmas (base64 PNG dataURL)
+  indicativoCumplimenta     String? // Indicativo seleccionado (ej: "B-13")
+  firmaIndicativoCumplimenta String? @db.Text // "data:image/png;base64,iVBORw0KG..."
+  responsableTurno          String? // Indicativo seleccionado (ej: "B-15")
+  firmaResponsableTurno     String? @db.Text // "data:image/png;base64,iVBORw0KG..."
+  firmaJefeServicio         String? @db.Text // "data:image/png;base64,iVBORw0KG..." o certificado digital
+  tipoFirmaJefe             String? // "biometrica" | "certificado_digital"
   
-  // Archivos y PDF
-  imagenes          ImagenParte[]
-  pdfGeneradoUrl    String?
+  // PDF generado
+  pdfUrl                    String? // URL del PDF en Vercel Blob
+  pdfGenerado               Boolean   @default(false)
   
-  // Responsables
-  indicativoInforma String?
-  responsableTurno  String?
-  vbJefeServicio    String?
-  indicativoCumplimenta String?
+  // Auditoría
+  creadoPorId               String
+  creadoPor                 Usuario   @relation(fields: [creadoPorId], references: [id])
+  createdAt                 DateTime  @default(now())
+  updatedAt                 DateTime  @updatedAt
   
-  // Estado del parte
-  estado            String   @default("borrador") // borrador, finalizado, validado
-  
-  // Relaciones
-  creadorId         String   @map("creador_id")
-  creador           Usuario  @relation(fields: [creadorId], references: [id])
-  
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @updatedAt @map("updated_at")
-  
+  @@index([numeroParte])
+  @@index([fecha])
+  @@index([estado])
+  @@index([archivado])
+  @@index([creadoPorId])
   @@map("partes_psi")
 }
-
-model ImagenParte {
-  id          String   @id @default(cuid())
-  parteId     String   @map("parte_id")
-  url         String
-  blobKey     String
-  descripcion String?
-  orden       Int      @default(0)
-  createdAt   DateTime @default(now()) @map("created_at")
-  
-  parte       PartePSI @relation(fields: [parteId], references: [id], onDelete: Cascade)
-  
-  @@index([parteId])
-  @@map("imagenes_parte")
-}
-
