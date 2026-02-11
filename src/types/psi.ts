@@ -50,73 +50,57 @@ export type PsiFormState = {
     responsableTurno: string
 
     circulacion: string
+    // Firmas (base64)
+    firmaInformante: string | null
+    firmaResponsable: string | null
+    firmaJefe: string | null
 }
 
 export const INITIAL_PSI_STATE: PsiFormState = {
-    fecha: new Date().toISOString().split('T')[0],
-    hora: '',
+    numero: undefined,
     numeroInforme: '',
-
+    fecha: new Date().toISOString().split('T')[0],
+    hora: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
     lugar: '',
     motivo: '',
     alertante: '',
+    circulacion: '',
 
-    tiempos: {
-        llamada: '',
-        salida: '',
-        llegada: '',
-        terminado: '',
-        disponible: '',
-    },
+    // Tablas
+    tabla1: Array(5).fill({ vehiculo: '', equipo: '', walkie: '' }),
+    tabla2: Array(3).fill({ equipo: '', walkie: '' }),
 
-    tabla1: Array.from({ length: 9 }, () => ({ vehiculo: '', equipo: '', walkie: '' })),
-    tabla2: Array.from({ length: 9 }, () => ({ equipo: '', walkie: '' })),
+    // Tiempos
+    tiempos: { llamada: '', salida: '', llegada: '', terminado: '', disponible: '' },
 
-    prevencion: {
-        mantenimiento: false,
-        practicas: false,
-        suministros: false,
-        preventivo: false,
-        otros: false,
-    },
-    intervencion: {
-        svb: false,
-        incendios: false,
-        inundaciones: false,
-        otros_riesgos_meteo: false,
-        activacion_pem_bor: false,
-        otros: false,
-    },
-    otros: {
-        reunion_coordinacion: false,
-        reunion_areas: false,
-        limpieza: false,
-        formacion: false,
-        otros: false,
-    },
+    // Tipología
+    prevencion: { mantenimiento: false, practicas: false, suministros: false, preventivo: false, otros: false },
+    intervencion: { svb: false, incendios: false, inundaciones: false, otros_riesgos_meteo: false, activacion_pem_bor: false, otros: false },
+    otros: { reunion_coordinacion: false, reunion_areas: false, limpieza: false, formacion: false, otros: false },
 
     otrosDescripcion: '',
     posiblesCausas: '',
 
-    heridosSi: false,
-    heridosNo: false,
-    heridosNum: '',
+    // Casualties
+    heridosSi: false, heridosNo: false, heridosNum: '',
+    fallecidosSi: false, fallecidosNo: false, fallecidosNum: '',
 
-    fallecidosSi: false,
-    fallecidosNo: false,
-    fallecidosNum: '',
-
-    matriculasImplicados: Array.from({ length: 5 }, () => ''),
+    // Tráfico
+    matriculasImplicados: Array(3).fill(''),
     autoridadInterviene: '',
     policiaLocalDe: '',
     guardiaCivilDe: '',
 
     observaciones: '',
 
+    // Firmas texto
     indicativosInforman: '',
+    responsableTurno: '',
     vbJefeServicio: '',
     indicativoCumplimenta: '',
-    responsableTurno: '',
 
-    circulacion: '',
+    // Firmas imagen
+    firmaInformante: null,
+    firmaResponsable: null,
+    firmaJefe: null
 }

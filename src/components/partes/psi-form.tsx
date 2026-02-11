@@ -8,6 +8,7 @@ import React, { useState } from 'react'
 import styles from '@/app/(app)/partes/psi/psi.module.css'
 import { usePsiForm } from '@/hooks/use-psi-form'
 import { ImageUploader } from './image-uploader'
+import { SignaturePad } from '@/components/ui/signature-pad'
 import { Toaster, toast } from 'react-hot-toast'
 import { Loader2, Save, FileDown, Plus, ChevronDown, ChevronUp, Trash2 } from 'lucide-react'
 import Image from 'next/image'
@@ -29,9 +30,9 @@ export function PsiForm() {
         }
 
         try {
-            const { generatePsiPdf } = await import('@/lib/pdf-generator')
-            toast.loading('Generando PDF...', { id: 'pdf-gen' })
-            await generatePsiPdf(form)
+            const { generatePsiPdfV2 } = await import('@/lib/pdf-generator-v2')
+            toast.loading('Generando PDF (Réplica)...', { id: 'pdf-gen' })
+            await generatePsiPdfV2(form)
             toast.dismiss('pdf-gen')
             toast.success('PDF descargado')
         } catch (e) {
@@ -332,21 +333,57 @@ export function PsiForm() {
                         <div className={styles.footerBarLeft}>INDICATIVOS QUE INFORMAN</div>
                         <div className={styles.footerBarRight}>VB JEFE DE SERVICIO</div>
 
+                        {/* Fila 1 */}
                         <div className={styles.footerCellLeft}>
-                            <input className={styles.inputFull} value={form.indicativosInforman} onChange={(e) => setField('indicativosInforman', e.target.value)} />
+                            <textarea
+                                className="w-full h-full border-none resize-none bg-transparent text-xs p-1 focus:ring-0"
+                                value={form.indicativosInforman}
+                                onChange={(e) => setField('indicativosInforman', e.target.value)}
+                                placeholder="Lista de indicativos..."
+                            />
                         </div>
                         <div className={styles.footerCellRight}>
-                            <input className={styles.inputFull} value={form.vbJefeServicio} onChange={(e) => setField('vbJefeServicio', e.target.value)} />
+                            <SignaturePad
+                                label="Firma Jefe Servicio"
+                                initialValue={form.firmaJefe}
+                                onChange={(val) => setField('firmaJefe', val)}
+                                disabled={saving}
+                            />
+                        </div>
+
+                        {/* Fila 2 */}
+                        <div className={styles.footerRow2} style={{ borderRight: '1px solid #0f172a' }}>
+                            <div className="mb-2">
+                                <span className={styles.footerSmallLabel}>INDICATIVO CUMPLIMENTA</span>
+                                <input
+                                    className="w-full border border-gray-300 rounded px-1 text-xs mb-1"
+                                    value={form.indicativoCumplimenta}
+                                    onChange={(e) => setField('indicativoCumplimenta', e.target.value)}
+                                />
+                            </div>
+                            <SignaturePad
+                                label="Firma Informante"
+                                initialValue={form.firmaInformante}
+                                onChange={(val) => setField('firmaInformante', val)}
+                                disabled={saving}
+                            />
                         </div>
 
                         <div className={styles.footerRow2}>
-                            <div className={styles.footerSmallLabel}>INDICATIVO QUE CUMPLIMENTA</div>
-                            <input className={styles.inputFull} value={form.indicativoCumplimenta} onChange={(e) => setField('indicativoCumplimenta', e.target.value)} />
-                        </div>
-
-                        <div className={styles.footerRow2}>
-                            <div className={styles.footerSmallLabel}>RESPONSABLE DEL TURNO</div>
-                            <input className={styles.inputFull} value={form.responsableTurno} onChange={(e) => setField('responsableTurno', e.target.value)} />
+                            <div className="mb-2">
+                                <span className={styles.footerSmallLabel}>RESPONSABLE DEL TURNO</span>
+                                <input
+                                    className="w-full border border-gray-300 rounded px-1 text-xs mb-1"
+                                    value={form.responsableTurno}
+                                    onChange={(e) => setField('responsableTurno', e.target.value)}
+                                />
+                            </div>
+                            <SignaturePad
+                                label="Firma Responsable"
+                                initialValue={form.firmaResponsable}
+                                onChange={(val) => setField('firmaResponsable', val)}
+                                disabled={saving}
+                            />
                         </div>
                     </section>
 
