@@ -208,8 +208,8 @@ export default function ModalPartePSI({
                             key={p}
                             onClick={() => setPagina(p)}
                             className={`px-6 py-2.5 rounded-lg font-medium transition-colors whitespace-nowrap ${pagina === p
-                                    ? 'bg-orange-500 text-white shadow-md'
-                                    : 'bg-white text-gray-700 hover:bg-gray-50'
+                                ? 'bg-orange-500 text-white shadow-md'
+                                : 'bg-white text-gray-700 hover:bg-gray-50'
                                 }`}
                         >
                             Página {p}
@@ -447,22 +447,41 @@ function Section({ title, children }: { title: string, children: React.ReactNode
     )
 }
 
-function Input({ label, ...props }: any) {
+interface InputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange'> {
+    label: string
+    onChange?: (value: string) => void
+}
+
+function Input({ label, onChange, ...props }: InputProps) {
     return (
         <div>
             <label className="block text-xs font-semibold text-gray-600 mb-1">{label}</label>
-            <input className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-orange-500 outline-none" {...props} />
+            <input
+                className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-orange-500 outline-none"
+                {...props}
+                onChange={e => onChange?.(e.target.value)}
+            />
         </div>
     )
 }
 
-function Select({ label, options, ...props }: any) {
+interface SelectProps extends Omit<React.SelectHTMLAttributes<HTMLSelectElement>, 'onChange'> {
+    label: string
+    options: string[]
+    onChange: (value: string) => void
+}
+
+function Select({ label, options, onChange, ...props }: SelectProps) {
     return (
         <div className="flex-1">
             <label className="block text-xs font-semibold text-gray-600 mb-1">{label}</label>
-            <select className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-orange-500 outline-none bg-white" {...props} onChange={e => props.onChange(e.target.value)}>
+            <select
+                className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-orange-500 outline-none bg-white"
+                {...props}
+                onChange={e => onChange(e.target.value)}
+            >
                 <option value="">Seleccionar...</option>
-                {options.map((o: string) => <option key={o} value={o}>{o}</option>)}
+                {options.map((o) => <option key={o} value={o}>{o}</option>)}
             </select>
         </div>
     )
