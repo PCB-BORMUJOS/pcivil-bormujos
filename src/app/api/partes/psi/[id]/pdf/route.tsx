@@ -39,7 +39,7 @@ export async function GET(
 
         // Generar PDF usando react-pdf/renderer
         // Note: renderToBuffer might be slow, be careful with timeouts.
-        const pdfBuffer = await renderToBuffer(<PartePDF data={ parte } />)
+        const pdfBuffer = await renderToBuffer(<PartePDF data={parte} />)
 
         // Determinar si es descarga o visualización
         const { searchParams } = new URL(request.url)
@@ -49,7 +49,7 @@ export async function GET(
             ? `attachment; filename="PSI-${parte.numeroParte}.pdf"`
             : `inline; filename="PSI-${parte.numeroParte}.pdf"`
 
-        return new NextResponse(pdfBuffer, {
+        return new NextResponse(pdfBuffer as any, {
             headers: {
                 'Content-Type': 'application/pdf',
                 'Content-Disposition': disposition
