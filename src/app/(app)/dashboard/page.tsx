@@ -511,20 +511,44 @@ export default function DashboardPage() {
   };
 
   useEffect(() => {
-    fetch('/api/voluntarios').then(res => res.json()).then(data => {
-      setVoluntarios(data.voluntarios || []);
-      setStats(data.stats || { total: 0, responsablesTurno: 0, conCarnet: 0, experienciaAlta: 0 });
-      setLoadingVol(false);
-    }).catch(() => setLoadingVol(false));
+    const fetchTimeout = (url: string, ms: number) => {
+      return new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => reject(new Error(`Timeout: ${url}`)), ms);
+        fetch(url)
+          .then(res => res.json())
+          .then(data => {
+            clearTimeout(timeout);
+            resolve(data);
+          })
+          .catch(err => {
+            clearTimeout(timeout);
+            reject(err);
+          });
+      });
+    };
 
-    fetch('/api/vehiculos').then(res => res.json()).then(data => {
-      setVehiculos(data.vehiculos || []);
-      setStatsVeh(data.stats || { total: 0, disponibles: 0, enServicio: 0, mantenimiento: 0 });
-    }).catch(() => { });
-
-    fetch('/api/clima').then(res => res.json()).then(data => setClima(data)).catch(() => { });
-    cargarEventos();
-    fetch('/api/guardias').then(res => res.json()).then(data => setGuardias(data.guardias || [])).catch(() => { });
+    Promise.all([
+      fetchTimeout('/api/voluntarios', 5000),
+      fetchTimeout('/api/vehiculos', 5000),
+      fetchTimeout('/api/clima', 5000),
+      fetchTimeout('/api/eventos?privados=true', 5000),
+      fetchTimeout('/api/guardias', 5000),
+    ])
+      .then(([volData, vehData, climaData, eventosData, guardiasData]: any[]) => {
+        setVoluntarios(volData.voluntarios || []);
+        setStats(volData.stats || { total: 0, responsablesTurno: 0, conCarnet: 0, experienciaAlta: 0 });
+        setVehiculos(vehData.vehiculos || []);
+        setStatsVeh(vehData.stats || { total: 0, disponibles: 0, enServicio: 0, mantenimiento: 0 });
+        setClima(climaData);
+        setEventos(eventosData.eventos || []);
+        setGuardias(guardiasData.guardias || []);
+      })
+      .catch((err) => {
+        console.error('Error cargando datos:', err);
+      })
+      .finally(() => {
+        setLoadingVol(false);
+      });
   }, []);
 
   useEffect(() => {

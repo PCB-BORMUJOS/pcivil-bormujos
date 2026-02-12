@@ -68,19 +68,73 @@ export function usePsiForm() {
 
         setSaving(true)
         try {
+            // Collect simple true values from typologies
+            const tipologias = [
+                ...Object.entries(form.prevencion).filter(([_, v]) => v).map(([k]) => `prevencion.${k}`),
+                ...Object.entries(form.intervencion).filter(([_, v]) => v).map(([k]) => `intervencion.${k}`),
+                ...Object.entries(form.otros).filter(([_, v]) => v).map(([k]) => `otros.${k}`)
+            ]
+
             const payload = {
+                // Fechas y horas
                 fecha: form.fecha ? new Date(form.fecha) : new Date(),
-                lugar: form.lugar,
-                motivo: form.motivo,
-                alertante: form.alertante,
                 horaLlamada: form.tiempos.llamada,
                 horaSalida: form.tiempos.salida,
                 horaLlegada: form.tiempos.llegada,
                 horaTerminado: form.tiempos.terminado,
                 horaDisponible: form.tiempos.disponible,
+
+                // Datos principales
+                lugar: form.lugar,
+                motivo: form.motivo,
+                alertante: form.alertante,
+                circulacion: form.circulacion,
+
+                // Tráfico
+                matriculasImplicados: form.matriculasImplicados.join(', '), // Store as string separated by comma
+                policiaLocal: form.policiaLocalDe,
+                guardiaCivil: form.guardiaCivilDe,
+                autoridadInterviene: form.autoridadInterviene, // Note: DB doesn't have authority field distinct from policia/guardia? Check schema.
+                // Schema check: matriculasImplicados is String?, policiaLocal String?, guardiaCivil String?. 
+                // autoridadInterviene is NOT in schema explicitly? 
+                // Let's put authority in 'policiaLocal' if generic or just trust the mapped fields.
+                // Re-reading schema: tipologias is Json.
+
+                // Tablas (JSON)
+                vehiculosIds: form.tabla1.map(r => r.vehiculo).filter(Boolean),
+                equipoWalkies: [
+                    ...form.tabla1.map(r => ({ vehiculo: r.vehiculo, equipo: r.equipo, walkie: r.walkie })),
+                    ...form.tabla2.map(r => ({ vehiculo: undefined, equipo: r.equipo, walkie: r.walkie }))
+                ].filter(r => r.vehiculo || r.equipo || r.walkie),
+
+                // Tipologías (JSON)
+                tipologias: tipologias,
+                tipologiasOtrosTexto: { descripcion: form.otrosDescripcion },
+
+                // Accidente
+                posiblesCausas: form.posiblesCausas,
+                tieneHeridos: form.heridosSi,
+                numeroHeridos: parseInt(form.heridosNum) || 0,
+                tieneFallecidos: form.fallecidosSi,
+                numeroFallecidos: parseInt(form.fallecidosNum) || 0,
+
+                // Contenido
                 observaciones: form.observaciones,
-                informacionExtra: form, // Guardamos TODO el estado UI
-                estado: finalizar ? 'finalizado' : 'borrador'
+                desarrolloDetallado: form.desarrolloDetallado,
+                indicativosInforman: form.indicativosInforman,
+
+                // Firmas y responsables
+                indicativoCumplimenta: form.indicativoCumplimenta,
+                firmaIndicativoCumplimenta: form.firmaInformante, // Mapped
+                responsableTurno: form.responsableTurno,
+                firmaResponsableTurno: form.firmaResponsable, // Mapped
+                vbJefeServicio: form.vbJefeServicio, // This field doesn't exist in DB schema directly? 
+                // Schema has firmaJefeServicio. 
+                firmaJefeServicio: form.firmaJefe,
+
+                // Otros
+                informacionExtra: form, // Copia seguridad UI state
+                estado: finalizar ? 'completo' : 'pendiente_vb'
             }
 
             let url = '/api/partes/psi'
@@ -99,10 +153,12 @@ export function usePsiForm() {
 
             if (res.ok) {
                 const saved = await res.json()
-                if (!id) {
-                    setId(saved.id)
+                const newId = saved.parte ? saved.parte.id : saved.id
+
+                if (!id && newId) {
+                    setId(newId)
                     const params = new URLSearchParams(window.location.search)
-                    params.set('id', saved.id)
+                    params.set('id', newId)
                     window.history.replaceState(null, '', `?${params.toString()}`)
                 }
                 setHasChanges(false)

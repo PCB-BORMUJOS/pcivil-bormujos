@@ -54,6 +54,10 @@ export type PsiFormState = {
     firmaInformante: string | null
     firmaResponsable: string | null
     firmaJefe: string | null
+
+    // Páginas adicionales
+    desarrolloDetallado: string
+    fotos: string[] // Array of base64 strings
 }
 
 export const INITIAL_PSI_STATE: PsiFormState = {
@@ -67,8 +71,8 @@ export const INITIAL_PSI_STATE: PsiFormState = {
     circulacion: '',
 
     // Tablas
-    tabla1: Array(5).fill({ vehiculo: '', equipo: '', walkie: '' }),
-    tabla2: Array(3).fill({ equipo: '', walkie: '' }),
+    tabla1: Array(8).fill({ vehiculo: '', equipo: '', walkie: '' }),
+    tabla2: Array(8).fill({ equipo: '', walkie: '' }),
 
     // Tiempos
     tiempos: { llamada: '', salida: '', llegada: '', terminado: '', disponible: '' },
@@ -102,5 +106,9 @@ export const INITIAL_PSI_STATE: PsiFormState = {
     // Firmas imagen
     firmaInformante: null,
     firmaResponsable: null,
-    firmaJefe: null
+    firmaJefe: null,
+
+    // Páginas adicionales
+    desarrolloDetallado: '',
+    fotos: []
 }

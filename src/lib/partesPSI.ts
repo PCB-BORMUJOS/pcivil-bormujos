@@ -3,16 +3,17 @@ import { format } from 'date-fns'
 
 /**
  * Genera el número de parte automático con formato YYYYMMDD-XXX
- * Ejemplo: 20260211-001, 20260211-002, etc.
- * Reinicia a 001 cada día
+ * Ejemplo: 20260201-001, 20260201-002, 20260301-001 (reinicia cada mes)
+ * Reinicia a 001 el día 1 de cada mes
  */
 export async function generarNumeroParte(): Promise<string> {
     const hoy = new Date()
     const prefix = format(hoy, 'yyyyMMdd')
+    const mesPrefix = format(hoy, 'yyyyMM') // Prefix para buscar partes del mes
 
     const ultimoParte = await prisma.partePSI.findFirst({
         where: {
-            numeroParte: { startsWith: prefix },
+            numeroParte: { startsWith: mesPrefix }, // Buscar en el mes actual
             archivado: false
         },
         orderBy: { numeroParte: 'desc' },

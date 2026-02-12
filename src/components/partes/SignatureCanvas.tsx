@@ -33,16 +33,20 @@ export default function SignatureCanvas({
         if (!canvas) return { x: 0, y: 0 }
 
         const rect = canvas.getBoundingClientRect()
+        const scaleX = canvas.width / rect.width
+        const scaleY = canvas.height / rect.height
 
         if ('touches' in e) {
+            // Use first touch point (Apple Pencil or finger)
+            const touch = e.touches[0]
             return {
-                x: e.touches[0].clientX - rect.left,
-                y: e.touches[0].clientY - rect.top
+                x: (touch.clientX - rect.left) * scaleX,
+                y: (touch.clientY - rect.top) * scaleY
             }
         } else {
             return {
-                x: e.clientX - rect.left,
-                y: e.clientY - rect.top
+                x: (e.clientX - rect.left) * scaleX,
+                y: (e.clientY - rect.top) * scaleY
             }
         }
     }
@@ -89,9 +93,13 @@ export default function SignatureCanvas({
     }
 
     const stopDrawing = () => {
-        // If we were drawing, we should call onSave or let user click save?
-        // The requirement says: Buttons: "Limpiar" y "Guardar Firma"
-        setIsDrawing(false)
+        if (isDrawing) {
+            setIsDrawing(false)
+            // Auto-save when user finishes drawing
+            setTimeout(() => {
+                save()
+            }, 300)
+        }
     }
 
     const clear = () => {
@@ -103,6 +111,7 @@ export default function SignatureCanvas({
 
         ctx.clearRect(0, 0, canvas.width, canvas.height)
         setHasSignature(false)
+        onSave('') // Notify parent that signature was cleared
     }
 
     const save = () => {

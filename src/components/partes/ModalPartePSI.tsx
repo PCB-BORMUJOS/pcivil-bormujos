@@ -73,22 +73,17 @@ export default function ModalPartePSI({
                 if (data.vehiculos) setVehiculos(data.vehiculos)
             }).catch(err => console.error(err))
 
-            // Mock indicativos for now or fetch
-            // In a real app we would have an API for this.
-            // For now hardcode some common ones or fetch from a helper API if we created one.
-            // The prompt implementation suggested `obtenerIndicativosTurnoActual` in lib, which is server-side.
-            // We should probably create an endpoint for it or just list all volunteers.
-            // Let's assume we fetch all volunteers for now or use a hardcoded list for dev.
-            setIndicativosTurno(['B-01', 'B-13', 'B-15', 'J-44', 'B-20'])
+            // Fetch indicativos from API
+            fetch('/api/indicativos').then(res => res.json()).then(data => {
+                if (data.indicativos) setIndicativosTurno(data.indicativos)
+            }).catch(err => {
+                console.error(err)
+                // Fallback to hardcoded list
+                setIndicativosTurno(['J-44', 'B-01', 'B-13', 'B-15', 'B-20'])
+            })
 
-            // Walkies
-            // Using static base for now as the server action is not easily callable from client without setup
-            /*
-            // If we had an API:
-            fetch('/api/config/walkies').then...
-            */
-            // We use the imported constant as fallback
-            // setWalkies(WALKIES_BASE as unknown as string[])
+            // Set walkies from constant
+            setWalkies(WALKIES_BASE as unknown as string[])
 
             if (parteEditar) {
                 setFormData(parteEditar)
@@ -291,7 +286,7 @@ export default function ModalPartePSI({
                                                 newArr[idx].walkie = v
                                                 handleChange('equipoWalkies', newArr)
                                             }}
-                                            options={['W-01', 'W-02', 'W-03', 'W-04', 'W-05', 'W-06', 'W-07', 'W-08', 'W-09', 'W-10']}
+                                            options={walkies}
                                         />
                                         <button
                                             onClick={() => {
@@ -310,6 +305,130 @@ export default function ModalPartePSI({
                                 >
                                     + Añadir fila
                                 </button>
+                            </Section>
+
+                            {/* SECCION 6: CIRCULACION */}
+                            <Section title="Circulación">
+                                <div className="flex gap-6">
+                                    {CIRCULACION_OPTIONS.map(opt => (
+                                        <label key={opt.value} className="flex items-center gap-2 cursor-pointer">
+                                            <input
+                                                type="radio"
+                                                name="circulacion"
+                                                value={opt.value}
+                                                checked={formData.circulacion === opt.value}
+                                                onChange={e => handleChange('circulacion', e.target.value)}
+                                                className="w-4 h-4 text-orange-500"
+                                            />
+                                            <span className="text-sm font-medium">{opt.label}</span>
+                                        </label>
+                                    ))}
+                                </div>
+                            </Section>
+
+                            {/* SECCION 7: MATRICULAS VEHICULOS IMPLICADOS */}
+                            <Section title="Matrículas Vehículos Implicados (Accidente de Tráfico)">
+                                <Input
+                                    label="Matrículas (separadas por comas)"
+                                    value={formData.matriculasImplicados}
+                                    onChange={v => handleChange('matriculasImplicados', v)}
+                                    placeholder="Ej: 1234ABC, 5678DEF"
+                                />
+                            </Section>
+
+                            {/* SECCION 8: AUTORIDADES QUE INTERVIENEN */}
+                            <Section title="Autoridad que Interviene">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <Input
+                                        label="Policía Local de..."
+                                        value={formData.policiaLocal}
+                                        onChange={v => handleChange('policiaLocal', v)}
+                                        placeholder="Nombre del municipio"
+                                    />
+                                    <Input
+                                        label="Guardia Civil de..."
+                                        value={formData.guardiaCivil}
+                                        onChange={v => handleChange('guardiaCivil', v)}
+                                        placeholder="Nombre del puesto"
+                                    />
+                                </div>
+                            </Section>
+
+                            {/* SECCION 9: POSIBLES CAUSAS */}
+                            <Section title="Posibles Causas">
+                                <textarea
+                                    className="w-full border rounded-lg p-3 h-20 focus:ring-2 focus:ring-orange-500 outline-none text-sm"
+                                    placeholder="Descripción de las posibles causas del incidente..."
+                                    value={formData.posiblesCausas}
+                                    onChange={e => handleChange('posiblesCausas', e.target.value)}
+                                />
+                            </Section>
+
+                            {/* SECCION 10: ACCIDENTES DE TRAFICO - HERIDOS/FALLECIDOS */}
+                            <Section title="En Accidentes de Tráfico">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    {/* Heridos */}
+                                    <div className="border rounded-lg p-4 bg-gray-50">
+                                        <h4 className="font-semibold text-sm mb-3">Heridos</h4>
+                                        <div className="flex gap-4 mb-3">
+                                            <label className="flex items-center gap-2">
+                                                <input
+                                                    type="radio"
+                                                    checked={formData.tieneHeridos === true}
+                                                    onChange={() => handleChange('tieneHeridos', true)}
+                                                />
+                                                <span className="text-sm">Sí</span>
+                                            </label>
+                                            <label className="flex items-center gap-2">
+                                                <input
+                                                    type="radio"
+                                                    checked={formData.tieneHeridos === false}
+                                                    onChange={() => handleChange('tieneHeridos', false)}
+                                                />
+                                                <span className="text-sm">No</span>
+                                            </label>
+                                        </div>
+                                        {formData.tieneHeridos && (
+                                            <Input
+                                                label="Número de heridos"
+                                                type="number"
+                                                value={formData.numeroHeridos || ''}
+                                                onChange={v => handleChange('numeroHeridos', parseInt(v) || null)}
+                                            />
+                                        )}
+                                    </div>
+
+                                    {/* Fallecidos */}
+                                    <div className="border rounded-lg p-4 bg-gray-50">
+                                        <h4 className="font-semibold text-sm mb-3">Fallecidos</h4>
+                                        <div className="flex gap-4 mb-3">
+                                            <label className="flex items-center gap-2">
+                                                <input
+                                                    type="radio"
+                                                    checked={formData.tieneFallecidos === true}
+                                                    onChange={() => handleChange('tieneFallecidos', true)}
+                                                />
+                                                <span className="text-sm">Sí</span>
+                                            </label>
+                                            <label className="flex items-center gap-2">
+                                                <input
+                                                    type="radio"
+                                                    checked={formData.tieneFallecidos === false}
+                                                    onChange={() => handleChange('tieneFallecidos', false)}
+                                                />
+                                                <span className="text-sm">No</span>
+                                            </label>
+                                        </div>
+                                        {formData.tieneFallecidos && (
+                                            <Input
+                                                label="Número de fallecidos"
+                                                type="number"
+                                                value={formData.numeroFallecidos || ''}
+                                                onChange={v => handleChange('numeroFallecidos', parseInt(v) || null)}
+                                            />
+                                        )}
+                                    </div>
+                                </div>
                             </Section>
 
                             {/* TIPOLOGIAS - Simplified rendering */}
@@ -347,23 +466,54 @@ export default function ModalPartePSI({
                             </Section>
 
                             {/* FIRMAS */}
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
-                                <SignatureCanvas
-                                    label="Indicativo que Cumplimenta *"
-                                    initialSignature={formData.firmaIndicativoCumplimenta}
-                                    onSave={data => handleChange('firmaIndicativoCumplimenta', data)}
-                                />
-                                <SignatureCanvas
-                                    label="Responsable del Turno *"
-                                    initialSignature={formData.firmaResponsableTurno}
-                                    onSave={data => handleChange('firmaResponsableTurno', data)}
-                                />
-                                <SignatureCanvas
-                                    label="VB Jefe de Servicio"
-                                    initialSignature={formData.firmaJefeServicio}
-                                    onSave={data => handleChange('firmaJefeServicio', data)}
-                                />
-                            </div>
+                            <Section title="Firmas">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                    {/* Indicativo que Cumplimenta */}
+                                    <div>
+                                        <Select
+                                            label="Indicativo que Cumplimenta *"
+                                            options={indicativosTurno}
+                                            value={formData.indicativoCumplimenta}
+                                            onChange={v => handleChange('indicativoCumplimenta', v)}
+                                        />
+                                        <div className="mt-4">
+                                            <SignatureCanvas
+                                                label="Firma"
+                                                initialSignature={formData.firmaIndicativoCumplimenta}
+                                                onSave={data => handleChange('firmaIndicativoCumplimenta', data)}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Responsable del Turno */}
+                                    <div>
+                                        <Select
+                                            label="Responsable del Turno *"
+                                            options={indicativosTurno}
+                                            value={formData.responsableTurno}
+                                            onChange={v => handleChange('responsableTurno', v)}
+                                        />
+                                        <div className="mt-4">
+                                            <SignatureCanvas
+                                                label="Firma"
+                                                initialSignature={formData.firmaResponsableTurno}
+                                                onSave={data => handleChange('firmaResponsableTurno', data)}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* VB Jefe de Servicio */}
+                                    <div>
+                                        <label className="block text-xs font-semibold text-gray-600 mb-1">VB Jefe de Servicio</label>
+                                        <p className="text-xs text-gray-500 mb-4">Usualmente J-44</p>
+                                        <SignatureCanvas
+                                            label="Firma VB"
+                                            initialSignature={formData.firmaJefeServicio}
+                                            onSave={data => handleChange('firmaJefeServicio', data)}
+                                        />
+                                    </div>
+                                </div>
+                            </Section>
                         </div>
                     )}
 
