@@ -11,8 +11,9 @@ import { usePsiForm } from '@/hooks/use-psi-form'
 import { ImageUploader } from './image-uploader'
 import { SignaturePad } from '@/components/ui/signature-pad'
 import { Toaster, toast } from 'react-hot-toast'
-import { Loader2, Save, FileDown, Plus, ChevronDown, ChevronUp, Trash2 } from 'lucide-react'
+import { Loader2, Save, FileDown, Plus, ChevronDown, ChevronUp, Trash2, ChevronLeft } from 'lucide-react'
 import Image from 'next/image'
+import Link from 'next/link'
 
 export function PsiForm() {
     const {
@@ -150,6 +151,10 @@ ${textComponents.conclusion}`.trim()
 
             {/* Toolbar Flotante */}
             <div className="sticky top-4 z-50 bg-white/90 backdrop-blur shadow-lg rounded-full px-6 py-2 flex items-center gap-4 border border-gray-200 mb-6 transition-all hover:shadow-xl">
+                <Link href="/partes" className="p-1.5 hover:bg-gray-100 rounded-full transition-colors text-gray-500 hover:text-gray-700" title="Volver a lista">
+                    <ChevronLeft className="w-5 h-5" />
+                </Link>
+                <div className="h-4 w-px bg-gray-300" />
                 <span className="text-sm font-semibold text-gray-600 flex items-center gap-2">
                     {id ? `Ref: ${form.numero || '...'}` : 'Nuevo Parte'}
                     <span className="bg-yellow-100 text-yellow-800 text-xs px-2 py-0.5 rounded-full border border-yellow-300">v2.0 Beta</span>

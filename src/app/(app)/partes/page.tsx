@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { Plus, FileText, Download, Trash2, Eye, Filter } from 'lucide-react'
 import ModalPartePSI from '@/components/partes/ModalPartePSI' // Adjust import path if needed
 import { ESTADOS_PARTE } from '@/constants/partesPSI'
@@ -116,13 +117,13 @@ export default function PartesPage() {
           <h1 className="text-3xl font-bold text-gray-800">Partes de Servicio (PSI)</h1>
           <p className="text-gray-500 mt-1">Gestión de partes de servicio e intervención</p>
         </div>
-        <button
-          onClick={handleNuevoParte}
+        <Link
+          href="/partes/psi"
           className="px-6 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 font-medium flex items-center gap-2 shadow-md transition-colors"
         >
           <Plus size={20} />
           <span>Nuevo Parte PSI</span>
-        </button>
+        </Link>
       </div>
 
       {/* FILTROS */}
@@ -222,13 +223,13 @@ export default function PartesPage() {
                   </td>
                   <td className="p-4">
                     <div className="flex justify-center gap-2">
-                      <button
-                        onClick={() => handleEditarParte(parte)}
+                      <Link
+                        href={`/partes/psi?id=${parte.id}`}
                         className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-transparent hover:border-blue-100"
                         title="Ver detalle"
                       >
                         <Eye size={18} />
-                      </button>
+                      </Link>
                       <button
                         onClick={() => handleDescargarPDF(parte.id, parte.numeroParte)}
                         className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors border border-transparent hover:border-green-100"

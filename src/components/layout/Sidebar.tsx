@@ -52,12 +52,12 @@ const navigation: NavItem[] = [
   { name: 'Formación', href: '/formacion', icon: GraduationCap },
   { name: 'Acción Social', href: '/accion-social', icon: Users },
   { name: 'Configuración', href: '/configuracion', icon: Settings },
-  { 
-    name: 'Partes', 
-    href: '/partes', 
+  {
+    name: 'Partes',
+    href: '/partes',
     icon: FileText,
     submenu: [
-      { name: 'PSI - Servicio e Intervención', href: '/partes/psi' },
+      { name: 'PSI - Servicio e Intervención', href: '/partes' },
       { name: 'PRV FSV - Revisión FSV', href: '/partes/prv-fsv' },
       { name: 'PRV VIR - Revisión VIR', href: '/partes/prv-vir' },
       { name: 'POT - Orden de Trabajo', href: '/partes/pot' },
@@ -78,7 +78,7 @@ export default function Sidebar() {
   const { data: session, status } = useSession()
   const userRole = session?.user?.rol || ''
   const isAdmin = ['superadmin', 'admin', 'coordinador'].includes(userRole)
-  
+
   const [collapsed, setCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [openSubmenu, setOpenSubmenu] = useState<string | null>(null)
@@ -111,7 +111,7 @@ export default function Sidebar() {
 
   // Abrir submenú si estamos en una de sus rutas
   useEffect(() => {
-    const item = navigation.find(nav => 
+    const item = navigation.find(nav =>
       nav.submenu?.some(sub => pathname.startsWith(sub.href))
     )
     if (item) {
@@ -159,7 +159,7 @@ export default function Sidebar() {
 
       {/* Overlay para móvil */}
       {mobileOpen && (
-        <div 
+        <div
           className="sidebar-overlay"
           onClick={() => setMobileOpen(false)}
           aria-hidden="true"
@@ -183,7 +183,7 @@ export default function Sidebar() {
               <span className="text-pc-primary-500 text-xs font-medium">BORMUJOS</span>
             </div>
           </div>
-          
+
           {/* Botón cerrar en móvil */}
           <button
             onClick={() => setMobileOpen(false)}
@@ -192,7 +192,7 @@ export default function Sidebar() {
           >
             <X size={20} />
           </button>
-          
+
           {/* Botón colapsar en desktop */}
           <button
             onClick={() => setCollapsed(!collapsed)}
@@ -211,7 +211,7 @@ export default function Sidebar() {
               const Icon = item.icon
               const hasSubmenu = item.submenu && item.submenu.length > 0
               const isSubmenuOpen = openSubmenu === item.name
-              
+
               return (
                 <li key={item.name}>
                   {hasSubmenu ? (
@@ -226,11 +226,11 @@ export default function Sidebar() {
                       >
                         <Icon className="w-5 h-5" />
                         <span className="sidebar-text flex-1 text-left">{item.name}</span>
-                        <ChevronDown 
+                        <ChevronDown
                           className={cn(
                             "w-4 h-4 sidebar-text transition-transform",
                             isSubmenuOpen && "rotate-180"
-                          )} 
+                          )}
                         />
                       </button>
                       {isSubmenuOpen && !collapsed && (
@@ -243,8 +243,8 @@ export default function Sidebar() {
                                 href={sub.href}
                                 className={cn(
                                   'block px-3 py-2 text-sm rounded-lg transition-colors',
-                                  isSubActive 
-                                    ? 'bg-pc-primary-500 text-white' 
+                                  isSubActive
+                                    ? 'bg-pc-primary-500 text-white'
                                     : 'text-gray-400 hover:text-white hover:bg-pc-dark-800'
                                 )}
                               >
@@ -256,8 +256,8 @@ export default function Sidebar() {
                       )}
                     </div>
                   ) : (
-                    <Link 
-                      href={item.href} 
+                    <Link
+                      href={item.href}
                       className={cn('sidebar-link', isActive && 'active')}
                       title={collapsed ? item.name : undefined}
                     >
@@ -288,8 +288,8 @@ export default function Sidebar() {
                   <p className="text-xs text-pc-primary-500 truncate">{getRolLabel(session.user.rol)}</p>
                 </div>
               </div>
-              <button 
-                onClick={handleLogout} 
+              <button
+                onClick={handleLogout}
                 className={cn(
                   "flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-400 hover:text-white hover:bg-pc-dark-800 rounded-lg transition-colors",
                   collapsed && "justify-center px-0"
@@ -301,8 +301,8 @@ export default function Sidebar() {
               </button>
             </div>
           ) : (
-            <Link 
-              href="/login" 
+            <Link
+              href="/login"
               className={cn(
                 "flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-400 hover:text-white hover:bg-pc-dark-800 rounded-lg transition-colors",
                 collapsed && "justify-center px-0"
