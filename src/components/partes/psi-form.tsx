@@ -9,7 +9,7 @@ import React, { useState, useEffect } from 'react'
 import styles from '@/app/(app)/partes/psi/psi.module.css'
 import { usePsiForm } from '@/hooks/use-psi-form'
 import { ImageUploader } from './image-uploader'
-import { SignaturePad } from '@/components/ui/signature-pad'
+import SignatureCanvas from './SignatureCanvas'
 import { Toaster, toast } from 'react-hot-toast'
 import { Loader2, Save, FileDown, Plus, ChevronDown, ChevronUp, Trash2, ChevronLeft } from 'lucide-react'
 import Image from 'next/image'
@@ -581,11 +581,10 @@ ${textComponents.conclusion}`.trim()
                                     </select>
                                 </div>
                                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                                    <SignaturePad
+                                    <SignatureCanvas
                                         label="Firma Informante"
-                                        initialValue={form.firmaInformante}
-                                        onChange={(val) => setField('firmaInformante', val)}
-                                        disabled={saving}
+                                        initialSignature={form.firmaInformante || undefined}
+                                        onSave={(val) => setField('firmaInformante', val)}
                                     />
                                 </div>
                             </div>
@@ -608,11 +607,10 @@ ${textComponents.conclusion}`.trim()
                                     </select>
                                 </div>
                                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                                    <SignaturePad
+                                    <SignatureCanvas
                                         label="Firma Responsable"
-                                        initialValue={form.firmaResponsable}
-                                        onChange={(val) => setField('firmaResponsable', val)}
-                                        disabled={saving}
+                                        initialSignature={form.firmaResponsable || undefined}
+                                        onSave={(val) => setField('firmaResponsable', val)}
                                     />
                                 </div>
                             </div>
@@ -626,12 +624,12 @@ ${textComponents.conclusion}`.trim()
                                     </div>
                                 </div>
                                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                                    <SignaturePad
+                                    <SignatureCanvas
                                         label="Firma Jefe Servicio"
-                                        initialValue={form.firmaJefe}
-                                        onChange={(val) => setField('firmaJefe', val)}
-                                        disabled={saving}
+                                        initialSignature={form.firmaJefe || undefined}
+                                        onSave={(val) => setField('firmaJefe', val)}
                                     />
+
                                 </div>
                             </div>
                         </section>
