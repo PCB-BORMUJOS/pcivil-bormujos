@@ -4,12 +4,7 @@ import { prisma } from '@/lib/db'
 import { generarNumeroParte } from '@/lib/partesPSI'
 import { validarPartePSI } from '@/lib/psi-validation'
 import { put } from '@vercel/blob'
-// We need to import authOptions or similar if getServerSession requires it, 
-// usually it does but in some setups it works without args if configured globally.
-// Looking at the prompt, it used getServerSession() without args.
-// I will check if I need to import authOptions from somewhere.
-// Usually '@/lib/auth' or '@/app/api/auth/[...nextauth]/route'
-// For now I'll stick to the prompt's snippet but I am aware it might need authOptions.
+import { authOptions } from '@/lib/auth'
 
 /**
  * GET /api/partes/psi
@@ -17,7 +12,7 @@ import { put } from '@vercel/blob'
  */
 export async function GET(request: NextRequest) {
     try {
-        const session = await getServerSession()
+        const session = await getServerSession(authOptions)
         if (!session?.user) {
             return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
         }
@@ -104,11 +99,9 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
     try {
-        const session = await getServerSession()
-        if (!session?.user?.id) { // Assuming session.user has id. In NextAuth default it might not, but schema has it.
-            // Actually session.user in next-auth usually has name, email, image. 
-            // ID needs to be added in session callback. 
-            // I'll assume it's configured.
+        const session = await getServerSession(authOptions)
+        if (!session?.user?.id) {
+
             return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
         }
 
