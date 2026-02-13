@@ -1,6 +1,8 @@
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { PsiFormState, INITIAL_PSI_STATE, TimeKey } from '@/types/psi'
+import { toast } from 'react-hot-toast'
+import { validarPartePSI } from '@/lib/partesPSI'
 
 // Simple type for images (no longer using ImagenParte model)
 type ImagenParte = {
@@ -46,7 +48,7 @@ export function usePsiForm() {
                         ...INITIAL_PSI_STATE,
                         ...extra,
                         id: parte.id,
-                        numero: parte.numero,
+                        numero: parte.numeroParte || parte.numero, // Handle schema difference
                         fecha: parte.fecha ? new Date(parte.fecha).toISOString().split('T')[0] : '',
                         hora: extra.hora || '',
                         lugar: parte.lugar || '',
@@ -58,13 +60,42 @@ export function usePsiForm() {
             }
         } catch (err) {
             console.error(err)
+            toast.error('Error al cargar el parte')
         } finally {
             setLoading(false)
         }
     }
 
-    const saveParte = useCallback(async (finalizar = false) => {
-        if (!hasChanges && !finalizar) return
+    const validateForm = (data: any) => {
+        // Client-side pre-validation to match strict server rules
+        const errors: string[] = []
+        if (!data.lugar?.trim()) errors.push('El campo "Lugar" es obligatorio')
+        if (!data.observaciones?.trim()) errors.push('El campo "Observaciones" es obligatorio')
+        if (!data.indicativoCumplimenta) errors.push('Debe seleccionar el indicativo que cumplimenta')
+        if (!data.firmaIndicativoCumplimenta) errors.push('Falta la firma del indicativo que cumplimenta')
+        if (!data.responsableTurno) errors.push('Debe seleccionar el responsable del turno')
+        if (!data.firmaResponsableTurno) errors.push('Falta la firma del responsable del turno')
+
+        // At least one typology should be selected (prevencion, intervencion, or otros)
+        const hasTypology =
+            Object.values(data.prevencion).some(v => v) ||
+            Object.values(data.intervencion).some(v => v) ||
+            Object.values(data.otros).some(v => v);
+
+        if (!hasTypology) errors.push('Debe seleccionar al menos una tipología')
+
+        return errors
+    }
+
+    const saveParte = useCallback(async (finalizar = false): Promise<PsiFormState | null> => {
+        // Validation check before saving
+        const errors = validateForm(form)
+        if (errors.length > 0) {
+            errors.forEach(err => toast.error(err))
+            return null // Return failure
+        }
+
+        if (!hasChanges && !finalizar && id) return form // No changes needed, return current form
 
         setSaving(true)
         try {
@@ -91,14 +122,10 @@ export function usePsiForm() {
                 circulacion: form.circulacion,
 
                 // Tráfico
-                matriculasImplicados: form.matriculasImplicados.join(', '), // Store as string separated by comma
+                matriculasImplicados: form.matriculasImplicados.join(', '),
                 policiaLocal: form.policiaLocalDe,
                 guardiaCivil: form.guardiaCivilDe,
-                autoridadInterviene: form.autoridadInterviene, // Note: DB doesn't have authority field distinct from policia/guardia? Check schema.
-                // Schema check: matriculasImplicados is String?, policiaLocal String?, guardiaCivil String?. 
-                // autoridadInterviene is NOT in schema explicitly? 
-                // Let's put authority in 'policiaLocal' if generic or just trust the mapped fields.
-                // Re-reading schema: tipologias is Json.
+                autoridadInterviene: form.autoridadInterviene,
 
                 // Tablas (JSON)
                 vehiculosIds: form.tabla1.map(r => r.vehiculo).filter(Boolean),
@@ -125,15 +152,14 @@ export function usePsiForm() {
 
                 // Firmas y responsables
                 indicativoCumplimenta: form.indicativoCumplimenta,
-                firmaIndicativoCumplimenta: form.firmaInformante, // Mapped
+                firmaIndicativoCumplimenta: form.firmaInformante,
                 responsableTurno: form.responsableTurno,
-                firmaResponsableTurno: form.firmaResponsable, // Mapped
-                vbJefeServicio: form.vbJefeServicio, // This field doesn't exist in DB schema directly? 
-                // Schema has firmaJefeServicio. 
+                firmaResponsableTurno: form.firmaResponsable,
+                vbJefeServicio: form.vbJefeServicio,
                 firmaJefeServicio: form.firmaJefe,
 
                 // Otros
-                informacionExtra: form, // Copia seguridad UI state
+                informacionExtra: form,
                 estado: finalizar ? 'completo' : 'pendiente_vb'
             }
 
@@ -151,33 +177,75 @@ export function usePsiForm() {
                 body: JSON.stringify(payload)
             })
 
-            if (res.ok) {
-                const saved = await res.json()
-                const newId = saved.parte ? saved.parte.id : saved.id
+            const data = await res.json()
 
-                if (!id && newId) {
-                    setId(newId)
-                    const params = new URLSearchParams(window.location.search)
-                    params.set('id', newId)
-                    window.history.replaceState(null, '', `?${params.toString()}`)
+            if (!res.ok) {
+                // Handle API errors
+                if (data.errores && Array.isArray(data.errores)) {
+                    data.errores.forEach((e: string) => toast.error(e))
+                } else if (data.error) {
+                    toast.error(data.error)
+                } else {
+                    toast.error('Error al guardar el parte')
                 }
-                setHasChanges(false)
-                if (finalizar) {
-                    router.push('/partes')
-                }
+                return null
             }
+
+            // Success
+            const saved = data
+            const newId = saved.parte ? saved.parte.id : saved.id
+            const newNumero = saved.parte ? saved.parte.numeroParte : saved.numeroParte
+
+            console.log('Parte saved:', saved)
+
+            // Enable updatedForm for return
+            const updatedForm = { ...form }
+
+            // Update state with ID and Number immediately
+            if (!id && newId) {
+                setId(newId)
+                updatedForm.id = newId
+                // Update URL without reload
+                const params = new URLSearchParams(window.location.search)
+                params.set('id', newId)
+                window.history.replaceState(null, '', `?${params.toString()}`)
+            }
+
+            if (newNumero) {
+                setField('numero', newNumero)
+                updatedForm.numero = newNumero
+            }
+
+            setHasChanges(false)
+            toast.success(finalizar ? 'Parte finalizado correctamente' : 'Parte guardado correctamente')
+
+            if (finalizar) {
+                router.push('/partes')
+            }
+
+            return updatedForm
+
         } catch (err) {
             console.error(err)
+            toast.error('Error de conexión')
+            return null
         } finally {
             setSaving(false)
         }
     }, [id, form, hasChanges, router])
 
-    // Auto-save cada 5 segundos si hay cambios
+    // Auto-save disabled or less aggressive to avoid validation spam?
+    // Let's keep it but check validation silently? Or just remove auto-save for mandatory fields?
+    // Better to keep auto-save OFF for now if validation is strict, 
+    // OR only auto-save if validation passes.
     useEffect(() => {
         const timer = setTimeout(() => {
             if (id && hasChanges) {
-                saveParte()
+                // Silent validation check? 
+                // Currently saveParte shows toasts. 
+                // Maybe simplified auto-save logic needed or just rely on manual save to avoid annoyance.
+                // For now, let's comment out auto-save to prevent error spam while typing
+                // saveParte() 
             }
         }, 5000)
         return () => clearTimeout(timer)

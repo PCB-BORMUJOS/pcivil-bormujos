@@ -111,8 +111,12 @@ ${textComponents.conclusion}`.trim()
     }, [])
 
     const handleExportPdf = async () => {
-        if (!id) {
-            toast.error('Primero debes guardar el parte')
+        // Attempt to save (or get current state if no changes)
+        // This handles validation and auto-saving if new/modified
+        const savedForm = await saveParte(false)
+
+        if (!savedForm) {
+            // Validation failed or server error
             return
         }
 
@@ -120,9 +124,9 @@ ${textComponents.conclusion}`.trim()
             const { generatePsiPdfV3 } = await import('@/lib/pdf-generator-v3')
             toast.loading('Generando PDF...', { id: 'pdf-gen' })
 
-            // Map current images to form.fotos
+            // Map current images to form.fotos using the SAVED state (which has correct number/id)
             const formDataWithPhotos = {
-                ...form,
+                ...savedForm,
                 fotos: imagenes.map(img => img.url)
             }
 
@@ -137,8 +141,10 @@ ${textComponents.conclusion}`.trim()
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
-        await saveParte(true)
-        toast.success('Parte finalizado correctamente')
+        const saved = await saveParte(true)
+        if (saved) {
+            // Toast already handled in saveParte
+        }
     }
 
     if (loading) {
