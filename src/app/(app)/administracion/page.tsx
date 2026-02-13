@@ -9,6 +9,8 @@ import {
   AlertTriangle, CheckCircle, XCircle, UserCheck, RefreshCw
 } from 'lucide-react';
 
+import DocumentUploader from '@/components/admin/DocumentUploader';
+
 // ============================================
 // TIPOS
 // ============================================
@@ -221,6 +223,14 @@ export default function AdministracionPage() {
   const [nuevaPoliza, setNuevaPoliza] = useState({
     tipo: 'vehiculo', numero: '', compania: '', descripcion: '',
     fechaInicio: '', fechaVencimiento: '', primaAnual: 0, vehiculoId: '', notas: ''
+  });
+
+  // Estados para Documentos
+  const [documentUrls, setDocumentUrls] = useState({
+    acuerdoIndividual: '',
+    certificadoTitularidad: '',
+    modelo145: '',
+    dni: ''
   });
 
   // Inicializar fechas
@@ -1582,28 +1592,44 @@ export default function AdministracionPage() {
                 <input type="checkbox" checked={fichaData.acuerdoIndividual || false} onChange={e => setFichaData({ ...fichaData, acuerdoIndividual: e.target.checked })} className="w-5 h-5 rounded" />
                 <div>
                   <p className="text-sm font-medium text-slate-700">Acuerdo Individual</p>
-                  <button type="button" className="text-xs text-orange-600">📎 Adjuntar</button>
+                  <DocumentUploader
+                    label="Acuerdo Individual"
+                    currentUrl={documentUrls.acuerdoIndividual}
+                    onUpload={(url: string) => setDocumentUrls({ ...documentUrls, acuerdoIndividual: url })}
+                  />
                 </div>
               </label>
               <label className="flex items-center gap-3 p-3 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-50">
                 <input type="checkbox" checked={fichaData.certificadoTitularidad || false} onChange={e => setFichaData({ ...fichaData, certificadoTitularidad: e.target.checked })} className="w-5 h-5 rounded" />
                 <div>
                   <p className="text-sm font-medium text-slate-700">Certificado Titularidad</p>
-                  <button type="button" className="text-xs text-orange-600">📎 Adjuntar</button>
+                  <DocumentUploader
+                    label="Certificado Titularidad"
+                    currentUrl={documentUrls.certificadoTitularidad}
+                    onUpload={(url: string) => setDocumentUrls({ ...documentUrls, certificadoTitularidad: url })}
+                  />
                 </div>
               </label>
               <label className="flex items-center gap-3 p-3 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-50">
                 <input type="checkbox" checked={fichaData.modelo145 || false} onChange={e => setFichaData({ ...fichaData, modelo145: e.target.checked })} className="w-5 h-5 rounded" />
                 <div>
                   <p className="text-sm font-medium text-slate-700">Modelo 145</p>
-                  <button type="button" className="text-xs text-orange-600">📎 Adjuntar</button>
+                  <DocumentUploader
+                    label="Modelo 145"
+                    currentUrl={documentUrls.modelo145}
+                    onUpload={(url: string) => setDocumentUrls({ ...documentUrls, modelo145: url })}
+                  />
                 </div>
               </label>
               <label className="flex items-center gap-3 p-3 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-50">
                 <input type="checkbox" checked={fichaData.dniAdjuntado || false} onChange={e => setFichaData({ ...fichaData, dniAdjuntado: e.target.checked })} className="w-5 h-5 rounded" />
                 <div>
                   <p className="text-sm font-medium text-slate-700">DNI (Anverso y Reverso)</p>
-                  <button type="button" className="text-xs text-orange-600">📎 Adjuntar</button>
+                  <DocumentUploader
+                    label="DNI"
+                    currentUrl={documentUrls.dni}
+                    onUpload={(url: string) => setDocumentUrls({ ...documentUrls, dni: url })}
+                  />
                 </div>
               </label>
             </div>
