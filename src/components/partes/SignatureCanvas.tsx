@@ -13,8 +13,16 @@ export default function SignatureCanvas({
     label = 'Firma'
 }: SignatureCanvasProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null)
-    const [isDrawing, setIsDrawing] = useState(false)
     const [hasSignature, setHasSignature] = useState(false)
+
+    // Refs for state that changes frequently or during events to avoid re-binding listeners
+    const isDrawingRef = useRef(false)
+    const onSaveRef = useRef(onSave)
+
+    // Update onSaveRef when prop changes
+    useEffect(() => {
+        onSaveRef.current = onSave
+    }, [onSave])
 
     useEffect(() => {
         if (initialSignature && canvasRef.current) {
@@ -28,7 +36,7 @@ export default function SignatureCanvas({
         }
     }, [initialSignature])
 
-    const getCoordinates = (e: React.MouseEvent | React.TouchEvent) => {
+    const getCoordinates = (e: React.MouseEvent | React.TouchEvent | MouseEvent | TouchEvent) => {
         const canvas = canvasRef.current
         if (!canvas) return { x: 0, y: 0 }
 
@@ -36,24 +44,37 @@ export default function SignatureCanvas({
         const scaleX = canvas.width / rect.width
         const scaleY = canvas.height / rect.height
 
-        if ('touches' in e) {
-            // Use first touch point (Apple Pencil or finger)
-            const touch = e.touches[0]
+        if ('touches' in e && (e as TouchEvent).touches && (e as TouchEvent).touches.length > 0) {
+            const touch = (e as TouchEvent).touches[0]
             return {
                 x: (touch.clientX - rect.left) * scaleX,
                 y: (touch.clientY - rect.top) * scaleY
             }
-        } else {
+        } else if ('clientX' in e) {
             return {
-                x: (e.clientX - rect.left) * scaleX,
-                y: (e.clientY - rect.top) * scaleY
+                x: ((e as MouseEvent).clientX - rect.left) * scaleX,
+                y: ((e as MouseEvent).clientY - rect.top) * scaleY
             }
+        }
+        return { x: 0, y: 0 }
+    }
+
+    // Helper to save current canvas state
+    const saveCanvas = () => {
+        const canvas = canvasRef.current
+        if (!canvas) return
+
+        const dataUrl = canvas.toDataURL('image/png')
+        if (onSaveRef.current) {
+            onSaveRef.current(dataUrl)
         }
     }
 
-    const startDrawing = (e: React.MouseEvent | React.TouchEvent) => {
-        e.preventDefault()
-        setIsDrawing(true)
+    const startDrawing = (e: React.MouseEvent | React.TouchEvent | TouchEvent) => {
+        // Prevent default only if cancelable to avoid scrolling
+        if (e.cancelable && e.type !== 'mousedown') e.preventDefault()
+
+        isDrawingRef.current = true
         setHasSignature(true)
 
         const canvas = canvasRef.current
@@ -66,19 +87,19 @@ export default function SignatureCanvas({
         ctx.lineCap = 'round'
         ctx.strokeStyle = '#000'
 
-        const { x, y } = getCoordinates(e)
+        const { x, y } = getCoordinates(e as any)
 
         ctx.beginPath()
         ctx.moveTo(x, y)
-
-        // Also draw a dot in case it's a tap
         ctx.lineTo(x, y)
         ctx.stroke()
     }
 
-    const draw = (e: React.MouseEvent | React.TouchEvent) => {
-        e.preventDefault()
-        if (!isDrawing) return
+    const draw = (e: React.MouseEvent | React.TouchEvent | TouchEvent) => {
+        // Prevent default for scroll safety
+        if (e.cancelable && e.type !== 'mousemove') e.preventDefault()
+
+        if (!isDrawingRef.current) return
 
         const canvas = canvasRef.current
         if (!canvas) return
@@ -86,18 +107,18 @@ export default function SignatureCanvas({
         const ctx = canvas.getContext('2d')
         if (!ctx) return
 
-        const { x, y } = getCoordinates(e)
+        const { x, y } = getCoordinates(e as any)
 
         ctx.lineTo(x, y)
         ctx.stroke()
     }
 
     const stopDrawing = () => {
-        if (isDrawing) {
-            setIsDrawing(false)
-            // Auto-save when user finishes drawing
+        if (isDrawingRef.current) {
+            isDrawingRef.current = false
+            // Auto-save
             setTimeout(() => {
-                save()
+                saveCanvas()
             }, 300)
         }
     }
@@ -111,68 +132,21 @@ export default function SignatureCanvas({
 
         ctx.clearRect(0, 0, canvas.width, canvas.height)
         setHasSignature(false)
-        onSave('') // Notify parent that signature was cleared
+        if (onSaveRef.current) {
+            onSaveRef.current('')
+        }
     }
 
-    const save = () => {
-        const canvas = canvasRef.current
-        if (!canvas || !hasSignature) return
-
-        const dataUrl = canvas.toDataURL('image/png')
-        onSave(dataUrl)
-    }
-
-    // Add non-passive event listeners for touch devices to prevent scrolling
+    // Native event listeners for touch (passive: false)
     useEffect(() => {
         const canvas = canvasRef.current
         if (!canvas) return
 
-        const handleTouchStart = (e: TouchEvent) => {
-            if (e.cancelable) e.preventDefault()
-            const touch = e.touches[0]
-            const rect = canvas.getBoundingClientRect()
-            const x = (touch.clientX - rect.left) * (canvas.width / rect.width)
-            const y = (touch.clientY - rect.top) * (canvas.height / rect.height)
-
-            setIsDrawing(true)
-            setHasSignature(true)
-
-            const ctx = canvas.getContext('2d')
-            if (ctx) {
-                ctx.lineWidth = 2
-                ctx.lineCap = 'round'
-                ctx.strokeStyle = '#000'
-                ctx.beginPath()
-                ctx.moveTo(x, y)
-                ctx.lineTo(x, y) // Draw a dot
-                ctx.stroke()
-            }
-        }
-
-        const handleTouchMove = (e: TouchEvent) => {
-            if (e.cancelable) e.preventDefault()
-            if (!isDrawing) return
-
-            const touch = e.touches[0]
-            const rect = canvas.getBoundingClientRect()
-            const x = (touch.clientX - rect.left) * (canvas.width / rect.width)
-            const y = (touch.clientY - rect.top) * (canvas.height / rect.height)
-
-            const ctx = canvas.getContext('2d')
-            if (ctx) {
-                ctx.lineTo(x, y)
-                ctx.stroke()
-            }
-        }
-
+        const handleTouchStart = (e: TouchEvent) => startDrawing(e)
+        const handleTouchMove = (e: TouchEvent) => draw(e)
         const handleTouchEnd = (e: TouchEvent) => {
             if (e.cancelable) e.preventDefault()
-            if (isDrawing) {
-                setIsDrawing(false)
-                setTimeout(() => {
-                    save()
-                }, 300)
-            }
+            stopDrawing()
         }
 
         canvas.addEventListener('touchstart', handleTouchStart, { passive: false })
@@ -184,7 +158,7 @@ export default function SignatureCanvas({
             canvas.removeEventListener('touchmove', handleTouchMove)
             canvas.removeEventListener('touchend', handleTouchEnd)
         }
-    }, [isDrawing, save]) // Dependencies needed for state access
+    }, []) // Empty dependencies = listeners bind ONCE and never detach during life of component
 
     return (
         <div className="space-y-3">
@@ -200,7 +174,6 @@ export default function SignatureCanvas({
                     onMouseMove={draw}
                     onMouseUp={stopDrawing}
                     onMouseLeave={stopDrawing}
-                    // Touch events handled natively in useEffect
                     className="cursor-crosshair w-full h-auto touch-none"
                     style={{ touchAction: 'none' }}
                 />
@@ -216,15 +189,15 @@ export default function SignatureCanvas({
                 </button>
                 <button
                     type="button"
-                    onClick={save}
+                    onClick={saveCanvas}
                     disabled={!hasSignature}
                     className="px-4 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors"
                 >
-                    Guardar Firma
+                    Guardar
                 </button>
             </div>
             {hasSignature && (
-                <p className="text-xs text-green-600 font-medium">✓ Firma capturada (Recuerde guardar)</p>
+                <p className="text-xs text-green-600 font-medium">✓ Firma guardada automáticamente</p>
             )}
         </div>
     )
