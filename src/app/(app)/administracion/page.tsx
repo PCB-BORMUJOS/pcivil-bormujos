@@ -205,6 +205,8 @@ export default function AdministracionPage() {
   const [movimientosCaja, setMovimientosCaja] = useState<MovimientoCaja[]>([]);
   const [saldoActual, setSaldoActual] = useState(0);
   const [showNuevoMovimiento, setShowNuevoMovimiento] = useState(false);
+  const [showEditarMovimiento, setShowEditarMovimiento] = useState(false);
+  const [movimientoEditando, setMovimientoEditando] = useState<MovimientoCaja | null>(null);
   const [nuevoMovimiento, setNuevoMovimiento] = useState({ tipo: 'entrada', concepto: '', descripcion: '', importe: 0, categoria: '' });
 
   // Estados para Combustible
@@ -472,6 +474,35 @@ export default function AdministracionPage() {
     } catch (error) {
       alert('Error al guardar movimiento');
     }
+  };
+
+  const handleActualizarMovimientoCaja = async () => {
+    if (!movimientoEditando || !movimientoEditando.concepto || !movimientoEditando.importe) {
+      alert('Concepto e importe son requeridos');
+      return;
+    }
+    try {
+      const res = await fetch('/api/admin/caja', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(movimientoEditando)
+      });
+      const data = await res.json();
+      if (data.success) {
+        setShowEditarMovimiento(false);
+        setMovimientoEditando(null);
+        cargarMovimientosCaja();
+      } else {
+        alert('Error: ' + data.error);
+      }
+    } catch (error) {
+      alert('Error al actualizar movimiento');
+    }
+  };
+
+  const handleAbrirEdicion = (movimiento: MovimientoCaja) => {
+    setMovimientoEditando({ ...movimiento });
+    setShowEditarMovimiento(true);
   };
 
   const handleGuardarTicket = async () => {
@@ -1026,6 +1057,7 @@ export default function AdministracionPage() {
                         <th className="text-right py-3 px-4 text-xs font-bold text-slate-500 uppercase">Importe</th>
                         <th className="text-right py-3 px-4 text-xs font-bold text-slate-500 uppercase">Saldo</th>
                         <th className="text-center py-3 px-4 text-xs font-bold text-slate-500 uppercase">Adjunto</th>
+                        <th className="text-center py-3 px-4 text-xs font-bold text-slate-500 uppercase">ACCIONES</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1050,6 +1082,25 @@ export default function AdministracionPage() {
                                 <FileText size={18} />
                               </a>
                             ) : <span className="text-slate-300">-</span>}
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="flex items-center justify-center gap-2">
+                              <button onClick={() => handleAbrirEdicion(m)} className="p-1.5 bg-slate-100 text-slate-600 rounded hover:bg-slate-200 transition-colors" title="Editar">
+                                <Edit size={14} />
+                              </button>
+                              <DocumentUploader
+                                label="Ticket"
+                                onUpload={(url) => {
+                                  // Actualizar el movimiento con el nuevo URL
+                                  const actualizado = movimientosCaja.map(move => 
+                                    move.id === m.id ? { ...move, adjuntoUrl: url } : move
+                                  );
+                                  setMovimientosCaja(actualizado);
+                                }}
+                                currentUrl={m.adjuntoUrl}
+                                folder="Tickets Caja"
+                              />
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -1695,6 +1746,70 @@ export default function AdministracionPage() {
             <div className="flex gap-3 pt-2">
               <button type="button" onClick={() => setShowNuevoMovimiento(false)} className="flex-1 py-2.5 border border-slate-300 text-slate-700 rounded-lg font-medium hover:bg-slate-50 transition-colors">Cancelar</button>
               <button type="button" onClick={handleGuardarMovimientoCaja} className="flex-1 py-2.5 bg-orange-500 text-white rounded-lg font-medium hover:bg-orange-600 transition-colors">Guardar</button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Modal: Editar Movimiento Caja */}
+      {showEditarMovimiento && movimientoEditando && (
+        <Modal title="Editar Movimiento de Caja" onClose={() => setShowEditarMovimiento(false)} size="md">
+          <div className="space-y-4">
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Tipo</label>
+              <div className="flex gap-2">
+                <button type="button" onClick={() => setMovimientoEditando({ ...movimientoEditando!, tipo: 'entrada' })} className={`flex-1 py-2.5 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors ${movimientoEditando.tipo === 'entrada' ? 'bg-green-500 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+                  <TrendingUp size={18} /> Entrada
+                </button>
+                <button type="button" onClick={() => setMovimientoEditando({ ...movimientoEditando!, tipo: 'salida' })} className={`flex-1 py-2.5 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors ${movimientoEditando.tipo === 'salida' ? 'bg-red-500 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+                  <TrendingDown size={18} /> Salida
+                </button>
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Fecha</label>
+              <input 
+                type="date" 
+                value={movimientoEditando.fecha ? new Date(movimientoEditando.fecha).toISOString().split('T')[0] : ''} 
+                onChange={e => setMovimientoEditando({ ...movimientoEditando, fecha: e.target.value })} 
+                className="w-full border border-slate-200 rounded-lg p-2.5 text-sm" 
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Concepto *</label>
+              <input type="text" value={movimientoEditando.concepto} onChange={e => setMovimientoEditando({ ...movimientoEditando, concepto: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm" placeholder="Ej: Compra material" />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Descripción</label>
+              <textarea value={movimientoEditando.descripcion} onChange={e => setMovimientoEditando({ ...movimientoEditando, descripcion: e.target.value })} rows={2} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm" />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Importe (€) *</label>
+              <input type="number" step="0.01" value={movimientoEditando.importe || ''} onChange={e => setMovimientoEditando({ ...movimientoEditando, importe: parseFloat(e.target.value) || 0 })} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm" />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Categoría</label>
+              <select value={movimientoEditando.categoria || ''} onChange={e => setMovimientoEditando({ ...movimientoEditando, categoria: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm">
+                <option value="">Sin categoría</option>
+                <option value="material">Material</option>
+                <option value="equipamiento">Equipamiento</option>
+                <option value="formacion">Formación</option>
+                <option value="transporte">Transporte</option>
+                <option value="otros">Otros</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Adjunto</label>
+              <DocumentUploader
+                label="Ticket"
+                onUpload={(url) => setMovimientoEditando({ ...movimientoEditando, adjuntoUrl: url })}
+                currentUrl={movimientoEditando.adjuntoUrl}
+                folder="Tickets Caja"
+              />
+            </div>
+            <div className="flex gap-3 pt-2">
+              <button type="button" onClick={() => setShowEditarMovimiento(false)} className="flex-1 py-2.5 border border-slate-300 text-slate-700 rounded-lg font-medium hover:bg-slate-50 transition-colors">Cancelar</button>
+              <button type="button" onClick={handleActualizarMovimientoCaja} className="flex-1 py-2.5 bg-orange-500 text-white rounded-lg font-medium hover:bg-orange-600 transition-colors">Guardar Cambios</button>
             </div>
           </div>
         </Modal>

@@ -5,9 +5,10 @@ interface DocumentUploaderProps {
   label: string
   onUpload: (url: string) => void
   currentUrl?: string
+  folder?: string
 }
 
-export default function DocumentUploader({ label, onUpload, currentUrl }: DocumentUploaderProps) {
+export default function DocumentUploader({ label, onUpload, currentUrl, folder = 'Documentos FRI' }: DocumentUploaderProps) {
   const [uploading, setUploading] = useState(false)
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -29,7 +30,7 @@ export default function DocumentUploader({ label, onUpload, currentUrl }: Docume
       const formData = new FormData()
       formData.append('file', file)
       formData.append('name', `${label}-${Date.now()}.pdf`)
-      formData.append('folder', 'Documentos FRI')
+      formData.append('folder', folder || 'Documentos FRI')
 
       const response = await fetch('/api/partes/psi/drive-upload', {
         method: 'POST',

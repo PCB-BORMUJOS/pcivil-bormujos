@@ -71,3 +71,60 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
   }
 }
+
+export async function PUT(request: NextRequest) {
+  try {
+    const session = await getServerSession()
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    }
+
+    const body = await request.json()
+    const { id, tipo, concepto, descripcion, importe, categoria, fecha, adjuntoUrl, adjuntoNombre } = body
+
+    if (!id || !concepto || !importe) {
+      return NextResponse.json({ error: 'ID, concepto e importe son requeridos' }, { status: 400 })
+    }
+
+    // Obtener movimiento actual
+    const movimientoActual = await prisma.movimientoCaja.findUnique({
+      where: { id }
+    })
+
+    if (!movimientoActual) {
+      return NextResponse.json({ error: 'Movimiento no encontrado' }, { status: 404 })
+    }
+
+    // Calcular nuevo saldo
+    const ultimo = await prisma.movimientoCaja.findFirst({
+      where: { NOT: { id } },
+      orderBy: { createdAt: 'desc' }
+    })
+    const saldoAnterior = ultimo ? Number(ultimo.saldoPosterior) : 0
+    const importeNum = Number(importe)
+    const saldoPosterior = tipo === 'entrada' 
+      ? saldoAnterior + importeNum 
+      : saldoAnterior - importeNum
+
+    const movimiento = await prisma.movimientoCaja.update({
+      where: { id },
+      data: {
+        tipo,
+        concepto,
+        descripcion,
+        importe: importeNum,
+        categoria,
+        fecha: fecha ? new Date(fecha) : new Date(),
+        saldoAnterior,
+        saldoPosterior,
+        adjuntoUrl,
+        adjuntoNombre
+      }
+    })
+
+    return NextResponse.json({ success: true, movimiento })
+  } catch (error) {
+    console.error('Error al actualizar movimiento:', error)
+    return NextResponse.json({ error: 'Error interno' }, { status: 500 })
+  }
+}
