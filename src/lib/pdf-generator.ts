@@ -29,7 +29,7 @@ export async function generatePsiPdf(data: PsiFormState) {
     const dateStr = data.fecha ? new Date(data.fecha).toLocaleDateString() : ''
     doc.text(`Fecha: ${dateStr}`, margin, y)
     doc.text(`Hora: ${data.hora}`, margin + 60, y)
-    doc.text(`Nº Informe: ${data.numeroInforme || data.numero || '---'}`, margin + 120, y)
+    doc.text(`Nº Informe: ${data.numero || '---'}`, margin + 120, y)
 
     y += 8
     doc.text(`Lugar: ${data.lugar}`, margin, y)

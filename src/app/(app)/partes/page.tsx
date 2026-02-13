@@ -230,6 +230,18 @@ export default function PartesPage() {
                       >
                         <Eye size={18} />
                       </Link>
+                      {parte.googleDriveUrl && (
+                        <a
+                          href={parte.googleDriveUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors border border-transparent hover:border-gray-200"
+                          title="Ver en Google Drive"
+                        >
+                          {/* Drive Logo or External Link Icon */}
+                          <img src="https://upload.wikimedia.org/wikipedia/commons/1/12/Google_Drive_icon_%282020%29.svg" alt="Drive" className="w-4 h-4" />
+                        </a>
+                      )}
                       <button
                         onClick={() => handleDescargarPDF(parte.id, parte.numeroParte)}
                         className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors border border-transparent hover:border-green-100"

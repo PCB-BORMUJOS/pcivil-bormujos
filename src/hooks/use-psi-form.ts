@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { PsiFormState, INITIAL_PSI_STATE, TimeKey } from '@/types/psi'
 import { toast } from 'react-hot-toast'
-import { validarPartePSI } from '@/lib/partesPSI'
+import { validarPartePSI } from '@/lib/psi-validation'
 
 // Simple type for images (no longer using ImagenParte model)
 type ImagenParte = {
@@ -66,32 +66,13 @@ export function usePsiForm() {
         }
     }
 
-    const validateForm = (data: any) => {
-        // Client-side pre-validation to match strict server rules
-        const errors: string[] = []
-        if (!data.lugar?.trim()) errors.push('El campo "Lugar" es obligatorio')
-        if (!data.observaciones?.trim()) errors.push('El campo "Observaciones" es obligatorio')
-        if (!data.indicativoCumplimenta) errors.push('Debe seleccionar el indicativo que cumplimenta')
-        if (!data.firmaIndicativoCumplimenta) errors.push('Falta la firma del indicativo que cumplimenta')
-        if (!data.responsableTurno) errors.push('Debe seleccionar el responsable del turno')
-        if (!data.firmaResponsableTurno) errors.push('Falta la firma del responsable del turno')
 
-        // At least one typology should be selected (prevencion, intervencion, or otros)
-        const hasTypology =
-            Object.values(data.prevencion).some(v => v) ||
-            Object.values(data.intervencion).some(v => v) ||
-            Object.values(data.otros).some(v => v);
-
-        if (!hasTypology) errors.push('Debe seleccionar al menos una tipología')
-
-        return errors
-    }
 
     const saveParte = useCallback(async (finalizar = false): Promise<PsiFormState | null> => {
         // Validation check before saving
-        const errors = validateForm(form)
-        if (errors.length > 0) {
-            errors.forEach(err => toast.error(err))
+        const { valido, errores } = validarPartePSI(form)
+        if (!valido) {
+            errores.forEach(err => toast.error(err))
             return null // Return failure
         }
 

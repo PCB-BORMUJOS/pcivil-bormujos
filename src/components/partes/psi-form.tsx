@@ -112,30 +112,60 @@ ${textComponents.conclusion}`.trim()
 
     const handleExportPdf = async () => {
         // Attempt to save (or get current state if no changes)
-        // This handles validation and auto-saving if new/modified
         const savedForm = await saveParte(false)
 
         if (!savedForm) {
-            // Validation failed or server error
             return
         }
 
         try {
             const { generatePsiPdfV3 } = await import('@/lib/pdf-generator-v3')
-            toast.loading('Generando PDF...', { id: 'pdf-gen' })
+            toast.loading('Generando y subiendo PDF...', { id: 'pdf-gen' })
 
-            // Map current images to form.fotos using the SAVED state (which has correct number/id)
+            // Map current images to form.fotos
             const formDataWithPhotos = {
                 ...savedForm,
                 fotos: imagenes.map(img => img.url)
             }
 
-            await generatePsiPdfV3(formDataWithPhotos)
+            // Generate PDF Blob
+            const doc = await generatePsiPdfV3(formDataWithPhotos)
+            const pdfBlob = doc.output('blob')
+
+            // Trigger download locally
+            doc.save(`PSI_${savedForm.numero || 'borrador'}.pdf`)
+
+            // Upload to Google Drive (Background)
+            if (savedForm.id && savedForm.numero) {
+                const formData = new FormData()
+                formData.append('file', pdfBlob, `PSI_${savedForm.numero}.pdf`)
+                formData.append('parteId', savedForm.id)
+                formData.append('numeroParte', savedForm.numero)
+
+                fetch('/api/partes/psi/drive-upload', {
+                    method: 'POST',
+                    body: formData
+                })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            toast.success('PDF sincronizado con Google Drive', { id: 'drive-upload' })
+                        } else {
+                            console.error('Error subida Drive:', data)
+                            toast.error('Error sincronizando con Drive', { id: 'drive-upload' })
+                        }
+                    })
+                    .catch(err => {
+                        console.error('Error network Drive:', err)
+                        toast.error('Error de red al subir a Drive', { id: 'drive-upload' })
+                    })
+            }
+
             toast.dismiss('pdf-gen')
-            toast.success('PDF descargado')
         } catch (e) {
             console.error(e)
-            toast.error('Error generando PDF')
+            toast.error('Error generador PDF')
+            toast.dismiss('pdf-gen')
         }
     }
 
@@ -268,8 +298,8 @@ ${textComponents.conclusion}`.trim()
                                             <div className={styles.informeWrapFrame}>
                                                 <input
                                                     className={styles.inputReset}
-                                                    value={form.numeroInforme}
-                                                    onChange={(e) => setField('numeroInforme', e.target.value)}
+                                                    value={form.numero || ''}
+                                                    onChange={(e) => setField('numero', e.target.value)}
                                                     placeholder="Auto-generado"
                                                     readOnly
                                                 />

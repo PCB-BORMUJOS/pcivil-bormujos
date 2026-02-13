@@ -65,7 +65,7 @@ export async function generatePsiPdfV2(data: PsiFormState) {
     // Header info
     drawText(firstPage, data.fecha, 80, height - 100, { size: 10 })
     drawText(firstPage, data.hora, 200, height - 100, { size: 10 })
-    drawText(firstPage, data.numeroInforme, 450, height - 90, { size: 12, font: helveticaBold })
+    drawText(firstPage, data.numero, 450, height - 90, { size: 12, font: helveticaBold })
 
     // Main fields
     drawText(firstPage, data.lugar, 80, height - 140, { size: 10, maxWidth: 450 })
@@ -188,6 +188,6 @@ export async function generatePsiPdfV2(data: PsiFormState) {
     const blob = new Blob([pdfBytes as BlobPart], { type: 'application/pdf' })
     const link = document.createElement('a')
     link.href = URL.createObjectURL(blob)
-    link.download = `PSI_${data.numeroInforme || 'preview'}_${new Date().toISOString().split('T')[0]}.pdf`
+    link.download = `PSI_${data.numero || 'preview'}_${new Date().toISOString().split('T')[0]}.pdf`
     link.click()
 }

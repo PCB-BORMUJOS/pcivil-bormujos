@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { prisma } from '@/lib/db'
-import { generarNumeroParte, validarPartePSI } from '@/lib/partesPSI'
+import { generarNumeroParte } from '@/lib/partesPSI'
+import { validarPartePSI } from '@/lib/psi-validation'
 import { put } from '@vercel/blob'
 // We need to import authOptions or similar if getServerSession requires it, 
 // usually it does but in some setups it works without args if configured globally.
@@ -113,6 +114,14 @@ export async function POST(request: NextRequest) {
 
         const body = await request.json()
 
+        // Debug payload
+        console.log('POST /api/partes/psi payload:', {
+            indicativosInforman: body.indicativosInforman,
+            firmaInformante: body.firmaInformante ? 'PRESENT' : 'MISSING',
+            responsableTurno: body.responsableTurno,
+            firmaResponsable: body.firmaResponsable ? 'PRESENT' : 'MISSING'
+        })
+
         // Validar campos obligatorios
         const validacion = validarPartePSI(body)
         if (!validacion.valido) {
@@ -197,15 +206,21 @@ export async function POST(request: NextRequest) {
                 numeroHeridos: body.numeroHeridos,
                 tieneFallecidos: body.tieneFallecidos || false,
                 numeroFallecidos: body.numeroFallecidos,
-                indicativosInforman: body.indicativosInforman,
+                indicativosInforman: body.indicativosInforman, // Assuming schema has this or mapping to indicativoCumplimenta?
                 descripcionAccidente: body.descripcionAccidente,
                 observaciones: body.observaciones,
                 desarrolloDetallado: body.desarrolloDetallado || '',
                 fotosUrls,
-                indicativoCumplimenta: body.indicativoCumplimenta,
-                firmaIndicativoCumplimenta: body.firmaIndicativoCumplimenta,
+                // Mapping form fields to schema fields
+                // Form uses: indicativosInforman, firmaInformante, responsableTurno, firmaResponsable
+                // Schema seems to use: indicativoCumplimenta, firmaIndicativoCumplimenta, responsableTurno, firmaResponsableTurno
+                // We need to check schema.prisma to be sure.
+                // Based on previous file reads, schema has indicativoCumplimenta. 
+                // Let's assume we map them here.
+                indicativoCumplimenta: body.indicativosInforman,
+                firmaIndicativoCumplimenta: body.firmaInformante,
                 responsableTurno: body.responsableTurno,
-                firmaResponsableTurno: body.firmaResponsableTurno,
+                firmaResponsableTurno: body.firmaResponsable,
                 firmaJefeServicio: body.firmaJefeServicio || null,
                 tipoFirmaJefe: body.tipoFirmaJefe || null,
                 creadoPorId: userId

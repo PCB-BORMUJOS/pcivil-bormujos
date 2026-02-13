@@ -7,7 +7,6 @@ export type PsiFormState = {
 
     fecha: string
     hora: string
-    numeroInforme: string
 
     lugar: string
     motivo: string
@@ -62,7 +61,6 @@ export type PsiFormState = {
 
 export const INITIAL_PSI_STATE: PsiFormState = {
     numero: undefined,
-    numeroInforme: '',
     fecha: new Date().toISOString().split('T')[0],
     hora: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
     lugar: '',

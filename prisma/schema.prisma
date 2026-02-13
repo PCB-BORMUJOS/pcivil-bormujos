@@ -1000,6 +1000,10 @@ model PartePSI {
   // PDF generado
   pdfUrl                    String? // URL del PDF en Vercel Blob
   pdfGenerado               Boolean   @default(false)
+
+  // Google Drive Backup
+  googleDriveId             String?   // ID del archivo en Google Drive
+  googleDriveUrl            String?   // URL pública en Google Drive
   
   // Auditoría
   creadoPorId               String

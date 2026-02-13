@@ -10,7 +10,7 @@ const COLORS = {
     lightGray: [240, 240, 240] as [number, number, number]
 }
 
-export async function generatePsiPdfV3(data: PsiFormState) {
+export async function generatePsiPdfV3(data: PsiFormState): Promise<jsPDF> {
     const doc = new jsPDF('p', 'mm', 'a4')
     const pageWidth = doc.internal.pageSize.getWidth()
     const pageHeight = doc.internal.pageSize.getHeight()
@@ -35,7 +35,7 @@ export async function generatePsiPdfV3(data: PsiFormState) {
     doc.setFont('helvetica', 'bold')
     doc.text('Nº INFORME', 130, yPos)
     doc.rect(153, yPos - 4, 35, 6)
-    doc.text(data.numeroInforme || 'Auto-generado', 154, yPos)
+    doc.text(data.numero || 'Auto-generado', 154, yPos)
     doc.rect(189, yPos - 4, 5, 6)
 
     // Tables section (right side)
@@ -192,8 +192,8 @@ export async function generatePsiPdfV3(data: PsiFormState) {
 
     createPageFooter(doc, pageWidth, pageHeight, 25)
 
-    // Save PDF
-    doc.save(`PSI_${data.numeroInforme || 'preview'}_${new Date().toISOString().split('T')[0]}.pdf`)
+    // Return the doc object to handle save/upload in the caller
+    return doc
 }
 
 // Helper to fetch image and convert to Base64 to avoid CORS issues in jsPDF
