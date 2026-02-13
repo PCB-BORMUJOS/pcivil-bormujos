@@ -122,6 +122,70 @@ export default function SignatureCanvas({
         onSave(dataUrl)
     }
 
+    // Add non-passive event listeners for touch devices to prevent scrolling
+    useEffect(() => {
+        const canvas = canvasRef.current
+        if (!canvas) return
+
+        const handleTouchStart = (e: TouchEvent) => {
+            if (e.cancelable) e.preventDefault()
+            const touch = e.touches[0]
+            const rect = canvas.getBoundingClientRect()
+            const x = (touch.clientX - rect.left) * (canvas.width / rect.width)
+            const y = (touch.clientY - rect.top) * (canvas.height / rect.height)
+
+            setIsDrawing(true)
+            setHasSignature(true)
+
+            const ctx = canvas.getContext('2d')
+            if (ctx) {
+                ctx.lineWidth = 2
+                ctx.lineCap = 'round'
+                ctx.strokeStyle = '#000'
+                ctx.beginPath()
+                ctx.moveTo(x, y)
+                ctx.lineTo(x, y) // Draw a dot
+                ctx.stroke()
+            }
+        }
+
+        const handleTouchMove = (e: TouchEvent) => {
+            if (e.cancelable) e.preventDefault()
+            if (!isDrawing) return
+
+            const touch = e.touches[0]
+            const rect = canvas.getBoundingClientRect()
+            const x = (touch.clientX - rect.left) * (canvas.width / rect.width)
+            const y = (touch.clientY - rect.top) * (canvas.height / rect.height)
+
+            const ctx = canvas.getContext('2d')
+            if (ctx) {
+                ctx.lineTo(x, y)
+                ctx.stroke()
+            }
+        }
+
+        const handleTouchEnd = (e: TouchEvent) => {
+            if (e.cancelable) e.preventDefault()
+            if (isDrawing) {
+                setIsDrawing(false)
+                setTimeout(() => {
+                    save()
+                }, 300)
+            }
+        }
+
+        canvas.addEventListener('touchstart', handleTouchStart, { passive: false })
+        canvas.addEventListener('touchmove', handleTouchMove, { passive: false })
+        canvas.addEventListener('touchend', handleTouchEnd, { passive: false })
+
+        return () => {
+            canvas.removeEventListener('touchstart', handleTouchStart)
+            canvas.removeEventListener('touchmove', handleTouchMove)
+            canvas.removeEventListener('touchend', handleTouchEnd)
+        }
+    }, [isDrawing, save]) // Dependencies needed for state access
+
     return (
         <div className="space-y-3">
             <label className="block text-sm font-medium text-gray-700">
@@ -136,12 +200,11 @@ export default function SignatureCanvas({
                     onMouseMove={draw}
                     onMouseUp={stopDrawing}
                     onMouseLeave={stopDrawing}
-                    onTouchStart={startDrawing}
-                    onTouchMove={draw}
-                    onTouchEnd={stopDrawing}
+                    // Touch events handled natively in useEffect
                     className="cursor-crosshair w-full h-auto touch-none"
                     style={{ touchAction: 'none' }}
                 />
+
             </div>
             <div className="flex gap-2">
                 <button
