@@ -3,7 +3,8 @@ import { useState, useEffect } from 'react'
 import { X, Save, FileText, Image as ImageIcon, ChevronRight, AlertTriangle } from 'lucide-react'
 import SignatureCanvas from './SignatureCanvas'
 import { TIPOLOGIAS_PSI, CIRCULACION_OPTIONS, WALKIES_BASE } from '@/constants/partesPSI'
-import { obtenerListaWalkies, validarPartePSI } from '@/lib/partesPSI' // We need to move utils to client or use API for some
+import { obtenerListaWalkies } from '@/lib/partesPSI' // We need to move utils to client or use API for some
+import { validarPartePSI } from '@/lib/psi-validation'
 import { format } from 'date-fns'
 
 // Note: obtenerListaWalkies is async and uses prisma, so it must be server side or called via API. 
