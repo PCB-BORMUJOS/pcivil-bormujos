@@ -1017,3 +1017,34 @@ model PartePSI {
   @@index([creadoPorId])
   @@map("partes_psi")
 }
+
+model Aspirante {
+  id                      String    @id @default(cuid())
+  fecha                   DateTime  @default(now())
+  nombre                  String
+  apellidos               String
+  dni                     String    @unique
+  telefono                String?
+  email                   String?
+  estado                  String    @default("pendiente")
+  
+  fechaEntrevista         DateTime? @map("fecha_entrevista")
+  confirmacionAsistencia  Boolean   @default(false) @map("confirmacion_asistencia")
+  asistioEntrevista       Boolean   @default(false) @map("asistio_entrevista")
+  evaluacionEntrevista    String?   @db.Text @map("evaluacion_entrevista")
+  
+  carneConducir           String?   @map("carne_conducir")
+  formacion               String?   @db.Text
+  ocupacionActual         String?   @map("ocupacion_actual")
+  tiempoLibre             String?   @db.Text @map("tiempo_libre")
+  interesServicio         String?   @db.Text @map("interes_servicio")
+  
+  observaciones           String?   @db.Text
+  
+  createdAt               DateTime  @default(now()) @map("created_at")
+  updatedAt               DateTime  @updatedAt @map("updated_at")
+  
+  @@index([estado])
+  @@index([fecha])
+  @@map("aspirantes")
+}
