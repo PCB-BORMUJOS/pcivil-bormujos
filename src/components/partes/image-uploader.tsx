@@ -33,12 +33,14 @@ export function ImageUploader({ parteId, onUploadComplete }: ImageUploaderProps)
     }
 
     const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        console.log('File selected:', e.target.files)
         if (e.target.files && e.target.files.length > 0) {
             await uploadFiles(e.target.files)
         }
     }
 
     const uploadFiles = async (files: FileList) => {
+        console.log('Uploading files:', files)
         setIsUploading(true)
 
         for (const file of Array.from(files)) {
@@ -48,6 +50,7 @@ export function ImageUploader({ parteId, onUploadComplete }: ImageUploaderProps)
             formData.append('file', file)
 
             try {
+                console.log(`Uploading ${file.name} to /api/partes/psi/${parteId}/imagenes`)
                 const res = await fetch(`/api/partes/psi/${parteId}/imagenes`, {
                     method: 'POST',
                     body: formData
@@ -55,7 +58,10 @@ export function ImageUploader({ parteId, onUploadComplete }: ImageUploaderProps)
 
                 if (res.ok) {
                     const newImage = await res.json()
+                    console.log('Upload success:', newImage)
                     onUploadComplete(newImage)
+                } else {
+                    console.error('Upload failed with status:', res.status)
                 }
             } catch (error) {
                 console.error('Error subiendo imagen:', error)
@@ -68,13 +74,12 @@ export function ImageUploader({ parteId, onUploadComplete }: ImageUploaderProps)
 
     return (
         <div className="w-full">
-            <div
+            <label
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
-                onClick={() => fileInputRef.current?.click()}
                 className={`
-          border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors
+          block border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors
           ${isDragging ? 'border-indigo-500 bg-indigo-50' : 'border-gray-300 hover:border-indigo-400'}
         `}
             >
@@ -96,8 +101,9 @@ export function ImageUploader({ parteId, onUploadComplete }: ImageUploaderProps)
                     accept="image/*"
                     className="hidden"
                     onChange={handleFileSelect}
+                    disabled={isUploading}
                 />
-            </div>
+            </label>
         </div>
     )
 }

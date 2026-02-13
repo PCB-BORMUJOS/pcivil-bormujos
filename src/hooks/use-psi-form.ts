@@ -69,8 +69,21 @@ export function usePsiForm() {
 
 
     const saveParte = useCallback(async (finalizar = false): Promise<PsiFormState | null> => {
+        // Collect simple true values from typologies
+        const tipologias = [
+            ...Object.entries(form.prevencion).filter(([_, v]) => v).map(([k]) => `prevencion.${k}`),
+            ...Object.entries(form.intervencion).filter(([_, v]) => v).map(([k]) => `intervencion.${k}`),
+            ...Object.entries(form.otros).filter(([_, v]) => v).map(([k]) => `otros.${k}`)
+        ]
+
         // Validation check before saving
-        const { valido, errores } = validarPartePSI(form)
+        // We create a validation object that matches what validarPartePSI expects (the API payload structure)
+        const validationData = {
+            ...form,
+            tipologias
+        }
+
+        const { valido, errores } = validarPartePSI(validationData)
         if (!valido) {
             errores.forEach(err => toast.error(err))
             return null // Return failure
@@ -80,12 +93,7 @@ export function usePsiForm() {
 
         setSaving(true)
         try {
-            // Collect simple true values from typologies
-            const tipologias = [
-                ...Object.entries(form.prevencion).filter(([_, v]) => v).map(([k]) => `prevencion.${k}`),
-                ...Object.entries(form.intervencion).filter(([_, v]) => v).map(([k]) => `intervencion.${k}`),
-                ...Object.entries(form.otros).filter(([_, v]) => v).map(([k]) => `otros.${k}`)
-            ]
+            // tipologias is already constructed above
 
             const payload = {
                 // Fechas y horas
