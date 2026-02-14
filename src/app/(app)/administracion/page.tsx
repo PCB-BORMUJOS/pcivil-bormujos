@@ -603,7 +603,7 @@ export default function AdministracionPage() {
       const res = await fetch('/api/admin/aspirantes', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, ...data })
+        body: JSON.stringify({ ...data, id })
       });
       const resData = await res.json();
       if (resData.success) {
