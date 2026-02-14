@@ -6,7 +6,7 @@ import {
   Search, Plus, Edit, Eye, Download, Upload, X, Save, FileText, Check,
   AlertCircle, Clock, Car, Phone, Mail, MapPin, CreditCard, Receipt,
   TrendingUp, TrendingDown, Filter, Printer, Shield, Building2, Trash2,
-  AlertTriangle, CheckCircle, XCircle, UserCheck, RefreshCw, UserPlus
+  AlertTriangle, CheckCircle, XCircle, UserCheck, RefreshCw, UserPlus, ChevronDown
 } from 'lucide-react';
 
 import DocumentUploader from '@/components/admin/DocumentUploader';
