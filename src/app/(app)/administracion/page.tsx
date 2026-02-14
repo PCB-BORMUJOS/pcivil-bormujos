@@ -89,23 +89,23 @@ interface Aspirante {
   telefono: string;
   email: string;
   estado: 'pendiente' | 'entrevistado' | 'aceptado' | 'rechazado';
-  
+
   // Entrevista
   fechaEntrevista?: string;
   confirmacionAsistencia: boolean;
   asistioEntrevista: boolean;
   evaluacionEntrevista?: string;
-  
+
   // Datos personales
   carneConducir?: string;
   formacion?: string;
   ocupacionActual?: string;
   tiempoLibre?: string;
   interesServicio?: string;
-  
+
   // Gestión
   observaciones?: string;
-  
+
   createdAt: string;
   updatedAt: string;
 }
@@ -262,6 +262,7 @@ export default function AdministracionPage() {
   const [showNuevoAspirante, setShowNuevoAspirante] = useState(false);
   const [aspiranteEditando, setAspiranteEditando] = useState<Aspirante | null>(null);
   const [aspiranteExpandido, setAspiranteExpandido] = useState<string | null>(null);
+  const [aspiranteEditandoTemp, setAspiranteEditandoTemp] = useState<any>(null);
   const [nuevoAspirante, setNuevoAspirante] = useState({
     nombre: '', apellidos: '', dni: '', telefono: '', email: ''
   });
@@ -1206,7 +1207,7 @@ export default function AdministracionPage() {
                                 label="Ticket"
                                 onUpload={(url) => {
                                   // Actualizar el movimiento con el nuevo URL
-                                  const actualizado = movimientosCaja.map(move => 
+                                  const actualizado = movimientosCaja.map(move =>
                                     move.id === m.id ? { ...move, adjuntoUrl: url } : move
                                   );
                                   setMovimientosCaja(actualizado);
@@ -1257,9 +1258,17 @@ export default function AdministracionPage() {
                   {aspirantes.map(a => (
                     <div key={a.id} className="border border-slate-200 rounded-xl overflow-hidden">
                       {/* Fila principal */}
-                      <div 
+                      <div
                         className={`flex items-center p-4 cursor-pointer hover:bg-slate-50 transition-colors ${aspiranteExpandido === a.id ? 'bg-slate-50' : ''}`}
-                        onClick={() => setAspiranteExpandido(aspiranteExpandido === a.id ? null : a.id)}
+                        onClick={() => {
+                          if (aspiranteExpandido === a.id) {
+                            setAspiranteExpandido(null);
+                            setAspiranteEditandoTemp(null);
+                          } else {
+                            setAspiranteExpandido(a.id);
+                            setAspiranteEditandoTemp({ ...a });
+                          }
+                        }}
                       >
                         <div className="flex-1 grid grid-cols-7 gap-4 items-center">
                           <div className="text-sm text-slate-600">{new Date(a.fecha).toLocaleDateString('es-ES')}</div>
@@ -1268,24 +1277,23 @@ export default function AdministracionPage() {
                           <div className="text-sm text-slate-600">{a.telefono}</div>
                           <div className="text-sm text-slate-600 truncate">{a.email}</div>
                           <div>
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                              a.estado === 'pendiente' ? 'bg-yellow-100 text-yellow-800' :
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${a.estado === 'pendiente' ? 'bg-yellow-100 text-yellow-800' :
                               a.estado === 'entrevistado' ? 'bg-blue-100 text-blue-800' :
-                              a.estado === 'aceptado' ? 'bg-green-100 text-green-800' :
-                              'bg-red-100 text-red-800'
-                            }`}>
+                                a.estado === 'aceptado' ? 'bg-green-100 text-green-800' :
+                                  'bg-red-100 text-red-800'
+                              }`}>
                               {a.estado.charAt(0).toUpperCase() + a.estado.slice(1)}
                             </span>
                           </div>
                           <div className="flex items-center gap-2">
-                            <button 
+                            <button
                               onClick={(e) => { e.stopPropagation(); setAspiranteEditando(a); setShowNuevoAspirante(true); }}
                               className="p-1.5 bg-slate-100 text-slate-600 rounded hover:bg-slate-200 transition-colors"
                               title="Editar"
                             >
                               <Edit size={14} />
                             </button>
-                            <button 
+                            <button
                               onClick={(e) => { e.stopPropagation(); handleEliminarAspirante(a.id); }}
                               className="p-1.5 bg-slate-100 text-slate-600 rounded hover:bg-red-100 hover:text-red-600 transition-colors"
                               title="Eliminar"
@@ -1294,9 +1302,9 @@ export default function AdministracionPage() {
                             </button>
                           </div>
                         </div>
-                        <ChevronDown 
-                          size={20} 
-                          className={`ml-4 text-slate-400 transition-transform ${aspiranteExpandido === a.id ? 'rotate-180' : ''}`} 
+                        <ChevronDown
+                          size={20}
+                          className={`ml-4 text-slate-400 transition-transform ${aspiranteExpandido === a.id ? 'rotate-180' : ''}`}
                         />
                       </div>
 
@@ -1313,28 +1321,28 @@ export default function AdministracionPage() {
                               <div className="space-y-4">
                                 <div>
                                   <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Fecha Entrevista</label>
-                                  <input 
-                                    type="date" 
-                                    value={a.fechaEntrevista ? new Date(a.fechaEntrevista).toISOString().split('T')[0] : ''} 
-                                    onChange={(e) => handleActualizarAspirante(a.id, { ...a, fechaEntrevista: e.target.value })}
+                                  <input
+                                    type="date"
+                                    value={aspiranteEditandoTemp?.fechaEntrevista ? new Date(aspiranteEditandoTemp.fechaEntrevista).toISOString().split('T')[0] : ''}
+                                    onChange={(e) => setAspiranteEditandoTemp({ ...aspiranteEditandoTemp, fechaEntrevista: e.target.value })}
                                     className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
                                   />
                                 </div>
                                 <div className="flex items-center gap-4">
                                   <label className="flex items-center gap-2 cursor-pointer">
-                                    <input 
-                                      type="checkbox" 
-                                      checked={a.confirmacionAsistencia}
-                                      onChange={(e) => handleActualizarAspirante(a.id, { ...a, confirmacionAsistencia: e.target.checked })}
+                                    <input
+                                      type="checkbox"
+                                      checked={aspiranteEditandoTemp?.confirmacionAsistencia}
+                                      onChange={(e) => setAspiranteEditandoTemp({ ...aspiranteEditandoTemp, confirmacionAsistencia: e.target.checked })}
                                       className="w-4 h-4 rounded border-slate-300 text-orange-500 focus:ring-orange-500"
                                     />
                                     <span className="text-sm text-slate-700">Confirmación Asistencia</span>
                                   </label>
                                   <label className="flex items-center gap-2 cursor-pointer">
-                                    <input 
-                                      type="checkbox" 
-                                      checked={a.asistioEntrevista}
-                                      onChange={(e) => handleActualizarAspirante(a.id, { ...a, asistioEntrevista: e.target.checked })}
+                                    <input
+                                      type="checkbox"
+                                      checked={aspiranteEditandoTemp?.asistioEntrevista}
+                                      onChange={(e) => setAspiranteEditandoTemp({ ...aspiranteEditandoTemp, asistioEntrevista: e.target.checked })}
                                       className="w-4 h-4 rounded border-slate-300 text-orange-500 focus:ring-orange-500"
                                     />
                                     <span className="text-sm text-slate-700">Asistió a Entrevista</span>
@@ -1342,9 +1350,9 @@ export default function AdministracionPage() {
                                 </div>
                                 <div>
                                   <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Evaluación Entrevista</label>
-                                  <textarea 
-                                    value={a.evaluacionEntrevista || ''} 
-                                    onChange={(e) => handleActualizarAspirante(a.id, { ...a, evaluacionEntrevista: e.target.value })}
+                                  <textarea
+                                    value={aspiranteEditandoTemp?.evaluacionEntrevista || ''}
+                                    onChange={(e) => setAspiranteEditandoTemp({ ...aspiranteEditandoTemp, evaluacionEntrevista: e.target.value })}
                                     rows={3}
                                     className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
                                     placeholder="Evaluación de la entrevista..."
@@ -1362,9 +1370,9 @@ export default function AdministracionPage() {
                               <div className="space-y-4">
                                 <div>
                                   <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Carné de Conducir</label>
-                                  <select 
-                                    value={a.carneConducir || ''} 
-                                    onChange={(e) => handleActualizarAspirante(a.id, { ...a, carneConducir: e.target.value })}
+                                  <select
+                                    value={aspiranteEditandoTemp?.carneConducir || ''}
+                                    onChange={(e) => setAspiranteEditandoTemp({ ...aspiranteEditandoTemp, carneConducir: e.target.value })}
                                     className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
                                   >
                                     <option value="">Sin especificar</option>
@@ -1377,9 +1385,9 @@ export default function AdministracionPage() {
                                 </div>
                                 <div>
                                   <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Formación Académica</label>
-                                  <textarea 
-                                    value={a.formacion || ''} 
-                                    onChange={(e) => handleActualizarAspirante(a.id, { ...a, formacion: e.target.value })}
+                                  <textarea
+                                    value={aspiranteEditandoTemp?.formacion || ''}
+                                    onChange={(e) => setAspiranteEditandoTemp({ ...aspiranteEditandoTemp, formacion: e.target.value })}
                                     rows={2}
                                     className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
                                     placeholder="Estudios realizados..."
@@ -1387,19 +1395,19 @@ export default function AdministracionPage() {
                                 </div>
                                 <div>
                                   <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Ocupación Actual</label>
-                                  <input 
-                                    type="text" 
-                                    value={a.ocupacionActual || ''} 
-                                    onChange={(e) => handleActualizarAspirante(a.id, { ...a, ocupacionActual: e.target.value })}
+                                  <input
+                                    type="text"
+                                    value={aspiranteEditandoTemp?.ocupacionActual || ''}
+                                    onChange={(e) => setAspiranteEditandoTemp({ ...aspiranteEditandoTemp, ocupacionActual: e.target.value })}
                                     className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
                                     placeholder="Trabajo actual..."
                                   />
                                 </div>
                                 <div>
                                   <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Tiempo Libre Disponible</label>
-                                  <textarea 
-                                    value={a.tiempoLibre || ''} 
-                                    onChange={(e) => handleActualizarAspirante(a.id, { ...a, tiempoLibre: e.target.value })}
+                                  <textarea
+                                    value={aspiranteEditandoTemp?.tiempoLibre || ''}
+                                    onChange={(e) => setAspiranteEditandoTemp({ ...aspiranteEditandoTemp, tiempoLibre: e.target.value })}
                                     rows={2}
                                     className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
                                     placeholder="Disponibilidad horaria..."
@@ -1407,9 +1415,9 @@ export default function AdministracionPage() {
                                 </div>
                                 <div>
                                   <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Interés por el Servicio</label>
-                                  <textarea 
-                                    value={a.interesServicio || ''} 
-                                    onChange={(e) => handleActualizarAspirante(a.id, { ...a, interesServicio: e.target.value })}
+                                  <textarea
+                                    value={aspiranteEditandoTemp?.interesServicio || ''}
+                                    onChange={(e) => setAspiranteEditandoTemp({ ...aspiranteEditandoTemp, interesServicio: e.target.value })}
                                     rows={3}
                                     className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
                                     placeholder="Motivos para incorporarse..."
@@ -1427,9 +1435,9 @@ export default function AdministracionPage() {
                               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                                 <div>
                                   <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Estado</label>
-                                  <select 
-                                    value={a.estado} 
-                                    onChange={(e) => handleActualizarAspirante(a.id, { ...a, estado: e.target.value as any })}
+                                  <select
+                                    value={aspiranteEditandoTemp?.estado || ""}
+                                    onChange={(e) => setAspiranteEditandoTemp({ ...aspiranteEditandoTemp, estado: e.target.value })}
                                     className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
                                   >
                                     <option value="pendiente">Pendiente</option>
@@ -1440,9 +1448,9 @@ export default function AdministracionPage() {
                                 </div>
                                 <div>
                                   <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Observaciones</label>
-                                  <textarea 
-                                    value={a.observaciones || ''} 
-                                    onChange={(e) => handleActualizarAspirante(a.id, { ...a, observaciones: e.target.value })}
+                                  <textarea
+                                    value={aspiranteEditandoTemp?.observaciones || ''}
+                                    onChange={(e) => setAspiranteEditandoTemp({ ...aspiranteEditandoTemp, observaciones: e.target.value })}
                                     rows={4}
                                     className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
                                     placeholder="Notas internas..."
@@ -1452,6 +1460,33 @@ export default function AdministracionPage() {
                             </div>
                           </div>
                         </div>
+
+                {/* Botón Guardar Cambios */}
+                <div className="mt-6 flex justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAspiranteExpandido(null);
+                      setAspiranteEditandoTemp(null);
+                    }}
+                    className="px-6 py-2.5 border border-slate-300 text-slate-700 rounded-lg font-medium hover:bg-slate-50 transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (aspiranteEditandoTemp) {
+                        handleActualizarAspirante(aspiranteEditandoTemp.id, aspiranteEditandoTemp);
+                        setAspiranteExpandido(null);
+                        setAspiranteEditandoTemp(null);
+                      }
+                    }}
+                    className="px-6 py-2.5 bg-orange-500 text-white rounded-lg font-medium hover:bg-orange-600 transition-colors"
+                  >
+                    Guardar Cambios
+                  </button>
+                </div>
                       )}
                     </div>
                   ))}
@@ -1893,7 +1928,7 @@ export default function AdministracionPage() {
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Área Asignada</label>
                 <select value={fichaData.areaAsignada || ''} onChange={e => setFichaData({ ...fichaData, areaAsignada: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm">
                   <option value="">Seleccionar...</option>
-                  {AREAS_SERVICIO.map(a => <option key={a.id} value={a.id}>{a.nombre}</option>)}
+                  {AREAS_SERVICIO.map(a => <option key={a.id} value={aspiranteEditandoTemp?.id || ""}>{a.nombre}</option>)}
                 </select>
               </div>
               <div>
@@ -2117,11 +2152,11 @@ export default function AdministracionPage() {
             </div>
             <div>
               <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Fecha</label>
-              <input 
-                type="date" 
-                value={movimientoEditando.fecha ? new Date(movimientoEditando.fecha).toISOString().split('T')[0] : ''} 
-                onChange={e => setMovimientoEditando({ ...movimientoEditando, fecha: e.target.value })} 
-                className="w-full border border-slate-200 rounded-lg p-2.5 text-sm" 
+              <input
+                type="date"
+                value={movimientoEditando.fecha ? new Date(movimientoEditando.fecha).toISOString().split('T')[0] : ''}
+                onChange={e => setMovimientoEditando({ ...movimientoEditando, fecha: e.target.value })}
+                className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
               />
             </div>
             <div>
@@ -2337,9 +2372,9 @@ export default function AdministracionPage() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Nombre *</label>
-                <input 
-                  type="text" 
-                  value={aspiranteEditando?.nombre || nuevoAspirante.nombre} 
+                <input
+                  type="text"
+                  value={aspiranteEditando?.nombre || nuevoAspirante.nombre}
                   onChange={(e) => aspiranteEditando ? setAspiranteEditando({ ...aspiranteEditando, nombre: e.target.value }) : setNuevoAspirante({ ...nuevoAspirante, nombre: e.target.value })}
                   className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
                   placeholder="Nombre"
@@ -2347,9 +2382,9 @@ export default function AdministracionPage() {
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Apellidos *</label>
-                <input 
-                  type="text" 
-                  value={aspiranteEditando?.apellidos || nuevoAspirante.apellidos} 
+                <input
+                  type="text"
+                  value={aspiranteEditando?.apellidos || nuevoAspirante.apellidos}
                   onChange={(e) => aspiranteEditando ? setAspiranteEditando({ ...aspiranteEditando, apellidos: e.target.value }) : setNuevoAspirante({ ...nuevoAspirante, apellidos: e.target.value })}
                   className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
                   placeholder="Apellidos"
@@ -2359,9 +2394,9 @@ export default function AdministracionPage() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">DNI *</label>
-                <input 
-                  type="text" 
-                  value={aspiranteEditando?.dni || nuevoAspirante.dni} 
+                <input
+                  type="text"
+                  value={aspiranteEditando?.dni || nuevoAspirante.dni}
                   onChange={(e) => aspiranteEditando ? setAspiranteEditando({ ...aspiranteEditando, dni: e.target.value }) : setNuevoAspirante({ ...nuevoAspirante, dni: e.target.value })}
                   className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
                   placeholder="DNI"
@@ -2369,9 +2404,9 @@ export default function AdministracionPage() {
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Teléfono</label>
-                <input 
-                  type="tel" 
-                  value={aspiranteEditando?.telefono || nuevoAspirante.telefono} 
+                <input
+                  type="tel"
+                  value={aspiranteEditando?.telefono || nuevoAspirante.telefono}
                   onChange={(e) => aspiranteEditando ? setAspiranteEditando({ ...aspiranteEditando, telefono: e.target.value }) : setNuevoAspirante({ ...nuevoAspirante, telefono: e.target.value })}
                   className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
                   placeholder="Teléfono"
@@ -2380,9 +2415,9 @@ export default function AdministracionPage() {
             </div>
             <div>
               <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Email</label>
-              <input 
-                type="email" 
-                value={aspiranteEditando?.email || nuevoAspirante.email} 
+              <input
+                type="email"
+                value={aspiranteEditando?.email || nuevoAspirante.email}
                 onChange={(e) => aspiranteEditando ? setAspiranteEditando({ ...aspiranteEditando, email: e.target.value }) : setNuevoAspirante({ ...nuevoAspirante, email: e.target.value })}
                 className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
                 placeholder="email@ejemplo.com"
