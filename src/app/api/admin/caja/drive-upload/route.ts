@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
-import { put } from '@vercel/blob'
+import { uploadToGoogleDrive } from '@/lib/google-drive'
+
+const CAJA_TICKETS_FOLDER_ID = process.env.CAJA_TICKETS_FOLDER_ID || '10X11xzEnPc75OdGBNZvZiiEfzP_3wj0h'
 
 export async function POST(request: NextRequest) {
     try {
@@ -17,28 +19,23 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Falta el archivo' }, { status: 400 })
         }
 
-        const buffer = Buffer.from(await file.arrayBuffer())
+        const arrayBuffer = await file.arrayBuffer()
+        const buffer = Buffer.from(arrayBuffer)
 
-        // Nombre del archivo: Caja_{movimientoId}_{fecha}.pdf
         const fecha = new Date().toISOString().split('T')[0]
-        const filename = `caja-tickets/Caja_${movimientoId || 'sin-id'}_${fecha}.pdf`
+        const filename = `Caja_${movimientoId || 'sin-id'}_${fecha}.pdf`
 
-        // Subir a Vercel Blob
-        const blob = await put(filename, buffer, {
-            access: 'public',
-            contentType: 'application/pdf'
-        })
+        const driveFile = await uploadToGoogleDrive(buffer, filename, 'application/pdf', CAJA_TICKETS_FOLDER_ID)
 
         return NextResponse.json({
             success: true,
-            webViewLink: blob.url,
-            mensaje: 'Ticket subido a Vercel Blob correctamente'
+            webViewLink: driveFile.url,
+            mensaje: 'Ticket subido a Google Drive correctamente'
         })
-
     } catch (error) {
         console.error('Error en /api/admin/caja/drive-upload:', error)
         return NextResponse.json(
-            { error: 'Error subiendo archivo' },
+            { error: 'Error subiendo archivo a Drive' },
             { status: 500 }
         )
     }
