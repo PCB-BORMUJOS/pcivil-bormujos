@@ -55,6 +55,9 @@ model Usuario {
 
   manuales              Manual[]
   partesPSI             PartePSI[]
+  inscripciones         Inscripcion[]
+  certificaciones        Certificacion[]
+
   @@map("usuarios")
 }
 
@@ -1047,4 +1050,154 @@ model Aspirante {
   @@index([estado])
   @@index([fecha])
   @@map("aspirantes")
+}
+
+// ============================================
+// MÓDULO DE FORMACIÓN
+// ============================================
+
+model Curso {
+  id                String   @id @default(cuid())
+  codigo            String   @unique
+  nombre            String
+  descripcion       String?  @db.Text
+  tipo              String
+  duracionHoras     Int      @map("duracion_horas")
+  validezMeses      Int?     @map("validez_meses")
+  
+  objetivos         String?  @db.Text
+  temario           String?  @db.Text
+  requisitosAcceso  String?  @db.Text @map("requisitos_acceso")
+  documentacion     String?  @db.Text
+  
+  entidadOrganiza   String?  @map("entidad_organiza")
+  entidadCertifica  String?  @map("entidad_certifica")
+  costoPorAlumno    Float?   @default(0) @map("costo_por_alumno")
+  plazasMaximas     Int?     @map("plazas_maximas")
+  
+  activo            Boolean  @default(true)
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+  
+  convocatorias     Convocatoria[]
+  certificaciones   Certificacion[]
+  necesidades       NecesidadFormativa[]
+  
+  @@map("cursos")
+}
+
+model Convocatoria {
+  id                String   @id @default(cuid())
+  cursoId           String   @map("curso_id")
+  curso             Curso    @relation(fields: [cursoId], references: [id], onDelete: Cascade)
+  
+  codigo            String   @unique
+  fechaInicio       DateTime @map("fecha_inicio")
+  fechaFin          DateTime @map("fecha_fin")
+  
+  lugar             String?
+  direccion         String?
+  horario           String?  @db.Text
+  instructores      String?  @db.Text
+  
+  plazasDisponibles Int      @map("plazas_disponibles")
+  plazasOcupadas    Int      @default(0) @map("plazas_ocupadas")
+  
+  estado            String   @default("planificada")
+  
+  evaluacionRequerida Boolean @default(true) @map("evaluacion_requerida")
+  notaMinima        Float?   @default(5) @map("nota_minima")
+  
+  actaFormacion     String?  @map("acta_formacion")
+  listadoAsistencia String?  @map("listado_asistencia")
+  
+  observaciones     String?  @db.Text
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+  
+  inscripciones     Inscripcion[]
+  
+  @@map("convocatorias")
+}
+
+model Inscripcion {
+  id                String   @id @default(cuid())
+  convocatoriaId    String   @map("convocatoria_id")
+  convocatoria      Convocatoria @relation(fields: [convocatoriaId], references: [id], onDelete: Cascade)
+  
+  usuarioId         String   @map("usuario_id")
+  usuario           Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  
+  fechaInscripcion  DateTime @default(now()) @map("fecha_inscripcion")
+  estado            String   @default("pendiente")
+  
+  porcentajeAsistencia Float? @map("porcentaje_asistencia")
+  notaFinal         Float?   @map("nota_final")
+  apto              Boolean?
+  
+  fechaCertificacion DateTime? @map("fecha_certificacion")
+  certificadoUrl    String?  @map("certificado_url")
+  
+  observaciones     String?  @db.Text
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+  
+  @@unique([convocatoriaId, usuarioId])
+  @@map("inscripciones")
+}
+
+model Certificacion {
+  id                String   @id @default(cuid())
+  usuarioId         String   @map("usuario_id")
+  usuario           Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  
+  cursoId           String   @map("curso_id")
+  curso             Curso    @relation(fields: [cursoId], references: [id], onDelete: Cascade)
+  
+  numeroCertificado String?  @unique @map("numero_certificado")
+  fechaObtencion    DateTime @map("fecha_obtencion")
+  fechaExpiracion   DateTime? @map("fecha_expiracion")
+  
+  entidadEmisora    String   @map("entidad_emisora")
+  vigente           Boolean  @default(true)
+  renovada          Boolean  @default(false)
+  certificacionRenovacionId String? @map("certificacion_renovacion_id")
+  
+  certificadoUrl    String?  @map("certificado_url")
+  observaciones     String?  @db.Text
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+  
+  @@map("certificaciones")
+}
+
+model NecesidadFormativa {
+  id                String   @id @default(cuid())
+  
+  cursoId           String?  @map("curso_id")
+  curso             Curso?   @relation(fields: [cursoId], references: [id], onDelete: SetNull)
+  descripcion       String   @db.Text
+  
+  areaAfectada      String   @map("area_afectada")
+  numeroPersonas    Int      @map("numero_personas")
+  
+  motivo            String   @db.Text
+  impacto           String   @default("medio")
+  urgencia          String   @default("normal")
+  prioridad         Int      @default(3)
+  
+  fechaLimite       DateTime? @map("fecha_limite")
+  estado            String   @default("identificada")
+  
+  convocatoriaPlanificada String? @map("convocatoria_planificada")
+  fechaResolucion   DateTime? @map("fecha_resolucion")
+  
+  detectadaPor      String   @map("detectada_por")
+  fechaDeteccion    DateTime @default(now()) @map("fecha_deteccion")
+  
+  observaciones     String?  @db.Text
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+  
+  @@map("necesidades_formativas")
 }
