@@ -6,9 +6,10 @@ interface DocumentUploaderProps {
   onUpload: (url: string) => void
   currentUrl?: string
   folder?: string
+  apiEndpoint?: string
 }
 
-export default function DocumentUploader({ label, onUpload, currentUrl, folder = 'Documentos FRI' }: DocumentUploaderProps) {
+export default function DocumentUploader({ label, onUpload, currentUrl, folder = 'Documentos FRI', apiEndpoint }: DocumentUploaderProps) {
   const [uploading, setUploading] = useState(false)
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -32,7 +33,8 @@ export default function DocumentUploader({ label, onUpload, currentUrl, folder =
       formData.append('name', `${label}-${Date.now()}.pdf`)
       formData.append('folder', folder || 'Documentos FRI')
 
-      const response = await fetch('/api/partes/psi/drive-upload', {
+      const endpoint = apiEndpoint || '/api/partes/psi/drive-upload'
+      const response = await fetch(endpoint, {
         method: 'POST',
         body: formData
       })
@@ -62,9 +64,8 @@ export default function DocumentUploader({ label, onUpload, currentUrl, folder =
       />
       <label
         htmlFor={`upload-${label.replace(/\s/g, '-')}`}
-        className={`text-xs cursor-pointer ${
-          uploading ? 'text-gray-400' : 'text-orange-600 hover:text-orange-700'
-        }`}
+        className={`text-xs cursor-pointer ${uploading ? 'text-gray-400' : 'text-orange-600 hover:text-orange-700'
+          }`}
       >
         {uploading ? '⏳ Subiendo...' : currentUrl ? '✅ Ver/Cambiar' : '📎 Adjuntar'}
       </label>

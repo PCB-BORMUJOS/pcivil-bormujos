@@ -1227,6 +1227,7 @@ export default function AdministracionPage() {
                               </button>
                               <DocumentUploader
                                 label="Ticket"
+                                apiEndpoint="/api/admin/caja/drive-upload"
                                 onUpload={async (url) => {
                                   // Actualizar el movimiento con el nuevo URL en la base de datos
                                   try {
@@ -2228,6 +2229,7 @@ export default function AdministracionPage() {
               <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Adjunto</label>
               <DocumentUploader
                 label="Ticket"
+                apiEndpoint="/api/admin/caja/drive-upload"
                 onUpload={(url) => setMovimientoEditando({ ...movimientoEditando, adjuntoUrl: url })}
                 currentUrl={movimientoEditando.adjuntoUrl}
                 folder="Tickets Caja"

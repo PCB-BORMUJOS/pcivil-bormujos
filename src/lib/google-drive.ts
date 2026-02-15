@@ -24,15 +24,18 @@ const getDriveClient = async () => {
  * @param buffer Buffer del archivo PDF
  * @param filename Nombre del archivo
  * @param mimeType Tipo MIME (application/pdf)
+ * @param folderId ID de la carpeta de Drive (opcional)
  * @returns Objeto con id y webViewLink
  */
 export async function uploadToGoogleDrive(
     buffer: Buffer,
     filename: string,
-    mimeType: string = 'application/pdf'
+    mimeType: string = 'application/pdf',
+    folderId?: string
 ) {
     try {
         const drive = await getDriveClient()
+        const targetFolderId = folderId || FOLDER_ID
 
         // Convertir buffer a stream
         const bufferStream = new Stream.PassThrough()
@@ -41,7 +44,7 @@ export async function uploadToGoogleDrive(
         const response = await drive.files.create({
             requestBody: {
                 name: filename,
-                parents: [FOLDER_ID], // Carpeta destino
+                parents: [targetFolderId], // Carpeta destino
             },
             media: {
                 mimeType,
