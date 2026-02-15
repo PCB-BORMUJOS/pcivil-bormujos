@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
-import { uploadToGoogleDrive } from '@/lib/google-drive'
-
-// ID de la carpeta de Tickets de Caja en Google Drive
-const CAJA_TICKETS_FOLDER_ID = process.env.CAJA_TICKETS_FOLDER_ID || ''
+import { put } from '@vercel/blob'
 
 export async function POST(request: NextRequest) {
     try {
@@ -20,26 +17,28 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Falta el archivo' }, { status: 400 })
         }
 
-        // Leer archivo como buffer
-        const arrayBuffer = await file.arrayBuffer()
-        const buffer = Buffer.from(arrayBuffer)
+        const buffer = Buffer.from(await file.arrayBuffer())
 
-        // Nombre del archivo en Drive
-        const filename = `Caja_${movimientoId || 'sin-id'}_${new Date().toISOString().split('T')[0]}.pdf`
+        // Nombre del archivo: Caja_{movimientoId}_{fecha}.pdf
+        const fecha = new Date().toISOString().split('T')[0]
+        const filename = `caja-tickets/Caja_${movimientoId || 'sin-id'}_${fecha}.pdf`
 
-        // Subir a Drive en la carpeta de Tickets de Caja
-        const driveFile = await uploadToGoogleDrive(buffer, filename, 'application/pdf', CAJA_TICKETS_FOLDER_ID)
+        // Subir a Vercel Blob
+        const blob = await put(filename, buffer, {
+            access: 'public',
+            contentType: 'application/pdf'
+        })
 
         return NextResponse.json({
             success: true,
-            webViewLink: driveFile.url,
-            mensaje: 'Ticket subido a Google Drive correctamente'
+            webViewLink: blob.url,
+            mensaje: 'Ticket subido a Vercel Blob correctamente'
         })
 
     } catch (error) {
         console.error('Error en /api/admin/caja/drive-upload:', error)
         return NextResponse.json(
-            { error: 'Error subiendo archivo a Drive' },
+            { error: 'Error subiendo archivo' },
             { status: 500 }
         )
     }
