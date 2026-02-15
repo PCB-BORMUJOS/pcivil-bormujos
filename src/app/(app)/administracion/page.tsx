@@ -89,23 +89,23 @@ interface Aspirante {
   telefono: string;
   email: string;
   estado: 'pendiente' | 'entrevistado' | 'aceptado' | 'rechazado';
-  
+
   // Entrevista
   fechaEntrevista?: string;
   confirmacionAsistencia: boolean;
   asistioEntrevista: boolean;
   evaluacionEntrevista?: string;
-  
+
   // Datos personales
   carneConducir?: string;
   formacion?: string;
   ocupacionActual?: string;
   tiempoLibre?: string;
   interesServicio?: string;
-  
+
   // Gestión
   observaciones?: string;
-  
+
   createdAt: string;
   updatedAt: string;
 }
@@ -546,6 +546,25 @@ export default function AdministracionPage() {
   const handleAbrirEdicion = (movimiento: MovimientoCaja) => {
     setMovimientoEditando({ ...movimiento });
     setShowEditarMovimiento(true);
+  };
+
+  const handleEliminarMovimientoCaja = async (id: string) => {
+    if (!confirm('¿Estás seguro de que quieres eliminar este movimiento?')) return;
+    try {
+      const res = await fetch('/api/admin/caja', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id })
+      });
+      const data = await res.json();
+      if (data.success) {
+        cargarMovimientosCaja();
+      } else {
+        alert('Error: ' + data.error);
+      }
+    } catch (error) {
+      alert('Error al eliminar movimiento');
+    }
   };
 
   const handleGuardarTicket = async () => {
@@ -1203,14 +1222,37 @@ export default function AdministracionPage() {
                               <button onClick={() => handleAbrirEdicion(m)} className="p-1.5 bg-slate-100 text-slate-600 rounded hover:bg-slate-200 transition-colors" title="Editar">
                                 <Edit size={14} />
                               </button>
+                              <button onClick={() => handleEliminarMovimientoCaja(m.id)} className="p-1.5 bg-slate-100 text-red-600 rounded hover:bg-red-100 transition-colors" title="Eliminar">
+                                <Trash2 size={14} />
+                              </button>
                               <DocumentUploader
                                 label="Ticket"
-                                onUpload={(url) => {
-                                  // Actualizar el movimiento con el nuevo URL
-                                  const actualizado = movimientosCaja.map(move => 
-                                    move.id === m.id ? { ...move, adjuntoUrl: url } : move
-                                  );
-                                  setMovimientosCaja(actualizado);
+                                onUpload={async (url) => {
+                                  // Actualizar el movimiento con el nuevo URL en la base de datos
+                                  try {
+                                    const res = await fetch('/api/admin/caja', {
+                                      method: 'PUT',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({
+                                        id: m.id,
+                                        tipo: m.tipo,
+                                        concepto: m.concepto,
+                                        descripcion: m.descripcion,
+                                        importe: m.importe,
+                                        categoria: m.categoria,
+                                        fecha: m.fecha,
+                                        adjuntoUrl: url
+                                      })
+                                    });
+                                    const data = await res.json();
+                                    if (data.success) {
+                                      cargarMovimientosCaja();
+                                    } else {
+                                      alert('Error al guardar adjunto: ' + data.error);
+                                    }
+                                  } catch (error) {
+                                    alert('Error al guardar adjunto');
+                                  }
                                 }}
                                 currentUrl={m.adjuntoUrl}
                                 folder="Tickets Caja"
@@ -1258,7 +1300,7 @@ export default function AdministracionPage() {
                   {aspirantes.map(a => (
                     <div key={a.id} className="border border-slate-200 rounded-xl overflow-hidden">
                       {/* Fila principal */}
-                      <div 
+                      <div
                         className={`flex items-center p-4 cursor-pointer hover:bg-slate-50 transition-colors ${aspiranteExpandido === a.id ? 'bg-slate-50' : ''}`}
                         onClick={() => {
                           if (aspiranteExpandido === a.id) {
@@ -1277,24 +1319,23 @@ export default function AdministracionPage() {
                           <div className="text-sm text-slate-600">{a.telefono}</div>
                           <div className="text-sm text-slate-600 truncate">{a.email}</div>
                           <div>
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                              a.estado === 'pendiente' ? 'bg-yellow-100 text-yellow-800' :
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${a.estado === 'pendiente' ? 'bg-yellow-100 text-yellow-800' :
                               a.estado === 'entrevistado' ? 'bg-blue-100 text-blue-800' :
-                              a.estado === 'aceptado' ? 'bg-green-100 text-green-800' :
-                              'bg-red-100 text-red-800'
-                            }`}>
+                                a.estado === 'aceptado' ? 'bg-green-100 text-green-800' :
+                                  'bg-red-100 text-red-800'
+                              }`}>
                               {a.estado.charAt(0).toUpperCase() + a.estado.slice(1)}
                             </span>
                           </div>
                           <div className="flex items-center gap-2">
-                            <button 
+                            <button
                               onClick={(e) => { e.stopPropagation(); setAspiranteEditando(a); setShowNuevoAspirante(true); }}
                               className="p-1.5 bg-slate-100 text-slate-600 rounded hover:bg-slate-200 transition-colors"
                               title="Editar"
                             >
                               <Edit size={14} />
                             </button>
-                            <button 
+                            <button
                               onClick={(e) => { e.stopPropagation(); handleEliminarAspirante(a.id); }}
                               className="p-1.5 bg-slate-100 text-slate-600 rounded hover:bg-red-100 hover:text-red-600 transition-colors"
                               title="Eliminar"
@@ -1303,9 +1344,9 @@ export default function AdministracionPage() {
                             </button>
                           </div>
                         </div>
-                        <ChevronDown 
-                          size={20} 
-                          className={`ml-4 text-slate-400 transition-transform ${aspiranteExpandido === a.id ? 'rotate-180' : ''}`} 
+                        <ChevronDown
+                          size={20}
+                          className={`ml-4 text-slate-400 transition-transform ${aspiranteExpandido === a.id ? 'rotate-180' : ''}`}
                         />
                       </div>
 
@@ -1322,17 +1363,17 @@ export default function AdministracionPage() {
                               <div className="space-y-4">
                                 <div>
                                   <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Fecha Entrevista</label>
-                                  <input 
-                                    type="date" 
-                                    value={aspiranteEditandoTemp?.fechaEntrevista ? new Date(aspiranteEditandoTemp.fechaEntrevista).toISOString().split('T')[0] : ''} 
+                                  <input
+                                    type="date"
+                                    value={aspiranteEditandoTemp?.fechaEntrevista ? new Date(aspiranteEditandoTemp.fechaEntrevista).toISOString().split('T')[0] : ''}
                                     onChange={(e) => setAspiranteEditandoTemp({ ...aspiranteEditandoTemp, fechaEntrevista: e.target.value })}
                                     className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
                                   />
                                 </div>
                                 <div className="flex items-center gap-4">
                                   <label className="flex items-center gap-2 cursor-pointer">
-                                    <input 
-                                      type="checkbox" 
+                                    <input
+                                      type="checkbox"
                                       checked={aspiranteEditandoTemp?.confirmacionAsistencia}
                                       onChange={(e) => setAspiranteEditandoTemp({ ...aspiranteEditandoTemp, confirmacionAsistencia: e.target.checked })}
                                       className="w-4 h-4 rounded border-slate-300 text-orange-500 focus:ring-orange-500"
@@ -1340,8 +1381,8 @@ export default function AdministracionPage() {
                                     <span className="text-sm text-slate-700">Confirmación Asistencia</span>
                                   </label>
                                   <label className="flex items-center gap-2 cursor-pointer">
-                                    <input 
-                                      type="checkbox" 
+                                    <input
+                                      type="checkbox"
                                       checked={aspiranteEditandoTemp?.asistioEntrevista}
                                       onChange={(e) => setAspiranteEditandoTemp({ ...aspiranteEditandoTemp, asistioEntrevista: e.target.checked })}
                                       className="w-4 h-4 rounded border-slate-300 text-orange-500 focus:ring-orange-500"
@@ -1351,8 +1392,8 @@ export default function AdministracionPage() {
                                 </div>
                                 <div>
                                   <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Evaluación Entrevista</label>
-                                  <textarea 
-                                    value={aspiranteEditandoTemp?.evaluacionEntrevista || ''} 
+                                  <textarea
+                                    value={aspiranteEditandoTemp?.evaluacionEntrevista || ''}
                                     onChange={(e) => setAspiranteEditandoTemp({ ...aspiranteEditandoTemp, evaluacionEntrevista: e.target.value })}
                                     rows={3}
                                     className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
@@ -1371,8 +1412,8 @@ export default function AdministracionPage() {
                               <div className="space-y-4">
                                 <div>
                                   <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Carné de Conducir</label>
-                                  <select 
-                                    value={aspiranteEditandoTemp?.carneConducir || ''} 
+                                  <select
+                                    value={aspiranteEditandoTemp?.carneConducir || ''}
                                     onChange={(e) => setAspiranteEditandoTemp({ ...aspiranteEditandoTemp, carneConducir: e.target.value })}
                                     className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
                                   >
@@ -1386,8 +1427,8 @@ export default function AdministracionPage() {
                                 </div>
                                 <div>
                                   <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Formación Académica</label>
-                                  <textarea 
-                                    value={aspiranteEditandoTemp?.formacion || ''} 
+                                  <textarea
+                                    value={aspiranteEditandoTemp?.formacion || ''}
                                     onChange={(e) => setAspiranteEditandoTemp({ ...aspiranteEditandoTemp, formacion: e.target.value })}
                                     rows={2}
                                     className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
@@ -1396,9 +1437,9 @@ export default function AdministracionPage() {
                                 </div>
                                 <div>
                                   <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Ocupación Actual</label>
-                                  <input 
-                                    type="text" 
-                                    value={aspiranteEditandoTemp?.ocupacionActual || ''} 
+                                  <input
+                                    type="text"
+                                    value={aspiranteEditandoTemp?.ocupacionActual || ''}
                                     onChange={(e) => setAspiranteEditandoTemp({ ...aspiranteEditandoTemp, ocupacionActual: e.target.value })}
                                     className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
                                     placeholder="Trabajo actual..."
@@ -1406,8 +1447,8 @@ export default function AdministracionPage() {
                                 </div>
                                 <div>
                                   <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Tiempo Libre Disponible</label>
-                                  <textarea 
-                                    value={aspiranteEditandoTemp?.tiempoLibre || ''} 
+                                  <textarea
+                                    value={aspiranteEditandoTemp?.tiempoLibre || ''}
                                     onChange={(e) => setAspiranteEditandoTemp({ ...aspiranteEditandoTemp, tiempoLibre: e.target.value })}
                                     rows={2}
                                     className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
@@ -1416,8 +1457,8 @@ export default function AdministracionPage() {
                                 </div>
                                 <div>
                                   <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Interés por el Servicio</label>
-                                  <textarea 
-                                    value={aspiranteEditandoTemp?.interesServicio || ''} 
+                                  <textarea
+                                    value={aspiranteEditandoTemp?.interesServicio || ''}
                                     onChange={(e) => setAspiranteEditandoTemp({ ...aspiranteEditandoTemp, interesServicio: e.target.value })}
                                     rows={3}
                                     className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
@@ -1436,8 +1477,8 @@ export default function AdministracionPage() {
                               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                                 <div>
                                   <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Estado</label>
-                                  <select 
-                                    value={aspiranteEditandoTemp?.estado || ""} 
+                                  <select
+                                    value={aspiranteEditandoTemp?.estado || ""}
                                     onChange={(e) => setAspiranteEditandoTemp({ ...aspiranteEditandoTemp, estado: e.target.value })}
                                     className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
                                   >
@@ -1449,8 +1490,8 @@ export default function AdministracionPage() {
                                 </div>
                                 <div>
                                   <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Observaciones</label>
-                                  <textarea 
-                                    value={aspiranteEditandoTemp?.observaciones || ''} 
+                                  <textarea
+                                    value={aspiranteEditandoTemp?.observaciones || ''}
                                     onChange={(e) => setAspiranteEditandoTemp({ ...aspiranteEditandoTemp, observaciones: e.target.value })}
                                     rows={4}
                                     className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
@@ -1460,32 +1501,32 @@ export default function AdministracionPage() {
                               </div>
                             </div>
 
-                {/* Botones de acción */}
-                <div className="mt-6 flex justify-end gap-3 px-6">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setAspiranteExpandido(null);
-                      setAspiranteEditandoTemp(null);
-                    }}
-                    className="px-6 py-2.5 border border-slate-300 text-slate-700 rounded-lg font-medium hover:bg-slate-50 transition-colors"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (aspiranteEditandoTemp) {
-                        handleActualizarAspirante(aspiranteEditandoTemp.id, aspiranteEditandoTemp);
-                        setAspiranteExpandido(null);
-                        setAspiranteEditandoTemp(null);
-                      }
-                    }}
-                    className="px-6 py-2.5 bg-orange-500 text-white rounded-lg font-medium hover:bg-orange-600 transition-colors"
-                  >
-                    Guardar Cambios
-                  </button>
-                </div>
+                            {/* Botones de acción */}
+                            <div className="mt-6 flex justify-end gap-3 px-6">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setAspiranteExpandido(null);
+                                  setAspiranteEditandoTemp(null);
+                                }}
+                                className="px-6 py-2.5 border border-slate-300 text-slate-700 rounded-lg font-medium hover:bg-slate-50 transition-colors"
+                              >
+                                Cancelar
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (aspiranteEditandoTemp) {
+                                    handleActualizarAspirante(aspiranteEditandoTemp.id, aspiranteEditandoTemp);
+                                    setAspiranteExpandido(null);
+                                    setAspiranteEditandoTemp(null);
+                                  }
+                                }}
+                                className="px-6 py-2.5 bg-orange-500 text-white rounded-lg font-medium hover:bg-orange-600 transition-colors"
+                              >
+                                Guardar Cambios
+                              </button>
+                            </div>
                           </div>
                         </div>
                       )}
@@ -2153,11 +2194,11 @@ export default function AdministracionPage() {
             </div>
             <div>
               <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Fecha</label>
-              <input 
-                type="date" 
-                value={movimientoEditando.fecha ? new Date(movimientoEditando.fecha).toISOString().split('T')[0] : ''} 
-                onChange={e => setMovimientoEditando({ ...movimientoEditando, fecha: e.target.value })} 
-                className="w-full border border-slate-200 rounded-lg p-2.5 text-sm" 
+              <input
+                type="date"
+                value={movimientoEditando.fecha ? new Date(movimientoEditando.fecha).toISOString().split('T')[0] : ''}
+                onChange={e => setMovimientoEditando({ ...movimientoEditando, fecha: e.target.value })}
+                className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
               />
             </div>
             <div>
@@ -2373,9 +2414,9 @@ export default function AdministracionPage() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Nombre *</label>
-                <input 
-                  type="text" 
-                  value={aspiranteEditando?.nombre || nuevoAspirante.nombre} 
+                <input
+                  type="text"
+                  value={aspiranteEditando?.nombre || nuevoAspirante.nombre}
                   onChange={(e) => aspiranteEditando ? setAspiranteEditando({ ...aspiranteEditando, nombre: e.target.value }) : setNuevoAspirante({ ...nuevoAspirante, nombre: e.target.value })}
                   className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
                   placeholder="Nombre"
@@ -2383,9 +2424,9 @@ export default function AdministracionPage() {
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Apellidos *</label>
-                <input 
-                  type="text" 
-                  value={aspiranteEditando?.apellidos || nuevoAspirante.apellidos} 
+                <input
+                  type="text"
+                  value={aspiranteEditando?.apellidos || nuevoAspirante.apellidos}
                   onChange={(e) => aspiranteEditando ? setAspiranteEditando({ ...aspiranteEditando, apellidos: e.target.value }) : setNuevoAspirante({ ...nuevoAspirante, apellidos: e.target.value })}
                   className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
                   placeholder="Apellidos"
@@ -2395,9 +2436,9 @@ export default function AdministracionPage() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">DNI *</label>
-                <input 
-                  type="text" 
-                  value={aspiranteEditando?.dni || nuevoAspirante.dni} 
+                <input
+                  type="text"
+                  value={aspiranteEditando?.dni || nuevoAspirante.dni}
                   onChange={(e) => aspiranteEditando ? setAspiranteEditando({ ...aspiranteEditando, dni: e.target.value }) : setNuevoAspirante({ ...nuevoAspirante, dni: e.target.value })}
                   className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
                   placeholder="DNI"
@@ -2405,9 +2446,9 @@ export default function AdministracionPage() {
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Teléfono</label>
-                <input 
-                  type="tel" 
-                  value={aspiranteEditando?.telefono || nuevoAspirante.telefono} 
+                <input
+                  type="tel"
+                  value={aspiranteEditando?.telefono || nuevoAspirante.telefono}
                   onChange={(e) => aspiranteEditando ? setAspiranteEditando({ ...aspiranteEditando, telefono: e.target.value }) : setNuevoAspirante({ ...nuevoAspirante, telefono: e.target.value })}
                   className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
                   placeholder="Teléfono"
@@ -2416,9 +2457,9 @@ export default function AdministracionPage() {
             </div>
             <div>
               <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Email</label>
-              <input 
-                type="email" 
-                value={aspiranteEditando?.email || nuevoAspirante.email} 
+              <input
+                type="email"
+                value={aspiranteEditando?.email || nuevoAspirante.email}
                 onChange={(e) => aspiranteEditando ? setAspiranteEditando({ ...aspiranteEditando, email: e.target.value }) : setNuevoAspirante({ ...nuevoAspirante, email: e.target.value })}
                 className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
                 placeholder="email@ejemplo.com"

@@ -45,8 +45,8 @@ export async function POST(request: NextRequest) {
     })
     const saldoAnterior = ultimo ? Number(ultimo.saldoPosterior) : 0
     const importeNum = Number(importe)
-    const saldoPosterior = tipo === 'entrada' 
-      ? saldoAnterior + importeNum 
+    const saldoPosterior = tipo === 'entrada'
+      ? saldoAnterior + importeNum
       : saldoAnterior - importeNum
 
     const movimiento = await prisma.movimientoCaja.create({
@@ -102,8 +102,8 @@ export async function PUT(request: NextRequest) {
     })
     const saldoAnterior = ultimo ? Number(ultimo.saldoPosterior) : 0
     const importeNum = Number(importe)
-    const saldoPosterior = tipo === 'entrada' 
-      ? saldoAnterior + importeNum 
+    const saldoPosterior = tipo === 'entrada'
+      ? saldoAnterior + importeNum
       : saldoAnterior - importeNum
 
     const movimiento = await prisma.movimientoCaja.update({
@@ -122,9 +122,84 @@ export async function PUT(request: NextRequest) {
       }
     })
 
+    // Recalcular TODOS los saldos desde el principio
+    const todosMovimientos = await prisma.movimientoCaja.findMany({
+      orderBy: { createdAt: 'asc' }
+    })
+
+    let saldoActual = 0
+    for (const m of todosMovimientos) {
+      saldoActual = m.tipo === 'entrada'
+        ? saldoActual + Number(m.importe)
+        : saldoActual - Number(m.importe)
+
+      await prisma.movimientoCaja.update({
+        where: { id: m.id },
+        data: {
+          saldoAnterior: saldoActual - (m.tipo === 'entrada' ? Number(m.importe) : -Number(m.importe)),
+          saldoPosterior: saldoActual
+        }
+      })
+    }
+
     return NextResponse.json({ success: true, movimiento })
   } catch (error) {
     console.error('Error al actualizar movimiento:', error)
+    return NextResponse.json({ error: 'Error interno' }, { status: 500 })
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const session = await getServerSession()
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    }
+
+    const body = await request.json()
+    const { id } = body
+
+    if (!id) {
+      return NextResponse.json({ error: 'ID es requerido' }, { status: 400 })
+    }
+
+    // Obtener movimiento a eliminar
+    const movimientoEliminado = await prisma.movimientoCaja.findUnique({
+      where: { id }
+    })
+
+    if (!movimientoEliminado) {
+      return NextResponse.json({ error: 'Movimiento no encontrado' }, { status: 404 })
+    }
+
+    // Eliminar movimiento
+    await prisma.movimientoCaja.delete({
+      where: { id }
+    })
+
+    // Recalcular todos los saldos desde el principio
+    const movimientos = await prisma.movimientoCaja.findMany({
+      orderBy: { createdAt: 'asc' }
+    })
+
+    let saldoActual = 0
+    for (const m of movimientos) {
+      saldoActual = m.tipo === 'entrada'
+        ? saldoActual + Number(m.importe)
+        : saldoActual - Number(m.importe)
+
+      await prisma.movimientoCaja.update({
+        where: { id: m.id },
+        data: {
+          saldoAnterior: saldoActual - (m.tipo === 'entrada' ? Number(m.importe) : -Number(m.importe)),
+          saldoPosterior: saldoActual
+        }
+      })
+    }
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('Error al eliminar movimiento:', error)
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
   }
 }
