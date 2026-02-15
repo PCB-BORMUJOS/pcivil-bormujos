@@ -68,6 +68,14 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'ID es requerido' }, { status: 400 })
     }
 
+    // Convertir fechaEntrevista de "YYYY-MM-DD" a DateTime ISO-8601
+    if (data.fechaEntrevista && typeof data.fechaEntrevista === 'string') {
+      // Si es solo fecha (YYYY-MM-DD), convertir a DateTime completo
+      if (data.fechaEntrevista.length === 10) {
+        data.fechaEntrevista = new Date(data.fechaEntrevista + 'T00:00:00.000Z').toISOString()
+      }
+    }
+
     const aspirante = await prisma.aspirante.update({
       where: { id },
       data

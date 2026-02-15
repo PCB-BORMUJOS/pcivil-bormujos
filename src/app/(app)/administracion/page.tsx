@@ -1324,7 +1324,7 @@ export default function AdministracionPage() {
                                   <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Fecha Entrevista</label>
                                   <input 
                                     type="date" 
-                                    value={a.fechaEntrevista ? new Date(a.fechaEntrevista).toISOString().split('T')[0] : ''} 
+                                    value={aspiranteEditandoTemp?.fechaEntrevista ? new Date(aspiranteEditandoTemp.fechaEntrevista).toISOString().split('T')[0] : ''} 
                                     onChange={(e) => setAspiranteEditandoTemp({ ...aspiranteEditandoTemp, fechaEntrevista: e.target.value })}
                                     className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
                                   />
@@ -1352,7 +1352,7 @@ export default function AdministracionPage() {
                                 <div>
                                   <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Evaluación Entrevista</label>
                                   <textarea 
-                                    value={a.evaluacionEntrevista || ''} 
+                                    value={aspiranteEditandoTemp?.evaluacionEntrevista || ''} 
                                     onChange={(e) => setAspiranteEditandoTemp({ ...aspiranteEditandoTemp, evaluacionEntrevista: e.target.value })}
                                     rows={3}
                                     className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
@@ -1372,7 +1372,7 @@ export default function AdministracionPage() {
                                 <div>
                                   <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Carné de Conducir</label>
                                   <select 
-                                    value={a.carneConducir || ''} 
+                                    value={aspiranteEditandoTemp?.carneConducir || ''} 
                                     onChange={(e) => setAspiranteEditandoTemp({ ...aspiranteEditandoTemp, carneConducir: e.target.value })}
                                     className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
                                   >
@@ -1387,7 +1387,7 @@ export default function AdministracionPage() {
                                 <div>
                                   <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Formación Académica</label>
                                   <textarea 
-                                    value={a.formacion || ''} 
+                                    value={aspiranteEditandoTemp?.formacion || ''} 
                                     onChange={(e) => setAspiranteEditandoTemp({ ...aspiranteEditandoTemp, formacion: e.target.value })}
                                     rows={2}
                                     className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
@@ -1398,7 +1398,7 @@ export default function AdministracionPage() {
                                   <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Ocupación Actual</label>
                                   <input 
                                     type="text" 
-                                    value={a.ocupacionActual || ''} 
+                                    value={aspiranteEditandoTemp?.ocupacionActual || ''} 
                                     onChange={(e) => setAspiranteEditandoTemp({ ...aspiranteEditandoTemp, ocupacionActual: e.target.value })}
                                     className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
                                     placeholder="Trabajo actual..."
@@ -1407,7 +1407,7 @@ export default function AdministracionPage() {
                                 <div>
                                   <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Tiempo Libre Disponible</label>
                                   <textarea 
-                                    value={a.tiempoLibre || ''} 
+                                    value={aspiranteEditandoTemp?.tiempoLibre || ''} 
                                     onChange={(e) => setAspiranteEditandoTemp({ ...aspiranteEditandoTemp, tiempoLibre: e.target.value })}
                                     rows={2}
                                     className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
@@ -1417,7 +1417,7 @@ export default function AdministracionPage() {
                                 <div>
                                   <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Interés por el Servicio</label>
                                   <textarea 
-                                    value={a.interesServicio || ''} 
+                                    value={aspiranteEditandoTemp?.interesServicio || ''} 
                                     onChange={(e) => setAspiranteEditandoTemp({ ...aspiranteEditandoTemp, interesServicio: e.target.value })}
                                     rows={3}
                                     className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
@@ -1450,7 +1450,7 @@ export default function AdministracionPage() {
                                 <div>
                                   <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Observaciones</label>
                                   <textarea 
-                                    value={a.observaciones || ''} 
+                                    value={aspiranteEditandoTemp?.observaciones || ''} 
                                     onChange={(e) => setAspiranteEditandoTemp({ ...aspiranteEditandoTemp, observaciones: e.target.value })}
                                     rows={4}
                                     className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
