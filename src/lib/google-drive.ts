@@ -1,14 +1,19 @@
 import { google } from 'googleapis'
 import { Stream } from 'stream'
 
-const FOLDER_ID = '1I0i96umQtLaTBLUg1Om_Wx6PlxfjQbRQ'
-const SCOPES = ['https://www.googleapis.com/auth/drive.file']
+const FOLDER_ID = '10X11xzEnPc75OdGBNZvZiiEfzP_3wj0h'
+const SCOPES = ['https://www.googleapis.com/auth/drive']
 
 const getDriveClient = async () => {
     let credentials
 
     if (process.env.GOOGLE_SERVICE_ACCOUNT_KEY) {
-        credentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_KEY)
+        try {
+            credentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_KEY)
+        } catch (error) {
+            console.error('❌ Error al parsear GOOGLE_SERVICE_ACCOUNT_KEY:', error)
+            throw new Error(`Failed to parse GOOGLE_SERVICE_ACCOUNT_KEY: ${error}`)
+        }
     } else {
         const fs = require('fs')
         const KEY_FILE_PATH = process.cwd() + '/secrets/google.json'
@@ -39,13 +44,14 @@ export async function uploadToGoogleDrive(
         const response = await drive.files.create({
             requestBody: {
                 name: filename,
-                parents: [targetFolderId],
+                parents: [folderId || FOLDER_ID],
             },
             media: {
                 mimeType,
                 body: bufferStream,
             },
-            fields: 'id, name, webViewLink, webContentLink',
+            fields: 'id,webViewLink,webContentLink',
+            supportsAllDrives: true,
         })
 
         return {
@@ -54,7 +60,7 @@ export async function uploadToGoogleDrive(
             downloadUrl: response.data.webContentLink
         }
     } catch (error) {
-        console.error('Error subiendo a Google Drive:', error)
+        console.error('❌ Error subiendo a Google Drive:', error)
         throw error
     }
 }
