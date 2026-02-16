@@ -282,6 +282,11 @@ export default function FormacionPage() {
   });
   const [showNuevaNecesidad, setShowNuevaNecesidad] = useState(false);
 
+  // Modal de inscripción
+  const [showInscripcionModal, setShowInscripcionModal] = useState(false);
+  const [convocatoriaSeleccionada, setConvocatoriaSeleccionada] = useState<Convocatoria | null>(null);
+  const [inscripcionLoading, setInscripcionLoading] = useState(false);
+
   // Cargar datos al montar
   useEffect(() => {
     cargarDatos();
@@ -415,6 +420,51 @@ export default function FormacionPage() {
     } catch (e) {
       console.error(e);
       alert('Error de conexión');
+    }
+  };
+
+  // ============================================
+  // INSCRIPCIÓN: ABRIR MODAL DE CONFIRMACIÓN
+  // ============================================
+  const handleOpenInscripcion = (convocatoria: Convocatoria) => {
+    if (!currentUser) {
+      alert('Debes iniciar sesión para inscribirte');
+      return;
+    }
+    setConvocatoriaSeleccionada(convocatoria);
+    setShowInscripcionModal(true);
+  };
+
+  const handleConfirmarInscripcion = async () => {
+    if (!convocatoriaSeleccionada || !currentUser) return;
+
+    setInscripcionLoading(true);
+    try {
+      const res = await fetch('/api/formacion', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tipo: 'inscripcion',
+          convocatoriaId: convocatoriaSeleccionada.id,
+          usuarioId: currentUser.id,
+          estado: 'confirmada'
+        })
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        alert('✅ ¡Inscripción confirmada! Te has apuntado correctamente a la formación.');
+        setShowInscripcionModal(false);
+        setConvocatoriaSeleccionada(null);
+        cargarConvocatorias();
+      } else {
+        alert('Error: ' + (data.error || 'No se pudo completar la inscripción'));
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Error de conexión');
+    } finally {
+      setInscripcionLoading(false);
     }
   };
 
@@ -1116,7 +1166,7 @@ export default function FormacionPage() {
                       ) : (
                         c.estado === 'inscripciones_abiertas' && c.plazasOcupadas < c.plazasDisponibles ? (
                           <button
-                            onClick={() => handleApuntarse(c.id)}
+                            onClick={() => handleOpenInscripcion(c)}
                             className="flex-1 py-2 text-center text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg"
                           >
                             📝 Apuntarse
@@ -1469,6 +1519,74 @@ export default function FormacionPage() {
               <button onClick={() => setShowNuevoCurso(false)} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg font-medium">Cancelar</button>
               <button onClick={handleGuardarCurso} className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 shadow-sm font-medium">
                 Crear Curso
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* MODAL: Confirmar Inscripción */}
+      {showInscripcionModal && convocatoriaSeleccionada && (
+        <Modal title="Confirmar Inscripción" onClose={() => setShowInscripcionModal(false)} size="md">
+          <div className="space-y-4">
+            <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+              <h4 className="font-bold text-purple-900 text-lg">{convocatoriaSeleccionada.curso?.nombre}</h4>
+              <p className="text-purple-700 text-sm mt-1">{convocatoriaSeleccionada.codigo}</p>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-center gap-3 text-slate-600">
+                <Calendar size={18} className="text-slate-400" />
+                <span>
+                  <strong>Fecha:</strong> {new Date(convocatoriaSeleccionada.fechaInicio).toLocaleDateString()} - {new Date(convocatoriaSeleccionada.fechaFin).toLocaleDateString()}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-3 text-slate-600">
+                <MapPin size={18} className="text-slate-400" />
+                <span>
+                  <strong>Lugar:</strong> {convocatoriaSeleccionada.lugar || 'Por determinar'}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-3 text-slate-600">
+                <Users size={18} className="text-slate-400" />
+                <span>
+                  <strong>Plazas:</strong> {convocatoriaSeleccionada.plazasOcupadas} / {convocatoriaSeleccionada.plazasDisponibles} ocupadas
+                </span>
+              </div>
+
+              {convocatoriaSeleccionada.horario && (
+                <div className="flex items-center gap-3 text-slate-600">
+                  <Clock size={18} className="text-slate-400" />
+                  <span>
+                    <strong>Horario:</strong> {convocatoriaSeleccionada.horario}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800">
+              <p>Plazas disponibles restantes: <strong>{convocatoriaSeleccionada.plazasDisponibles - convocatoriaSeleccionada.plazasOcupadas}</strong></p>
+            </div>
+
+            <div className="flex gap-3 pt-4">
+              <button
+                onClick={() => setShowInscripcionModal(false)}
+                className="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 font-medium"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleConfirmarInscripcion}
+                disabled={inscripcionLoading}
+                className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {inscripcionLoading ? (
+                  <RefreshCw size={18} className="animate-spin" />
+                ) : (
+                  <>✅ Confirmar Inscripción</>
+                )}
               </button>
             </div>
           </div>

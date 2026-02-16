@@ -314,13 +314,31 @@ export async function POST(request: NextRequest) {
                     return NextResponse.json({ error: 'Convocatoria no encontrada' }, { status: 404 })
                 }
 
-                // Crear solicitud de inscripción (pendiente - no ocupa plaza)
+                // Determinar estado: si se proporciona, usarlo; si no, default 'pendiente'
+                const estadoInscripcion = data.estado || 'pendiente';
+
+                // Si es confirmada directamente, verificar plazas y ocupar
+                if (estadoInscripcion === 'confirmada' && convCheck.plazasOcupadas >= convCheck.plazasDisponibles) {
+                    return NextResponse.json({ error: 'No hay plazas disponibles' }, { status: 400 })
+                }
+
+                // Crear inscripción
                 const inscripcion = await prisma.inscripcion.create({
                     data: {
-                        ...data,
-                        estado: 'pendiente'
+                        convocatoriaId: data.convocatoriaId,
+                        usuarioId: data.usuarioId,
+                        estado: estadoInscripcion
                     }
                 })
+
+                // Si está confirmada, ocupar plaza
+                if (estadoInscripcion === 'confirmada') {
+                    await prisma.convocatoria.update({
+                        where: { id: data.convocatoriaId },
+                        data: { plazasOcupadas: { increment: 1 } }
+                    })
+                    return NextResponse.json({ success: true, inscripcion, mensaje: '¡Inscripción confirmada!' })
+                }
 
                 return NextResponse.json({ success: true, inscripcion, mensaje: 'Solicitud de inscripción enviada' })
 
