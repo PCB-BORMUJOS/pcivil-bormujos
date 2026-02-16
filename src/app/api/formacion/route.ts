@@ -264,7 +264,7 @@ export async function POST(request: NextRequest) {
                 const inscripcionesAptas = await prisma.inscripcion.findMany({
                     where: {
                         convocatoriaId,
-                        apta: true
+                        apto: true
                     }
                 })
 

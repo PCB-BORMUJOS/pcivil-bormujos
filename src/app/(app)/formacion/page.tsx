@@ -104,7 +104,7 @@ interface Inscripcion {
   estado: string;
   porcentajeAsistencia?: number;
   notaFinal?: number;
-  apta?: boolean;
+  apto?: boolean;
   usuario: {
     id: string;
     nombre: string;
@@ -1574,8 +1574,8 @@ export default function FormacionPage() {
                             <input
                               type="checkbox"
                               className="w-5 h-5 text-purple-600 rounded focus:ring-purple-500"
-                              checked={insc.apta || false}
-                              onChange={(e) => handleUpdateInscripcion(insc.id, 'apta', e.target.checked)}
+                              checked={insc.apto || false}
+                              onChange={(e) => handleUpdateInscripcion(insc.id, 'apto', e.target.checked)}
                               disabled={selectedConvocatoriaForGrading.estado === 'finalizada'}
                             />
                           </td>
