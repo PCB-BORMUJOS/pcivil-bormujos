@@ -302,7 +302,7 @@ export default function FormacionPage() {
     setLoadingGrading(false);
   };
 
-  const handleUpdateInscripcion = async (id: string, field: 'notaFinal' | 'porcentajeAsistencia' | 'apta', value: any) => {
+  const handleUpdateInscripcion = async (id: string, field: 'notaFinal' | 'porcentajeAsistencia' | 'apto', value: any) => {
     // Optimistic update
     setInscripcionesGrading(prev => prev.map(i =>
       i.id === id ? { ...i, [field]: value } : i
@@ -310,7 +310,7 @@ export default function FormacionPage() {
 
     // Si cambiamos nota o asistencia, calcular apto automáticamente
     // Lógica simple: Asistencia >= 80% y Nota >= 5 -> Apto
-    if (field !== 'apta') {
+    if (field !== 'apto') {
       // Obtenemos el registro actualizado del estado (pero el estado no se ha actualizado aun en this render frame para el calculo complejo, asi que usamos lo que tenemos)
       // Mejor hacerlo simple: enviar al backend y dejar que el backend o el usuario decida.
       // Por ahora, solo guardamos el valor cambiado.
