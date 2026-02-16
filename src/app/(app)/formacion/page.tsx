@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 import {
   Plus, Search, RefreshCw, Package, Users, Calendar, BookOpen,
   Award, AlertCircle, Layers, Edit, Trash2, X, ClipboardList,
@@ -199,6 +200,10 @@ function Modal({ title, children, onClose, size = 'md' }: {
 // COMPONENTE PRINCIPAL
 // ============================================
 export default function FormacionPage() {
+  const { data: session } = useSession();
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+
   // Estados principales
   const [mainTab, setMainTab] = useState<'inventario' | 'catalogo' | 'convocatorias' | 'inscripciones' | 'certificaciones' | 'necesidades'>('inventario');
   const [inventoryTab, setInventoryTab] = useState<'stock' | 'peticiones' | 'movimientos'>('stock');
@@ -282,6 +287,30 @@ export default function FormacionPage() {
     cargarDatos();
   }, [mainTab]);
 
+  // Cargar usuario actual
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      try {
+        const res = await fetch('/api/auth/session');
+        const sessionData = await res.json();
+        if (sessionData?.user?.email) {
+          // Get full user with role
+          const userRes = await fetch('/api/mi-area');
+          const userData = await userRes.json();
+          if (userData?.usuario) {
+            setCurrentUser(userData.usuario);
+            setIsAdmin(userData.usuario.rol?.nombre === 'ADMIN' || userData.usuario.rol?.nombre === 'admin');
+          }
+        }
+      } catch (e) {
+        console.error('Error fetching user:', e);
+      }
+    };
+    if (session) {
+      fetchCurrentUser();
+    }
+  }, [session]);
+
   // Estado Gestion Convocatoria
   const [showGestionConvocatoria, setShowGestionConvocatoria] = useState(false);
   const [selectedConvocatoriaForGrading, setSelectedConvocatoriaForGrading] = useState<Convocatoria | null>(null);
@@ -346,6 +375,42 @@ export default function FormacionPage() {
         cargarConvocatorias(); // Refrescar lista para ver estado finalizada
       } else {
         alert('Error al cerrar acta: ' + (data.error || 'Desconocido'));
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Error de conexión');
+    }
+  };
+
+  // ============================================
+  // INSCRIPCIÓN DE VOLUNTARIOS (APUNTARSE)
+  // ============================================
+  const handleApuntarse = async (convocatoriaId: string) => {
+    if (!currentUser) {
+      alert('Debes iniciar sesión para apuntarte');
+      return;
+    }
+    if (!confirm('¿Quieres apuntarte a esta formación? Tu solicitud será revisada por un administrador.')) {
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/formacion', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tipo: 'inscripcion',
+          convocatoriaId,
+          usuarioId: currentUser.id
+        })
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        alert('✅ Te has apuntado correctamente. Tu solicitud está pendiente de aprobación.');
+        cargarConvocatorias(); // Refresh to show updated plazas
+      } else {
+        alert('Error: ' + (data.error || 'No se pudo completar la inscripción'));
       }
     } catch (e) {
       console.error(e);
@@ -1012,9 +1077,11 @@ export default function FormacionPage() {
           <div className="p-6">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-lg font-bold text-slate-800">Convocatorias</h3>
-              <button onClick={() => setShowNuevaConvocatoria(true)} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2">
-                <Plus size={18} /> Nueva Convocatoria
-              </button>
+              {isAdmin && (
+                <button onClick={() => setShowNuevaConvocatoria(true)} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2">
+                  <Plus size={18} /> Nueva Convocatoria
+                </button>
+              )}
             </div>
             {convocatorias.length === 0 ? <p className="text-center py-10 text-slate-400">No hay convocatorias registradas</p> : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1025,9 +1092,13 @@ export default function FormacionPage() {
                         <h4 className="font-bold text-slate-800 text-lg">{c.curso?.nombre}</h4>
                         <p className="text-xs text-slate-500 font-mono mt-1">{c.codigo}</p>
                       </div>
-                      <span className={`px-2 py-1 rounded text-xs font-bold uppercase ${c.estado === 'planificada' ? 'bg-blue-100 text-blue-700' :
-                        c.estado === 'en_curso' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-600'
-                        }`}>{c.estado}</span>
+                      <span className={`px-2 py-1 rounded text-xs font-bold uppercase ${c.estado === 'inscripciones_abiertas' ? 'bg-green-100 text-green-700' :
+                        c.estado === 'planificada' ? 'bg-blue-100 text-blue-700' :
+                          c.estado === 'en_curso' ? 'bg-purple-100 text-purple-700' :
+                            c.estado === 'finalizada' ? 'bg-gray-100 text-gray-700' : 'bg-slate-100 text-slate-600'
+                        }`}>
+                        {c.estado === 'inscripciones_abiertas' ? 'ABIERTA' : c.estado}
+                      </span>
                     </div>
 
                     <div className="space-y-2 text-sm text-slate-600 mb-4">
@@ -1037,8 +1108,29 @@ export default function FormacionPage() {
                     </div>
 
                     <div className="pt-3 border-t flex gap-2">
-                      <button onClick={() => setShowNuevaConvocatoria(true)} className="flex-1 py-2 text-center text-sm font-medium text-slate-600 hover:bg-slate-50 rounded-lg">Editar</button>
-                      <button onClick={() => handleOpenGestion(c)} className="flex-1 py-2 text-center text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg">Gestionar / Calificar</button>
+                      {isAdmin ? (
+                        <>
+                          <button onClick={() => setShowNuevaConvocatoria(true)} className="flex-1 py-2 text-center text-sm font-medium text-slate-600 hover:bg-slate-50 rounded-lg">Editar</button>
+                          <button onClick={() => handleOpenGestion(c)} className="flex-1 py-2 text-center text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg">Gestionar / Calificar</button>
+                        </>
+                      ) : (
+                        c.estado === 'inscripciones_abiertas' && c.plazasOcupadas < c.plazasDisponibles ? (
+                          <button
+                            onClick={() => handleApuntarse(c.id)}
+                            className="flex-1 py-2 text-center text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg"
+                          >
+                            📝 Apuntarse
+                          </button>
+                        ) : c.estado === 'inscripciones_abiertas' && c.plazasOcupadas >= c.plazasDisponibles ? (
+                          <button disabled className="flex-1 py-2 text-center text-sm font-medium text-slate-400 bg-slate-100 rounded-lg cursor-not-allowed">
+                            Completo
+                          </button>
+                        ) : (
+                          <button disabled className="flex-1 py-2 text-center text-sm font-medium text-slate-400 bg-slate-100 rounded-lg cursor-not-allowed">
+                            No disponible
+                          </button>
+                        )
+                      )}
                     </div>
                   </div>
                 ))}
