@@ -30,6 +30,15 @@ export async function GET(request: NextRequest) {
             }
           },
           orderBy: { fechaSolicitud: 'desc' }
+        },
+
+        inscripciones: {
+          include: { convocatoria: { include: { curso: true } } },
+          orderBy: { fechaInscripcion: 'desc' }
+        },
+        certificaciones: {
+          include: { curso: true },
+          orderBy: { fechaObtencion: 'desc' }
         }
       }
     })
@@ -55,7 +64,7 @@ export async function GET(request: NextRequest) {
       })
 
       const totalesPorMes: { [key: string]: { totalDietas: number; totalKm: number; total: number; registros: number } } = {}
-      
+
       dietas.forEach(dieta => {
         if (!totalesPorMes[dieta.mesAnio]) {
           totalesPorMes[dieta.mesAnio] = { totalDietas: 0, totalKm: 0, total: 0, registros: 0 }
@@ -105,7 +114,32 @@ export async function GET(request: NextRequest) {
         alergias: usuario.fichaVoluntario.datosAlergias,
         grupoSanguineo: usuario.fichaVoluntario.grupoSanguineo
       } : null,
-      formaciones: [],
+      formaciones: [
+        // Mapear inscripciones a formato Formacion
+        ...(usuario.inscripciones || []).map(i => ({
+          id: i.id,
+          nombre: i.convocatoria.curso.nombre,
+          tipo: i.convocatoria.curso.tipo,
+          fechaObtencion: i.fechaInscripcion.toISOString(),
+          entidad: i.convocatoria.curso.entidadOrganiza || 'Protección Civil Bormujos',
+          horas: i.convocatoria.curso.duracionHoras,
+          estado: i.estado === 'admitida' ? 'vigente' : 'pendiente', // Simplificado
+          documentoUrl: i.certificadoUrl
+        })),
+        // Mapear certificaciones a formato Formacion
+        ...(usuario.certificaciones || []).map(c => ({
+          id: c.id,
+          nombre: c.curso.nombre,
+          tipo: 'Certificación Oficial',
+          fechaObtencion: c.fechaObtencion.toISOString(),
+          fechaValidez: c.fechaExpiracion?.toISOString(),
+          entidad: c.entidadEmisora,
+          horas: c.curso.duracionHoras,
+          estado: c.vigente ? 'vigente' : 'vencido',
+          documentoUrl: c.certificadoUrl,
+          documentoNombre: `Certificado ${c.numeroCertificado}`
+        }))
+      ],
       actividades: [],
       documentos: [],
       vestuario: {
@@ -171,33 +205,33 @@ export async function POST(request: NextRequest) {
     }
 
     if (tipo === 'cambiar-password') {
-  const { passwordActual, passwordNuevo } = body
+      const { passwordActual, passwordNuevo } = body
 
-  if (!passwordActual || !passwordNuevo) {
-    return NextResponse.json({ error: 'Faltan campos requeridos' }, { status: 400 })
-  }
+      if (!passwordActual || !passwordNuevo) {
+        return NextResponse.json({ error: 'Faltan campos requeridos' }, { status: 400 })
+      }
 
-  if (passwordNuevo.length < 6) {
-    return NextResponse.json({ error: 'La contraseña debe tener al menos 6 caracteres' }, { status: 400 })
-  }
+      if (passwordNuevo.length < 6) {
+        return NextResponse.json({ error: 'La contraseña debe tener al menos 6 caracteres' }, { status: 400 })
+      }
 
-  // Verificar contraseña actual
-  const passwordValida = await bcrypt.compare(passwordActual, usuario.password)
-  if (!passwordValida) {
-    return NextResponse.json({ error: 'Contraseña actual incorrecta' }, { status: 400 })
-  }
+      // Verificar contraseña actual
+      const passwordValida = await bcrypt.compare(passwordActual, usuario.password)
+      if (!passwordValida) {
+        return NextResponse.json({ error: 'Contraseña actual incorrecta' }, { status: 400 })
+      }
 
-  // Hash de la nueva contraseña
-  const hashedPassword = await bcrypt.hash(passwordNuevo, 10)
+      // Hash de la nueva contraseña
+      const hashedPassword = await bcrypt.hash(passwordNuevo, 10)
 
-  // Actualizar contraseña
-  await prisma.usuario.update({
-    where: { id: usuario.id },
-    data: { password: hashedPassword }
-  })
+      // Actualizar contraseña
+      await prisma.usuario.update({
+        where: { id: usuario.id },
+        data: { password: hashedPassword }
+      })
 
-  return NextResponse.json({ success: true })
-}
+      return NextResponse.json({ success: true })
+    }
 
     return NextResponse.json({ error: 'Tipo de operación no válido' }, { status: 400 })
   } catch (error) {
@@ -214,7 +248,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json()
-    
+
     const usuario = await prisma.usuario.findUnique({
       where: { email: session.user.email },
       include: { fichaVoluntario: true }

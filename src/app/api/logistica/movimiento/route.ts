@@ -83,15 +83,58 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url)
     const articuloId = searchParams.get('articuloId')
+    const inventarioSlug = searchParams.get('inventario')
     const limit = parseInt(searchParams.get('limit') || '50')
 
     const where: any = {}
-    if (articuloId) where.articuloId = articuloId
+
+    // Filtro por artículo específico
+    if (articuloId) {
+      where.articuloId = articuloId
+    }
+
+    // Filtro por inventario/área
+    if (inventarioSlug && inventarioSlug !== 'all') {
+      // Buscar la categoría y sus hijos
+      const categoria = await prisma.categoriaInventario.findFirst({
+        where: { slug: inventarioSlug }
+      })
+
+      if (categoria) {
+        // Encontrar todas las categorías relacionadas (padre e hijos)
+        const categoriasIds = [categoria.id]
+
+        // Si es padre, buscar hijos
+        const hijos = await prisma.categoriaInventario.findMany({
+          where: { padreId: categoria.id },
+          select: { id: true }
+        })
+        categoriasIds.push(...hijos.map(h => h.id))
+
+        // Filtrar movimientos donde el artículo pertenezca a estas categorías
+        where.articulo = {
+          familia: {
+            categoriaId: { in: categoriasIds }
+          }
+        }
+      }
+    }
 
     const movimientos = await prisma.movimientoStock.findMany({
       where,
       include: {
-        articulo: { select: { nombre: true, codigo: true } },
+        articulo: {
+          select: {
+            nombre: true,
+            codigo: true,
+            familia: {
+              select: {
+                nombre: true,
+                categoria: { select: { nombre: true, slug: true } }
+              }
+            }
+          }
+        },
         usuario: { select: { nombre: true, apellidos: true, numeroVoluntario: true } }
       },
       orderBy: { createdAt: 'desc' },

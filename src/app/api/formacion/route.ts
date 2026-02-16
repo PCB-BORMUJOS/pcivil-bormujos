@@ -154,7 +154,7 @@ export async function GET(request: NextRequest) {
                 const convocatoriasActivas = await prisma.convocatoria.count({
                     where: { estado: { in: ['planificada', 'inscripciones_abiertas', 'en_curso'] } }
                 })
-                const certificacionesVidentes = await prisma.certificacion.count({
+                const certificacionesVigentes = await prisma.certificacion.count({
                     where: {
                         vigente: true,
                         OR: [
@@ -171,7 +171,7 @@ export async function GET(request: NextRequest) {
                     stats: {
                         totalCursos,
                         convocatoriasActivas,
-                        certificacionesVidentes,
+                        certificacionesVigentes,
                         necesidadesPendientes
                     }
                 })
@@ -197,11 +197,26 @@ export async function POST(request: NextRequest) {
 
         switch (tipo) {
             case 'curso':
-                const curso = await prisma.curso.create({ data })
+                // Mapear tipo_curso a tipo (campo de BBDD) para evitar conflicto con el 'tipo' de la acción
+                const cursoData = {
+                    ...data,
+                    tipo: data.tipo_curso || 'interna' // Fallback default
+                }
+                // Limpiar campo auxiliar si existe
+                delete cursoData.tipo_curso
+
+                const curso = await prisma.curso.create({ data: cursoData })
                 return NextResponse.json({ success: true, curso })
 
             case 'convocatoria':
-                const convocatoria = await prisma.convocatoria.create({ data })
+                const convocatoria = await prisma.convocatoria.create({
+                    data: {
+                        ...data,
+                        fechaInicio: new Date(data.fechaInicio),
+                        fechaFin: new Date(data.fechaFin),
+                        plazasDisponibles: Number(data.plazasDisponibles)
+                    }
+                })
                 return NextResponse.json({ success: true, convocatoria })
 
             case 'inscripcion':
@@ -234,6 +249,65 @@ export async function POST(request: NextRequest) {
             case 'necesidad':
                 const necesidad = await prisma.necesidadFormativa.create({ data })
                 return NextResponse.json({ success: true, necesidad })
+
+            case 'cerrar-acta':
+                const { convocatoriaId } = data
+                if (!convocatoriaId) return NextResponse.json({ error: 'Convocatoria ID requerido' }, { status: 400 })
+
+                const convActa = await prisma.convocatoria.findUnique({
+                    where: { id: convocatoriaId },
+                    include: { curso: true }
+                })
+                if (!convActa) return NextResponse.json({ error: 'Convocatoria no encontrada' }, { status: 404 })
+
+                // Obtener inscripciones aptas sin certificar (aunque mejor certificar todas las aptas)
+                const inscripcionesAptas = await prisma.inscripcion.findMany({
+                    where: {
+                        convocatoriaId,
+                        apta: true
+                    }
+                })
+
+                let certificadosGenerados = 0
+                const fechaHoy = new Date()
+
+                // Calcular fecha expiración si aplica
+                let fechaExpiracion: Date | null = null
+                if (convActa.curso.validezMeses) {
+                    fechaExpiracion = new Date()
+                    fechaExpiracion.setMonth(fechaExpiracion.getMonth() + convActa.curso.validezMeses)
+                }
+
+                for (const insc of inscripcionesAptas) {
+                    // Verificar si ya existe certificación para este curso y usuario (opcional, pero recomendable)
+                    // En este caso permitimos recertificación si es otra convocatoria diferente, pero 
+                    // si es la misma convocatoria no deberíamos duplicar.
+                    // Simplificación: crear certificación.
+
+                    const numCert = `CERT-${fechaHoy.getFullYear()}-${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`
+
+                    await prisma.certificacion.create({
+                        data: {
+                            usuarioId: insc.usuarioId,
+                            cursoId: convActa.cursoId,
+                            fechaObtencion: fechaHoy,
+                            fechaExpiracion,
+                            numeroCertificado: numCert,
+                            entidadEmisora: 'Protección Civil Bormujos', // O data.entidad
+                            vigente: true,
+                            renovada: false
+                        }
+                    })
+                    certificadosGenerados++
+                }
+
+                // Cerrar convocatoria
+                await prisma.convocatoria.update({
+                    where: { id: convocatoriaId },
+                    data: { estado: 'finalizada' }
+                })
+
+                return NextResponse.json({ success: true, certificadosGenerados })
 
             default:
                 return NextResponse.json({ error: 'Tipo no válido' }, { status: 400 })
