@@ -496,6 +496,7 @@ export default function DashboardPage() {
   const [loadingVol, setLoadingVol] = useState(true);
   const [eventos, setEventos] = useState<any[]>([]);
   const [guardias, setGuardias] = useState<any[]>([]);
+  const [formaciones, setFormaciones] = useState<any[]>([]);
 
   // Estados para disponibilidad contextual
   const [turnoSeleccionado, setTurnoSeleccionado] = useState<{ fecha: string; turno: string; diaSemanaNombre: string } | null>(null);
@@ -508,6 +509,13 @@ export default function DashboardPage() {
 
   const cargarEventos = () => {
     fetch('/api/eventos?privados=true').then(res => res.json()).then(data => setEventos(data.eventos || [])).catch(() => { });
+  };
+
+  const cargarFormaciones = () => {
+    fetch('/api/formacion?tipo=convocatorias&estado=inscripciones_abiertas')
+      .then(res => res.json())
+      .then(data => setFormaciones(data.convocatorias || []))
+      .catch(() => { });
   };
 
   useEffect(() => {
@@ -548,6 +556,7 @@ export default function DashboardPage() {
       })
       .finally(() => {
         setLoadingVol(false);
+        cargarFormaciones(); // Cargar formaciones abiertas
       });
   }, []);
 
@@ -748,12 +757,36 @@ export default function DashboardPage() {
       />
 
       {/* Bottom Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="bg-gradient-to-br from-indigo-500 to-purple-600 text-white p-6 rounded-xl shadow-lg">
           <h4 className="font-bold flex items-center gap-2 mb-3 text-lg"><span className="text-2xl">✨</span> IA Operativa - Gemini</h4>
           <p className="text-sm text-indigo-100 leading-relaxed">
             <strong>Resumen:</strong> Dispositivo preventivo activo. {guardias.length} turnos programados esta semana. {eventos.length} eventos planificados.
           </p>
+        </div>
+
+        {/* Próximas Formaciones */}
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+          <h4 className="font-bold text-slate-800 mb-4 text-sm uppercase tracking-wider flex items-center gap-2">
+            <span className="text-lg">📚</span> Próximas Formaciones
+          </h4>
+          {formaciones.length === 0 ? (
+            <p className="text-sm text-slate-400">No hay formaciones abiertas</p>
+          ) : (
+            <div className="space-y-3">
+              {formaciones.slice(0, 3).map((f: any) => (
+                <div key={f.id} className="p-3 bg-purple-50 rounded-lg border border-purple-100">
+                  <p className="font-medium text-slate-800 text-sm">{f.curso?.nombre}</p>
+                  <p className="text-xs text-slate-500 mt-1">
+                    {new Date(f.fechaInicio).toLocaleDateString()} • {f.plazasOcupadas}/{f.plazasDisponibles} plazas
+                  </p>
+                </div>
+              ))}
+              {formaciones.length > 3 && (
+                <p className="text-xs text-purple-600 text-center">+ {formaciones.length - 3} más</p>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
