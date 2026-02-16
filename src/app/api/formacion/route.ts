@@ -255,12 +255,12 @@ export async function POST(request: NextRequest) {
 
             case 'inscripcion':
                 // Verificar si es una acción de aprobar/rechazar
-                const { action, estado: newEstado } = data
+                const { action, estado: newEstado, id: inscripcionId } = data
 
                 if (action === 'aprobar') {
                     // Obtener la inscripción actual
                     const inscripcionActual = await prisma.inscripcion.findUnique({
-                        where: { id }
+                        where: { id: inscripcionId }
                     })
 
                     if (!inscripcionActual) {
@@ -283,7 +283,7 @@ export async function POST(request: NextRequest) {
                     // Aprobar: actualizar estado y ocupar plaza
                     const [inscripcionAprobada] = await prisma.$transaction([
                         prisma.inscripcion.update({
-                            where: { id },
+                            where: { id: inscripcionId },
                             data: { estado: 'confirmada' }
                         }),
                         prisma.convocatoria.update({
@@ -298,7 +298,7 @@ export async function POST(request: NextRequest) {
                 if (action === 'rechazar') {
                     // Rechazar: solo actualizar estado
                     const inscripcionRechazada = await prisma.inscripcion.update({
-                        where: { id },
+                        where: { id: inscripcionId },
                         data: { estado: 'rechazada' }
                     })
 
@@ -306,11 +306,11 @@ export async function POST(request: NextRequest) {
                 }
 
                 // Crear nueva inscripción (solicitud)
-                const conv = await prisma.convocatoria.findUnique({
+                const convCheck = await prisma.convocatoria.findUnique({
                     where: { id: data.convocatoriaId }
                 })
 
-                if (!conv) {
+                if (!convCheck) {
                     return NextResponse.json({ error: 'Convocatoria no encontrada' }, { status: 404 })
                 }
 
