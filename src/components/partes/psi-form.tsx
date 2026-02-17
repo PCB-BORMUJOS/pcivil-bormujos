@@ -558,7 +558,7 @@ ${textComponents.conclusion}`.trim()
                         <section className={styles.footerGrid3Col}>
                             {/* Headers */}
                             <div className={styles.footerHeader}>INDICATIVO QUE INFORMA</div>
-                            <div className={styles.footerHeader}>RESPONSABLE DEL TURNO</div>
+                            <div className={styles.footerHeader}>RESPONSABLE DE TURNO</div>
                             <div className={styles.footerHeader}>VB JEFE DE SERVICIO</div>
 
                             {/* Columna 1: Indicativo Informante */}
@@ -590,7 +590,7 @@ ${textComponents.conclusion}`.trim()
                             {/* Columna 2: Responsable Turno */}
                             <div className={styles.footerContent}>
                                 <div>
-                                    <label className={styles.footerLabel}>RESPONSABLE</label>
+                                    <label className={styles.footerLabel}>RESPONSABLE DE TURNO</label>
                                     <select
                                         className={styles.footerDropdown}
                                         value={form.responsableTurno}
@@ -616,7 +616,7 @@ ${textComponents.conclusion}`.trim()
                             {/* Columna 3: Jefe Servicio */}
                             <div className={styles.footerContent}>
                                 <div>
-                                    <label className={styles.footerLabel}>INDICATIVO</label>
+                                    <label className={styles.footerLabel}>JEFE DE SERVICIO</label>
                                     <div className={styles.footerDropdown} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', background: '#f8fafc' }}>
                                         J-44
                                     </div>
