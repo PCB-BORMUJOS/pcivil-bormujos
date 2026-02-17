@@ -95,15 +95,17 @@ function drawHeader(doc: jsPDF): number {
     doc.setFont('helvetica', 'bold')
     doc.text('SERVICIO E INTERVENCIÓN', psiX + psiW + 4, 10)
 
-    // Logo (4 orange squares)
+    // Logo (3 orange squares in pyramid: 1 top center, 2 bottom)
     const logoX = PAGE_W - MARGIN - 52
-    const logoY = 3
+    const logoY = 2.5
     const sq = 3.5
     const gap = 0.8
     doc.setFillColor(...ORANGE)
-    doc.rect(logoX, logoY, sq, sq, 'F')
-    doc.rect(logoX + sq + gap, logoY, sq, sq, 'F')
+    // Top center square
+    doc.rect(logoX + (sq + gap) / 2, logoY, sq, sq, 'F')
+    // Bottom left square
     doc.rect(logoX, logoY + sq + gap, sq, sq, 'F')
+    // Bottom right square
     doc.rect(logoX + sq + gap, logoY + sq + gap, sq, sq, 'F')
 
     // Org name
