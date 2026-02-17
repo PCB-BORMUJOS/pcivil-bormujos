@@ -40,6 +40,13 @@ export const WALKIES_BASE = [
 ] as const
 
 export const ESTADOS_PARTE = {
+    borrador: {
+        label: 'Borrador',
+        color: 'gray',
+        bgColor: 'bg-gray-100',
+        textColor: 'text-gray-600',
+        borderColor: 'border-gray-300'
+    },
     pendiente_vb: {
         label: 'Pendiente VB',
         color: 'yellow',

@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { PsiFormState, INITIAL_PSI_STATE, TimeKey } from '@/types/psi'
 import { toast } from 'react-hot-toast'
-import { validarPartePSI } from '@/lib/psi-validation'
+import { validarPartePSI, validarBorradorPSI } from '@/lib/psi-validation'
 
 // Simple type for images (no longer using ImagenParte model)
 type ImagenParte = {
@@ -83,10 +83,21 @@ export function usePsiForm() {
             tipologias
         }
 
-        const { valido, errores } = validarPartePSI(validationData)
-        if (!valido) {
-            errores.forEach(err => toast.error(err))
-            return null // Return failure
+        // Dos niveles de validación:
+        // - Borrador: solo requiere lugar (permite guardar rápido y subir fotos)
+        // - Finalización: requiere todos los campos obligatorios
+        if (finalizar) {
+            const { valido, errores } = validarPartePSI(validationData)
+            if (!valido) {
+                errores.forEach(err => toast.error(err))
+                return null
+            }
+        } else {
+            const { valido, errores } = validarBorradorPSI(validationData)
+            if (!valido) {
+                errores.forEach(err => toast.error(err))
+                return null
+            }
         }
 
         if (!hasChanges && !finalizar && id) return form // No changes needed, return current form
@@ -149,7 +160,8 @@ export function usePsiForm() {
 
                 // Otros
                 informacionExtra: form,
-                estado: finalizar ? 'completo' : 'pendiente_vb'
+                finalizar: finalizar,
+                estado: finalizar ? 'completo' : 'borrador'
             }
 
             let url = '/api/partes/psi'

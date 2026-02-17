@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { prisma } from '@/lib/db'
 import { generarNumeroParte } from '@/lib/partesPSI'
-import { validarPartePSI } from '@/lib/psi-validation'
+import { validarPartePSI, validarBorradorPSI } from '@/lib/psi-validation'
 import { put } from '@vercel/blob'
 import { authOptions } from '@/lib/auth'
 
@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
             where.fecha = { gte: fechaInicio, lte: fechaFin }
         }
 
-        if (estado && (estado === 'pendiente_vb' || estado === 'completo')) {
+        if (estado && (estado === 'pendiente_vb' || estado === 'completo' || estado === 'borrador')) {
             where.estado = estado
         }
 
@@ -115,8 +115,9 @@ export async function POST(request: NextRequest) {
             firmaResponsable: body.firmaResponsable ? 'PRESENT' : 'MISSING'
         })
 
-        // Validar campos obligatorios
-        const validacion = validarPartePSI(body)
+        // Validar campos obligatorios (dos niveles: borrador vs finalización)
+        const esBorrador = !body.finalizar
+        const validacion = esBorrador ? validarBorradorPSI(body) : validarPartePSI(body)
         if (!validacion.valido) {
             return NextResponse.json(
                 { error: 'Validación fallida', errores: validacion.errores },
@@ -157,8 +158,16 @@ export async function POST(request: NextRequest) {
             }
         }
 
-        // Determinar estado del parte
-        const estado = body.firmaJefeServicio ? 'completo' : 'pendiente_vb'
+        // Determinar estado del parte:
+        // - 'borrador' si no tiene firmas ni campos críticos
+        // - 'pendiente_vb' si tiene firmas pero falta VB del jefe
+        // - 'completo' si tiene firma del jefe de servicio
+        let estado = 'borrador'
+        if (body.firmaJefeServicio) {
+            estado = 'completo'
+        } else if (body.firmaInformante || body.firmaIndicativoCumplimenta || body.firmaResponsable || body.firmaResponsableTurno) {
+            estado = 'pendiente_vb'
+        }
 
         // Crear parte en base de datos
         // Use user ID from session. Assuming session.user.id exists.

@@ -151,6 +151,7 @@ export default function PartesPage() {
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 bg-white"
             >
               <option value="todos">Todos los estados</option>
+              <option value="borrador">Borrador</option>
               <option value="pendiente_vb">Pendiente VB</option>
               <option value="completo">Completo</option>
             </select>
