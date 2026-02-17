@@ -35,8 +35,8 @@
 }
 
 .activeTab {
-  color: #173d7a;
-  border-bottom-color: #173d7a;
+  color: #283666;
+  border-bottom-color: #283666;
   background: #fff;
 }
 
@@ -44,7 +44,7 @@
 /* Barra azul como el PDF */
 .header {
   height: 84px;
-  background: #173d7a;
+  background: #283666;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -211,7 +211,7 @@
 }
 
 .tableHeaderBlue {
-  background: #173d7a;
+  background: #283666;
   color: #fff;
   font-size: 11px;
   font-weight: 800;
@@ -224,7 +224,7 @@
 }
 
 .tableHeaderBlueDouble {
-  background: #173d7a;
+  background: #283666;
   color: #fff;
   font-size: 11px;
   font-weight: 800;
@@ -260,7 +260,7 @@
 }
 
 .bar {
-  background: #173d7a;
+  background: #283666;
   color: #fff;
   font-weight: 800;
   font-size: 13px;
@@ -269,7 +269,7 @@
 }
 
 .subBar {
-  background: #173d7a;
+  background: #283666;
   color: #fff;
   font-weight: 800;
   font-size: 12px;
@@ -319,7 +319,7 @@
 }
 
 .typologyTitle {
-  background: #173d7a;
+  background: #283666;
   color: #fff;
   font-weight: 800;
   font-size: 12px;
@@ -384,7 +384,7 @@
 }
 
 .casualtyTitle {
-  background: #173d7a;
+  background: #283666;
   color: #fff;
   font-weight: 800;
   font-size: 12px;
@@ -485,7 +485,7 @@
 }
 
 .footerHeader {
-  background: #173d7a;
+  background: #283666;
   color: #fff;
   font-weight: 800;
   font-size: 11px;
@@ -546,7 +546,7 @@
 }
 
 .primaryBtn {
-  background: #173d7a;
+  background: #283666;
   color: #fff;
   border: 1px solid #0f172a;
   padding: 8px 12px;

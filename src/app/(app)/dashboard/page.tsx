@@ -834,6 +834,43 @@ export default function DashboardPage() {
               </div>
             </div>
             {showEventDetail.descripcion && <div><h4 className="text-sm font-bold text-slate-500 uppercase mb-2">Descripción</h4><p className="text-slate-700">{showEventDetail.descripcion}</p></div>}
+
+            {/* Si es un evento de formación, permitir inscripción */}
+            {showEventDetail.tipo === 'formacion' && (
+              <div className="pt-4 border-t mt-4">
+                <button
+                  onClick={async () => {
+                    const res = await fetch('/api/formacion', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        tipo: 'inscripcion',
+                        convocatoriaId: showEventDetail.esConvocatoria ? showEventDetail.id : (
+                          // Intentar encontrar en la lista de formaciones cargadas si no es una convocatoria directa
+                          formaciones.find((f: any) =>
+                            f.curso?.nombre === showEventDetail.titulo.replace('Formación: ', '') &&
+                            new Date(f.fechaInicio).toDateString() === new Date(showEventDetail.fecha).toDateString()
+                          )?.id
+                        ),
+                        usuarioId: userId
+                      })
+                    });
+
+                    const data = await res.json();
+                    if (res.ok) {
+                      alert(`✅ ${data.mensaje || 'Solicitud enviada'}`);
+                      setShowEventDetail(null);
+                      cargarFormaciones();
+                    } else {
+                      alert('Error: ' + (data.error || 'No se pudo realizar la inscripción'));
+                    }
+                  }}
+                  className="w-full bg-purple-600 text-white py-3 rounded-lg font-bold hover:bg-purple-700 transition-colors flex items-center justify-center gap-2"
+                >
+                  <Users size={18} /> Inscribirme en esta formación
+                </button>
+              </div>
+            )}
           </div>
         </Modal>
       )}

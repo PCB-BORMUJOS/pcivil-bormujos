@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
 
         switch (tipo) {
             case 'cursos':
-                const cursos = await prisma.curso.findMany({
+                const cursos = await (prisma as any).curso.findMany({
                     where: { activo: true },
                     orderBy: { nombre: 'asc' },
                     include: {
@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
 
             case 'convocatorias':
                 const estadoFilter = searchParams.get('estado')
-                const convocatorias = await prisma.convocatoria.findMany({
+                const convocatorias = await (prisma as any).convocatoria.findMany({
                     where: estadoFilter ? { estado: estadoFilter } : {},
                     include: {
                         curso: true,
@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
 
             case 'inscripciones':
                 const convocatoriaId = searchParams.get('convocatoriaId')
-                const inscripciones = await prisma.inscripcion.findMany({
+                const inscripciones = await (prisma as any).inscripcion.findMany({
                     where: convocatoriaId ? { convocatoriaId } : {},
                     include: {
                         usuario: {
@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
                 const usuarioId = searchParams.get('usuarioId')
                 const vigentes = searchParams.get('vigentes') === 'true'
 
-                const certificaciones = await prisma.certificacion.findMany({
+                const certificaciones = await (prisma as any).certificacion.findMany({
                     where: {
                         ...(usuarioId && { usuarioId }),
                         ...(vigentes && {
@@ -96,7 +96,7 @@ export async function GET(request: NextRequest) {
 
             case 'necesidades':
                 const estadoNecesidad = searchParams.get('estado')
-                const necesidades = await prisma.necesidadFormativa.findMany({
+                const necesidades = await (prisma as any).necesidadFormativa.findMany({
                     where: estadoNecesidad ? { estado: estadoNecesidad } : {},
                     include: {
                         curso: true
@@ -109,7 +109,7 @@ export async function GET(request: NextRequest) {
                 return NextResponse.json({ necesidades })
 
             case 'inventario':
-                const categoriaFormacion = await prisma.categoriaInventario.findFirst({
+                const categoriaFormacion = await (prisma as any).categoriaInventario.findFirst({
                     where: { slug: 'formacion' }
                 })
 
@@ -121,7 +121,7 @@ export async function GET(request: NextRequest) {
                     })
                 }
 
-                const familias = await prisma.familiaArticulo.findMany({
+                const familias = await (prisma as any).familiaArticulo.findMany({
                     where: { categoriaId: categoriaFormacion.id },
                     include: {
                         _count: {
@@ -130,7 +130,7 @@ export async function GET(request: NextRequest) {
                     }
                 })
 
-                const articulos = await prisma.articulo.findMany({
+                const articulos = await (prisma as any).articulo.findMany({
                     where: {
                         familia: {
                             categoriaId: categoriaFormacion.id
@@ -150,11 +150,11 @@ export async function GET(request: NextRequest) {
                 })
 
             case 'stats':
-                const totalCursos = await prisma.curso.count({ where: { activo: true } })
-                const convocatoriasActivas = await prisma.convocatoria.count({
+                const totalCursos = await (prisma as any).curso.count({ where: { activo: true } })
+                const convocatoriasActivas = await (prisma as any).convocatoria.count({
                     where: { estado: { in: ['planificada', 'inscripciones_abiertas', 'en_curso'] } }
                 })
-                const certificacionesVigentes = await prisma.certificacion.count({
+                const certificacionesVigentes = await (prisma as any).certificacion.count({
                     where: {
                         vigente: true,
                         OR: [
@@ -163,7 +163,7 @@ export async function GET(request: NextRequest) {
                         ]
                     }
                 })
-                const necesidadesPendientes = await prisma.necesidadFormativa.count({
+                const necesidadesPendientes = await (prisma as any).necesidadFormativa.count({
                     where: { estado: { in: ['identificada', 'planificada'] } }
                 })
 
@@ -205,12 +205,12 @@ export async function POST(request: NextRequest) {
                 // Limpiar campo auxiliar si existe
                 delete cursoData.tipo_curso
 
-                const curso = await prisma.curso.create({ data: cursoData })
+                const curso = await (prisma as any).curso.create({ data: cursoData })
                 return NextResponse.json({ success: true, curso })
 
             case 'convocatoria':
                 // Obtener el usuario actual
-                const usuario = await prisma.usuario.findUnique({
+                const usuario = await (prisma as any).usuario.findUnique({
                     where: { email: session.user.email },
                     include: { servicio: true }
                 })
@@ -222,16 +222,16 @@ export async function POST(request: NextRequest) {
                     fechaFin: new Date(data.fechaFin),
                     plazasDisponibles: Number(data.plazasDisponibles)
                 }
-                const convocatoria = await prisma.convocatoria.create({ data: convocatoriaData })
+                const convocatoria = await (prisma as any).convocatoria.create({ data: convocatoriaData })
 
                 // Obtener el curso relacionado
-                const cursoRelacionado = await prisma.curso.findUnique({
+                const cursoRelacionado = await (prisma as any).curso.findUnique({
                     where: { id: data.cursoId }
                 })
 
                 // Auto-crear evento en el calendario
                 if (convocatoria && usuario) {
-                    await prisma.evento.create({
+                    await (prisma as any).evento.create({
                         data: {
                             titulo: `Formación: ${cursoRelacionado?.nombre || 'Curso'}`,
                             descripcion: `Convocatoria: ${convocatoria.codigo}\n${cursoRelacionado?.descripcion || ''}`,
@@ -259,7 +259,7 @@ export async function POST(request: NextRequest) {
 
                 if (action === 'aprobar') {
                     // Obtener la inscripción actual
-                    const inscripcionActual = await prisma.inscripcion.findUnique({
+                    const inscripcionActual = await (prisma as any).inscripcion.findUnique({
                         where: { id: inscripcionId }
                     })
 
@@ -268,7 +268,7 @@ export async function POST(request: NextRequest) {
                     }
 
                     // Verificar plazas disponibles
-                    const conv = await prisma.convocatoria.findUnique({
+                    const conv = await (prisma as any).convocatoria.findUnique({
                         where: { id: inscripcionActual.convocatoriaId }
                     })
 
@@ -281,12 +281,12 @@ export async function POST(request: NextRequest) {
                     }
 
                     // Aprobar: actualizar estado y ocupar plaza
-                    const [inscripcionAprobada] = await prisma.$transaction([
-                        prisma.inscripcion.update({
+                    const [inscripcionAprobada] = await (prisma as any).$transaction([
+                        (prisma as any).inscripcion.update({
                             where: { id: inscripcionId },
                             data: { estado: 'confirmada' }
                         }),
-                        prisma.convocatoria.update({
+                        (prisma as any).convocatoria.update({
                             where: { id: inscripcionActual.convocatoriaId },
                             data: { plazasOcupadas: { increment: 1 } }
                         })
@@ -297,7 +297,7 @@ export async function POST(request: NextRequest) {
 
                 if (action === 'rechazar') {
                     // Rechazar: solo actualizar estado
-                    const inscripcionRechazada = await prisma.inscripcion.update({
+                    const inscripcionRechazada = await (prisma as any).inscripcion.update({
                         where: { id: inscripcionId },
                         data: { estado: 'rechazada' }
                     })
@@ -306,12 +306,24 @@ export async function POST(request: NextRequest) {
                 }
 
                 // Crear nueva inscripción (solicitud)
-                const convCheck = await prisma.convocatoria.findUnique({
+                const convCheck = await (prisma as any).convocatoria.findUnique({
                     where: { id: data.convocatoriaId }
                 })
 
                 if (!convCheck) {
                     return NextResponse.json({ error: 'Convocatoria no encontrada' }, { status: 404 })
+                }
+
+                // Verificar si el usuario ya está inscrito
+                const inscripcionExistente = await (prisma as any).inscripcion.findFirst({
+                    where: {
+                        convocatoriaId: data.convocatoriaId,
+                        usuarioId: data.usuarioId
+                    }
+                })
+
+                if (inscripcionExistente) {
+                    return NextResponse.json({ error: 'Ya estás inscrito en esta formación' }, { status: 400 })
                 }
 
                 // Determinar estado: si se proporciona, usarlo; si no, default 'pendiente'
@@ -323,7 +335,7 @@ export async function POST(request: NextRequest) {
                 }
 
                 // Crear inscripción
-                const inscripcion = await prisma.inscripcion.create({
+                const inscripcion = await (prisma as any).inscripcion.create({
                     data: {
                         convocatoriaId: data.convocatoriaId,
                         usuarioId: data.usuarioId,
@@ -333,7 +345,7 @@ export async function POST(request: NextRequest) {
 
                 // Si está confirmada, ocupar plaza
                 if (estadoInscripcion === 'confirmada') {
-                    await prisma.convocatoria.update({
+                    await (prisma as any).convocatoria.update({
                         where: { id: data.convocatoriaId },
                         data: { plazasOcupadas: { increment: 1 } }
                     })
@@ -343,25 +355,25 @@ export async function POST(request: NextRequest) {
                 return NextResponse.json({ success: true, inscripcion, mensaje: 'Solicitud de inscripción enviada' })
 
             case 'certificacion':
-                const certificacion = await prisma.certificacion.create({ data })
+                const certificacion = await (prisma as any).certificacion.create({ data })
                 return NextResponse.json({ success: true, certificacion })
 
             case 'necesidad':
-                const necesidad = await prisma.necesidadFormativa.create({ data })
+                const necesidad = await (prisma as any).necesidadFormativa.create({ data })
                 return NextResponse.json({ success: true, necesidad })
 
             case 'cerrar-acta':
                 const { convocatoriaId } = data
                 if (!convocatoriaId) return NextResponse.json({ error: 'Convocatoria ID requerido' }, { status: 400 })
 
-                const convActa = await prisma.convocatoria.findUnique({
+                const convActa = await (prisma as any).convocatoria.findUnique({
                     where: { id: convocatoriaId },
                     include: { curso: true }
                 })
                 if (!convActa) return NextResponse.json({ error: 'Convocatoria no encontrada' }, { status: 404 })
 
                 // Obtener inscripciones aptas sin certificar (aunque mejor certificar todas las aptas)
-                const inscripcionesAptas = await prisma.inscripcion.findMany({
+                const inscripcionesAptas = await (prisma as any).inscripcion.findMany({
                     where: {
                         convocatoriaId,
                         apto: true
@@ -386,7 +398,7 @@ export async function POST(request: NextRequest) {
 
                     const numCert = `CERT-${fechaHoy.getFullYear()}-${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`
 
-                    await prisma.certificacion.create({
+                    await (prisma as any).certificacion.create({
                         data: {
                             usuarioId: insc.usuarioId,
                             cursoId: convActa.cursoId,
@@ -402,7 +414,7 @@ export async function POST(request: NextRequest) {
                 }
 
                 // Cerrar convocatoria
-                await prisma.convocatoria.update({
+                await (prisma as any).convocatoria.update({
                     where: { id: convocatoriaId },
                     data: { estado: 'finalizada' }
                 })
@@ -434,11 +446,11 @@ export async function PUT(request: NextRequest) {
 
         switch (tipo) {
             case 'curso':
-                const curso = await prisma.curso.update({ where: { id }, data })
+                const curso = await (prisma as any).curso.update({ where: { id }, data })
                 return NextResponse.json({ success: true, curso })
 
             case 'convocatoria':
-                const convocatoria = await prisma.convocatoria.update({ where: { id }, data })
+                const convocatoria = await (prisma as any).convocatoria.update({ where: { id }, data })
                 return NextResponse.json({ success: true, convocatoria })
 
             case 'inscripcion':
@@ -447,7 +459,7 @@ export async function PUT(request: NextRequest) {
 
                 if (action === 'aprobar') {
                     // Obtener la inscripción actual
-                    const inscripcionActual = await prisma.inscripcion.findUnique({
+                    const inscripcionActual = await (prisma as any).inscripcion.findUnique({
                         where: { id }
                     })
 
@@ -456,7 +468,7 @@ export async function PUT(request: NextRequest) {
                     }
 
                     // Verificar plazas disponibles
-                    const conv = await prisma.convocatoria.findUnique({
+                    const conv = await (prisma as any).convocatoria.findUnique({
                         where: { id: inscripcionActual.convocatoriaId }
                     })
 
@@ -469,12 +481,12 @@ export async function PUT(request: NextRequest) {
                     }
 
                     // Aprobar: actualizar estado y ocupar plaza
-                    const [inscripcionAprobada] = await prisma.$transaction([
-                        prisma.inscripcion.update({
+                    const [inscripcionAprobada] = await (prisma as any).$transaction([
+                        (prisma as any).inscripcion.update({
                             where: { id },
                             data: { estado: 'confirmada' }
                         }),
-                        prisma.convocatoria.update({
+                        (prisma as any).convocatoria.update({
                             where: { id: inscripcionActual.convocatoriaId },
                             data: { plazasOcupadas: { increment: 1 } }
                         })
@@ -485,7 +497,7 @@ export async function PUT(request: NextRequest) {
 
                 if (action === 'rechazar') {
                     // Rechazar: solo actualizar estado
-                    const inscripcionRechazada = await prisma.inscripcion.update({
+                    const inscripcionRechazada = await (prisma as any).inscripcion.update({
                         where: { id },
                         data: { estado: 'rechazada' }
                     })
@@ -494,15 +506,15 @@ export async function PUT(request: NextRequest) {
                 }
 
                 // Actualización normal de inscripción
-                const inscripcion = await prisma.inscripcion.update({ where: { id }, data })
+                const inscripcion = await (prisma as any).inscripcion.update({ where: { id }, data })
                 return NextResponse.json({ success: true, inscripcion })
 
             case 'certificacion':
-                const certificacion = await prisma.certificacion.update({ where: { id }, data })
+                const certificacion = await (prisma as any).certificacion.update({ where: { id }, data })
                 return NextResponse.json({ success: true, certificacion })
 
             case 'necesidad':
-                const necesidad = await prisma.necesidadFormativa.update({ where: { id }, data })
+                const necesidad = await (prisma as any).necesidadFormativa.update({ where: { id }, data })
                 return NextResponse.json({ success: true, necesidad })
 
             default:
@@ -531,19 +543,19 @@ export async function DELETE(request: NextRequest) {
 
         switch (tipo) {
             case 'curso':
-                await prisma.curso.delete({ where: { id } })
+                await (prisma as any).curso.delete({ where: { id } })
                 return NextResponse.json({ success: true })
 
             case 'convocatoria':
-                await prisma.convocatoria.delete({ where: { id } })
+                await (prisma as any).convocatoria.delete({ where: { id } })
                 return NextResponse.json({ success: true })
 
             case 'inscripcion':
-                const insc = await prisma.inscripcion.findUnique({ where: { id } })
+                const insc = await (prisma as any).inscripcion.findUnique({ where: { id } })
                 if (insc) {
-                    await prisma.$transaction([
-                        prisma.inscripcion.delete({ where: { id } }),
-                        prisma.convocatoria.update({
+                    await (prisma as any).$transaction([
+                        (prisma as any).inscripcion.delete({ where: { id } }),
+                        (prisma as any).convocatoria.update({
                             where: { id: insc.convocatoriaId },
                             data: { plazasOcupadas: { decrement: 1 } }
                         })
@@ -552,11 +564,11 @@ export async function DELETE(request: NextRequest) {
                 return NextResponse.json({ success: true })
 
             case 'certificacion':
-                await prisma.certificacion.delete({ where: { id } })
+                await (prisma as any).certificacion.delete({ where: { id } })
                 return NextResponse.json({ success: true })
 
             case 'necesidad':
-                await prisma.necesidadFormativa.delete({ where: { id } })
+                await (prisma as any).necesidadFormativa.delete({ where: { id } })
                 return NextResponse.json({ success: true })
 
             default:

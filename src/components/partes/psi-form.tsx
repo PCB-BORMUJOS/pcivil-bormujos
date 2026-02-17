@@ -256,13 +256,11 @@ ${textComponents.conclusion}`.trim()
                             </div>
                         </div>
                         <div className={styles.headerRight}>
-                            <div className={styles.logoMark} aria-hidden="true">
-                                <div className={styles.logoSquares} />
-                            </div>
-                            <div className={styles.logoText}>
-                                <div className={styles.logoTextTop}>PROTECCIÓN CIVIL</div>
-                                <div className={styles.logoTextBottom}>BORMUJOS</div>
-                            </div>
+                            <img
+                                src="/logo-pcb.png"
+                                alt="Protección Civil Bormujos"
+                                style={{ height: 56, width: 'auto', objectFit: 'contain' }}
+                            />
                         </div>
                     </header>
 

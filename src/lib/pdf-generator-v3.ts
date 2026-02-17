@@ -3,7 +3,7 @@ import { PsiFormState } from '@/types/psi'
 import { LOGO_BASE64 } from '@/lib/logo-data'
 
 // ─── Colores exactos del formulario web ───
-const BLUE: [number, number, number] = [23, 61, 122]    // #173d7a
+const BLUE: [number, number, number] = [40, 54, 102]    // #283666 – exacto del logo
 const ORANGE: [number, number, number] = [255, 122, 0]  // #ff7a00
 const WHITE: [number, number, number] = [255, 255, 255]
 const TEXT_DARK: [number, number, number] = [15, 23, 42]
