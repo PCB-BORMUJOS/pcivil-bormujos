@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf'
 import { PsiFormState } from '@/types/psi'
+import { LOGO_BASE64 } from '@/lib/logo-data'
 
 // ─── Colores exactos del formulario web ───
 const BLUE: [number, number, number] = [23, 61, 122]    // #173d7a
@@ -95,27 +96,12 @@ function drawHeader(doc: jsPDF): number {
     doc.setFont('helvetica', 'bold')
     doc.text('SERVICIO E INTERVENCIÓN', psiX + psiW + 4, 10)
 
-    // Logo (3 orange squares in pyramid: 1 top center, 2 bottom)
-    const logoX = PAGE_W - MARGIN - 52
-    const logoY = 2.5
-    const sq = 3.5
-    const gap = 0.8
-    doc.setFillColor(...ORANGE)
-    // Top center square
-    doc.rect(logoX + (sq + gap) / 2, logoY, sq, sq, 'F')
-    // Bottom left square
-    doc.rect(logoX, logoY + sq + gap, sq, sq, 'F')
-    // Bottom right square
-    doc.rect(logoX + sq + gap, logoY + sq + gap, sq, sq, 'F')
-
-    // Org name
-    doc.setTextColor(...WHITE)
-    doc.setFontSize(6)
-    doc.setFont('helvetica', 'normal')
-    doc.text('PROTECCIÓN CIVIL', logoX + sq * 2 + gap + 3, 5.5)
-    doc.setFontSize(8)
-    doc.setFont('helvetica', 'bold')
-    doc.text('BORMUJOS', logoX + sq * 2 + gap + 3, 10)
+    // Logo — imagen real embebida
+    const logoW = 52
+    const logoH = logoW * (333 / 1024)  // aspect ratio from original image (1024x333)
+    const logoX = PAGE_W - MARGIN - logoW
+    const logoY = 1.5
+    doc.addImage(LOGO_BASE64, 'PNG', logoX, logoY, logoW, logoH)
 
     return headerH + 2
 }
