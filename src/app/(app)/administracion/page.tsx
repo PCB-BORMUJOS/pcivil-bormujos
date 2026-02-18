@@ -1,5 +1,23 @@
 'use client';
 
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragOverlay,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  sortableKeyboardCoordinates,
+  SortableContext,
+  rectSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+
 import React, { useState, useEffect } from 'react';
 import {
   Users, Calendar, DollarSign, Fuel, Wallet, ChevronLeft, ChevronRight,
@@ -113,11 +131,21 @@ interface Aspirante {
 // ============================================
 // CONSTANTES
 // ============================================
+// ============================================
+// IMPORTS FOR DRAG & DROP
+// ============================================
+
+// ... (existing imports)
+
+// ============================================
+// CONSTANTES
+// ============================================
 const AREAS_SERVICIO = [
   { id: 'JEFATURA', nombre: 'Jefatura', color: 'bg-purple-500' },
   { id: 'SOCORRISMO', nombre: 'Socorrismo', color: 'bg-blue-500' },
   { id: 'EXT_INCENDIOS', nombre: 'Ext. Incendios', color: 'bg-red-500' },
   { id: 'LOGISTICA', nombre: 'Logística', color: 'bg-green-500' },
+  { id: 'VEHICULOS', nombre: 'Vehículos', color: 'bg-indigo-500' }, // NUEVA ÁREA
   { id: 'FORMACION', nombre: 'Formación', color: 'bg-yellow-500' },
   { id: 'TRANSMISIONES', nombre: 'Transmisiones', color: 'bg-cyan-500' },
   { id: 'ACCION_SOCIAL', nombre: 'Acción Social', color: 'bg-pink-500' },
@@ -125,6 +153,88 @@ const AREAS_SERVICIO = [
   { id: 'ADMINISTRACION', nombre: 'Administración', color: 'bg-slate-500' },
 ];
 
+// ... (existing constants)
+
+// ============================================
+// COMPONENTES DRAG & DROP
+// ============================================
+
+// Componente para un voluntario arrastrable
+function VoluntarioDraggable({ voluntario }: { voluntario: Voluntario }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging
+  } = useSortable({ id: voluntario.id, data: { voluntario } }); // Usamos useSortable para compatibilidad si quisiéramos ordenar, aunque Draggable bastaría
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 999 : 'auto',
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className={`flex items-center gap-2 p-2 rounded-lg cursor-grab active:cursor-grabbing border border-transparent hover:border-slate-200 ${isDragging ? 'bg-orange-50 ring-2 ring-orange-500' : 'hover:bg-slate-50'
+        }`}
+    >
+      <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold 
+        ${!voluntario.fichaVoluntario?.areaAsignada ? 'bg-orange-100 text-orange-600' : 'bg-slate-200 text-slate-600'}`}>
+        {voluntario.nombre?.charAt(0)}{voluntario.apellidos?.charAt(0)}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-slate-700 truncate">{voluntario.nombre} {voluntario.apellidos}</p>
+        <p className="text-xs text-slate-500">{voluntario.numeroVoluntario}</p>
+      </div>
+    </div>
+  );
+}
+
+// Componente para un área droppable
+function AreaDroppable({ id, color, nombre, count, children }: { id: string, color: string, nombre: string, count: number, children: React.ReactNode }) {
+  const { setNodeRef, isOver } = useSortable({ id: id, data: { type: 'AREA', areaId: id } }); // Usamos useSortable para que el contenedor también sea parte del contexto si needed, pero useDroppable es mejor para contenedores fijos
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`bg-white border-2 rounded-xl overflow-hidden transition-colors flex flex-col h-full ${isOver ? 'border-orange-500 ring-2 ring-orange-200' : 'border-slate-200'
+        }`}
+      style={{ minHeight: '200px' }}
+    >
+      <div className={`${color} px-4 py-3 text-white flex-shrink-0`}>
+        <div className="flex items-center justify-between">
+          <h4 className="font-bold">{nombre}</h4>
+          <span className="bg-white/20 px-2 py-0.5 rounded-full text-sm font-bold">
+            {count}
+          </span>
+        </div>
+      </div>
+      <div className="p-3 flex-1 overflow-y-auto bg-slate-50/50">
+        {React.Children.count(children) === 0 ? (
+          <div className="h-full flex items-center justify-center">
+            <p className="text-center text-slate-300 text-sm py-4 italic">Arrastra aquí</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {children}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ============================================
+// COMPONENTE PRINCIPAL
+// ============================================
 const FORMACION_PC = [
   'NIVEL 1 FORMACIÓN BÁSICA', 'COMUNICACIONES', 'RESCATE URBANO',
   'LAPL RPA MULTIROTOR', 'OPERADOR 112', 'SOCORRISMO AVA',
@@ -211,6 +321,82 @@ function TabButton({ active, onClick, icon: Icon, label, count, alert }: {
 // COMPONENTE PRINCIPAL
 // ============================================
 export default function AdministracionPage() {
+  // DRAG & DROP STATE
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveId(null);
+
+    if (!over) return;
+
+    const voluntarioId = active.id as string;
+    const voluntario = voluntarios.find(v => v.id === voluntarioId);
+
+    const nuevaAreaId = over.id as string;
+    let areaFinal = nuevaAreaId;
+
+    // Si soltamos sobre un voluntario (sortable item), buscamos su area
+    if (!AREAS_SERVICIO.some(a => a.id === nuevaAreaId) && nuevaAreaId !== 'sin-area') {
+      const overVoluntario = voluntarios.find(v => v.id === nuevaAreaId);
+      if (overVoluntario) {
+        areaFinal = overVoluntario.fichaVoluntario?.areaAsignada || 'sin-area';
+      } else {
+        // Fallback si no encontramos
+        return;
+      }
+    }
+
+    // Convertir 'sin-area' a string vacío
+    if (areaFinal === 'sin-area') areaFinal = '';
+
+    if (!voluntario) return;
+    if (voluntario.fichaVoluntario?.areaAsignada === areaFinal || (!voluntario.fichaVoluntario?.areaAsignada && areaFinal === '')) {
+      return;
+    }
+
+    // Actualización Optimista
+    const prevVoluntarios = [...voluntarios];
+    setVoluntarios(prev => prev.map(v => {
+      if (v.id === voluntarioId) {
+        return {
+          ...v,
+          fichaVoluntario: {
+            ...v.fichaVoluntario,
+            areaAsignada: areaFinal || undefined
+          }
+        };
+      }
+      return v;
+    }));
+
+    // Llamada API
+    try {
+      const resFicha = await fetch(`/api/admin/personal/${voluntarioId}/ficha`);
+      const dataFicha = await resFicha.json();
+      const fichaActual = dataFicha.ficha || {};
+
+      const payload = {
+        ...fichaActual,
+        areaAsignada: areaFinal
+      };
+
+      await fetch(`/api/admin/personal/${voluntarioId}/ficha`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+    } catch (error) {
+      console.error("Error actualizando area", error);
+      alert("Error al guardar el cambio de área. Se revertirá.");
+      setVoluntarios(prevVoluntarios);
+    }
+  };
   const [activeTab, setActiveTab] = useState<'personal' | 'disponibilidad' | 'dietas' | 'caja' | 'combustible' | 'polizas' | 'areas' | 'aspirantes'>('personal');
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -237,7 +423,7 @@ export default function AdministracionPage() {
   const [showNuevoMovimiento, setShowNuevoMovimiento] = useState(false);
   const [showEditarMovimiento, setShowEditarMovimiento] = useState(false);
   const [movimientoEditando, setMovimientoEditando] = useState<MovimientoCaja | null>(null);
-  const [nuevoMovimiento, setNuevoMovimiento] = useState({ tipo: 'entrada', concepto: '', descripcion: '', importe: 0, categoria: '' });
+  const [nuevoMovimiento, setNuevoMovimiento] = useState({ tipo: 'entrada', concepto: '', descripcion: '', importe: 0, categoria: '', adjuntoUrl: '' });
 
   // Estados para Combustible
   const [ticketsCombustible, setTicketsCombustible] = useState<TicketCombustible[]>([]);
@@ -509,7 +695,7 @@ export default function AdministracionPage() {
       const data = await res.json();
       if (data.success) {
         setShowNuevoMovimiento(false);
-        setNuevoMovimiento({ tipo: 'entrada', concepto: '', descripcion: '', importe: 0, categoria: '' });
+        setNuevoMovimiento({ tipo: 'entrada', concepto: '', descripcion: '', importe: 0, categoria: '', adjuntoUrl: '' });
         cargarMovimientosCaja();
       } else {
         alert('Error: ' + data.error);
@@ -1720,96 +1906,89 @@ export default function AdministracionPage() {
           {/* ============================================ */}
           {/* TAB: ASIGNACIÓN POR ÁREAS */}
           {/* ============================================ */}
+          {/* TAB: ASIGNACIÓN POR ÁREAS (DRAG & DROP) */}
+          {/* ============================================ */}
           {activeTab === 'areas' && (
-            <div>
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h3 className="text-lg font-bold text-slate-800">Distribución por Áreas</h3>
-                  <p className="text-sm text-slate-500">{voluntarios.length} voluntarios activos • {sinArea.length} sin área asignada</p>
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+              onDragStart={(event) => setActiveId(event.active.id as string)}
+            >
+              <div>
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h3 className="text-lg font-bold text-slate-800">Distribución por Áreas</h3>
+                    <p className="text-sm text-slate-500">{voluntarios.length} voluntarios activos • {sinArea.length} sin área asignada</p>
+                    <p className="text-xs text-orange-600 mt-1 font-medium bg-orange-50 inline-block px-2 py-1 rounded">
+                      💡 Arrastra los voluntarios para cambiar su área asignada
+                    </p>
+                  </div>
+                  <button
+                    onClick={cargarVoluntarios}
+                    className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors"
+                  >
+                    <RefreshCw size={18} /> Actualizar
+                  </button>
                 </div>
-                <button
-                  onClick={cargarVoluntarios}
-                  className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors"
-                >
-                  <RefreshCw size={18} /> Actualizar
-                </button>
+
+                {loading ? (
+                  <div className="flex justify-center py-12">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-20">
+                    {/* ZONA SIN ÁREA */}
+                    <AreaDroppable id="sin-area" nombre="Sin Área Asignada" color="bg-slate-500" count={sinArea.length}>
+                      <SortableContext items={sinArea.map(v => v.id)} strategy={rectSortingStrategy}>
+                        {sinArea.map(v => (
+                          <VoluntarioDraggable key={v.id} voluntario={v} />
+                        ))}
+                      </SortableContext>
+                    </AreaDroppable>
+
+                    {/* ÁREAS DE SERVICIO */}
+                    {AREAS_SERVICIO.filter(a => a.id !== 'ADMINISTRACION').map(area => { // Excluir Administración si se desea, o mantenerla.
+                      // Filter volunteers for this area
+                      const areaVols = voluntarios.filter(v => v.fichaVoluntario?.areaAsignada === area.id);
+                      return (
+                        <AreaDroppable key={area.id} id={area.id} nombre={area.nombre} color={area.color} count={areaVols.length}>
+                          <SortableContext items={areaVols.map(v => v.id)} strategy={rectSortingStrategy}>
+                            {areaVols.map(v => (
+                              <VoluntarioDraggable key={v.id} voluntario={v} />
+                            ))}
+                          </SortableContext>
+                        </AreaDroppable>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
 
-              {loading ? (
-                <div className="flex justify-center py-12">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {voluntariosPorArea.map(area => (
-                    <div key={area.id} className="bg-white border border-slate-200 rounded-xl overflow-hidden">
-                      <div className={`${area.color} px-4 py-3 text-white`}>
-                        <div className="flex items-center justify-between">
-                          <h4 className="font-bold">{area.nombre}</h4>
-                          <span className="bg-white/20 px-2 py-0.5 rounded-full text-sm font-bold">
-                            {area.voluntarios.length}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="p-3 max-h-48 overflow-y-auto">
-                        {area.voluntarios.length === 0 ? (
-                          <p className="text-center text-slate-400 text-sm py-4">Sin asignaciones</p>
-                        ) : (
-                          <div className="space-y-2">
-                            {area.voluntarios.map(v => (
-                              <div key={v.id} className="flex items-center gap-2 p-2 hover:bg-slate-50 rounded-lg">
-                                <div className="w-7 h-7 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-slate-600">
-                                  {v.nombre?.charAt(0)}{v.apellidos?.charAt(0)}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-medium text-slate-700 truncate">{v.nombre} {v.apellidos}</p>
-                                  <p className="text-xs text-slate-500">{v.numeroVoluntario}</p>
-                                </div>
-                              </div>
-                            ))}
+              {/* Overlay para mostrar el item arrastrándose */}
+              <DragOverlay>
+                {activeId ? (
+                  <div className="bg-white shadow-xl p-2 rounded-lg border-2 border-orange-500 opacity-90 w-64 ring-4 ring-orange-200 pointer-events-none">
+                    {(() => {
+                      const v = voluntarios.find(vol => vol.id === activeId);
+                      if (!v) return null;
+                      return (
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-slate-600">
+                            {v.nombre?.charAt(0)}{v.apellidos?.charAt(0)}
                           </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-slate-800 truncate">{v.nombre} {v.apellidos}</p>
+                            <p className="text-xs text-slate-500">{v.numeroVoluntario}</p>
+                          </div>
+                        </div>
+                      )
+                    })()}
+                  </div>
+                ) : null}
+              </DragOverlay>
 
-                  {/* Sin área asignada */}
-                  {sinArea.length > 0 && (
-                    <div className="bg-white border-2 border-dashed border-slate-300 rounded-xl overflow-hidden">
-                      <div className="bg-slate-100 px-4 py-3">
-                        <div className="flex items-center justify-between">
-                          <h4 className="font-bold text-slate-600">Sin Área Asignada</h4>
-                          <span className="bg-slate-200 px-2 py-0.5 rounded-full text-sm font-bold text-slate-600">
-                            {sinArea.length}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="p-3 max-h-48 overflow-y-auto">
-                        <div className="space-y-2">
-                          {sinArea.map(v => (
-                            <div key={v.id} className="flex items-center gap-2 p-2 hover:bg-slate-50 rounded-lg">
-                              <div className="w-7 h-7 rounded-full bg-orange-100 flex items-center justify-center text-xs font-bold text-orange-600">
-                                {v.nombre?.charAt(0)}{v.apellidos?.charAt(0)}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-slate-700 truncate">{v.nombre} {v.apellidos}</p>
-                                <p className="text-xs text-slate-500">{v.numeroVoluntario}</p>
-                              </div>
-                              <button
-                                onClick={() => handleEditarFicha(v)}
-                                className="text-xs text-orange-600 hover:text-orange-700 font-medium"
-                              >
-                                Asignar
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
+            </DndContext>
           )}
         </div>
       </div>
@@ -2164,11 +2343,14 @@ export default function AdministracionPage() {
               </select>
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Adjuntar Documento</label>
-              <div className="border-2 border-dashed border-slate-200 rounded-lg p-6 text-center hover:border-orange-300 transition-colors cursor-pointer">
-                <Upload size={32} className="mx-auto text-slate-300 mb-2" />
-                <p className="text-sm text-slate-500">Arrastra un archivo o haz clic para seleccionar</p>
-              </div>
+              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Adjunto</label>
+              <DocumentUploader
+                label="Ticket"
+                apiEndpoint="/api/admin/caja/drive-upload"
+                onUpload={(url) => setNuevoMovimiento({ ...nuevoMovimiento, adjuntoUrl: url })}
+                currentUrl={nuevoMovimiento.adjuntoUrl}
+                folder="Tickets Caja"
+              />
             </div>
             <div className="flex gap-3 pt-2">
               <button type="button" onClick={() => setShowNuevoMovimiento(false)} className="flex-1 py-2.5 border border-slate-300 text-slate-700 rounded-lg font-medium hover:bg-slate-50 transition-colors">Cancelar</button>

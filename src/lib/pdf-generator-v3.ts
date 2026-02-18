@@ -1,7 +1,7 @@
 import jsPDF from 'jspdf'
 import { PsiFormState } from '@/types/psi'
 import { LOGO_BASE64 } from '@/lib/logo-data'
-import { FOOTER_BASE64 } from '@/lib/footer-data'
+import { AYTO_LOGO_BASE64 } from '@/lib/footer-data'
 
 // ─── Colores exactos del formulario web ───
 const BLUE: [number, number, number] = [40, 54, 102]    // #283666 – exacto del logo
@@ -117,20 +117,50 @@ function drawFooter(doc: jsPDF) {
     const footerH = 18                     // same height as header
     const footerY = PAGE_H - footerH
 
-    // Draw Blue Background first (in case image has transcription/padding issues)
+    // 1. Blue Background
     drawRect(doc, 0, footerY, PAGE_W, footerH, BLUE)
 
-    // Footer Image - full width
-    // The image aspect ratio is approx 2480x350 (from typical footer strips)
-    // We force fit to PAGE_W x footerH
+    // 2. Center Text
+    doc.setTextColor(...WHITE)
+    const centerX = PAGE_W / 2
+    const textStartY = footerY + 4
+    const lineHeight = 3.2
+
+    doc.setFontSize(8)
+    doc.setFont('helvetica', 'bold')
+    doc.text('SERVICIO DE PROTECCIÓN CIVIL', centerX, textStartY, { align: 'center' })
+
+    doc.setFontSize(7)
+    doc.setFont('helvetica', 'normal')
+    doc.text('Ayuntamiento de Bormujos (Sevilla)', centerX, textStartY + lineHeight, { align: 'center' })
+    doc.text('C/ Maestro Francisco Rodríguez s/n | Avda. Universidad de Salamanca', centerX, textStartY + lineHeight * 2, { align: 'center' })
+    doc.text('info.pcivil@bormujos.net | www.proteccioncivilbormujos.es', centerX, textStartY + lineHeight * 3, { align: 'center' })
+
+    // 3. Right Logo (Protección Civil)
+    // Scale slightly smaller than header to fit comfortably
+    const pcLogoW = 38
+    const pcLogoH = pcLogoW * (333 / 1024) // approx 12.3mm
+    const pcLogoX = PAGE_W - MARGIN - pcLogoW
+    const pcLogoY = footerY + (footerH - pcLogoH) / 2
     try {
-        doc.addImage(FOOTER_BASE64, 'PNG', 0, footerY, PAGE_W, footerH)
+        doc.addImage(LOGO_BASE64, 'PNG', pcLogoX, pcLogoY, pcLogoW, pcLogoH)
     } catch (e) {
-        console.error('Error drawing footer image', e)
-        // Fallback text if image fails
-        doc.setTextColor(...WHITE)
-        doc.setFontSize(8)
-        doc.text('Protección Civil Bormujos', PAGE_W / 2, footerY + 9, { align: 'center' })
+        console.error('Error drawing footer PC logo', e)
+    }
+
+    // 4. Left Logo (Ayuntamiento) - Placeholder
+    // Dimensions for a typical coat of arms (square-ish or vertical)
+    const aytoH = 12
+    const aytoW = 12 * (365 / 400) // approx aspect ratio if unknown, assume near square
+    const aytoX = MARGIN
+    const aytoY = footerY + (footerH - aytoH) / 2
+
+    if (AYTO_LOGO_BASE64) {
+        try {
+            doc.addImage(AYTO_LOGO_BASE64, 'PNG', aytoX, aytoY, aytoW, aytoH)
+        } catch (e) {
+            console.error('Error drawing footer Ayto logo', e)
+        }
     }
 }
 
