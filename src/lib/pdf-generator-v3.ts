@@ -77,24 +77,24 @@ function drawHeader(doc: jsPDF): number {
     const headerH = 18  // taller header for logo integration
     drawRect(doc, 0, 0, PAGE_W, headerH, BLUE)
 
-    // PSI – BOLD, no border, spans full height of the two text lines
+    // PSI – BOLD, same visual height as the two text lines to the right
     const psiX = MARGIN + 2
-    const psiY = 2
-    const psiW = 16
-    const psiH = headerH - 4
+    const textBlockTop = 4        // top of "PARTE DE" line
+    const textBlockBottom = 15    // bottom of "SERVICIO E INTERVENCIÓN" line
+    const psiW = 20
     doc.setTextColor(...WHITE)
-    doc.setFontSize(14)
+    doc.setFontSize(22)
     doc.setFont('helvetica', 'bold')
-    doc.text('PSI', psiX + psiW / 2, psiY + psiH / 2 + 2.5, { align: 'center' })
+    doc.text('PSI', psiX + psiW / 2, (textBlockTop + textBlockBottom) / 2 + 3, { align: 'center' })
 
-    // Title – larger font
+    // Title – two lines aligned to the right of PSI
     doc.setTextColor(...WHITE)
     doc.setFontSize(8)
     doc.setFont('helvetica', 'normal')
-    doc.text('PARTE DE', psiX + psiW + 4, 7)
+    doc.text('PARTE DE', psiX + psiW + 4, textBlockTop + 4)
     doc.setFontSize(12)
     doc.setFont('helvetica', 'bold')
-    doc.text('SERVICIO E INTERVENCIÓN', psiX + psiW + 4, 13)
+    doc.text('SERVICIO E INTERVENCIÓN', psiX + psiW + 4, textBlockBottom)
 
     // Logo — imagen real embebida
     const logoW = 52
@@ -113,6 +113,12 @@ function drawFooter(doc: jsPDF) {
     const footerH = 18                     // same height as header
     const footerY = PAGE_H - footerH
     drawRect(doc, 0, footerY, PAGE_W, footerH, BLUE)
+
+    // Orange square icon on the left (like header)
+    const iconSize = 10
+    const iconX = MARGIN + 2
+    const iconY = footerY + (footerH - iconSize) / 2
+    drawRect(doc, iconX, iconY, iconSize, iconSize, ORANGE)
 
     // Footer text centered
     doc.setTextColor(...WHITE)
@@ -140,8 +146,8 @@ function drawPage1(doc: jsPDF, data: PsiFormState) {
     let y = drawHeader(doc)
 
     // ── Info fields (left side) + Resource tables (right side) ──
-    const leftW = CONTENT_W * 0.48
-    const rightW = CONTENT_W * 0.50
+    const leftW = CONTENT_W * 0.55
+    const rightW = CONTENT_W * 0.43
     const rightX = MARGIN + leftW + CONTENT_W * 0.02
     const fieldH = 7
     const labelW = 22
@@ -150,13 +156,16 @@ function drawPage1(doc: jsPDF, data: PsiFormState) {
     const startY = y
 
     // Row 1: FECHA + Nº INFORME
-    textInBox(doc, 'FECHA', MARGIN, y, labelW, fieldH, { bold: true, size: 10 })
-    drawRect(doc, MARGIN + labelW, y, 30, fieldH, undefined, BORDER)
-    textInBox(doc, data.fecha || '', MARGIN + labelW, y, 30, fieldH, { size: 10 })
+    textInBox(doc, 'FECHA', MARGIN, y, labelW, fieldH, { bold: true, size: 9 })
+    drawRect(doc, MARGIN + labelW, y, 28, fieldH, undefined, BORDER)
+    textInBox(doc, data.fecha || '', MARGIN + labelW, y, 28, fieldH, { size: 9 })
 
-    textInBox(doc, 'Nº INFORME', MARGIN + labelW + 32, y, 22, fieldH, { bold: true, size: 10 })
-    drawRect(doc, MARGIN + labelW + 54, y, leftW - labelW - 54, fieldH, undefined, BORDER)
-    textInBox(doc, data.numero || 'Auto-generado', MARGIN + labelW + 54, y, leftW - labelW - 54, fieldH, { size: 10 })
+    const informeX = MARGIN + labelW + 30
+    const informeLabelW = 20
+    const informeValueW = leftW - labelW - 30 - informeLabelW
+    textInBox(doc, 'Nº INFORME', informeX, y, informeLabelW, fieldH, { bold: true, size: 8 })
+    drawRect(doc, informeX + informeLabelW, y, informeValueW, fieldH, undefined, BORDER)
+    textInBox(doc, data.numero || 'Auto-generado', informeX + informeLabelW, y, informeValueW, fieldH, { size: 8 })
     y += fieldH + 1
 
     // Row 2: HORA
@@ -438,7 +447,7 @@ function drawPage1(doc: jsPDF, data: PsiFormState) {
 
     // Signature bodies – corrected labels
     const sigLabels = ['INDICATIVO', 'RESPONSABLE DE TURNO', 'JEFE DE SERVICIO']
-    const sigValues = [data.indicativosInforman || '', data.responsableTurno || '', data.vbJefeServicio || '']
+    const sigValues = [data.indicativosInforman || '', data.responsableTurno || '', data.vbJefeServicio || 'J-44']
     const sigFootLabels = ['Firma Informante', 'Firma Responsable', 'Firma Jefe Servicio']
     const sigImages = [data.firmaInformante, data.firmaResponsable, data.firmaJefe]
 

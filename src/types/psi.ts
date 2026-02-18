@@ -73,7 +73,7 @@ export const INITIAL_PSI_STATE: PsiFormState = {
     tabla2: Array(8).fill({ equipo: '', walkie: '' }),
 
     // Tiempos
-    tiempos: { llamada: '', salida: '', llegada: '', terminado: '', disponible: '' },
+    tiempos: { llamada: '00:00', salida: '00:00', llegada: '00:00', terminado: '00:00', disponible: '00:00' },
 
     // Tipología
     prevencion: { mantenimiento: false, practicas: false, suministros: false, preventivo: false, otros: false },
