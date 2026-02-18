@@ -429,23 +429,23 @@ ${textComponents.conclusion}`.trim()
                             <div className={styles.bar}>PAUTAS DE TIEMPO</div>
                             <div className={styles.timeGrid}>
                                 <div className={styles.timeBox}>
-                                    <input className={styles.timeInput} value={form.tiempos.llamada} onChange={(e) => setTiempo('llamada', e.target.value)} />
+                                    <input type="time" className={styles.timeInput} value={form.tiempos.llamada} onChange={(e) => setTiempo('llamada', e.target.value)} />
                                     <div className={styles.timeLabel}>LLAMADA</div>
                                 </div>
                                 <div className={styles.timeBox}>
-                                    <input className={styles.timeInput} value={form.tiempos.salida} onChange={(e) => setTiempo('salida', e.target.value)} />
+                                    <input type="time" className={styles.timeInput} value={form.tiempos.salida} onChange={(e) => setTiempo('salida', e.target.value)} />
                                     <div className={styles.timeLabel}>SALIDA</div>
                                 </div>
                                 <div className={styles.timeBox}>
-                                    <input className={styles.timeInput} value={form.tiempos.llegada} onChange={(e) => setTiempo('llegada', e.target.value)} />
+                                    <input type="time" className={styles.timeInput} value={form.tiempos.llegada} onChange={(e) => setTiempo('llegada', e.target.value)} />
                                     <div className={styles.timeLabel}>LLEGADA</div>
                                 </div>
                                 <div className={styles.timeBox}>
-                                    <input className={styles.timeInput} value={form.tiempos.terminado} onChange={(e) => setTiempo('terminado', e.target.value)} />
+                                    <input type="time" className={styles.timeInput} value={form.tiempos.terminado} onChange={(e) => setTiempo('terminado', e.target.value)} />
                                     <div className={styles.timeLabel}>TERMINADO</div>
                                 </div>
                                 <div className={styles.timeBox}>
-                                    <input className={styles.timeInput} value={form.tiempos.disponible} onChange={(e) => setTiempo('disponible', e.target.value)} />
+                                    <input type="time" className={styles.timeInput} value={form.tiempos.disponible} onChange={(e) => setTiempo('disponible', e.target.value)} />
                                     <div className={styles.timeLabel}>DISPONIBLE</div>
                                 </div>
                             </div>
