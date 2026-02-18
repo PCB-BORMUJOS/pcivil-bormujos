@@ -630,9 +630,45 @@ export default function AdministracionPage() {
   const handleGuardarFicha = async () => {
     if (!selectedVoluntario) return;
 
-    // Primero guardar la ficha
+    // Verificar que los campos obligatorios estén preenchidos para nueva ficha
+    const esNuevaFicha = !selectedVoluntario.id;
+    if (esNuevaFicha) {
+      if (!selectedVoluntario.nombre || !selectedVoluntario.apellidos || !selectedVoluntario.email) {
+        alert('Por favor, completa los datos del voluntario: Nombre, Apellidos y Email');
+        return;
+      }
+    }
+
     try {
-      const res = await fetch(`/api/admin/personal/${selectedVoluntario.id}/ficha`, {
+      let voluntarioId = selectedVoluntario.id;
+
+      // Si es una nueva ficha, primero crear el voluntario
+      if (esNuevaFicha) {
+        const resVoluntario = await fetch('/api/admin/personal', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            numeroVoluntario: selectedVoluntario.numeroVoluntario,
+            nombre: selectedVoluntario.nombre,
+            apellidos: selectedVoluntario.apellidos,
+            email: selectedVoluntario.email,
+            telefono: selectedVoluntario.telefono || '',
+            rolId: fichaData.rolId || null,
+            activo: true
+          })
+        });
+        const dataVoluntario = await resVoluntario.json();
+
+        if (!dataVoluntario.success) {
+          alert('Error al crear el voluntario: ' + dataVoluntario.error);
+          return;
+        }
+
+        voluntarioId = dataVoluntario.voluntario.id;
+      }
+
+      // Guardar la ficha
+      const res = await fetch(`/api/admin/personal/${voluntarioId}/ficha`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(fichaData)
@@ -646,7 +682,7 @@ export default function AdministracionPage() {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              id: selectedVoluntario.id,
+              id: voluntarioId,
               rolId: fichaData.rolId,
               accion: 'rol'
             })
@@ -2019,7 +2055,13 @@ export default function AdministracionPage() {
             <div className="grid grid-cols-4 gap-4">
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Indicativo 1</label>
-                <input type="text" value={selectedVoluntario?.numeroVoluntario || ''} disabled className="w-full border border-slate-200 rounded-lg p-2.5 bg-slate-50 text-sm" />
+                <input
+                  type="text"
+                  value={selectedVoluntario?.numeroVoluntario || ''}
+                  onChange={e => setSelectedVoluntario({ ...selectedVoluntario!, numeroVoluntario: e.target.value })}
+                  disabled={!!selectedVoluntario?.id}
+                  className="w-full border border-slate-200 rounded-lg p-2.5 bg-slate-50 text-sm"
+                />
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Indicativo 2</label>
@@ -2039,11 +2081,23 @@ export default function AdministracionPage() {
             <div className="grid grid-cols-6 gap-4">
               <div className="col-span-2">
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Nombre</label>
-                <input type="text" value={selectedVoluntario?.nombre || ''} disabled className="w-full border border-slate-200 rounded-lg p-2.5 bg-slate-50 text-sm" />
+                <input
+                  type="text"
+                  value={selectedVoluntario?.nombre || ''}
+                  onChange={e => setSelectedVoluntario({ ...selectedVoluntario!, nombre: e.target.value })}
+                  disabled={!!selectedVoluntario?.id}
+                  className="w-full border border-slate-200 rounded-lg p-2.5 bg-slate-50 text-sm"
+                />
               </div>
               <div className="col-span-2">
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Apellidos</label>
-                <input type="text" value={selectedVoluntario?.apellidos || ''} disabled className="w-full border border-slate-200 rounded-lg p-2.5 bg-slate-50 text-sm" />
+                <input
+                  type="text"
+                  value={selectedVoluntario?.apellidos || ''}
+                  onChange={e => setSelectedVoluntario({ ...selectedVoluntario!, apellidos: e.target.value })}
+                  disabled={!!selectedVoluntario?.id}
+                  className="w-full border border-slate-200 rounded-lg p-2.5 bg-slate-50 text-sm"
+                />
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Edad</label>
@@ -2159,7 +2213,13 @@ export default function AdministracionPage() {
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Email</label>
-                <input type="email" value={selectedVoluntario?.email || ''} disabled className="w-full border border-slate-200 rounded-lg p-2.5 bg-slate-50 text-sm" />
+                <input
+                  type="email"
+                  value={selectedVoluntario?.email || ''}
+                  onChange={e => setSelectedVoluntario({ ...selectedVoluntario!, email: e.target.value })}
+                  disabled={!!selectedVoluntario?.id}
+                  className="w-full border border-slate-200 rounded-lg p-2.5 bg-slate-50 text-sm"
+                />
               </div>
             </div>
 
