@@ -1,6 +1,7 @@
 import jsPDF from 'jspdf'
 import { PsiFormState } from '@/types/psi'
 import { LOGO_BASE64 } from '@/lib/logo-data'
+import { FOOTER_BASE64 } from '@/lib/footer-data'
 
 // ─── Colores exactos del formulario web ───
 const BLUE: [number, number, number] = [40, 54, 102]    // #283666 – exacto del logo
@@ -109,34 +110,28 @@ function drawHeader(doc: jsPDF): number {
 // ═══════════════════════════════════════════════════
 //  FOOTER – same height and color as header
 // ═══════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════
+//  FOOTER – Image based (18mm height)
+// ═══════════════════════════════════════════════════
 function drawFooter(doc: jsPDF) {
     const footerH = 18                     // same height as header
     const footerY = PAGE_H - footerH
+
+    // Draw Blue Background first (in case image has transcription/padding issues)
     drawRect(doc, 0, footerY, PAGE_W, footerH, BLUE)
 
-    // Orange square icon on the left (like header)
-    const iconSize = 10
-    const iconX = MARGIN + 2
-    const iconY = footerY + (footerH - iconSize) / 2
-    drawRect(doc, iconX, iconY, iconSize, iconSize, ORANGE)
-
-    // Footer text centered
-    doc.setTextColor(...WHITE)
-    doc.setFontSize(7)
-    doc.setFont('helvetica', 'bold')
-    doc.text('Servicio de Protección Civil', PAGE_W / 2, footerY + 5, { align: 'center' })
-    doc.setFontSize(6)
-    doc.setFont('helvetica', 'normal')
-    doc.text('Ayuntamiento de Bormujos (Sevilla)', PAGE_W / 2, footerY + 9, { align: 'center' })
-    doc.text('Calle Maestro Francisco Rodríguez | Avda Universidad de Salamanca', PAGE_W / 2, footerY + 12.5, { align: 'center' })
-    doc.text('info.pcivil@bormujos.net  |  www.proteccioncivilbormujos.es', PAGE_W / 2, footerY + 15.5, { align: 'center' })
-
-    // Logo on the right side of footer
-    const logoW = 42
-    const logoH = logoW * (333 / 1024)
-    const logoX = PAGE_W - MARGIN - logoW
-    const logoY = footerY + (footerH - logoH) / 2
-    doc.addImage(LOGO_BASE64, 'PNG', logoX, logoY, logoW, logoH)
+    // Footer Image - full width
+    // The image aspect ratio is approx 2480x350 (from typical footer strips)
+    // We force fit to PAGE_W x footerH
+    try {
+        doc.addImage(FOOTER_BASE64, 'PNG', 0, footerY, PAGE_W, footerH)
+    } catch (e) {
+        console.error('Error drawing footer image', e)
+        // Fallback text if image fails
+        doc.setTextColor(...WHITE)
+        doc.setFontSize(8)
+        doc.text('Protección Civil Bormujos', PAGE_W / 2, footerY + 9, { align: 'center' })
+    }
 }
 
 // ═══════════════════════════════════════════════════
@@ -156,7 +151,8 @@ function drawPage1(doc: jsPDF, data: PsiFormState) {
     const startY = y
 
     // Row 1: FECHA + Nº INFORME
-    textInBox(doc, 'FECHA', MARGIN, y, labelW, fieldH, { bold: true, size: 9 })
+    // Labels resized to 8pt to prevent overlapping
+    textInBox(doc, 'FECHA', MARGIN, y, labelW, fieldH, { bold: true, size: 8 })
     drawRect(doc, MARGIN + labelW, y, 28, fieldH, undefined, BORDER)
     textInBox(doc, data.fecha || '', MARGIN + labelW, y, 28, fieldH, { size: 9 })
 
@@ -165,29 +161,30 @@ function drawPage1(doc: jsPDF, data: PsiFormState) {
     const informeValueW = leftW - labelW - 30 - informeLabelW
     textInBox(doc, 'Nº INFORME', informeX, y, informeLabelW, fieldH, { bold: true, size: 8 })
     drawRect(doc, informeX + informeLabelW, y, informeValueW, fieldH, undefined, BORDER)
-    textInBox(doc, data.numero || 'Auto-generado', informeX + informeLabelW, y, informeValueW, fieldH, { size: 8 })
+    // Informe value centered and larger (12pt)
+    textInBox(doc, data.numero || 'Auto-generado', informeX + informeLabelW, y, informeValueW, fieldH, { size: 12, bold: true, align: 'center' })
     y += fieldH + 1
 
     // Row 2: HORA
-    textInBox(doc, 'HORA', MARGIN, y, labelW, fieldH, { bold: true, size: 10 })
+    textInBox(doc, 'HORA', MARGIN, y, labelW, fieldH, { bold: true, size: 8 })
     drawRect(doc, MARGIN + labelW, y, 30, fieldH, undefined, BORDER)
     textInBox(doc, data.hora || '', MARGIN + labelW, y, 30, fieldH, { size: 10 })
     y += fieldH + 1
 
     // Row 3: LUGAR
-    textInBox(doc, 'LUGAR', MARGIN, y, labelW, fieldH, { bold: true, size: 10 })
+    textInBox(doc, 'LUGAR', MARGIN, y, labelW, fieldH, { bold: true, size: 8 })
     drawRect(doc, MARGIN + labelW, y, leftW - labelW, fieldH, undefined, BORDER)
     textInBox(doc, data.lugar || '', MARGIN + labelW, y, leftW - labelW, fieldH, { size: 10 })
     y += fieldH + 1
 
     // Row 4: MOTIVO
-    textInBox(doc, 'MOTIVO', MARGIN, y, labelW, fieldH, { bold: true, size: 10 })
+    textInBox(doc, 'MOTIVO', MARGIN, y, labelW, fieldH, { bold: true, size: 8 })
     drawRect(doc, MARGIN + labelW, y, leftW - labelW, fieldH, undefined, BORDER)
     textInBox(doc, data.motivo || '', MARGIN + labelW, y, leftW - labelW, fieldH, { size: 10 })
     y += fieldH + 1
 
     // Row 5: ALERTANTE
-    textInBox(doc, 'ALERTANTE', MARGIN, y, labelW, fieldH, { bold: true, size: 10 })
+    textInBox(doc, 'ALERTANTE', MARGIN, y, labelW, fieldH, { bold: true, size: 8 })
     drawRect(doc, MARGIN + labelW, y, leftW - labelW, fieldH, undefined, BORDER)
     textInBox(doc, data.alertante || '', MARGIN + labelW, y, leftW - labelW, fieldH, { size: 10 })
     y += fieldH + 2
@@ -525,11 +522,25 @@ function drawPage3(doc: jsPDF, data: PsiFormState) {
     const availableH = PAGE_H - y - footerMargin
     const gap = 5
     const maxPerPage = 2  // 2 images per page
-    const photoW = CONTENT_W  // full width
+    const photoW = CONTENT_W  // full width to margins
     // 4:3 aspect ratio: height = width * 3/4
-    const photoH43 = photoW * 3 / 4
-    // Use the smaller of 4:3 ratio height or available space
-    const photoH = Math.min(photoH43, (availableH - gap) / maxPerPage)
+    // Calculate optimal photo height to fit 2 per page
+    // Each photo gets (availableH - gap) / 2 space vertical max
+    const maxPhotoH = (availableH - gap) / maxPerPage
+
+    // We want 4:3 aspect. If 4:3 height is > maxPhotoH, we constrain by height.
+    // Otherwise we constrain by width (photoW).
+    const idealH = photoW * 0.75
+
+    // If ideal height fits, great. If not, we scale down maintaining ratio.
+    let drawW, drawH
+    if (idealH <= maxPhotoH) {
+        drawW = photoW
+        drawH = idealH
+    } else {
+        drawH = maxPhotoH
+        drawW = drawH * (4 / 3) // 4:3 aspect
+    }
 
     if (fotos.length === 0) {
         drawRect(doc, MARGIN, y, CONTENT_W, 40, BG_LIGHT, BORDER)
@@ -538,7 +549,7 @@ function drawPage3(doc: jsPDF, data: PsiFormState) {
         doc.text('No hay fotografías adjuntas', PAGE_W / 2, y + 20, { align: 'center' })
     } else {
         for (let i = 0; i < fotos.length; i++) {
-            // If we've filled a page, add a new one
+            // New page if needed
             if (i > 0 && i % maxPerPage === 0) {
                 drawFooter(doc)
                 doc.addPage()
@@ -546,33 +557,25 @@ function drawPage3(doc: jsPDF, data: PsiFormState) {
             }
 
             const indexInPage = i % maxPerPage
-            const py = y + indexInPage * (photoH + gap)
+            // Center content vertically in the slot if smaller than slot
+            const slotH = maxPhotoH
+            const slotY = y + indexInPage * (slotH + gap)
 
-            // Draw background frame
-            drawRect(doc, MARGIN, py, photoW, photoH, BG_LIGHT, BORDER)
+            // Center the image horizontally
+            const imgX = MARGIN + (CONTENT_W - drawW) / 2
+            // Center vertically within slot
+            const imgY = slotY + (slotH - drawH) / 2
+
+            // Draw background frame around the image area
+            drawRect(doc, imgX, imgY, drawW, drawH, BG_LIGHT, BORDER)
 
             if (fotos[i]) {
                 try {
-                    // Calculate dimensions to fit image in 4:3 container without distortion
-                    const imgPadding = 2
-                    const maxW = photoW - imgPadding * 2
-                    const maxH = photoH - imgPadding * 2
-                    // Assume 4:3 source images – fit within container maintaining aspect ratio
-                    const imgRatio = 4 / 3
-                    let drawW = maxW
-                    let drawH = drawW / imgRatio
-                    if (drawH > maxH) {
-                        drawH = maxH
-                        drawW = drawH * imgRatio
-                    }
-                    // Center the image in the container
-                    const imgX = MARGIN + imgPadding + (maxW - drawW) / 2
-                    const imgY = py + imgPadding + (maxH - drawH) / 2
-                    doc.addImage(fotos[i], 'JPEG', imgX, imgY, drawW, drawH)
+                    doc.addImage(fotos[i]!, 'JPEG', imgX, imgY, drawW, drawH)
                 } catch {
                     doc.setTextColor(148, 163, 184)
                     doc.setFontSize(6)
-                    doc.text('Error al cargar imagen', MARGIN + photoW / 2, py + photoH / 2, { align: 'center' })
+                    doc.text('Error al cargar imagen', imgX + drawW / 2, imgY + drawH / 2, { align: 'center' })
                 }
             }
         }
