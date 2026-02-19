@@ -1201,3 +1201,43 @@ model NecesidadFormativa {
   
   @@map("necesidades_formativas")
 }
+
+// ============================================
+// MODELO DE AUDITORÍA / TRAZABILIDAD
+// ============================================
+
+model AuditLog {
+  id              String   @id @default(cuid())
+  
+  // Información de la acción
+  accion          String   @db.Text // CREATE, UPDATE, DELETE, LOGIN, LOGOUT, EXPORT, etc.
+  entidad         String   // Nombre del modelo: Usuario, Voluntario, Evento, Caja, etc.
+  entidadId       String?  @map("entidad_id") // ID del registro afectado
+  
+  // Datos anteriores y nuevos (JSON)
+  datosAnteriores Json?   @map("datos_anteriores") // Estado anterior
+  datosNuevos     Json?   @map("datos_nuevos") // Estado nuevo
+  
+  // Información del usuario
+  usuarioId       String?  @map("usuario_id")
+  usuarioEmail   String?  @map("usuario_email")
+  usuarioNombre  String?  @map("usuario_nombre")
+  
+  // Contexto adicional
+  ip             String?  @map("ip_address")
+  userAgent      String?  @map("user_agent")
+  
+  // Metadatos
+  descripcion    String?  @db.Text // Descripción legible de la acción
+  modulo         String?  // Módulo del sistema: Administracion, Personal, Incendios, etc.
+  
+  // Timestamps
+  createdAt      DateTime @default(now()) @map("created_at")
+  
+  @@index([createdAt])
+  @@index([entidad, entidadId])
+  @@index([usuarioId])
+  @@index([accion])
+  @@index([modulo])
+  @@map("audit_logs")
+}

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Settings, Shield, CreditCard, History, Users, TrendingUp, Download, Edit, Loader2, Plus, X, Eye, EyeOff, Trash2, Save, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
+import TrazabilidadPanel from '@/components/configuracion/TrazabilidadPanel';
 
 interface Usuario {
   id: string;
@@ -731,11 +732,7 @@ export default function ConfiguracionPage() {
 
       {/* Audit */}
       {activeTab === 'audit' && (
-        <div className="bg-white rounded-xl border shadow-sm p-20 text-center">
-          <History size={64} className="mx-auto mb-4 text-slate-200" />
-          <h3 className="font-bold text-slate-600 text-lg">Módulo de Seguridad Alta</h3>
-          <p className="text-sm text-slate-400 mt-2 max-w-md mx-auto">Los logs de auditoría están siendo migrados a la bóveda de datos securizada. Disponible próximamente.</p>
-        </div>
+        <TrazabilidadPanel />
       )}
 
       {/* Modal de creación de usuario */}
