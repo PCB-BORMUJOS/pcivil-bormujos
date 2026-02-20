@@ -461,63 +461,6 @@ export async function POST(request: NextRequest) {
                 return NextResponse.json({ success: true, certificadosGenerados })
 
             default:
-            case 'jornada': {
-                const { convocatoriaId: convIdJ, fecha, numeroJornada, titulo, horaInicio, horaFin } = body
-                if (!convIdJ || !fecha || !numeroJornada) {
-                    return NextResponse.json({ error: 'convocatoriaId, fecha y numeroJornada requeridos' }, { status: 400 })
-                }
-                const jornada = await (prisma as any).jornadaAsistencia.create({
-                    data: {
-                        convocatoriaId: convIdJ,
-                        fecha: new Date(fecha),
-                        numeroJornada: parseInt(String(numeroJornada)),
-                        titulo: titulo || null,
-                        horaInicio: horaInicio || null,
-                        horaFin: horaFin || null
-                    }
-                })
-                const inscripciones = await (prisma as any).inscripcion.findMany({
-                    where: { convocatoriaId: convIdJ, estado: { in: ['confirmada', 'pendiente'] } },
-                    select: { usuarioId: true }
-                })
-                if (inscripciones.length > 0) {
-                    await (prisma as any).registroFirma.createMany({
-                        data: inscripciones.map((ins: any) => ({ jornadaId: jornada.id, usuarioId: ins.usuarioId, asistio: false })),
-                        skipDuplicates: true
-                    })
-                }
-                const externosJ = await (prisma as any).participanteExterno.findMany({
-                    where: { convocatoriaId: convIdJ },
-                    select: { id: true }
-                })
-                if (externosJ.length > 0) {
-                    await (prisma as any).registroFirma.createMany({
-                        data: externosJ.map((ext: any) => ({ jornadaId: jornada.id, participanteExternoId: ext.id, asistio: false })),
-                        skipDuplicates: true
-                    })
-                }
-                return NextResponse.json({ jornada, registrosCreados: inscripciones.length + externosJ.length })
-            }
-            case 'participante-externo': {
-                const { convocatoriaId: convIdE, nombre, apellidos, dni, email, telefono, organizacion, cargo } = body
-                if (!convIdE || !nombre || !apellidos) {
-                    return NextResponse.json({ error: 'convocatoriaId, nombre y apellidos requeridos' }, { status: 400 })
-                }
-                const externo = await (prisma as any).participanteExterno.create({
-                    data: { convocatoriaId: convIdE, nombre, apellidos, dni: dni || null, email: email || null, telefono: telefono || null, organizacion: organizacion || null, cargo: cargo || null }
-                })
-                const jornadasE = await (prisma as any).jornadaAsistencia.findMany({
-                    where: { convocatoriaId: convIdE },
-                    select: { id: true }
-                })
-                if (jornadasE.length > 0) {
-                    await (prisma as any).registroFirma.createMany({
-                        data: jornadasE.map((j: any) => ({ jornadaId: j.id, participanteExternoId: externo.id, asistio: false })),
-                        skipDuplicates: true
-                    })
-                }
-                return NextResponse.json({ externo })
-            }
                 return NextResponse.json({ error: 'Tipo no válido' }, { status: 400 })
         }
     } catch (error) {
@@ -614,25 +557,6 @@ export async function PUT(request: NextRequest) {
                 return NextResponse.json({ success: true, necesidad })
 
             default:
-            case 'registro-firma': {
-                const { id: regId, asistio, firmaBase64, valoracionFormador, notaFormador, comentarioFormador } = body
-                if (!regId) return NextResponse.json({ error: 'id requerido' }, { status: 400 })
-                const updateData: any = {}
-                if (asistio !== undefined) updateData.asistio = asistio
-                if (firmaBase64 !== undefined) {
-                    updateData.firmaBase64 = firmaBase64
-                    updateData.fechaFirma = new Date()
-                    updateData.asistio = true
-                }
-                if (valoracionFormador !== undefined) updateData.valoracionFormador = valoracionFormador || null
-                if (notaFormador !== undefined) updateData.notaFormador = notaFormador !== null ? parseFloat(String(notaFormador)) : null
-                if (comentarioFormador !== undefined) updateData.comentarioFormador = comentarioFormador || null
-                const registroActualizado = await (prisma as any).registroFirma.update({
-                    where: { id: regId },
-                    data: updateData
-                })
-                return NextResponse.json({ registro: registroActualizado })
-            }
                 return NextResponse.json({ error: 'Tipo no válido' }, { status: 400 })
         }
     } catch (error) {
