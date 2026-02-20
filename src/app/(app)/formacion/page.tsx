@@ -8,6 +8,7 @@ import {
   ArrowUpDown, Send, CheckCircle, AlertTriangle, Clock, ShoppingCart, Ban,
   MapPin, Tag, FileText, CalendarDays
 } from 'lucide-react';
+import SignatureCanvas from '@/components/partes/SignatureCanvas';
 
 // ============================================
 // INTERFACES
@@ -203,6 +204,7 @@ export default function FormacionPage() {
   const { data: session } = useSession();
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isFormacionMember, setIsFormacionMember] = useState(false);
 
   // Estados principales
   const [mainTab, setMainTab] = useState<'inventario' | 'catalogo' | 'convocatorias' | 'inscripciones' | 'certificaciones' | 'necesidades'>('inventario');
@@ -293,6 +295,22 @@ export default function FormacionPage() {
     cargarDatos();
   }, [mainTab]);
 
+  // Effect para manejar edición de curso
+  useEffect(() => {
+    if (cursoEditando) {
+      setNuevoCurso({
+        codigo: cursoEditando.codigo || '',
+        nombre: cursoEditando.nombre || '',
+        descripcion: cursoEditando.descripcion || '',
+        tipo: cursoEditando.tipo || 'interna',
+        duracionHoras: cursoEditando.duracionHoras || 0,
+        validezMeses: cursoEditando.validezMeses || 0,
+        activo: cursoEditando.activo !== false
+      });
+      setShowNuevoCurso(true);
+    }
+  }, [cursoEditando]);
+
   // Cargar usuario actual
   useEffect(() => {
     const fetchCurrentUser = async () => {
@@ -304,8 +322,11 @@ export default function FormacionPage() {
           const userRes = await fetch('/api/mi-area');
           const userData = await userRes.json();
           if (userData?.usuario) {
-            setCurrentUser(userData.usuario);
+            // Guardamos ficha junto al usuario para comprobar área asignada
+            setCurrentUser({ ...userData.usuario, ficha: userData.ficha || null });
             setIsAdmin(userData.usuario.rol?.nombre === 'ADMIN' || userData.usuario.rol?.nombre === 'admin');
+            const area = (userData.ficha && userData.ficha.areaAsignada) || '';
+            setIsFormacionMember(area.toLowerCase() === 'formación' || area.toLowerCase() === 'formacion');
           }
         }
       } catch (e) {
@@ -316,6 +337,25 @@ export default function FormacionPage() {
       fetchCurrentUser();
     }
   }, [session]);
+
+  // UI: curso detalles modal
+  const [showCursoDetails, setShowCursoDetails] = useState(false);
+  const [selectedCurso, setSelectedCurso] = useState<Curso | null>(null);
+
+  const openCursoDetails = (curso: Curso) => {
+    setSelectedCurso(curso);
+    setShowCursoDetails(true);
+  };
+  const closeCursoDetails = () => {
+    setSelectedCurso(null);
+    setShowCursoDetails(false);
+  };
+
+  // Inscripciones: control de filas desplegables por convocatoria
+  const [expandedConvocatorias, setExpandedConvocatorias] = useState<Record<string, boolean>>({});
+  const toggleConvocatoria = (id: string) => {
+    setExpandedConvocatorias(prev => ({ ...prev, [id]: !prev[id] }));
+  };
 
   // Estado Gestion Convocatoria
   const [showGestionConvocatoria, setShowGestionConvocatoria] = useState(false);
@@ -360,6 +400,22 @@ export default function FormacionPage() {
     } catch (e) {
       console.error(e);
       // Revertir si falla (opcional, por simplicidad no lo implemento ahora)
+    }
+  };
+
+  const handleSaveFirma = async (inscripcionId: string, dataUrl: string) => {
+    // Optimistic update in grading list
+    setInscripcionesGrading(prev => prev.map(i => i.id === inscripcionId ? { ...i, firmaBiometrica: dataUrl, fechaFirma: new Date().toISOString() } : i));
+
+    try {
+      await fetch('/api/formacion', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tipo: 'inscripcion', id: inscripcionId, firmaBiometrica: dataUrl, fechaFirma: new Date().toISOString(), dispositivoFirma: (typeof navigator !== 'undefined' ? (navigator.platform || navigator.userAgent) : 'web') })
+      });
+    } catch (e) {
+      console.error('Error guardando firma:', e);
+      alert('Error guardando firma');
     }
   };
 
@@ -628,37 +684,72 @@ export default function FormacionPage() {
     }
 
     try {
-      const res = await fetch('/api/formacion', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tipo: 'curso',
-          nombre: nuevoCurso.nombre,
-          codigo: nuevoCurso.codigo,
-          descripcion: nuevoCurso.descripcion,
-          tipo_curso: nuevoCurso.tipo, // Rename to avoid conflict with 'tipo' action
-          duracionHoras: Number(nuevoCurso.duracionHoras),
-          validezMeses: nuevoCurso.validezMeses ? Number(nuevoCurso.validezMeses) : null,
-          activo: nuevoCurso.activo
-        })
-      });
+      const isEditing = !!cursoEditando;
 
-      if (res.ok) {
-        setShowNuevoCurso(false);
-        setNuevoCurso({
-          codigo: '', nombre: '', descripcion: '', tipo: 'interna',
-          duracionHoras: 0, validezMeses: 0, activo: true
+      if (isEditing) {
+        // Actualizar curso existente
+        const res = await fetch(`/api/formacion?id=${cursoEditando.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tipo: 'curso',
+            nombre: nuevoCurso.nombre,
+            codigo: nuevoCurso.codigo,
+            descripcion: nuevoCurso.descripcion,
+            tipo_curso: nuevoCurso.tipo,
+            duracionHoras: Number(nuevoCurso.duracionHoras),
+            validezMeses: nuevoCurso.validezMeses ? Number(nuevoCurso.validezMeses) : null,
+            activo: nuevoCurso.activo
+          })
         });
-        cargarCursos();
-        // Also refresh stats
-        const resStats = await fetch('/api/formacion?tipo=stats');
-        const dataStats = await resStats.json();
-        setStats(prev => ({ ...prev, totalCursos: dataStats.stats?.totalCursos || prev.totalCursos }));
 
-        alert('✅ Curso creado correctamente');
+        if (res.ok) {
+          setShowNuevoCurso(false);
+          setCursoEditando(null);
+          setNuevoCurso({
+            codigo: '', nombre: '', descripcion: '', tipo: 'interna',
+            duracionHoras: 0, validezMeses: 0, activo: true
+          });
+          cargarCursos();
+          alert('✅ Curso actualizado correctamente');
+        } else {
+          const err = await res.json();
+          alert('Error al actualizar curso: ' + (err.error || 'Error desconocido'));
+        }
       } else {
-        const err = await res.json();
-        alert('Error al crear curso: ' + (err.error || 'Error desconocido'));
+        // Crear nuevo curso
+        const res = await fetch('/api/formacion', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tipo: 'curso',
+            nombre: nuevoCurso.nombre,
+            codigo: nuevoCurso.codigo,
+            descripcion: nuevoCurso.descripcion,
+            tipo_curso: nuevoCurso.tipo,
+            duracionHoras: Number(nuevoCurso.duracionHoras),
+            validezMeses: nuevoCurso.validezMeses ? Number(nuevoCurso.validezMeses) : null,
+            activo: nuevoCurso.activo
+          })
+        });
+
+        if (res.ok) {
+          setShowNuevoCurso(false);
+          setNuevoCurso({
+            codigo: '', nombre: '', descripcion: '', tipo: 'interna',
+            duracionHoras: 0, validezMeses: 0, activo: true
+          });
+          cargarCursos();
+          // Also refresh stats
+          const resStats = await fetch('/api/formacion?tipo=stats');
+          const dataStats = await resStats.json();
+          setStats(prev => ({ ...prev, totalCursos: dataStats.stats?.totalCursos || prev.totalCursos }));
+
+          alert('✅ Curso creado correctamente');
+        } else {
+          const err = await res.json();
+          alert('Error al crear curso: ' + (err.error || 'Error desconocido'));
+        }
       }
     } catch (error) {
       console.error(error);
@@ -1047,6 +1138,25 @@ export default function FormacionPage() {
             </div>
           </div>
         )}
+        {showCursoDetails && selectedCurso && (
+          <Modal title={`Curso: ${selectedCurso.nombre}`} onClose={closeCursoDetails} size="lg">
+            <div className="space-y-4">
+              <p className="text-sm text-slate-600">Código: <span className="font-mono text-slate-800">{selectedCurso.codigo}</span></p>
+              <p className="text-sm text-slate-600">Duración: <span className="text-slate-800">{selectedCurso.duracionHoras} horas</span></p>
+              {selectedCurso.validezMeses && <p className="text-sm text-slate-600">Validez: <span className="text-slate-800">{selectedCurso.validezMeses} meses</span></p>}
+              <div className="text-sm text-slate-700">
+                <h5 className="font-bold mb-1">Descripción</h5>
+                <div className="prose max-w-none text-slate-600">{selectedCurso.descripcion || 'Sin descripción'}</div>
+              </div>
+              <div className="flex gap-2 justify-end">
+                {isAdmin && (
+                  <button onClick={() => { setCursoEditando(selectedCurso); closeCursoDetails(); }} className="px-4 py-2 bg-purple-600 text-white rounded-lg">Editar curso</button>
+                )}
+                <button onClick={closeCursoDetails} className="px-4 py-2 bg-gray-100 rounded-lg">Cerrar</button>
+              </div>
+            </div>
+          </Modal>
+        )}
 
         {/* ================================================================================== */}
         {/* CONTENIDOS RESTANTES */}
@@ -1123,14 +1233,17 @@ export default function FormacionPage() {
                       <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">
                         {curso.tipo}
                       </span>
-                      {isAdmin && (
-                        <button
-                          onClick={() => setCursoEditando(curso)}
-                          className="text-purple-600 hover:text-purple-800 text-sm font-medium"
-                        >
-                          Editar
-                        </button>
-                      )}
+                      <div className="flex items-center gap-2">
+                        <button onClick={() => openCursoDetails(curso)} className="text-slate-600 hover:text-slate-800 text-sm font-medium">Ver</button>
+                        {isAdmin && (
+                          <button
+                            onClick={() => setCursoEditando(curso)}
+                            className="text-purple-600 hover:text-purple-800 text-sm font-medium"
+                          >
+                            Editar
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -1221,34 +1334,64 @@ export default function FormacionPage() {
                       <th className="p-3 text-right">Acciones</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y">
-                    {inscripciones.map(i => (
-                      <tr key={i.id} className="hover:bg-slate-50/50">
-                        <td className="p-3">
-                          <div className="font-medium text-slate-800">{i.usuario?.nombre} {i.usuario?.apellidos}</div>
-                          <div className="text-xs text-slate-500">{i.usuario?.numeroVoluntario}</div>
-                        </td>
-                        <td className="p-3">
-                          <div className="font-medium">{i.convocatoria?.curso?.nombre}</div>
-                          <div className="text-xs text-slate-500">{i.convocatoria?.codigo}</div>
-                        </td>
-                        <td className="p-3 text-center text-slate-500">{new Date(i.fechaInscripcion).toLocaleDateString()}</td>
-                        <td className="p-3 text-center">
-                          <span className={`px-2 py-1 rounded-full text-xs font-bold ${i.estado === 'admitida' ? 'bg-green-100 text-green-700' :
-                            i.estado === 'rechazada' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'
-                            }`}>{i.estado}</span>
-                        </td>
-                        <td className="p-3 text-right">
-                          {i.estado === 'pendiente' && (
-                            <div className="flex justify-end gap-1">
-                              <button onClick={() => handleEstadoInscripcion(i.id, 'admitida')} className="p-1.5 text-green-600 hover:bg-green-100 rounded" title="Admitir"><CheckCircle size={18} /></button>
-                              <button onClick={() => handleEstadoInscripcion(i.id, 'rechazada')} className="p-1.5 text-red-600 hover:bg-red-100 rounded" title="Rechazar"><Ban size={18} /></button>
-                            </div>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
+                  {
+                    (() => {
+                      const grouped: Record<string, { convocatoria: any; inscritos: Inscripcion[] }> = {};
+                      inscripciones.forEach((insc: Inscripcion) => {
+                        const key = insc.convocatoria?.id || 'sin_convocatoria';
+                        if (!grouped[key]) grouped[key] = { convocatoria: insc.convocatoria, inscritos: [] };
+                        grouped[key].inscritos.push(insc);
+                      });
+
+                      return Object.values(grouped).map(g => (
+                        <tbody key={g.convocatoria?.id || Math.random()} className="divide-y">
+                          <tr className="bg-slate-50 hover:bg-slate-100 cursor-pointer">
+                            <td className="p-3" colSpan={2} onClick={() => toggleConvocatoria(g.convocatoria.id)}>
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <div className="font-medium text-slate-800">{g.convocatoria?.curso?.nombre}</div>
+                                  <div className="text-xs text-slate-500">{g.convocatoria?.codigo} · {new Date(g.convocatoria?.fechaInicio || '').toLocaleDateString()} - {new Date(g.convocatoria?.fechaFin || '').toLocaleDateString()}</div>
+                                </div>
+                                <div className="text-sm text-slate-600">{g.inscritos.length} inscritos</div>
+                              </div>
+                            </td>
+                            <td className="p-3 text-center">&nbsp;</td>
+                            <td className="p-3 text-center">{g.convocatoria?.estado}</td>
+                            <td className="p-3 text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                {(isAdmin || isFormacionMember) ? (
+                                  <>
+                                    <button onClick={() => handleOpenGestion(g.convocatoria)} className="px-3 py-1 bg-blue-100 text-blue-700 rounded-lg text-xs font-medium">Acta / Firmas</button>
+                                    <button onClick={() => { setShowNuevaConvocatoria(true); setNuevaConvocatoriaData({ ...nuevaConvocatoriaData, cursoId: g.convocatoria.curso?.id, fechaInicio: new Date(g.convocatoria.fechaInicio).toISOString().slice(0,10), fechaFin: new Date(g.convocatoria.fechaFin).toISOString().slice(0,10), lugar: g.convocatoria.lugar || '', plazasDisponibles: g.convocatoria.plazasDisponibles || 20, horario: g.convocatoria.horario || '', instructores: g.convocatoria.instructores || '' }); }} className="px-3 py-1 bg-slate-100 text-slate-700 rounded-lg text-xs font-medium">Editar</button>
+                                  </>
+                                ) : (
+                                  <button disabled className="px-3 py-1 bg-slate-100 text-slate-400 rounded-lg text-xs">Sin permiso</button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                          {expandedConvocatorias[g.convocatoria.id] && g.inscritos.map(ins => (
+                            <tr key={ins.id} className="hover:bg-white">
+                              <td className="p-3">
+                                <div className="font-medium text-slate-800">{ins.usuario?.nombre} {ins.usuario?.apellidos}</div>
+                                <div className="text-xs text-slate-500">{ins.usuario?.numeroVoluntario}</div>
+                              </td>
+                              <td className="p-3">{ins.estado}</td>
+                              <td className="p-3 text-center">{new Date(ins.fechaInscripcion).toLocaleDateString()}</td>
+                              <td className="p-3 text-center">{ins.porcentajeAsistencia ?? '-'}</td>
+                              <td className="p-3 text-right">
+                                <div className="flex items-center justify-end gap-2">
+                                  {(isAdmin || isFormacionMember) && (
+                                    <button onClick={() => { setSelectedConvocatoriaForGrading(g.convocatoria); setShowGestionConvocatoria(true); setInscripcionesGrading([ins]); }} className="px-3 py-1 bg-orange-100 text-orange-700 rounded-lg text-xs">Firmar</button>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      ));
+                    })()
+                  }
                 </table>
               </div>
             )}
@@ -1447,9 +1590,9 @@ export default function FormacionPage() {
         </Modal>
       )}
 
-      {/* MODAL: Nuevo Curso */}
+      {/* MODAL: Nuevo/Editar Curso */}
       {showNuevoCurso && (
-        <Modal title="Crear Nuevo Curso" onClose={() => setShowNuevoCurso(false)} size="lg">
+        <Modal title={cursoEditando ? 'Editar Curso' : 'Crear Nuevo Curso'} onClose={() => { setShowNuevoCurso(false); setCursoEditando(null); }} size="lg">
           <div className="space-y-5">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -1533,9 +1676,9 @@ export default function FormacionPage() {
             </div>
 
             <div className="flex justify-end gap-2 pt-4 bg-slate-50 -mx-6 -mb-6 p-4 mt-4 border-t">
-              <button onClick={() => setShowNuevoCurso(false)} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg font-medium">Cancelar</button>
+              <button onClick={() => { setShowNuevoCurso(false); setCursoEditando(null); }} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg font-medium">Cancelar</button>
               <button onClick={handleGuardarCurso} className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 shadow-sm font-medium">
-                Crear Curso
+                {cursoEditando ? 'Guardar Cambios' : 'Crear Curso'}
               </button>
             </div>
           </div>
@@ -1815,6 +1958,17 @@ export default function FormacionPage() {
                       ))}
                     </tbody>
                   </table>
+                </div>
+              )}
+
+              {inscripcionesGrading.length === 1 && (isAdmin || isFormacionMember) && (
+                <div className="mt-4 p-4 border border-dashed rounded-xl bg-white">
+                  <h5 className="font-bold text-slate-800 mb-2">Firma de asistencia</h5>
+                  <SignatureCanvas
+                    initialSignature={inscripcionesGrading[0].firmaBiometrica || ''}
+                    onSave={(dataUrl) => handleSaveFirma(inscripcionesGrading[0].id, dataUrl)}
+                    label="Firma del participante"
+                  />
                 </div>
               )}
             </div>
