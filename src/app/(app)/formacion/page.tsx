@@ -1,16 +1,5 @@
-      {/* MODAL: Firma individual */}
-      {showFirmaModal && firmaTarget && (
-        <Modal title={`Firmar asistencia: ${firmaTarget.usuario?.nombre} ${firmaTarget.usuario?.apellidos}`} onClose={() => setShowFirmaModal(false)} size="md">
-          <div className="space-y-4">
-            <div className="mb-2 text-sm text-slate-600">Por favor, firma en el recuadro inferior. Esta firma quedará registrada como asistencia biométrica.</div>
-            <SignatureCanvas
-              initialSignature={firmaTarget.firmaBiometrica || ''}
-              onSave={(dataUrl) => handleSaveFirma(firmaTarget.id, dataUrl)}
-              label="Firma del participante"
-            />
-          </div>
-        </Modal>
-      )}
+
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -303,6 +292,7 @@ export default function FormacionPage() {
     descripcion: '', areaAfectada: '', numeroPersonas: 1, motivo: '', prioridad: 3, impacto: 'medio', urgencia: 'normal'
   });
   const [showNuevaNecesidad, setShowNuevaNecesidad] = useState(false);
+  const [filtroEstadoConv, setFiltroEstadoConv] = useState<'todas' | 'abiertas' | 'cerradas'>('todas');
 
   // Modal de inscripción
   const [showInscripcionModal, setShowInscripcionModal] = useState(false);
@@ -372,6 +362,8 @@ export default function FormacionPage() {
 
   // Inscripciones: control de filas desplegables por convocatoria
   const [expandedConvocatorias, setExpandedConvocatorias] = useState<Record<string, boolean>>({});
+  const [expandedCursos, setExpandedCursos] = useState<Record<string, boolean>>({});
+  const toggleCursoExpand = (id: string) => setExpandedCursos(prev => ({ ...prev, [id]: !prev[id] }));
   const toggleConvocatoria = (id: string) => {
     setExpandedConvocatorias(prev => ({ ...prev, [id]: !prev[id] }));
   };
@@ -1293,8 +1285,13 @@ export default function FormacionPage() {
                         {curso.tipo}
                       </span>
                       <div className="flex items-center gap-2">
-                        <button onClick={() => openCursoDetails(curso)} className="text-slate-600 hover:text-slate-800 text-sm font-medium">Ver</button>
-                        {isAdmin && (
+                        <button
+                          onClick={() => toggleCursoExpand(curso.id)}
+                          className="text-slate-600 hover:text-slate-800 text-sm font-medium"
+                        >
+                          {expandedCursos[curso.id] ? '▲ Menos' : '▼ Ver más'}
+                        </button>
+                        {(isAdmin || isFormacionMember) && (
                           <button
                             onClick={() => setCursoEditando(curso)}
                             className="text-purple-600 hover:text-purple-800 text-sm font-medium"
@@ -1304,6 +1301,51 @@ export default function FormacionPage() {
                         )}
                       </div>
                     </div>
+                    {expandedCursos[curso.id] && (
+                      <div className="mt-3 pt-3 border-t border-slate-100 space-y-3 text-sm">
+                        {(curso as any).descripcion && (
+                          <div>
+                            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1">Descripción</p>
+                            <p className="text-slate-600 leading-relaxed">{(curso as any).descripcion}</p>
+                          </div>
+                        )}
+                        {(curso as any).objetivos && (
+                          <div>
+                            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1">Objetivos</p>
+                            <p className="text-slate-600 leading-relaxed">{(curso as any).objetivos}</p>
+                          </div>
+                        )}
+                        {(curso as any).temario && (
+                          <div>
+                            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1">Temario</p>
+                            <p className="text-slate-600 leading-relaxed whitespace-pre-line">{(curso as any).temario}</p>
+                          </div>
+                        )}
+                        {(curso as any).requisitosAcceso && (
+                          <div>
+                            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1">Requisitos de acceso</p>
+                            <p className="text-slate-600 leading-relaxed">{(curso as any).requisitosAcceso}</p>
+                          </div>
+                        )}
+                        <div className="flex flex-wrap gap-4 text-xs text-slate-500 pt-1">
+                          {(curso as any).entidadOrganiza && <span>🏛️ Organiza: <strong>{(curso as any).entidadOrganiza}</strong></span>}
+                          {(curso as any).entidadCertifica && <span>📋 Certifica: <strong>{(curso as any).entidadCertifica}</strong></span>}
+                          {(curso as any).costoPorAlumno > 0 && <span>💶 Coste: <strong>{(curso as any).costoPorAlumno}€/alumno</strong></span>}
+                        </div>
+                        {(isAdmin || isFormacionMember) && (
+                          <button
+                            onClick={() => {
+                              setNuevaConvocatoriaData({ cursoId: curso.id, fechaInicio: '', fechaFin: '', lugar: '', plazasDisponibles: (curso as any).plazasMaximas || 20, horario: '', instructores: '' });
+                              setConvocatoriaEditando(null);
+                              setShowNuevaConvocatoria(true);
+                            }}
+                            className="w-full py-2 text-xs text-center border-2 border-dashed border-blue-300 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors"
+                          >
+                            + Crear convocatoria de este curso
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -1314,17 +1356,41 @@ export default function FormacionPage() {
         {/* ... (Otros tabs como Convocatorias, Inscripciones, etc.) ... */}
         {mainTab === 'convocatorias' && (
           <div className="p-6">
-            <div className="flex justify-between items-center mb-6">
+            <div className="flex flex-wrap justify-between items-center mb-5 gap-3">
               <h3 className="text-lg font-bold text-slate-800">Convocatorias</h3>
-              {isAdmin && (
-                <button onClick={() => { setConvocatoriaEditando(null); setNuevaConvocatoriaData({ cursoId: '', fechaInicio: '', fechaFin: '', lugar: '', plazasDisponibles: 20, horario: '', instructores: '' }); setShowNuevaConvocatoria(true); }} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2">
-                  <Plus size={18} /> Nueva Convocatoria
-                </button>
-              )}
+              <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex rounded-lg border overflow-hidden text-sm">
+                  {(['todas', 'abiertas', 'cerradas'] as const).map(f => (
+                    <button
+                      key={f}
+                      onClick={() => setFiltroEstadoConv(f)}
+                      className={`px-3 py-1.5 font-medium transition-colors ${filtroEstadoConv === f ? 'bg-purple-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'}`}
+                    >
+                      {f === 'todas' ? 'Todas' : f === 'abiertas' ? '✅ Abiertas' : '🔒 Cerradas'}
+                    </button>
+                  ))}
+                </div>
+                {(isAdmin || isFormacionMember) && (
+                  <button
+                    onClick={() => { setConvocatoriaEditando(null); setNuevaConvocatoriaData({ cursoId: '', fechaInicio: '', fechaFin: '', lugar: '', plazasDisponibles: 20, horario: '', instructores: '' }); setShowNuevaConvocatoria(true); }}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 text-sm"
+                  >
+                    <Plus size={16} /> Nueva Convocatoria
+                  </button>
+                )}
+              </div>
             </div>
-            {convocatorias.length === 0 ? <p className="text-center py-10 text-slate-400">No hay convocatorias registradas</p> : (
+            {(() => {
+              const convsFiltradas = convocatorias.filter(c => {
+                if (filtroEstadoConv === 'abiertas') return c.estado === 'inscripciones_abiertas';
+                if (filtroEstadoConv === 'cerradas') return c.estado !== 'inscripciones_abiertas';
+                return true;
+              });
+              return convsFiltradas.length === 0
+                ? <p className="text-center py-10 text-slate-400">No hay convocatorias en este filtro</p>
+                : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {convocatorias.map(c => (
+                {convsFiltradas.map(c => (
                   <div key={c.id} className="bg-white border rounded-xl p-5 hover:shadow-md transition-shadow">
                     <div className="flex justify-between items-start mb-3">
                       <div>
@@ -1347,10 +1413,10 @@ export default function FormacionPage() {
                     </div>
 
                     <div className="pt-3 border-t flex gap-2">
-                      {isAdmin ? (
+                      {(isAdmin || isFormacionMember) ? (
                         <>
                           <button onClick={() => { setConvocatoriaEditando(c); setNuevaConvocatoriaData({ ...nuevaConvocatoriaData, cursoId: c.curso?.id, fechaInicio: new Date(c.fechaInicio).toISOString().slice(0,10), fechaFin: new Date(c.fechaFin).toISOString().slice(0,10), lugar: c.lugar || '', plazasDisponibles: c.plazasDisponibles || 20, horario: c.horario || '', instructores: (c as any).instructores || '' }); setShowNuevaConvocatoria(true); }} className="flex-1 py-2 text-center text-sm font-medium text-slate-600 hover:bg-slate-50 rounded-lg">Editar</button>
-                          <button onClick={() => handleOpenGestion(c)} className="flex-1 py-2 text-center text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg">Gestionar / Calificar</button>
+                          <button onClick={() => handleOpenGestion(c)} className="flex-1 py-2 text-center text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg">Acta / Firmas</button>
                         </>
                       ) : (
                         c.estado === 'inscripciones_abiertas' && c.plazasOcupadas < c.plazasDisponibles ? (
@@ -1374,7 +1440,8 @@ export default function FormacionPage() {
                   </div>
                 ))}
               </div>
-            )}
+              );
+            })()}
           </div>
         )}
 
@@ -2071,16 +2138,63 @@ export default function FormacionPage() {
                 </div>
               )}
 
-              {inscripcionesGrading.length === 1 && (isAdmin || isFormacionMember) && (
-                <div className="mt-4 p-4 border border-dashed rounded-xl bg-white">
-                  <h5 className="font-bold text-slate-800 mb-2">Firma de asistencia</h5>
-                  <SignatureCanvas
-                    initialSignature={inscripcionesGrading[0].firmaBiometrica || ''}
-                    onSave={(dataUrl) => handleSaveFirma(inscripcionesGrading[0].id, dataUrl)}
-                    label="Firma del participante"
-                  />
+              {/* Firmas por participante — admin/formacion gestionan, cada voluntario puede firmar la suya */}
+              <div className="mt-6">
+                <h5 className="font-bold text-slate-800 mb-3">
+                  ✍️ Firmas de asistencia
+                  {!(isAdmin || isFormacionMember) && (
+                    <span className="ml-2 text-xs text-slate-400 font-normal">Puedes firmar tu propia asistencia</span>
+                  )}
+                </h5>
+                <div className="space-y-4">
+                  {inscripcionesGrading.map(ins => {
+                    const esPropio = currentUser?.id === ins.usuario?.id;
+                    const puedeFirmar = isAdmin || isFormacionMember || esPropio;
+                    return (
+                      <div key={`firma-${ins.id}`} className="border rounded-xl p-4 bg-white">
+                        <div className="flex items-center justify-between mb-3">
+                          <div>
+                            <p className="font-semibold text-slate-800">{ins.usuario?.nombre} {ins.usuario?.apellidos}</p>
+                            <p className="text-xs text-slate-400">{ins.usuario?.numeroVoluntario || 'Sin N.V.'}</p>
+                          </div>
+                          {ins.firmaBiometrica
+                            ? <span className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded-full font-medium">✅ Firmado {ins.fechaFirma ? new Date(ins.fechaFirma).toLocaleDateString() : ''}</span>
+                            : <span className="text-xs px-2 py-1 bg-amber-100 text-amber-700 rounded-full font-medium">⏳ Pendiente firma</span>
+                          }
+                        </div>
+                        {ins.firmaBiometrica ? (
+                          <div className="flex items-center gap-4">
+                            <img src={ins.firmaBiometrica} alt="firma" className="h-14 object-contain border rounded-lg bg-slate-50 p-1" />
+                            {(isAdmin || isFormacionMember) && (
+                              <button
+                                onClick={() => handleOpenFirma(ins)}
+                                className="text-xs text-red-500 hover:underline"
+                              >
+                                Repetir firma
+                              </button>
+                            )}
+                          </div>
+                        ) : puedeFirmar ? (
+                          <div>
+                            <p className="text-xs text-slate-500 mb-2">
+                              {esPropio && !(isAdmin || isFormacionMember) ? 'Firma aquí para registrar tu asistencia:' : `Capturar firma de ${ins.usuario?.nombre}:`}
+                            </p>
+                            <SignatureCanvas
+                              initialSignature=""
+                              onSave={(dataUrl) => handleSaveFirma(ins.id, dataUrl)}
+                              label={esPropio && !(isAdmin || isFormacionMember) ? 'Tu firma' : `Firma de ${ins.usuario?.nombre}`}
+                            />
+                          </div>
+                        ) : (
+                          <div className="h-10 border border-dashed rounded-lg flex items-center justify-center text-xs text-slate-400 bg-slate-50">
+                            Sin permisos para firmar en este dispositivo
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
-              )}
+              </div>
             </div>
 
             <div className="flex justify-end pt-4 border-t gap-3 bg-slate-50 -mx-6 -mb-6 p-4 mt-4">
