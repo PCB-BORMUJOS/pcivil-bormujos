@@ -93,58 +93,6 @@ interface Curso {
   };
 }
 
-interface JornadaAsistencia {
-  id: string;
-  convocatoriaId: string;
-  fecha: string;
-  numeroJornada: number;
-  titulo?: string;
-  horaInicio?: string;
-  horaFin?: string;
-  bloqueada: boolean;
-  observaciones?: string;
-  firmas?: RegistroFirma[];
-}
-
-interface RegistroFirma {
-  id: string;
-  jornadaId: string;
-  usuarioId?: string;
-  participanteExternoId?: string;
-  asistio: boolean;
-  firmaBase64?: string;
-  fechaFirma?: string;
-  valoracionFormador?: string;
-  notaFormador?: number;
-  comentarioFormador?: string;
-  usuario?: {
-    id: string;
-    nombre: string;
-    apellidos: string;
-    numeroVoluntario?: string;
-  };
-  participanteExterno?: {
-    id: string;
-    nombre: string;
-    apellidos: string;
-    organizacion?: string;
-    cargo?: string;
-  };
-}
-
-interface ParticipanteExterno {
-  id: string;
-  convocatoriaId: string;
-  nombre: string;
-  apellidos: string;
-  dni?: string;
-  email?: string;
-  telefono?: string;
-  organizacion?: string;
-  cargo?: string;
-}
-
-
 interface Convocatoria {
   id: string;
   codigo: string;
