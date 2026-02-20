@@ -76,17 +76,6 @@ interface Curso {
   duracionHoras: number;
   validezMeses?: number;
   activo: boolean;
-  areaVinculada?: string;
-  formadorPrincipal?: string;
-  nivelFormacion?: string;
-  modalidad?: string;
-  objetivos?: string;
-  temario?: string;
-  requisitosAcceso?: string;
-  entidadOrganiza?: string;
-  entidadCertifica?: string;
-  costoPorAlumno?: number;
-  plazasMaximas?: number;
   _count?: {
     convocatorias: number;
     certificaciones: number;
@@ -107,8 +96,6 @@ interface Convocatoria {
     id: string;
     nombre: string;
     tipo: string;
-    areaVinculada?: string;
-    duracionHoras?: number;
   };
   _count?: {
     inscripciones: number;
@@ -227,7 +214,7 @@ export default function FormacionPage() {
   const [isFormacionMember, setIsFormacionMember] = useState(false);
 
   // Estados principales
-  const [mainTab, setMainTab] = useState<'inventario' | 'catalogo' | 'convocatorias' | 'inscripciones' | 'certificaciones' | 'necesidades' | 'asistencia'>('inventario');
+  const [mainTab, setMainTab] = useState<'inventario' | 'catalogo' | 'convocatorias' | 'inscripciones' | 'certificaciones' | 'necesidades'>('inventario');
   const [inventoryTab, setInventoryTab] = useState<'stock' | 'peticiones' | 'movimientos'>('stock');
   const [loading, setLoading] = useState(true);
 
@@ -1037,7 +1024,6 @@ export default function FormacionPage() {
             { id: 'inscripciones', label: 'Inscripciones', icon: Users },
             { id: 'certificaciones', label: 'Certificaciones', icon: Award },
             { id: 'necesidades', label: 'Necesidades', icon: AlertCircle },
-            { id: 'asistencia', label: 'Registro Asistencia', icon: ClipboardList },
           ].map(tab => (
             <button
               key={tab.id}
