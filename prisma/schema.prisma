@@ -56,6 +56,7 @@ model Usuario {
   manuales              Manual[]
   partesPSI             PartePSI[]
   inscripciones         Inscripcion[]
+  firmasAsistencia      RegistroFirma[]        @relation("FirmasUsuario")
   certificaciones        Certificacion[]
 
   @@map("usuarios")
@@ -1075,6 +1076,12 @@ model Curso {
   costoPorAlumno    Float?   @default(0) @map("costo_por_alumno")
   plazasMaximas     Int?     @map("plazas_maximas")
   
+  // Nuevos campos
+  areaVinculada     String?  @map("area_vinculada") // socorrismo, incendios, transmisiones, etc.
+  formadorPrincipal String?  @map("formador_principal") // Nombre del formador/ponente habitual
+  nivelFormacion    String?  @default("basico") @map("nivel_formacion") // basico, intermedio, avanzado
+  modalidad         String?  @default("presencial") // presencial, online, mixto
+  
   activo            Boolean  @default(true)
   createdAt         DateTime @default(now()) @map("created_at")
   updatedAt         DateTime @updatedAt @map("updated_at")
@@ -1111,11 +1118,21 @@ model Convocatoria {
   actaFormacion     String?  @map("acta_formacion")
   listadoAsistencia String?  @map("listado_asistencia")
   
+  // Nuevos campos de fechas y gestión
+  fechaProgramacion DateTime? @map("fecha_programacion") // Cuando se planifica
+  fechaPublicacion  DateTime? @map("fecha_publicacion")  // Cuando se abre al público
+  formadorNombre    String?   @map("formador_nombre")    // Formador específico de esta edición
+  formadorExterno   Boolean   @default(false) @map("formador_externo")
+  edicion           String?   // "1ª Edición", "2ª Edición", etc.
+  actaGenerada      Boolean   @default(false) @map("acta_generada")
+  actaUrl           String?   @map("acta_url")
+  
   observaciones     String?  @db.Text
   createdAt         DateTime @default(now()) @map("created_at")
   updatedAt         DateTime @updatedAt @map("updated_at")
   
   inscripciones     Inscripcion[]
+  jornadas          JornadaAsistencia[]
   
   @@map("convocatorias")
 }
@@ -1206,6 +1223,80 @@ model NecesidadFormativa {
   updatedAt         DateTime @updatedAt @map("updated_at")
   
   @@map("necesidades_formativas")
+}
+
+// ============================================
+// MODELOS REGISTRO DE ASISTENCIA Y FORMACIÓN
+// ============================================
+
+model JornadaAsistencia {
+  id                String   @id @default(cuid())
+  convocatoriaId    String   @map("convocatoria_id")
+  convocatoria      Convocatoria @relation(fields: [convocatoriaId], references: [id], onDelete: Cascade)
+
+  fecha             DateTime
+  numeroJornada     Int      @map("numero_jornada")
+  titulo            String?
+  horaInicio        String?  @map("hora_inicio")
+  horaFin           String?  @map("hora_fin")
+  bloqueada         Boolean  @default(false)
+  observaciones     String?  @db.Text
+
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  firmas            RegistroFirma[]
+
+  @@map("jornadas_asistencia")
+}
+
+model RegistroFirma {
+  id                      String   @id @default(cuid())
+  jornadaId               String   @map("jornada_id")
+  jornada                 JornadaAsistencia @relation(fields: [jornadaId], references: [id], onDelete: Cascade)
+
+  usuarioId               String?  @map("usuario_id")
+  usuario                 Usuario? @relation("FirmasUsuario", fields: [usuarioId], references: [id], onDelete: SetNull)
+
+  participanteExternoId   String?  @map("participante_externo_id")
+  participanteExterno     ParticipanteExterno? @relation(fields: [participanteExternoId], references: [id], onDelete: SetNull)
+
+  asistio                 Boolean  @default(false)
+  firmaBase64             String?  @map("firma_base64") @db.Text
+  fechaFirma              DateTime? @map("fecha_firma")
+
+  valoracionFormador      String?  @map("valoracion_formador")
+  notaFormador            Float?   @map("nota_formador")
+  comentarioFormador      String?  @db.Text @map("comentario_formador")
+
+  createdAt               DateTime @default(now()) @map("created_at")
+  updatedAt               DateTime @updatedAt @map("updated_at")
+
+  @@unique([jornadaId, usuarioId])
+  @@map("registros_firma")
+}
+
+model ParticipanteExterno {
+  id                String   @id @default(cuid())
+  convocatoriaId    String   @map("convocatoria_id")
+
+  nombre            String
+  apellidos         String
+  dni               String?
+  email             String?
+  telefono          String?
+  organizacion      String?
+  cargo             String?
+
+  certificadoGenerado Boolean @default(false) @map("certificado_generado")
+  certificadoUrl    String?  @map("certificado_url")
+
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  firmas            RegistroFirma[]
+
+  @@map("participantes_externos")
 }
 
 // ============================================
