@@ -333,7 +333,7 @@ export default function FormacionPage() {
           if (userData?.usuario) {
             // Guardamos ficha junto al usuario para comprobar área asignada
             setCurrentUser({ ...userData.usuario, ficha: userData.ficha || null });
-            setIsAdmin(userData.usuario.rol?.nombre === 'ADMIN' || userData.usuario.rol?.nombre === 'admin');
+            setIsAdmin(userData.usuario.rol?.nombre === 'ADMIN' || userData.usuario.rol?.nombre === 'admin' || userData.usuario.rol?.nombre === 'superadmin');
             const area = (userData.ficha && userData.ficha.areaAsignada) || '';
             setIsFormacionMember(area.toLowerCase() === 'formación' || area.toLowerCase() === 'formacion');
           }
