@@ -1,3 +1,16 @@
+      {/* MODAL: Firma individual */}
+      {showFirmaModal && firmaTarget && (
+        <Modal title={`Firmar asistencia: ${firmaTarget.usuario?.nombre} ${firmaTarget.usuario?.apellidos}`} onClose={() => setShowFirmaModal(false)} size="md">
+          <div className="space-y-4">
+            <div className="mb-2 text-sm text-slate-600">Por favor, firma en el recuadro inferior. Esta firma quedará registrada como asistencia biométrica.</div>
+            <SignatureCanvas
+              initialSignature={firmaTarget.firmaBiometrica || ''}
+              onSave={(dataUrl) => handleSaveFirma(firmaTarget.id, dataUrl)}
+              label="Firma del participante"
+            />
+          </div>
+        </Modal>
+      )}
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -242,6 +255,7 @@ export default function FormacionPage() {
   const [showNuevoCurso, setShowNuevoCurso] = useState(false);
   const [cursoEditando, setCursoEditando] = useState<Curso | null>(null);
   const [showNuevaConvocatoria, setShowNuevaConvocatoria] = useState(false);
+  const [convocatoriaEditando, setConvocatoriaEditando] = useState<Convocatoria | null>(null);
 
   // Modales de Inventario
   const [showNuevoArticulo, setShowNuevoArticulo] = useState(false);
@@ -411,6 +425,8 @@ export default function FormacionPage() {
   const handleSaveFirma = async (inscripcionId: string, dataUrl: string) => {
     // Optimistic update in grading list
     setInscripcionesGrading(prev => prev.map(i => i.id === inscripcionId ? { ...i, firmaBiometrica: dataUrl, fechaFirma: new Date().toISOString() } : i));
+    // Also update global inscripciones list if present
+    setInscripciones(prev => prev.map(i => i.id === inscripcionId ? { ...i, firmaBiometrica: dataUrl, fechaFirma: new Date().toISOString() } : i));
 
     try {
       await fetch('/api/formacion', {
@@ -418,10 +434,17 @@ export default function FormacionPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tipo: 'inscripcion', id: inscripcionId, firmaBiometrica: dataUrl, fechaFirma: new Date().toISOString(), dispositivoFirma: (typeof navigator !== 'undefined' ? (navigator.platform || navigator.userAgent) : 'web') })
       });
+      // Close modal if it was opened for signing
+      setShowFirmaModal(false);
     } catch (e) {
       console.error('Error guardando firma:', e);
       alert('Error guardando firma');
     }
+  };
+
+  const handleOpenFirma = (insc: Inscripcion) => {
+    setFirmaTarget(insc);
+    setShowFirmaModal(true);
   };
 
   const handleCerrarActa = async () => {
@@ -598,6 +621,10 @@ export default function FormacionPage() {
     const data = await res.json();
     setConvocatorias(data.convocatorias || []);
   };
+
+  // Firma modal
+  const [showFirmaModal, setShowFirmaModal] = useState(false);
+  const [firmaTarget, setFirmaTarget] = useState<Inscripcion | null>(null);
   const cargarInscripciones = async () => {
     const res = await fetch('/api/formacion?tipo=inscripciones');
     const data = await res.json();
@@ -768,27 +795,54 @@ export default function FormacionPage() {
       return;
     }
     try {
-      const res = await fetch('/api/formacion', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tipo: 'convocatoria',
-          ...nuevaConvocatoriaData,
-          cursoId: nuevaConvocatoriaData.cursoId,
-          codigo: `CONV-${Date.now().toString().slice(-6)}`,
-          fechaInicio: new Date(nuevaConvocatoriaData.fechaInicio),
-          fechaFin: new Date(nuevaConvocatoriaData.fechaFin),
-          plazasDisponibles: Number(nuevaConvocatoriaData.plazasDisponibles),
-          estado: 'planificada'
-        })
-      });
-      if (res.ok) {
-        setShowNuevaConvocatoria(false);
-        setNuevaConvocatoriaData({ cursoId: '', fechaInicio: '', fechaFin: '', lugar: '', plazasDisponibles: 20, horario: '', instructores: '' });
-        cargarConvocatorias();
-        alert('✅ Convocatoria creada');
+      if (convocatoriaEditando) {
+        // Actualizar convocatoria existente
+        const res = await fetch(`/api/formacion?id=${convocatoriaEditando.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tipo: 'convocatoria',
+            id: convocatoriaEditando.id,
+            fechaInicio: new Date(nuevaConvocatoriaData.fechaInicio),
+            fechaFin: new Date(nuevaConvocatoriaData.fechaFin),
+            lugar: nuevaConvocatoriaData.lugar,
+            plazasDisponibles: Number(nuevaConvocatoriaData.plazasDisponibles),
+            horario: nuevaConvocatoriaData.horario,
+            instructores: nuevaConvocatoriaData.instructores
+          })
+        });
+        if (res.ok) {
+          setShowNuevaConvocatoria(false);
+          setConvocatoriaEditando(null);
+          setNuevaConvocatoriaData({ cursoId: '', fechaInicio: '', fechaFin: '', lugar: '', plazasDisponibles: 20, horario: '', instructores: '' });
+          cargarConvocatorias();
+          alert('✅ Convocatoria actualizada');
+        } else {
+          alert('Error al actualizar convocatoria');
+        }
       } else {
-        alert('Error al crear convocatoria');
+        const res = await fetch('/api/formacion', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tipo: 'convocatoria',
+            ...nuevaConvocatoriaData,
+            cursoId: nuevaConvocatoriaData.cursoId,
+            codigo: `CONV-${Date.now().toString().slice(-6)}`,
+            fechaInicio: new Date(nuevaConvocatoriaData.fechaInicio),
+            fechaFin: new Date(nuevaConvocatoriaData.fechaFin),
+            plazasDisponibles: Number(nuevaConvocatoriaData.plazasDisponibles),
+            estado: 'planificada'
+          })
+        });
+        if (res.ok) {
+          setShowNuevaConvocatoria(false);
+          setNuevaConvocatoriaData({ cursoId: '', fechaInicio: '', fechaFin: '', lugar: '', plazasDisponibles: 20, horario: '', instructores: '' });
+          cargarConvocatorias();
+          alert('✅ Convocatoria creada');
+        } else {
+          alert('Error al crear convocatoria');
+        }
       }
     } catch (e) { console.error(e); alert('Error'); }
   };
@@ -1263,7 +1317,7 @@ export default function FormacionPage() {
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-lg font-bold text-slate-800">Convocatorias</h3>
               {isAdmin && (
-                <button onClick={() => setShowNuevaConvocatoria(true)} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2">
+                <button onClick={() => { setConvocatoriaEditando(null); setNuevaConvocatoriaData({ cursoId: '', fechaInicio: '', fechaFin: '', lugar: '', plazasDisponibles: 20, horario: '', instructores: '' }); setShowNuevaConvocatoria(true); }} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2">
                   <Plus size={18} /> Nueva Convocatoria
                 </button>
               )}
@@ -1295,7 +1349,7 @@ export default function FormacionPage() {
                     <div className="pt-3 border-t flex gap-2">
                       {isAdmin ? (
                         <>
-                          <button onClick={() => setShowNuevaConvocatoria(true)} className="flex-1 py-2 text-center text-sm font-medium text-slate-600 hover:bg-slate-50 rounded-lg">Editar</button>
+                          <button onClick={() => { setConvocatoriaEditando(c); setNuevaConvocatoriaData({ ...nuevaConvocatoriaData, cursoId: c.curso?.id, fechaInicio: new Date(c.fechaInicio).toISOString().slice(0,10), fechaFin: new Date(c.fechaFin).toISOString().slice(0,10), lugar: c.lugar || '', plazasDisponibles: c.plazasDisponibles || 20, horario: c.horario || '', instructores: (c as any).instructores || '' }); setShowNuevaConvocatoria(true); }} className="flex-1 py-2 text-center text-sm font-medium text-slate-600 hover:bg-slate-50 rounded-lg">Editar</button>
                           <button onClick={() => handleOpenGestion(c)} className="flex-1 py-2 text-center text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg">Gestionar / Calificar</button>
                         </>
                       ) : (
@@ -1348,53 +1402,53 @@ export default function FormacionPage() {
                         grouped[key].inscritos.push(insc);
                       });
 
-                      return Object.values(grouped).map(g => (
-                        <tbody key={g.convocatoria?.id || Math.random()} className="divide-y">
-                          <tr className="bg-slate-50 hover:bg-slate-100 cursor-pointer">
-                            <td className="p-3" colSpan={2} onClick={() => toggleConvocatoria(g.convocatoria.id)}>
-                              <div className="flex items-center justify-between">
-                                <div>
-                                  <div className="font-medium text-slate-800">{g.convocatoria?.curso?.nombre}</div>
-                                  <div className="text-xs text-slate-500">{g.convocatoria?.codigo} · {new Date(g.convocatoria?.fechaInicio || '').toLocaleDateString()} - {new Date(g.convocatoria?.fechaFin || '').toLocaleDateString()}</div>
-                                </div>
-                                <div className="text-sm text-slate-600">{g.inscritos.length} inscritos</div>
-                              </div>
-                            </td>
-                            <td className="p-3 text-center">&nbsp;</td>
-                            <td className="p-3 text-center">{g.convocatoria?.estado}</td>
-                            <td className="p-3 text-right">
-                              <div className="flex items-center justify-end gap-2">
-                                {(isAdmin || isFormacionMember) ? (
-                                  <>
-                                    <button onClick={() => handleOpenGestion(g.convocatoria)} className="px-3 py-1 bg-blue-100 text-blue-700 rounded-lg text-xs font-medium">Acta / Firmas</button>
-                                    <button onClick={() => { setShowNuevaConvocatoria(true); setNuevaConvocatoriaData({ ...nuevaConvocatoriaData, cursoId: g.convocatoria.curso?.id, fechaInicio: new Date(g.convocatoria.fechaInicio).toISOString().slice(0,10), fechaFin: new Date(g.convocatoria.fechaFin).toISOString().slice(0,10), lugar: g.convocatoria.lugar || '', plazasDisponibles: g.convocatoria.plazasDisponibles || 20, horario: g.convocatoria.horario || '', instructores: g.convocatoria.instructores || '' }); }} className="px-3 py-1 bg-slate-100 text-slate-700 rounded-lg text-xs font-medium">Editar</button>
-                                  </>
-                                ) : (
-                                  <button disabled className="px-3 py-1 bg-slate-100 text-slate-400 rounded-lg text-xs">Sin permiso</button>
-                                )}
-                              </div>
-                            </td>
-                          </tr>
-                          {expandedConvocatorias[g.convocatoria.id] && g.inscritos.map(ins => (
-                            <tr key={ins.id} className="hover:bg-white">
-                              <td className="p-3">
-                                <div className="font-medium text-slate-800">{ins.usuario?.nombre} {ins.usuario?.apellidos}</div>
-                                <div className="text-xs text-slate-500">{ins.usuario?.numeroVoluntario}</div>
-                              </td>
-                              <td className="p-3">{ins.estado}</td>
-                              <td className="p-3 text-center">{new Date(ins.fechaInscripcion).toLocaleDateString()}</td>
-                              <td className="p-3 text-center">{ins.porcentajeAsistencia ?? '-'}</td>
-                              <td className="p-3 text-right">
-                                <div className="flex items-center justify-end gap-2">
-                                  {(isAdmin || isFormacionMember) && (
-                                    <button onClick={() => { setSelectedConvocatoriaForGrading(g.convocatoria); setShowGestionConvocatoria(true); setInscripcionesGrading([ins]); }} className="px-3 py-1 bg-orange-100 text-orange-700 rounded-lg text-xs">Firmar</button>
-                                  )}
+                        return Object.values(grouped).map(g => (
+                          <tbody key={g.convocatoria?.id || Math.random()} className="divide-y">
+                            <tr className="bg-slate-50 hover:bg-slate-100 cursor-pointer">
+                              <td className="p-3" colSpan={5} onClick={() => toggleConvocatoria(g.convocatoria.id)}>
+                                <div className="flex items-center justify-between">
+                                  <div>
+                                    <div className="font-medium text-slate-800">{g.convocatoria?.curso?.nombre}</div>
+                                    <div className="text-xs text-slate-500">{g.convocatoria?.codigo} · {new Date(g.convocatoria?.fechaInicio || '').toLocaleDateString()} - {new Date(g.convocatoria?.fechaFin || '').toLocaleDateString()}</div>
+                                  </div>
+                                  <div className="flex items-center gap-3">
+                                    <div className="text-sm text-slate-600">{g.inscritos.length} inscritos</div>
+                                    <div className="flex items-center justify-end gap-2">
+                                      {(isAdmin || isFormacionMember) ? (
+                                        <>
+                                          <button onClick={(e) => { e.stopPropagation(); handleOpenGestion(g.convocatoria); }} className="px-3 py-1 bg-blue-100 text-blue-700 rounded-lg text-xs font-medium">Acta / Firmas</button>
+                                          <button onClick={(e) => { e.stopPropagation(); setConvocatoriaEditando(g.convocatoria); setNuevaConvocatoriaData({ ...nuevaConvocatoriaData, cursoId: g.convocatoria.curso?.id, fechaInicio: new Date(g.convocatoria.fechaInicio).toISOString().slice(0,10), fechaFin: new Date(g.convocatoria.fechaFin).toISOString().slice(0,10), lugar: g.convocatoria.lugar || '', plazasDisponibles: g.convocatoria.plazasDisponibles || 20, horario: g.convocatoria.horario || '', instructores: (g.convocatoria as any).instructores || '' }); setShowNuevaConvocatoria(true); }} className="px-3 py-1 bg-slate-100 text-slate-700 rounded-lg text-xs font-medium">Editar</button>
+                                        </>
+                                      ) : (
+                                        <button disabled className="px-3 py-1 bg-slate-100 text-slate-400 rounded-lg text-xs">Sin permiso</button>
+                                      )}
+                                    </div>
+                                  </div>
                                 </div>
                               </td>
                             </tr>
-                          ))}
-                        </tbody>
-                      ));
+                            {expandedConvocatorias[g.convocatoria.id] && g.inscritos.map(ins => (
+                              <tr key={ins.id} className="hover:bg-white">
+                                <td className="p-3">
+                                  <div className="font-medium text-slate-800">{ins.usuario?.nombre} {ins.usuario?.apellidos}</div>
+                                  <div className="text-xs text-slate-500">{ins.usuario?.numeroVoluntario}</div>
+                                </td>
+                                <td className="p-3">{ins.convocatoria?.curso?.nombre || ins.convocatoria?.codigo}</td>
+                                <td className="p-3 text-center">{new Date(ins.fechaInscripcion).toLocaleDateString()}</td>
+                                <td className="p-3 text-center">
+                                  <span className={`px-2 py-1 rounded-full text-xs font-bold ${ins.estado === 'admitida' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-600'}`}>{ins.estado}</span>
+                                </td>
+                                <td className="p-3 text-right">
+                                  <div className="flex items-center justify-end gap-2">
+                                    {(isAdmin || isFormacionMember) && (
+                                      <button onClick={(e) => { e.stopPropagation(); setSelectedConvocatoriaForGrading(g.convocatoria); setShowGestionConvocatoria(true); setInscripcionesGrading([ins]); }} className="px-3 py-1 bg-orange-100 text-orange-700 rounded-lg text-xs">Firmar</button>
+                                    )}
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        ));
                     })()
                   }
                 </table>
@@ -1760,7 +1814,7 @@ export default function FormacionPage() {
 
       {/* MODAL: Nueva Convocatoria */}
       {showNuevaConvocatoria && (
-        <Modal title="Nueva Convocatoria" onClose={() => setShowNuevaConvocatoria(false)} size="lg">
+        <Modal title={convocatoriaEditando ? 'Editar Convocatoria' : 'Nueva Convocatoria'} onClose={() => { setShowNuevaConvocatoria(false); setConvocatoriaEditando(null); }} size="lg">
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Curso <span className="text-red-500">*</span></label>
@@ -1793,10 +1847,10 @@ export default function FormacionPage() {
               <label className="block text-sm font-medium text-slate-700 mb-1">Instructores</label>
               <input type="text" className="w-full border rounded-lg p-2" placeholder="Nombres de instructores..." value={nuevaConvocatoriaData.instructores} onChange={e => setNuevaConvocatoriaData({ ...nuevaConvocatoriaData, instructores: e.target.value })} />
             </div>
-            <div className="flex justify-end gap-2 pt-4 bg-slate-50 -mx-6 -mb-6 p-4 mt-4 border-t">
-              <button onClick={() => setShowNuevaConvocatoria(false)} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg font-medium">Cancelar</button>
-              <button onClick={handleGuardarConvocatoria} className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-sm font-medium">Crear Convocatoria</button>
-            </div>
+              <div className="flex justify-end gap-2 pt-4 bg-slate-50 -mx-6 -mb-6 p-4 mt-4 border-t">
+                <button onClick={() => { setShowNuevaConvocatoria(false); setConvocatoriaEditando(null); }} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg font-medium">Cancelar</button>
+                <button onClick={handleGuardarConvocatoria} className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-sm font-medium">{convocatoriaEditando ? 'Guardar Cambios' : 'Crear Convocatoria'}</button>
+              </div>
           </div>
         </Modal>
       )}
@@ -1963,6 +2017,57 @@ export default function FormacionPage() {
                       ))}
                     </tbody>
                   </table>
+                </div>
+              )}
+
+              {/* Sección: Tabla de Firmas */}
+              {inscripcionesGrading.length > 0 && (
+                <div className="mt-6">
+                  <h5 className="font-bold text-slate-800 mb-3">Firmas</h5>
+                  <div className="overflow-hidden border border-slate-200 rounded-lg">
+                    <table className="w-full text-sm table-fixed">
+                      <thead className="bg-slate-100 text-slate-600 font-semibold uppercase text-xs">
+                        <tr>
+                          <th className="p-3 text-left">Voluntario</th>
+                          <th className="p-3 text-center w-48">Firma</th>
+                          <th className="p-3 text-center">Fecha Firma</th>
+                          <th className="p-3 text-right">Acciones</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {inscripcionesGrading.map(ins => (
+                          <tr key={ins.id} className="hover:bg-slate-50">
+                            <td className="p-3">
+                              <div className="font-medium text-slate-800">{ins.usuario?.nombre} {ins.usuario?.apellidos}</div>
+                              <div className="text-xs text-slate-500">{ins.usuario?.numeroVoluntario || 'Sin N.V.'}</div>
+                            </td>
+                            <td className="p-3 text-center">
+                              {ins.firmaBiometrica ? (
+                                <img src={ins.firmaBiometrica} alt="firma" className="mx-auto h-12 object-contain" />
+                              ) : (
+                                <div className="mx-auto h-12 w-36 border border-dashed rounded flex items-center justify-center text-xs text-slate-400">Sin firma</div>
+                              )}
+                            </td>
+                            <td className="p-3 text-center text-xs text-slate-600">{ins.fechaFirma ? new Date(ins.fechaFirma).toLocaleString() : '-'}</td>
+                            <td className="p-3 text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                {(isAdmin || isFormacionMember) ? (
+                                  <>
+                                    <button onClick={() => handleOpenFirma(ins)} className="px-3 py-1 bg-orange-100 text-orange-700 rounded-lg text-xs">Firmar</button>
+                                    {ins.firmaBiometrica && (
+                                      <a href={ins.firmaBiometrica} target="_blank" rel="noreferrer" className="px-3 py-1 bg-slate-100 text-slate-700 rounded-lg text-xs">Abrir</a>
+                                    )}
+                                  </>
+                                ) : (
+                                  <button disabled className="px-3 py-1 bg-slate-100 text-slate-400 rounded-lg text-xs">Sin permiso</button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               )}
 
