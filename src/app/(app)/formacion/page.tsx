@@ -122,6 +122,11 @@ interface Inscripcion {
       nombre: string
     }
   }
+  // Campos de firma biométrica (opcional)
+  firmaBiometrica?: string;
+  fechaFirma?: string;
+  dispositivoFirma?: string;
+  ipFirma?: string;
 }
 
 interface Certificacion {
