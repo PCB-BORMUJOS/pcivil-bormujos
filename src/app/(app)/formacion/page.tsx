@@ -233,6 +233,7 @@ export default function FormacionPage() {
 
   // Estados de modales
   const [showNuevoCurso, setShowNuevoCurso] = useState(false);
+  const [cursoEditando, setCursoEditando] = useState<Curso | null>(null);
   const [showNuevaConvocatoria, setShowNuevaConvocatoria] = useState(false);
 
   // Modales de Inventario
@@ -1058,6 +1059,14 @@ export default function FormacionPage() {
                 <h3 className="text-lg font-bold text-slate-800">Catálogo de Cursos</h3>
                 <p className="text-slate-600 text-sm">Gestión del catálogo de cursos de formación</p>
               </div>
+              {isAdmin && (
+                <button
+                  onClick={() => setShowNuevoCurso(true)}
+                  className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center gap-2"
+                >
+                  <Plus size={18} /> Nuevo Curso
+                </button>
+              )}
             </div>
 
             {loading ? (
@@ -1110,10 +1119,18 @@ export default function FormacionPage() {
                       </div>
                     </div>
 
-                    <div className="pt-3 border-t border-slate-200">
+                    <div className="pt-3 border-t border-slate-200 flex justify-between items-center">
                       <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">
                         {curso.tipo}
                       </span>
+                      {isAdmin && (
+                        <button
+                          onClick={() => setCursoEditando(curso)}
+                          className="text-purple-600 hover:text-purple-800 text-sm font-medium"
+                        >
+                          Editar
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))}

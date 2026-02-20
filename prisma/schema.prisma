@@ -1135,6 +1135,12 @@ model Inscripcion {
   notaFinal         Float?   @map("nota_final")
   apto              Boolean?
   
+  // Campos de firma biométrica
+  firmaBiometrica   String?  @map("firma_biometrica") // Datos de firma (base64 o hash)
+  fechaFirma        DateTime? @map("fecha_firma") // Fecha y hora de la firma
+  dispositivoFirma  String?  @map("dispositivo_firma") // Dispositivo donde se firmó (iPad, etc.)
+  ipFirma           String?  @map("ip_firma") // IP del dispositivo
+  
   fechaCertificacion DateTime? @map("fecha_certificacion")
   certificadoUrl    String?  @map("certificado_url")
   
