@@ -146,13 +146,17 @@ ${textComponents.conclusion}`.trim()
                     method: 'POST',
                     body: formData
                 })
-                    .then(res => res.json())
+                    .then(res => {
+                        console.log('Drive upload status:', res.status)
+                        return res.json()
+                    })
                     .then(data => {
+                        console.log('Drive upload response:', JSON.stringify(data))
                         if (data.success) {
                             toast.success('PDF sincronizado con Google Drive', { id: 'drive-upload' })
                         } else {
                             console.error('Error subida Drive:', data)
-                            toast.error('Error sincronizando con Drive', { id: 'drive-upload' })
+                            toast.error('Error sincronizando con Drive: ' + (data.error || 'desconocido'), { id: 'drive-upload' })
                         }
                     })
                     .catch(err => {
