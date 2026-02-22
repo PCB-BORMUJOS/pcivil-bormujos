@@ -51,7 +51,6 @@ export async function uploadToGoogleDrive(
                 body: bufferStream,
             },
             fields: 'id,webViewLink,webContentLink',
-            supportsAllDrives: true,
         })
 
         return {
