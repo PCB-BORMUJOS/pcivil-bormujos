@@ -927,6 +927,7 @@ export default function FormacionPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             tipo: 'curso',
+            id: cursoEditando.id,
             nombre: nuevoCurso.nombre,
             codigo: nuevoCurso.codigo,
             descripcion: nuevoCurso.descripcion,
