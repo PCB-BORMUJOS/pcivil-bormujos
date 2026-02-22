@@ -191,6 +191,10 @@ export default function MiAreaPage() {
   });
 
   const [formaciones, setFormaciones] = useState<Formacion[]>([]);
+  const [inscripcionesReales, setInscripcionesReales] = useState<any[]>([]);
+  const [certificacionesReales, setCertificacionesReales] = useState<any[]>([]);
+  const [loadingFormacion, setLoadingFormacion] = useState(false);
+  const [formacionSubTab, setFormacionSubTab] = useState<'inscripciones' | 'certificaciones' | 'manual'>('inscripciones');
   const [actividades, setActividades] = useState<Actividad[]>([]);
   const [disponibilidades, setDisponibilidades] = useState<any[]>([]); // Nueva línea
   const [documentos, setDocumentos] = useState<Documento[]>([]);
@@ -231,6 +235,17 @@ export default function MiAreaPage() {
   }, []);
 
   useEffect(() => {
+    if (activeTab === 'formacion') {
+      setLoadingFormacion(true)
+      fetch('/api/formacion?tipo=mi-formacion')
+        .then(r => r.json())
+        .then(data => {
+          setInscripcionesReales(data.inscripciones || [])
+          setCertificacionesReales(data.certificaciones || [])
+        })
+        .catch(console.error)
+        .finally(() => setLoadingFormacion(false))
+    }
     if (activeTab === 'dietas') {
       cargarDietas();
     }
@@ -916,20 +931,166 @@ export default function MiAreaPage() {
                   <div className="flex justify-between items-center mb-6">
                     <div>
                       <h2 className="text-lg font-bold text-slate-800">Formación y Certificaciones</h2>
-                      <p className="text-sm text-slate-500">Registro de cursos, títulos y certificaciones</p>
+                      <p className="text-sm text-slate-500">Historial completo de formación</p>
                     </div>
                     <button
                       onClick={() => setShowNuevaFormacion(true)}
                       className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm font-medium"
                     >
-                      <Plus size={16} /> Añadir Formación
+                      <Plus size={16} /> Añadir Manual
                     </button>
                   </div>
+                  {/* Sub-tabs */}
+                  <div className="flex gap-1 mb-6 bg-slate-100 p-1 rounded-lg w-fit">
+                    {[
+                      { id: 'inscripciones', label: 'Inscripciones', count: inscripcionesReales.length },
+                      { id: 'certificaciones', label: 'Certificaciones', count: certificacionesReales.length },
+                      { id: 'manual', label: 'Registro Manual', count: formaciones.length }
+                    ].map(t => (
+                      <button
+                        key={t.id}
+                        onClick={() => setFormacionSubTab(t.id as any)}
+                        className={`px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-2 ${formacionSubTab === t.id ? 'bg-white shadow text-slate-800' : 'text-slate-500 hover:text-slate-700'}`}
+                      >
+                        {t.label}
+                        {t.count > 0 && <span className="bg-purple-100 text-purple-700 text-xs px-1.5 py-0.5 rounded-full font-bold">{t.count}</span>}
+                      </button>
+                    ))}
+                  </div>
 
-                  {formaciones.length === 0 ? (
+                  {/* Sub-tab: Inscripciones */}
+                  {formacionSubTab === 'inscripciones' && (
+                    <div>
+                      {loadingFormacion ? (
+                        <div className="text-center py-8 text-slate-400">Cargando...</div>
+                      ) : inscripcionesReales.length === 0 ? (
+                        <div className="text-center py-12 text-slate-500">
+                          <GraduationCap className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                          <p>No tienes inscripciones en el sistema</p>
+                          <p className="text-xs mt-1 text-slate-400">Las inscripciones a convocatorias aparecerán aquí</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {inscripcionesReales.map((insc: any) => {
+                            const estadoColor: Record<string, string> = {
+                              pendiente: 'bg-yellow-100 text-yellow-700',
+                              confirmada: 'bg-blue-100 text-blue-700',
+                              completada: 'bg-green-100 text-green-700',
+                              no_presentado: 'bg-red-100 text-red-700',
+                              cancelada: 'bg-slate-100 text-slate-500'
+                            }
+                            return (
+                              <div key={insc.id} className="bg-white border border-slate-200 rounded-xl p-4 hover:shadow-md transition-shadow">
+                                <div className="flex items-start justify-between">
+                                  <div className="flex items-start gap-4">
+                                    <div className="w-10 h-10 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center flex-shrink-0">
+                                      <GraduationCap size={20} />
+                                    </div>
+                                    <div>
+                                      <h4 className="font-bold text-slate-800">{insc.convocatoria?.curso?.nombre}</h4>
+                                      <p className="text-sm text-slate-500 mt-0.5">
+                                        {insc.convocatoria?.curso?.entidadOrganiza && <span>{insc.convocatoria.curso.entidadOrganiza} • </span>}
+                                        {insc.convocatoria?.curso?.duracionHoras}h
+                                      </p>
+                                      <div className="flex items-center gap-3 mt-2 text-xs text-slate-500">
+                                        <span className="flex items-center gap-1">
+                                          <Calendar size={11} />
+                                          {insc.convocatoria?.fechaInicio ? new Date(insc.convocatoria.fechaInicio).toLocaleDateString('es-ES') : '—'} — {insc.convocatoria?.fechaFin ? new Date(insc.convocatoria.fechaFin).toLocaleDateString('es-ES') : '—'}
+                                        </span>
+                                        {insc.convocatoria?.lugar && <span>📍 {insc.convocatoria.lugar}</span>}
+                                      </div>
+                                      {insc.convocatoria?.curso?.formadorPrincipal && (
+                                        <p className="text-xs text-slate-400 mt-1">👤 {insc.convocatoria.curso.formadorPrincipal}</p>
+                                      )}
+                                      <div className="flex items-center gap-3 mt-2">
+                                        {insc.apto !== null && insc.apto !== undefined && (
+                                          <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${insc.apto ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                            {insc.apto ? '✓ APTO' : '✗ NO APTO'}
+                                          </span>
+                                        )}
+                                        {insc.notaFinal !== null && insc.notaFinal !== undefined && (
+                                          <span className="text-xs text-slate-500">Nota: <strong>{insc.notaFinal}</strong></span>
+                                        )}
+                                        {insc.porcentajeAsistencia !== null && insc.porcentajeAsistencia !== undefined && (
+                                          <span className="text-xs text-slate-500">Asistencia: <strong>{insc.porcentajeAsistencia}%</strong></span>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <span className={`text-xs px-2.5 py-1 rounded-full font-bold flex-shrink-0 ${estadoColor[insc.estado] || 'bg-slate-100 text-slate-500'}`}>
+                                    {insc.estado?.replace('_', ' ').toUpperCase()}
+                                  </span>
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Sub-tab: Certificaciones */}
+                  {formacionSubTab === 'certificaciones' && (
+                    <div>
+                      {loadingFormacion ? (
+                        <div className="text-center py-8 text-slate-400">Cargando...</div>
+                      ) : certificacionesReales.length === 0 ? (
+                        <div className="text-center py-12 text-slate-500">
+                          <Award className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                          <p>No tienes certificaciones registradas</p>
+                          <p className="text-xs mt-1 text-slate-400">Las certificaciones se generan al completar un curso</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {certificacionesReales.map((cert: any) => {
+                            const vigente = cert.vigente && (!cert.fechaExpiracion || new Date(cert.fechaExpiracion) > new Date())
+                            return (
+                              <div key={cert.id} className="bg-white border border-slate-200 rounded-xl p-4 hover:shadow-md transition-shadow">
+                                <div className="flex items-start justify-between">
+                                  <div className="flex items-start gap-4">
+                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${vigente ? 'bg-green-100 text-green-600' : 'bg-slate-100 text-slate-400'}`}>
+                                      <Award size={20} />
+                                    </div>
+                                    <div>
+                                      <h4 className="font-bold text-slate-800">{cert.curso?.nombre}</h4>
+                                      <p className="text-sm text-slate-500">{cert.entidadEmisora}</p>
+                                      <div className="flex items-center gap-3 mt-2 text-xs text-slate-500">
+                                        <span>📅 Obtenido: {new Date(cert.fechaObtencion).toLocaleDateString('es-ES')}</span>
+                                        {cert.fechaExpiracion && (
+                                          <span className={new Date(cert.fechaExpiracion) < new Date() ? 'text-red-500 font-medium' : ''}>
+                                            ⏱ Expira: {new Date(cert.fechaExpiracion).toLocaleDateString('es-ES')}
+                                          </span>
+                                        )}
+                                      </div>
+                                      {cert.numeroCertificado && (
+                                        <p className="text-xs text-slate-400 mt-1">Nº {cert.numeroCertificado}</p>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <span className={`text-xs px-2.5 py-1 rounded-full font-bold ${vigente ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                      {vigente ? 'VIGENTE' : 'VENCIDA'}
+                                    </span>
+                                    {cert.certificadoUrl && (
+                                      <a href={cert.certificadoUrl} target="_blank" className="p-1.5 text-purple-600 hover:bg-purple-50 rounded-lg">
+                                        <Eye size={16} />
+                                      </a>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Sub-tab: Registro Manual */}
+                  {formacionSubTab === 'manual' && (formaciones.length === 0 ? (
                     <div className="text-center py-12 text-slate-500">
                       <GraduationCap className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                      <p>No hay formaciones registradas</p>
+                      <p>No hay formaciones manuales registradas</p>
                       <button
                         onClick={() => setShowNuevaFormacion(true)}
                         className="mt-4 text-orange-600 hover:text-orange-700 font-medium text-sm"
@@ -980,7 +1141,7 @@ export default function MiAreaPage() {
                         </div>
                       ))}
                     </div>
-                  )}
+                  ))}
                 </div>
               )}
 

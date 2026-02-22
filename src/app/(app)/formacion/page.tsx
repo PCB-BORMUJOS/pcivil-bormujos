@@ -347,11 +347,14 @@ export default function FormacionPage() {
     tipo: 'interna',
     duracionHoras: 0,
     validezMeses: 0, // 0 = indefinido
-    activo: true
+    activo: true,
+    formadorPrincipal: '',
+    entidadOrganiza: '',
+    entidadCertifica: ''
   });
 
   const [nuevaConvocatoriaData, setNuevaConvocatoriaData] = useState({
-    cursoId: '', fechaInicio: '', fechaFin: '', lugar: '', plazasDisponibles: 20, horario: '', instructores: ''
+    cursoId: '', fechaInicio: '', fechaFin: '', lugar: '', plazasDisponibles: 20, horario: '', instructores: '', formadorNombre: '', formadorExterno: false
   });
   const [nuevaNecesidadData, setNuevaNecesidadData] = useState({
     descripcion: '', areaAfectada: '', numeroPersonas: 1, motivo: '', prioridad: 3, impacto: 'medio', urgencia: 'normal'
@@ -391,7 +394,10 @@ export default function FormacionPage() {
         tipo: cursoEditando.tipo || 'interna',
         duracionHoras: cursoEditando.duracionHoras || 0,
         validezMeses: cursoEditando.validezMeses || 0,
-        activo: cursoEditando.activo !== false
+        activo: cursoEditando.activo !== false,
+        formadorPrincipal: cursoEditando.formadorPrincipal || '',
+        entidadOrganiza: cursoEditando.entidadOrganiza || '',
+        entidadCertifica: cursoEditando.entidadCertifica || ''
       });
       setShowNuevoCurso(true);
     }
@@ -927,7 +933,10 @@ export default function FormacionPage() {
             tipo_curso: nuevoCurso.tipo,
             duracionHoras: Number(nuevoCurso.duracionHoras),
             validezMeses: nuevoCurso.validezMeses ? Number(nuevoCurso.validezMeses) : null,
-            activo: nuevoCurso.activo
+            activo: nuevoCurso.activo,
+            formadorPrincipal: nuevoCurso.formadorPrincipal,
+            entidadOrganiza: nuevoCurso.entidadOrganiza,
+            entidadCertifica: nuevoCurso.entidadCertifica
           })
         });
 
@@ -936,7 +945,8 @@ export default function FormacionPage() {
           setCursoEditando(null);
           setNuevoCurso({
             codigo: '', nombre: '', descripcion: '', tipo: 'interna',
-            duracionHoras: 0, validezMeses: 0, activo: true
+            duracionHoras: 0, validezMeses: 0, activo: true,
+            formadorPrincipal: '', entidadOrganiza: '', entidadCertifica: ''
           });
           cargarCursos();
           alert('✅ Curso actualizado correctamente');
@@ -957,7 +967,10 @@ export default function FormacionPage() {
             tipo_curso: nuevoCurso.tipo,
             duracionHoras: Number(nuevoCurso.duracionHoras),
             validezMeses: nuevoCurso.validezMeses ? Number(nuevoCurso.validezMeses) : null,
-            activo: nuevoCurso.activo
+            activo: nuevoCurso.activo,
+            formadorPrincipal: nuevoCurso.formadorPrincipal,
+            entidadOrganiza: nuevoCurso.entidadOrganiza,
+            entidadCertifica: nuevoCurso.entidadCertifica
           })
         });
 
@@ -965,7 +978,8 @@ export default function FormacionPage() {
           setShowNuevoCurso(false);
           setNuevoCurso({
             codigo: '', nombre: '', descripcion: '', tipo: 'interna',
-            duracionHoras: 0, validezMeses: 0, activo: true
+            duracionHoras: 0, validezMeses: 0, activo: true,
+            formadorPrincipal: '', entidadOrganiza: '', entidadCertifica: ''
           });
           cargarCursos();
           // Also refresh stats
@@ -1004,13 +1018,15 @@ export default function FormacionPage() {
             lugar: nuevaConvocatoriaData.lugar,
             plazasDisponibles: Number(nuevaConvocatoriaData.plazasDisponibles),
             horario: nuevaConvocatoriaData.horario,
-            instructores: nuevaConvocatoriaData.instructores
+            instructores: nuevaConvocatoriaData.instructores,
+            formadorNombre: nuevaConvocatoriaData.formadorNombre,
+            formadorExterno: nuevaConvocatoriaData.formadorExterno
           })
         });
         if (res.ok) {
           setShowNuevaConvocatoria(false);
           setConvocatoriaEditando(null);
-          setNuevaConvocatoriaData({ cursoId: '', fechaInicio: '', fechaFin: '', lugar: '', plazasDisponibles: 20, horario: '', instructores: '' });
+          setNuevaConvocatoriaData({ cursoId: '', fechaInicio: '', fechaFin: '', lugar: '', plazasDisponibles: 20, horario: '', instructores: '', formadorNombre: '', formadorExterno: false });
           cargarConvocatorias();
           alert('✅ Convocatoria actualizada');
         } else {
@@ -1033,7 +1049,7 @@ export default function FormacionPage() {
         });
         if (res.ok) {
           setShowNuevaConvocatoria(false);
-          setNuevaConvocatoriaData({ cursoId: '', fechaInicio: '', fechaFin: '', lugar: '', plazasDisponibles: 20, horario: '', instructores: '' });
+          setNuevaConvocatoriaData({ cursoId: '', fechaInicio: '', fechaFin: '', lugar: '', plazasDisponibles: 20, horario: '', instructores: '', formadorNombre: '', formadorExterno: false });
           cargarConvocatorias();
           alert('✅ Convocatoria creada');
         } else {
@@ -1535,7 +1551,7 @@ export default function FormacionPage() {
                           {(isAdmin || isFormacionMember) && (
                             <div className="mt-4 pt-3 border-t border-slate-200">
                               <button
-                                onClick={() => { setNuevaConvocatoriaData({ cursoId: curso.id, fechaInicio: '', fechaFin: '', lugar: '', plazasDisponibles: curso.plazasMaximas || 20, horario: '', instructores: '' }); setConvocatoriaEditando(null); setShowNuevaConvocatoria(true); }}
+                                onClick={() => { setNuevaConvocatoriaData({ cursoId: curso.id, fechaInicio: '', fechaFin: '', lugar: '', plazasDisponibles: curso.plazasMaximas || 20, horario: '', instructores: '', formadorNombre: '', formadorExterno: false }); setConvocatoriaEditando(null); setShowNuevaConvocatoria(true); }}
                                 className="px-4 py-2 text-sm border border-dashed border-blue-300 text-blue-600 rounded-lg hover:bg-blue-50 flex items-center gap-2"
                               >
                                 <Plus size={14} /> Nueva convocatoria de este curso
@@ -1570,7 +1586,7 @@ export default function FormacionPage() {
                 </div>
                 {(isAdmin || isFormacionMember) && (
                   <button
-                    onClick={() => { setConvocatoriaEditando(null); setNuevaConvocatoriaData({ cursoId: '', fechaInicio: '', fechaFin: '', lugar: '', plazasDisponibles: 20, horario: '', instructores: '' }); setShowNuevaConvocatoria(true); }}
+                    onClick={() => { setConvocatoriaEditando(null); setNuevaConvocatoriaData({ cursoId: '', fechaInicio: '', fechaFin: '', lugar: '', plazasDisponibles: 20, horario: '', instructores: '', formadorNombre: '', formadorExterno: false }); setShowNuevaConvocatoria(true); }}
                     className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 text-sm"
                   >
                     <Plus size={16} /> Nueva Convocatoria
@@ -2279,6 +2295,20 @@ export default function FormacionPage() {
               </div>
             </div>
 
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Formador Principal</label>
+                <input type="text" className="w-full border rounded-lg p-2" placeholder="Nombre del formador habitual..." value={nuevoCurso.formadorPrincipal} onChange={e => setNuevoCurso({ ...nuevoCurso, formadorPrincipal: e.target.value })} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Entidad que Organiza</label>
+                <input type="text" className="w-full border rounded-lg p-2" placeholder="Ej. Cruz Roja, IESPA..." value={nuevoCurso.entidadOrganiza} onChange={e => setNuevoCurso({ ...nuevoCurso, entidadOrganiza: e.target.value })} />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Entidad que Certifica</label>
+              <input type="text" className="w-full border rounded-lg p-2" placeholder="Ej. Consejería de Salud, DGT..." value={nuevoCurso.entidadCertifica} onChange={e => setNuevoCurso({ ...nuevoCurso, entidadCertifica: e.target.value })} />
+            </div>
             <div className="flex items-center gap-2">
               <input
                 type="checkbox"
@@ -2402,6 +2432,16 @@ export default function FormacionPage() {
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Instructores</label>
               <input type="text" className="w-full border rounded-lg p-2" placeholder="Nombres de instructores..." value={nuevaConvocatoriaData.instructores} onChange={e => setNuevaConvocatoriaData({ ...nuevaConvocatoriaData, instructores: e.target.value })} />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Formador de esta edición</label>
+                <input type="text" className="w-full border rounded-lg p-2" placeholder="Nombre del formador..." value={nuevaConvocatoriaData.formadorNombre} onChange={e => setNuevaConvocatoriaData({ ...nuevaConvocatoriaData, formadorNombre: e.target.value })} />
+              </div>
+              <div className="flex items-center gap-2 mt-6">
+                <input type="checkbox" id="formadorExterno" className="w-4 h-4 rounded" checked={nuevaConvocatoriaData.formadorExterno} onChange={e => setNuevaConvocatoriaData({ ...nuevaConvocatoriaData, formadorExterno: e.target.checked })} />
+                <label htmlFor="formadorExterno" className="text-sm font-medium text-slate-700">Formador externo</label>
+              </div>
             </div>
               <div className="flex justify-end gap-2 pt-4 bg-slate-50 -mx-6 -mb-6 p-4 mt-4 border-t">
                 <button onClick={() => { setShowNuevaConvocatoria(false); setConvocatoriaEditando(null); }} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg font-medium">Cancelar</button>
