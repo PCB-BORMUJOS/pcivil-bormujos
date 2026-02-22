@@ -9,7 +9,12 @@ const getDriveClient = async () => {
 
     if (process.env.GOOGLE_SERVICE_ACCOUNT_KEY) {
         try {
-            credentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_KEY)
+            const raw = process.env.GOOGLE_SERVICE_ACCOUNT_KEY!
+        credentials = JSON.parse(raw)
+        // Corregir private_key: los \n literales deben ser saltos de línea reales
+        if (credentials.private_key) {
+            credentials.private_key = credentials.private_key.replace(/\\n/g, '\n')
+        }
         } catch (error) {
             console.error('❌ Error al parsear GOOGLE_SERVICE_ACCOUNT_KEY:', error)
             throw new Error(`Failed to parse GOOGLE_SERVICE_ACCOUNT_KEY: ${error}`)
