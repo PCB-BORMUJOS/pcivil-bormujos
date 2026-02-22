@@ -1,7 +1,7 @@
 import { google } from 'googleapis'
 import { Stream } from 'stream'
 
-const FOLDER_ID = '10X11xzEnPc75OdGBNZvZiiEfzP_3wj0h'
+const FOLDER_ID = process.env.GOOGLE_DRIVE_FOLDER_ID || '1I0i96umQtLaTBLUg1Om_Wx6PlxfjQbRQ'
 const SCOPES = ['https://www.googleapis.com/auth/drive']
 
 const getDriveClient = async () => {
