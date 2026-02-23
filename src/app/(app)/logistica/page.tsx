@@ -576,7 +576,7 @@ export default function LogisticaPage() {
                             <p className="text-xs text-slate-500">{area.totalArticulos} artículos</p>
                           </div>
                           {area.stockBajo > 0 && (
-                            <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full font-bold">⚠️ {area.stockBajo}</span>
+                            <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full font-bold flex items-center gap-1"><AlertTriangle size={12} />{area.stockBajo}</span>
                           )}
                         </button>
                         {area.subInventarios.map(sub => (
@@ -664,7 +664,7 @@ export default function LogisticaPage() {
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-2xl font-bold text-slate-800">{area.totalArticulos}</span>
-                  {area.stockBajo > 0 && <span className="text-xs bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded font-bold">{area.stockBajo}⚠️</span>}
+                  {area.stockBajo > 0 && <span className="text-xs bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded-full font-bold inline-flex items-center gap-1"><AlertTriangle size={10} />{area.stockBajo}</span>}
                 </div>
               </button>
             );
