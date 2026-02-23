@@ -216,6 +216,7 @@ export default function LogisticaPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFamilia, setSelectedFamilia] = useState('all');
   const [soloAlertas, setSoloAlertas] = useState(false);
+  const [paginaActual, setPaginaActual] = useState(1);
   const [filtroPeticiones, setFiltroPeticiones] = useState('all');
 
   // Datos
@@ -276,6 +277,7 @@ export default function LogisticaPage() {
   // FUNCIONES DE CARGA
   // ============================================
   const cargarDatos = async () => {
+    setPaginaActual(1);
     setLoading(true);
     try {
       const params = new URLSearchParams();
@@ -620,7 +622,7 @@ export default function LogisticaPage() {
             <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center text-purple-600"><Package size={24} /></div>
           </div>
         </div>
-        <div className={`bg-white p-5 rounded-xl border shadow-sm cursor-pointer transition-all hover:shadow-md ${soloAlertas ? 'border-yellow-400 ring-2 ring-yellow-200' : 'border-slate-200'}`} onClick={() => setSoloAlertas(!soloAlertas)}>
+        <div className={`bg-white p-5 rounded-xl border shadow-sm cursor-pointer transition-all hover:shadow-md ${soloAlertas ? 'border-yellow-400 ring-2 ring-yellow-200' : 'border-slate-200'}`} onClick={() => { setSoloAlertas(!soloAlertas); setPaginaActual(1); }}>
           <div className="flex items-center justify-between">
             <div>
               <p className="text-slate-500 text-sm">Stock Bajo</p>
@@ -709,12 +711,12 @@ export default function LogisticaPage() {
                     type="text"
                     placeholder="Buscar por nombre, código..."
                     value={searchTerm}
-                    onChange={e => setSearchTerm(e.target.value)}
+                    onChange={e => { setSearchTerm(e.target.value); setPaginaActual(1); }}
                     onKeyDown={e => e.key === 'Enter' && cargarDatos()}
                     className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
                   />
                 </div>
-                <select value={selectedFamilia} onChange={e => setSelectedFamilia(e.target.value)} className="border border-slate-200 rounded-lg px-3 py-2.5 text-sm">
+                <select value={selectedFamilia} onChange={e => { setSelectedFamilia(e.target.value); setPaginaActual(1); }} className="border border-slate-200 rounded-lg px-3 py-2.5 text-sm">
                   <option value="all">Todas las familias</option>
                   {familias.map(f => <option key={f.id} value={f.id}>{f.categoria.nombre} → {f.nombre}</option>)}
                 </select>
@@ -747,7 +749,7 @@ export default function LogisticaPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {articulos.map(articulo => {
+                      {articulos.slice((paginaActual - 1) * 30, paginaActual * 30).map(articulo => {
                         const estadoStock = getEstadoStock(articulo);
                         const estadoCaducidad = getEstadoCaducidad(articulo);
                         const EstadoIcon = estadoStock.icon;
@@ -802,6 +804,20 @@ export default function LogisticaPage() {
                     </tbody>
                   </table>
                 </div>
+                {articulos.length > 30 && (
+                  <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200 bg-slate-50/50 rounded-b-xl">
+                    <p className="text-sm text-slate-500">
+                      Mostrando {((paginaActual - 1) * 30) + 1}-{Math.min(paginaActual * 30, articulos.length)} de {articulos.length} artículos
+                    </p>
+                    <div className="flex items-center gap-1">
+                      <button onClick={() => setPaginaActual(p => Math.max(1, p - 1))} disabled={paginaActual === 1} className="px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-200 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed">← Anterior</button>
+                      {Array.from({ length: Math.ceil(articulos.length / 30) }, (_, i) => i + 1).map(p => (
+                        <button key={p} onClick={() => setPaginaActual(p)} className={`w-8 h-8 text-sm font-medium rounded-lg ${paginaActual === p ? 'bg-purple-600 text-white' : 'text-slate-600 hover:bg-slate-200'}`}>{p}</button>
+                      ))}
+                      <button onClick={() => setPaginaActual(p => Math.min(Math.ceil(articulos.length / 30), p + 1))} disabled={paginaActual >= Math.ceil(articulos.length / 30)} className="px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-200 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed">Siguiente →</button>
+                    </div>
+                  </div>
+                )}
               )}
             </>
           )}
