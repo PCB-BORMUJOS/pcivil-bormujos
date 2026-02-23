@@ -1,7 +1,7 @@
 import { google } from 'googleapis'
 import { Stream } from 'stream'
 
-const FOLDER_ID = '10X11xzEnPc75OdGBNZvZiiEfzP_3wj0h'
+const FOLDER_ID = process.env.GOOGLE_DRIVE_FOLDER_ID || '1I0i96umQtLaTBLUg1Om_Wx6PlxfjQbRQ'
 const SCOPES = ['https://www.googleapis.com/auth/drive']
 
 const getDriveClient = async () => {
@@ -9,7 +9,12 @@ const getDriveClient = async () => {
 
     if (process.env.GOOGLE_SERVICE_ACCOUNT_KEY) {
         try {
-            credentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_KEY)
+            const raw = process.env.GOOGLE_SERVICE_ACCOUNT_KEY!
+        credentials = JSON.parse(raw)
+        // Corregir private_key: los \n literales deben ser saltos de línea reales
+        if (credentials.private_key) {
+            credentials.private_key = credentials.private_key.replace(/\\n/g, '\n')
+        }
         } catch (error) {
             console.error('❌ Error al parsear GOOGLE_SERVICE_ACCOUNT_KEY:', error)
             throw new Error(`Failed to parse GOOGLE_SERVICE_ACCOUNT_KEY: ${error}`)
@@ -51,7 +56,6 @@ export async function uploadToGoogleDrive(
                 body: bufferStream,
             },
             fields: 'id,webViewLink,webContentLink',
-            supportsAllDrives: true,
         })
 
         return {

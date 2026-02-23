@@ -780,6 +780,40 @@ export default function DashboardPage() {
                   <p className="text-xs text-slate-500 mt-1">
                     {new Date(f.fechaInicio).toLocaleDateString()} • {f.plazasOcupadas}/{f.plazasDisponibles} plazas
                   </p>
+                  {f.curso?.formadorPrincipal && (
+                    <p className="text-xs text-slate-400 mt-0.5">👤 {f.curso.formadorPrincipal}</p>
+                  )}
+                  {f.curso?.entidadOrganiza && (
+                    <p className="text-xs text-slate-400">🏛 {f.curso.entidadOrganiza}</p>
+                  )}
+                  <div className="flex items-center justify-between mt-2">
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${f.plazasDisponibles - f.plazasOcupadas > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                      {f.plazasDisponibles - f.plazasOcupadas > 0 ? `${f.plazasDisponibles - f.plazasOcupadas} plazas libres` : 'Sin plazas'}
+                    </span>
+                    {f.plazasDisponibles - f.plazasOcupadas > 0 && (
+                      <button
+                        onClick={async () => {
+                          const res = await fetch('/api/formacion', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ tipo: 'inscripcion', convocatoriaId: f.id })
+                          })
+                          const data = await res.json()
+                          if (res.ok) {
+                            alert('✅ Inscripción realizada correctamente')
+                            fetch('/api/formacion?tipo=convocatorias&estado=inscripciones_abiertas')
+                              .then(r => r.json())
+                              .then(d => setFormaciones(d.convocatorias || []))
+                          } else {
+                            alert(data.error || 'Error al inscribirse')
+                          }
+                        }}
+                        className="text-xs px-3 py-1 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium transition-colors"
+                      >
+                        Inscribirme
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
               {formaciones.length > 3 && (

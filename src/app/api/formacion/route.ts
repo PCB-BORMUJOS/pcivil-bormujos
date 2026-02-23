@@ -176,6 +176,35 @@ export async function GET(request: NextRequest) {
                     }
                 })
 
+            case 'mi-formacion': {
+                const usuarioActual = await (prisma as any).usuario.findUnique({
+                    where: { email: session.user.email }
+                })
+                if (!usuarioActual) return NextResponse.json({ inscripciones: [], certificaciones: [] })
+                
+                const [inscripcionesUsuario, certificacionesUsuario] = await Promise.all([
+                    (prisma as any).inscripcion.findMany({
+                        where: { usuarioId: usuarioActual.id },
+                        include: {
+                            convocatoria: {
+                                include: {
+                                    curso: { select: { id: true, nombre: true, duracionHoras: true, entidadCertifica: true, entidadOrganiza: true, formadorPrincipal: true } }
+                                }
+                            }
+                        },
+                        orderBy: { createdAt: 'desc' }
+                    }),
+                    (prisma as any).certificacion.findMany({
+                        where: { usuarioId: usuarioActual.id },
+                        include: {
+                            curso: { select: { id: true, nombre: true, duracionHoras: true, entidadOrganiza: true } }
+                        },
+                        orderBy: { fechaObtencion: 'desc' }
+                    })
+                ])
+                return NextResponse.json({ inscripciones: inscripcionesUsuario, certificaciones: certificacionesUsuario })
+            }
+
             case 'jornadas': {
                 const convId = searchParams.get('convocatoriaId')
                 if (!convId) return NextResponse.json({ error: 'convocatoriaId requerido' }, { status: 400 })

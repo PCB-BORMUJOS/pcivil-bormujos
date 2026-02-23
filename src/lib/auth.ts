@@ -94,16 +94,37 @@ export const authOptions: AuthOptions = {
             accion: 'LOGIN',
             entidad: 'Usuario',
             entidadId: user.id,
-            descripcion: 'Inicio de sesion: ' + user.email,
+            descripcion: `Inicio de sesión: ${user.email}`,
             usuarioId: user.id,
             usuarioNombre: user.name || user.email || 'Desconocido',
-            modulo: 'Autenticacion',
+            modulo: 'Autenticación',
             ip: null,
             userAgent: null,
           }
         })
       } catch (e) {
-        console.error('Error registrando LOGIN:', e)
+        console.error('Error registrando LOGIN en auditoría:', e)
+      }
+    },
+    async signOut({ token }: { token: any }) {
+      try {
+        if (token?.id) {
+          await prisma.auditLog.create({
+            data: {
+              accion: 'LOGOUT',
+              entidad: 'Usuario',
+              entidadId: token.id,
+              descripcion: `Cierre de sesión: ${token.email}`,
+              usuarioId: token.id,
+              usuarioNombre: token.name || token.email || 'Desconocido',
+              modulo: 'Autenticación',
+              ip: null,
+              userAgent: null,
+            }
+          })
+        }
+      } catch (e) {
+        console.error('Error registrando LOGOUT en auditoría:', e)
       }
     }
   },

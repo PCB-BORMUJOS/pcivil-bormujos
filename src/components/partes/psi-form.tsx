@@ -136,23 +136,29 @@ ${textComponents.conclusion}`.trim()
             doc.save(`PSI_${savedForm.numero || 'borrador'}.pdf`)
 
             // Upload to Google Drive (Background)
-            if (savedForm.id && savedForm.numero) {
+            const parteId = savedForm.id || id
+            const parteNumero = savedForm.numero || form.numero
+            if (parteId && parteNumero) {
                 const formData = new FormData()
-                formData.append('file', pdfBlob, `PSI_${savedForm.numero}.pdf`)
-                formData.append('parteId', savedForm.id)
-                formData.append('numeroParte', savedForm.numero)
+                formData.append('file', pdfBlob, `PSI_${parteNumero}.pdf`)
+                formData.append('parteId', parteId)
+                formData.append('numeroParte', parteNumero)
 
                 fetch('/api/partes/psi/drive-upload', {
                     method: 'POST',
                     body: formData
                 })
-                    .then(res => res.json())
+                    .then(res => {
+                        console.log('Drive upload status:', res.status)
+                        return res.json()
+                    })
                     .then(data => {
+                        console.log('Drive upload response:', JSON.stringify(data))
                         if (data.success) {
                             toast.success('PDF sincronizado con Google Drive', { id: 'drive-upload' })
                         } else {
                             console.error('Error subida Drive:', data)
-                            toast.error('Error sincronizando con Drive', { id: 'drive-upload' })
+                            toast.error('Error sincronizando con Drive: ' + (data.error || 'desconocido'), { id: 'drive-upload' })
                         }
                     })
                     .catch(err => {
