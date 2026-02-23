@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
+import { registrarAudit, getUsuarioAudit } from '@/lib/audit'
 import { authOptions } from '@/lib/auth'
 import { PrismaClient } from '@prisma/client'
 import { put, del } from '@vercel/blob'
@@ -173,6 +174,16 @@ export async function POST(request: NextRequest) {
         }
       })
 
+      const { usuarioId, usuarioNombre } = getUsuarioAudit(session)
+      await registrarAudit({
+        accion: 'CREATE',
+        entidad: 'Vehículo',
+        entidadId: vehiculoId,
+        descripcion: 'Mantenimiento registrado: ' + tipoMant + ' - ' + descripcion,
+        usuarioId,
+        usuarioNombre,
+        modulo: 'Vehículos',
+      })
       return NextResponse.json({ mantenimiento })
     }
 

@@ -1,6 +1,7 @@
 import { put, del } from '@vercel/blob'
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
+import { registrarAudit, getUsuarioAudit } from '@/lib/audit'
 // CORRECCIÓN 1: Usamos la ruta correcta de tu DB y quitamos authOptions para evitar errores
 import { prisma } from '@/lib/db'
 
@@ -420,6 +421,17 @@ export async function POST(request: NextRequest) {
         }
       })
 
+      const _auditUser = getUsuarioAudit(session)
+      await registrarAudit({
+        accion: 'CREATE',
+        entidad: 'Inventario',
+        entidadId: articulo.id,
+        descripcion: 'Artículo creado: ' + articulo.nombre,
+        usuarioId: _auditUser.usuarioId,
+        usuarioNombre: _auditUser.usuarioNombre,
+        modulo: 'Logística',
+        datosNuevos: { nombre: articulo.nombre, stock: articulo.stockActual },
+      })
       return NextResponse.json({ success: true, articulo })
     }
 

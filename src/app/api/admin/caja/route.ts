@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { prisma } from '@/lib/db'
-import logAudit from '@/lib/audit'
+import { registrarAudit, getUsuarioAudit } from '@/lib/audit'
 
 export async function GET(request: NextRequest) {
   try {
@@ -83,11 +83,16 @@ export async function POST(request: NextRequest) {
     })
 
     // Registrar en auditoría
-    await logAudit(request, 'CREATE', 'Caja', {
+const _auditUser = getUsuarioAudit(session)
+    await registrarAudit({
+      accion: 'CREATE',
+      entidad: 'Caja',
       entidadId: movimiento.id,
-      datosNuevos: { tipo, concepto, descripcion, importe: importeNum, categoria },
-      descripcion: `${tipo === 'entrada' ? 'Entrada' : 'Salida'} de ${importeNum}€ - ${concepto}`,
-      modulo: 'Administración'
+      descripcion: (tipo === 'entrada' ? 'Entrada' : 'Salida') + ' de ' + importeNum + '€ - ' + concepto,
+      usuarioId: _auditUser.usuarioId,
+      usuarioNombre: _auditUser.usuarioNombre,
+      modulo: 'Administración',
+      datosNuevos: { tipo, concepto, importe: importeNum },
     })
 
     return NextResponse.json({ success: true, movimiento })

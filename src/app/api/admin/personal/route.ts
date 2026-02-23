@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
+import { registrarAudit, getUsuarioAudit } from '@/lib/audit'
 import { prisma } from '@/lib/db'
 import { hash } from 'bcryptjs'
 import { authOptions } from '@/lib/auth'
@@ -106,6 +107,17 @@ export async function POST(request: NextRequest) {
       }
     })
 
+    const { usuarioId, usuarioNombre } = getUsuarioAudit(session)
+    await registrarAudit({
+      accion: 'CREATE',
+      entidad: 'Usuario',
+      entidadId: usuario.id,
+      descripcion: 'Usuario creado: ' + usuario.nombre + ' ' + usuario.apellidos,
+      usuarioId,
+      usuarioNombre,
+      modulo: 'Administración',
+      datosNuevos: { email: usuario.email, rol: usuario.rol?.nombre },
+    })
     return NextResponse.json(usuario, { status: 201 })
   } catch (error) {
     console.error('Error al crear usuario:', error)
@@ -224,6 +236,16 @@ export async function DELETE(request: NextRequest) {
       where: { id }
     })
 
+    const { usuarioId, usuarioNombre } = getUsuarioAudit(session)
+    await registrarAudit({
+      accion: 'DELETE',
+      entidad: 'Usuario',
+      entidadId: id,
+      descripcion: 'Usuario eliminado: ' + id,
+      usuarioId,
+      usuarioNombre,
+      modulo: 'Administración',
+    })
     return NextResponse.json({ success: true, message: 'Usuario eliminado' })
   } catch (error) {
     console.error('Error al eliminar voluntario:', error)

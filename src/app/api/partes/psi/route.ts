@@ -234,6 +234,20 @@ export async function POST(request: NextRequest) {
             }
         })
 
+        // Registrar auditoría
+        const { registrarAudit, getUsuarioAudit } = await import('@/lib/audit')
+        const { usuarioId, usuarioNombre } = getUsuarioAudit(session)
+        await registrarAudit({
+            accion: 'CREATE',
+            entidad: 'PartePSI',
+            entidadId: parte.id,
+            descripcion: 'Parte PSI creado: ' + parte.numeroParte,
+            usuarioId,
+            usuarioNombre,
+            modulo: 'Partes',
+            datosNuevos: { numeroParte: parte.numeroParte, lugar: parte.lugar },
+        })
+
         return NextResponse.json({
             success: true,
             parte,
