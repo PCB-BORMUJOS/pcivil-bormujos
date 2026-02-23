@@ -35,6 +35,26 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ equipos })
     }
 
+    if (tipo === 'mantenimientos-equipo') {
+      const equipoId = searchParams.get('equipoId')
+      if (!equipoId) return NextResponse.json({ error: 'equipoId requerido' }, { status: 400 })
+      const mantenimientos = await prisma.mantenimientoEquipo.findMany({
+        where: { equipoId },
+        orderBy: { fecha: 'desc' }
+      })
+      return NextResponse.json({ mantenimientos })
+    }
+
+    if (tipo === 'ciclos-carga') {
+      const equipoId = searchParams.get('equipoId')
+      if (!equipoId) return NextResponse.json({ error: 'equipoId requerido' }, { status: 400 })
+      const ciclos = await prisma.cicloCarga.findMany({
+        where: { equipoId },
+        orderBy: { fechaInicio: 'desc' }
+      })
+      return NextResponse.json({ ciclos })
+    }
+
     // ===== EQUIPOS ECI =====
     if (tipo === 'equipos-eci') {
       const edificioId = searchParams.get('edificioId')
@@ -871,6 +891,48 @@ export async function POST(request: NextRequest) {
       })
 
       return NextResponse.json({ manual })
+    }
+
+    if (tipo === 'mantenimiento-equipo') {
+      const { equipoId, tipoMantenimiento, descripcion, fecha, realizadoPor, coste, observaciones } = body
+      if (!equipoId || !tipoMantenimiento || !descripcion) {
+        return NextResponse.json({ error: 'Datos incompletos' }, { status: 400 })
+      }
+      const mantenimiento = await prisma.mantenimientoEquipo.create({
+        data: {
+          equipoId,
+          tipo: tipoMantenimiento,
+          descripcion,
+          fecha: fecha ? new Date(fecha) : new Date(),
+          realizadoPor: realizadoPor || null,
+          coste: coste ? parseFloat(coste) : null,
+          observaciones: observaciones || null,
+        }
+      })
+      return NextResponse.json({ mantenimiento })
+    }
+
+    if (tipo === 'ciclo-carga') {
+      const { equipoId, fechaInicio, fechaFin, duracionHoras, nivelInicial, nivelFinal, observaciones } = body
+      if (!equipoId || !fechaInicio) {
+        return NextResponse.json({ error: 'Datos incompletos' }, { status: 400 })
+      }
+      const ciclo = await prisma.cicloCarga.create({
+        data: {
+          equipoId,
+          fechaInicio: new Date(fechaInicio),
+          fechaFin: fechaFin ? new Date(fechaFin) : null,
+          duracionHoras: duracionHoras ? parseFloat(duracionHoras) : null,
+          nivelInicial: nivelInicial ? parseInt(nivelInicial) : null,
+          nivelFinal: nivelFinal ? parseInt(nivelFinal) : null,
+          observaciones: observaciones || null,
+        }
+      })
+      await prisma.equipoRadio.update({
+        where: { id: equipoId },
+        data: { ciclosCarga: { increment: 1 } }
+      })
+      return NextResponse.json({ ciclo })
     }
 
     return NextResponse.json({ error: 'Tipo no válido' }, { status: 400 })
