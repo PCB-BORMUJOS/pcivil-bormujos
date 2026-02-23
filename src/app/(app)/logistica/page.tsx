@@ -803,21 +803,21 @@ export default function LogisticaPage() {
                       })}
                     </tbody>
                   </table>
-                </div>
-                {articulos.length > 30 && (
-                  <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200 bg-slate-50/50 rounded-b-xl">
-                    <p className="text-sm text-slate-500">
-                      Mostrando {((paginaActual - 1) * 30) + 1}-{Math.min(paginaActual * 30, articulos.length)} de {articulos.length} artículos
-                    </p>
-                    <div className="flex items-center gap-1">
-                      <button onClick={() => setPaginaActual(p => Math.max(1, p - 1))} disabled={paginaActual === 1} className="px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-200 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed">← Anterior</button>
-                      {Array.from({ length: Math.ceil(articulos.length / 30) }, (_, i) => i + 1).map(p => (
-                        <button key={p} onClick={() => setPaginaActual(p)} className={`w-8 h-8 text-sm font-medium rounded-lg ${paginaActual === p ? 'bg-purple-600 text-white' : 'text-slate-600 hover:bg-slate-200'}`}>{p}</button>
-                      ))}
-                      <button onClick={() => setPaginaActual(p => Math.min(Math.ceil(articulos.length / 30), p + 1))} disabled={paginaActual >= Math.ceil(articulos.length / 30)} className="px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-200 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed">Siguiente →</button>
+                  {articulos.length > 30 && (
+                    <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200 bg-slate-50/50">
+                      <p className="text-sm text-slate-500">
+                        Mostrando {((paginaActual - 1) * 30) + 1}-{Math.min(paginaActual * 30, articulos.length)} de {articulos.length} artículos
+                      </p>
+                      <div className="flex items-center gap-1">
+                        <button onClick={() => setPaginaActual(p => Math.max(1, p - 1))} disabled={paginaActual === 1} className="px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-200 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed">← Anterior</button>
+                        {Array.from({ length: Math.ceil(articulos.length / 30) }, (_, i) => i + 1).map(p => (
+                          <button key={p} onClick={() => setPaginaActual(p)} className={`w-8 h-8 text-sm font-medium rounded-lg ${paginaActual === p ? 'bg-purple-600 text-white' : 'text-slate-600 hover:bg-slate-200'}`}>{p}</button>
+                        ))}
+                        <button onClick={() => setPaginaActual(p => Math.min(Math.ceil(articulos.length / 30), p + 1))} disabled={paginaActual >= Math.ceil(articulos.length / 30)} className="px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-200 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed">Siguiente →</button>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
               )}
             </>
           )}
