@@ -86,5 +86,26 @@ export const authOptions: AuthOptions = {
       return session
     }
   },
+  events: {
+    async signIn({ user }) {
+      try {
+        await prisma.auditLog.create({
+          data: {
+            accion: 'LOGIN',
+            entidad: 'Usuario',
+            entidadId: user.id,
+            descripcion: 'Inicio de sesion: ' + user.email,
+            usuarioId: user.id,
+            usuarioNombre: user.name || user.email || 'Desconocido',
+            modulo: 'Autenticacion',
+            ip: null,
+            userAgent: null,
+          }
+        })
+      } catch (e) {
+        console.error('Error registrando LOGIN:', e)
+      }
+    }
+  },
   secret: process.env.NEXTAUTH_SECRET
 }
