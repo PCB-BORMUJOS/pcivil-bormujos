@@ -90,7 +90,6 @@ function createMapIcon(tipo: 'repetidor' | 'base' | 'base_junta' | 'portatil' | 
     iconAnchor: [size / 2, size + 12],
     popupAnchor: [0, -(size + 8)],
   });
-});
 }
 
 const CODIGOS_Q = [
