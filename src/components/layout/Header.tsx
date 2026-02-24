@@ -525,9 +525,9 @@ export default function Header({
                     <Link href="/mi-area" className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50" onClick={() => setShowUserMenu(false)}>
                       <User className="w-4 h-4 text-slate-400" /> Mi Perfil / FRI
                     </Link>
-                    <Link href="/configuracion" className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50" onClick={() => setShowUserMenu(false)}>
+                    {["superadmin","admin"].includes(session?.user?.rol || "") && <Link href="/configuracion" className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50" onClick={() => setShowUserMenu(false)}>
                       <Settings className="w-4 h-4 text-slate-400" /> Configuración
-                    </Link>
+                    </Link>}
                   </div>
                   <div className="border-t border-slate-200 py-2">
                     <button onClick={() => signOut({ callbackUrl: '/login' })} className="flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 w-full">

@@ -51,7 +51,7 @@ const navigation: NavItem[] = [
   { name: 'PMA', href: '/pma', icon: AlertTriangle },
   { name: 'Formación', href: '/formacion', icon: GraduationCap },
   { name: 'Acción Social', href: '/accion-social', icon: Users },
-  { name: 'Configuración', href: '/configuracion', icon: Settings },
+  { name: 'Configuración', href: '/configuracion', icon: Settings, adminOnly: true },
   {
     name: 'Partes',
     href: '/partes',
