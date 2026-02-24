@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import dynamic from 'next/dynamic'
 import 'leaflet/dist/leaflet.css'
+import L from 'leaflet'
 import {
   RefreshCw, Plus, Search, Edit, Trash2, Eye, X, Save,
   Package, AlertTriangle, CheckCircle, ShoppingCart, Layers,
@@ -66,10 +67,14 @@ const PRIORIDADES: Record<string, { label: string; color: string }> = {
 }
 
 const COLORES_COBERTURA: Record<string, { fill: string; stroke: string }> = {
-  portatil: { fill: '#3b82f680', stroke: '#3b82f6' },
-  base: { fill: '#10b98180', stroke: '#10b981' },
-  repetidor: { fill: '#8b5cf680', stroke: '#8b5cf6' },
-  movil: { fill: '#f59e0b80', stroke: '#f59e0b' },
+  portatil: { fill: '#2563eb', stroke: '#1d4ed8' },
+  base: { fill: '#059669', stroke: '#047857' },
+  repetidor: { fill: '#7c3aed', stroke: '#6d28d9' },
+  base_junta: { fill: '#dc2626', stroke: '#b91c1c' },
+}
+function createMapIcon(color, label, size = 36) {
+  if (typeof window === 'undefined') return undefined;
+  return L.divIcon({ className: '', html: '<div style="width:'+size+'px;height:'+size+'px;background:'+color+';border:3px solid white;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:'+(size*0.35)+'px;font-family:system-ui,sans-serif;">'+label+'</div>', iconSize: [size, size], iconAnchor: [size/2, size/2], popupAnchor: [0, -size/2] });
 }
 
 const CODIGOS_Q = [
@@ -163,7 +168,7 @@ export default function TransmisionesPage() {
   const [nuevaFamilia, setNuevaFamilia] = useState('')
   const [familiaEditando, setFamiliaEditando] = useState<string | null>(null)
   const [familiaEditandoNombre, setFamiliaEditandoNombre] = useState('')
-  const [coberturaVisible, setCoberturaVisible] = useState<Record<string, boolean>>({ portatil: true, base: true, repetidor: true, movil: true })
+  const [coberturaVisible, setCoberturaVisible] = useState<Record<string, boolean>>({ portatil: true, base: true, repetidor: true, base_junta: true })
   const [searchCodigo, setSearchCodigo] = useState('')
   const [isMounted, setIsMounted] = useState(false)
 
@@ -432,87 +437,35 @@ export default function TransmisionesPage() {
       {/* TAB: MAPA DE COBERTURA */}
       {mainTab === 'cobertura' && (
         <div className="space-y-4">
-          {/* Leyenda y toggles */}
           <div className="bg-white border border-slate-200 rounded-2xl p-5">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="font-semibold text-slate-800">Anillos de Cobertura Estimada</h3>
-              <p className="text-xs text-slate-400">Centro: Bormujos | Banda VHF</p>
-            </div>
-            <div className="flex items-center gap-4 flex-wrap">
-              {TIPOS_EQUIPO.map(t => {
-                const col = COLORES_COBERTURA[t.value]
-                return (
-                  <label key={t.value} className="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" checked={coberturaVisible[t.value] || false} onChange={() => setCoberturaVisible(prev => ({ ...prev, [t.value]: !prev[t.value] }))} className="rounded border-slate-300 text-purple-600 focus:ring-purple-500" />
-                    <span className="w-3 h-3 rounded-full" style={{ backgroundColor: col?.stroke }} />
-                    <span className="text-sm text-slate-600">{t.label}</span>
-                  </label>
-                )
-              })}
+            <div className="flex items-center justify-between mb-3"><h3 className="font-semibold text-slate-800">Mapa de Cobertura de Comunicaciones</h3><p className="text-xs text-slate-400">Banda VHF | Centro: Bormujos</p></div>
+            <div className="flex items-center gap-5 flex-wrap">
+              {[{key:'portatil',label:'Portátiles (~10 km)',color:'#1d4ed8'},{key:'base',label:'Base PC Digital (~25 km)',color:'#047857'},{key:'repetidor',label:'Repetidor Digital (~30 km)',color:'#6d28d9'},{key:'base_junta',label:'Red Emergencias Junta (~80 km)',color:'#b91c1c'}].map(t=>(
+                <label key={t.key} className="flex items-center gap-2 cursor-pointer select-none">
+                  <input type="checkbox" checked={coberturaVisible[t.key]||false} onChange={()=>setCoberturaVisible(prev=>({...prev,[t.key]:!prev[t.key]}))} className="rounded border-slate-300 text-purple-600 focus:ring-purple-500" />
+                  <span className="w-4 h-4 rounded-full border-2 border-white shadow-sm" style={{backgroundColor:t.color}} />
+                  <span className="text-sm font-medium text-slate-700">{t.label}</span>
+                </label>
+              ))}
             </div>
           </div>
-          {/* Mapa */}
-          <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden" style={{ height: '550px' }}>
+          <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden" style={{height:'600px'}}>
             {isMounted && (
-              <MapContainer center={[37.3716, -6.0719]} zoom={13} style={{ height: '100%', width: '100%' }} scrollWheelZoom={true}>
+              <MapContainer center={[37.3716,-6.0719]} zoom={11} style={{height:'100%',width:'100%'}} scrollWheelZoom={true}>
                 <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; OpenStreetMap' />
-                {/* Repetidor */}
-                {coberturaVisible.repetidor && (
-                  <>
-                    <Circle center={[37.37405612396787, -6.079995246657121]} radius={15000} pathOptions={{ color: '#8b5cf6', fillColor: '#8b5cf680', fillOpacity: 0.08, weight: 2, dashArray: '10,6' }} />
-                    <Circle center={[37.37405612396787, -6.079995246657121]} radius={10000} pathOptions={{ color: '#8b5cf6', fillColor: '#8b5cf680', fillOpacity: 0.05, weight: 1, dashArray: '5,5' }} />
-                    <Marker position={[37.37405612396787, -6.079995246657121]}><Popup><div className="text-sm"><p className="font-bold text-purple-700">Repetidor VHF</p><p className="text-slate-600">Cobertura: ~15 km</p><p className="text-xs text-slate-400">37.3741, -6.0800</p></div></Popup></Marker>
-                  </>
-                )}
-                {/* Emisora Base CECOPAL */}
-                {coberturaVisible.base && (
-                  <>
-                    <Circle center={[37.370547477757015, -6.08469160785196]} radius={8000} pathOptions={{ color: '#10b981', fillColor: '#10b98140', fillOpacity: 0.08, weight: 2, dashArray: '8,5' }} />
-                    <Marker position={[37.370547477757015, -6.08469160785196]}><Popup><div className="text-sm"><p className="font-bold text-emerald-700">Emisora Base - CECOPAL</p><p className="text-slate-600">Cobertura: ~8 km</p><p className="text-xs text-slate-400">37.3705, -6.0847</p></div></Popup></Marker>
-                  </>
-                )}
-                {/* Emisora Red Emergencias Junta */}
-                {coberturaVisible.base && (
-                  <>
-                    <Circle center={[37.37040742334877, -6.084648323420483]} radius={12000} pathOptions={{ color: '#0ea5e9', fillColor: '#0ea5e940', fillOpacity: 0.06, weight: 2, dashArray: '12,4' }} />
-                    <Marker position={[37.37040742334877, -6.084648323420483]}><Popup><div className="text-sm"><p className="font-bold text-sky-700">Red Emergencias Junta Andalucía</p><p className="text-slate-600">Antena CECOPAL</p><p className="text-xs text-slate-400">37.3704, -6.0846</p></div></Popup></Marker>
-                  </>
-                )}
-                {/* Portátiles: anillo desde centro Bormujos */}
-                {coberturaVisible.portatil && (
-                  <>
-                    <Circle center={[37.3716, -6.0719]} radius={3000} pathOptions={{ color: '#3b82f6', fillColor: '#3b82f640', fillOpacity: 0.1, weight: 2, dashArray: '4,4' }} />
-                    <Circle center={[37.3716, -6.0719]} radius={1500} pathOptions={{ color: '#3b82f6', fillColor: '#3b82f660', fillOpacity: 0.12, weight: 1, dashArray: '3,3' }} />
-                  </>
-                )}
-                {/* Equipos con coordenadas propias */}
-                {equipos.filter(eq => eq.latitud && eq.longitud && eq.tipo !== 'portatil').map(eq => {
-                  const radio = (eq.radioCobertura || (eq.tipo === 'repetidor' ? 15 : eq.tipo === 'base' ? 8 : 5)) * 1000
-                  const col = COLORES_COBERTURA[eq.tipo] || COLORES_COBERTURA.movil
-                  return coberturaVisible[eq.tipo] ? (
-                    <div key={eq.id}>
-                      <Circle center={[eq.latitud!, eq.longitud!]} radius={radio} pathOptions={{ color: col.stroke, fillColor: col.fill, fillOpacity: 0.08, weight: 2, dashArray: '6,4' }} />
-                      <Marker position={[eq.latitud!, eq.longitud!]}><Popup><div className="text-sm"><p className="font-bold" style={{ color: col.stroke }}>{eq.codigo} - {eq.marca} {eq.modelo}</p><p className="text-slate-600">{TIPOS_EQUIPO.find(t => t.value === eq.tipo)?.label}</p><p className="text-xs text-slate-400">Cobertura: ~{eq.radioCobertura || (eq.tipo === 'repetidor' ? 15 : 8)} km</p></div></Popup></Marker>
-                    </div>
-                  ) : null
-                })}
+                {coberturaVisible.repetidor && (<><Circle center={[37.37405612396787,-6.079995246657121]} radius={30000} pathOptions={{color:'#6d28d9',fillColor:'#7c3aed',fillOpacity:0.10,weight:3,dashArray:'12,8'}} /><Circle center={[37.37405612396787,-6.079995246657121]} radius={20000} pathOptions={{color:'#7c3aed',fillColor:'#8b5cf6',fillOpacity:0.06,weight:2,dashArray:'8,6'}} /><Marker position={[37.37405612396787,-6.079995246657121]} icon={createMapIcon('#6d28d9','R',42)}><Popup><div className="text-sm"><p className="font-bold text-purple-700">Repetidor Digital VHF</p><p className="text-slate-600">Cobertura: ~30 km</p><p className="text-xs text-slate-500 mt-1">Frecuencia digital (DMR)</p><p className="text-xs text-slate-400 font-mono">37.3741, -6.0800</p></div></Popup></Marker></>)}
+                {coberturaVisible.base && (<><Circle center={[37.370547477757015,-6.08469160785196]} radius={25000} pathOptions={{color:'#047857',fillColor:'#059669',fillOpacity:0.10,weight:3,dashArray:'10,6'}} /><Circle center={[37.370547477757015,-6.08469160785196]} radius={15000} pathOptions={{color:'#059669',fillColor:'#10b981',fillOpacity:0.06,weight:2,dashArray:'6,5'}} /><Marker position={[37.370547477757015,-6.08469160785196]} icon={createMapIcon('#047857','B',42)}><Popup><div className="text-sm"><p className="font-bold text-emerald-700">Base CECOPAL - PC Bormujos</p><p className="text-slate-600">Cobertura: ~25 km (digital)</p><p className="text-xs text-slate-500 mt-1">Emisora fija en sede Protección Civil</p><p className="text-xs text-slate-400 font-mono">37.3705, -6.0847</p></div></Popup></Marker></>)}
+                {coberturaVisible.base_junta && (<><Circle center={[37.37040742334877,-6.084648323420483]} radius={80000} pathOptions={{color:'#b91c1c',fillColor:'#dc2626',fillOpacity:0.06,weight:3,dashArray:'15,10'}} /><Circle center={[37.37040742334877,-6.084648323420483]} radius={50000} pathOptions={{color:'#dc2626',fillColor:'#ef4444',fillOpacity:0.04,weight:2,dashArray:'10,8'}} /><Marker position={[37.37040742334877,-6.084648323420483]} icon={createMapIcon('#b91c1c','J',42)}><Popup><div className="text-sm"><p className="font-bold text-red-700">Red Emergencias - Junta de Andalucía</p><p className="text-slate-600">Cobertura: ~80 km</p><p className="text-xs text-slate-500 mt-1">Antena en CECOPAL Bormujos</p><p className="text-xs text-slate-400 font-mono">37.3704, -6.0846</p></div></Popup></Marker></>)}
+                {coberturaVisible.portatil && (<><Circle center={[37.3716,-6.0719]} radius={10000} pathOptions={{color:'#1d4ed8',fillColor:'#2563eb',fillOpacity:0.12,weight:3,dashArray:'8,5'}} /><Circle center={[37.3716,-6.0719]} radius={5000} pathOptions={{color:'#2563eb',fillColor:'#3b82f6',fillOpacity:0.08,weight:2,dashArray:'5,4'}} /><Marker position={[37.3716,-6.0719]} icon={createMapIcon('#1d4ed8','P',36)}><Popup><div className="text-sm"><p className="font-bold text-blue-700">Portátiles (Walkies)</p><p className="text-slate-600">Cobertura directa: ~10 km</p><p className="text-xs text-slate-500 mt-1">Alcance mayor vía repetidor</p></div></Popup></Marker></>)}
+                {equipos.filter(eq=>eq.latitud&&eq.longitud&&eq.radioCobertura).map(eq=>{const col=COLORES_COBERTURA[eq.tipo]||COLORES_COBERTURA.base;return coberturaVisible[eq.tipo]?(<div key={eq.id}><Circle center={[eq.latitud,eq.longitud]} radius={(eq.radioCobertura||10)*1000} pathOptions={{color:col.stroke,fillColor:col.fill,fillOpacity:0.10,weight:2,dashArray:'8,5'}} /><Marker position={[eq.latitud,eq.longitud]} icon={createMapIcon(col.stroke,eq.codigo.charAt(0),34)}><Popup><div className="text-sm"><p className="font-bold" style={{color:col.stroke}}>{eq.codigo} - {eq.marca} {eq.modelo}</p><p className="text-slate-600">{TIPOS_EQUIPO.find(t=>t.value===eq.tipo)?.label}</p><p className="text-xs text-slate-400">~{eq.radioCobertura} km</p></div></Popup></Marker></div>):null})}
               </MapContainer>
             )}
           </div>
-          {/* Info cards debajo del mapa */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-white border border-slate-200 rounded-2xl p-5">
-              <div className="flex items-center gap-3 mb-3"><div className="p-2 bg-purple-100 rounded-lg"><Activity className="w-4 h-4 text-purple-600" /></div><h4 className="font-semibold text-slate-800">Repetidor</h4></div>
-              <div className="space-y-1 text-sm text-slate-600"><p>Coordenadas: 37.3741, -6.0800</p><p>Cobertura estimada: ~15 km</p><p>Tipo: VHF</p></div>
-            </div>
-            <div className="bg-white border border-slate-200 rounded-2xl p-5">
-              <div className="flex items-center gap-3 mb-3"><div className="p-2 bg-emerald-100 rounded-lg"><Antenna className="w-4 h-4 text-emerald-600" /></div><h4 className="font-semibold text-slate-800">Base CECOPAL</h4></div>
-              <div className="space-y-1 text-sm text-slate-600"><p>Coordenadas: 37.3705, -6.0847</p><p>Cobertura estimada: ~8 km</p><p>Emisora fija en sede PC</p></div>
-            </div>
-            <div className="bg-white border border-slate-200 rounded-2xl p-5">
-              <div className="flex items-center gap-3 mb-3"><div className="p-2 bg-blue-100 rounded-lg"><Radio className="w-4 h-4 text-blue-600" /></div><h4 className="font-semibold text-slate-800">Portátiles</h4></div>
-              <div className="space-y-1 text-sm text-slate-600"><p>Centro: Bormujos</p><p>Cobertura: ~1.5-3 km directa</p><p>Hasta ~15 km vía repetidor</p></div>
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="bg-white border border-slate-200 rounded-2xl p-5"><div className="flex items-center gap-3 mb-3"><div className="w-4 h-4 rounded-full bg-blue-700" /><h4 className="font-semibold text-slate-800">Portátiles</h4></div><div className="space-y-1 text-sm text-slate-600"><p>Cobertura directa: ~10 km</p><p>Vía repetidor: ~30 km</p></div></div>
+            <div className="bg-white border border-slate-200 rounded-2xl p-5"><div className="flex items-center gap-3 mb-3"><div className="w-4 h-4 rounded-full bg-emerald-700" /><h4 className="font-semibold text-slate-800">Base CECOPAL</h4></div><div className="space-y-1 text-sm text-slate-600"><p>Cobertura digital: ~25 km</p><p>Frecuencia PC Bormujos</p></div></div>
+            <div className="bg-white border border-slate-200 rounded-2xl p-5"><div className="flex items-center gap-3 mb-3"><div className="w-4 h-4 rounded-full bg-purple-700" /><h4 className="font-semibold text-slate-800">Repetidor Digital</h4></div><div className="space-y-1 text-sm text-slate-600"><p>Cobertura: ~30 km</p><p>DMR / Frecuencia digital</p></div></div>
+            <div className="bg-white border border-slate-200 rounded-2xl p-5"><div className="flex items-center gap-3 mb-3"><div className="w-4 h-4 rounded-full bg-red-700" /><h4 className="font-semibold text-slate-800">Red Junta Andalucía</h4></div><div className="space-y-1 text-sm text-slate-600"><p>Cobertura: ~80 km</p><p>Red de Emergencias autonómica</p></div></div>
           </div>
         </div>
       )}
