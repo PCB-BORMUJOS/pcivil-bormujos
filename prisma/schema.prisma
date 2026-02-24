@@ -880,6 +880,34 @@ model EquipoRadio {
   fechaInstalacionBat   DateTime?
   ciclosCarga           Int       @default(0)
   
+  // Configuración RF - Modo Analógico
+  freqTxAnalogico       Float?    // MHz
+  freqRxAnalogico       Float?    // MHz
+  subtonoTx             String?   // CTCSS Hz (ej: "67.0", "71.9")
+  subtonoRx             String?   // CTCSS Hz
+  potenciaAnalogico     Float?    // Watts
+
+  // Configuración RF - Modo Digital (DMR/Repetidor)
+  freqTxDigital         Float?    // MHz
+  freqRxDigital         Float?    // MHz
+  colorCode             Int?
+  timeslot              Int?      // 1 o 2
+  potenciaDigital       Float?    // Watts
+
+  // General RF
+  potenciaMaxima        Float?    // Watts máx del equipo
+  bandaFrecuencia       String?   // VHF, UHF
+  canalAnalogico        String?   // Nombre del canal
+  canalDigital          String?   // Nombre del canal digital
+  
+  // Coordenadas (para base, repetidor)
+  latitud               Float?
+  longitud              Float?
+  alturaAntena          Float?    // metros
+  
+  // Cobertura estimada
+  radioCobertura        Float?    // km estimados
+
   // Ubicación y notas
   ubicacion             String?
   observaciones         String?

@@ -1064,22 +1064,43 @@ export async function PUT(request: NextRequest) {
 
     // ===== EQUIPO RADIO =====
     if (tipo === 'equipo-radio') {
-      const { codigo, tipo: tipoEquipo, marca, modelo, numeroSerie, configuracion, estado, estadoBateria, fechaInstalacionBat, ubicacion, observaciones } = body
-
+      const { codigo, tipo: tipoEquipo, marca, modelo, numeroSerie, configuracion, estado, estadoBateria, fechaInstalacionBat, ubicacion, observaciones,
+        freqTxAnalogico, freqRxAnalogico, subtonoTx, subtonoRx, potenciaAnalogico,
+        freqTxDigital, freqRxDigital, colorCode, timeslot, potenciaDigital,
+        potenciaMaxima, bandaFrecuencia, canalAnalogico, canalDigital,
+        latitud, longitud, alturaAntena, radioCobertura } = body
       const equipo = await prisma.equipoRadio.update({
         where: { id },
         data: {
-          codigo,
-          tipo: tipoEquipo,
-          marca,
-          modelo,
-          numeroSerie,
-          configuracion,
-          estado,
-          estadoBateria: estadoBateria ? parseInt(estadoBateria) : null,
-          fechaInstalacionBat: fechaInstalacionBat ? new Date(fechaInstalacionBat) : null,
-          ubicacion,
-          observaciones
+          ...(codigo !== undefined && { codigo }),
+          ...(tipoEquipo !== undefined && { tipo: tipoEquipo }),
+          ...(marca !== undefined && { marca }),
+          ...(modelo !== undefined && { modelo }),
+          ...(numeroSerie !== undefined && { numeroSerie }),
+          ...(configuracion !== undefined && { configuracion }),
+          ...(estado !== undefined && { estado }),
+          ...(estadoBateria !== undefined && { estadoBateria: estadoBateria ? parseInt(estadoBateria) : null }),
+          ...(fechaInstalacionBat !== undefined && { fechaInstalacionBat: fechaInstalacionBat ? new Date(fechaInstalacionBat) : null }),
+          ...(ubicacion !== undefined && { ubicacion }),
+          ...(observaciones !== undefined && { observaciones }),
+          ...(freqTxAnalogico !== undefined && { freqTxAnalogico: freqTxAnalogico ? parseFloat(freqTxAnalogico) : null }),
+          ...(freqRxAnalogico !== undefined && { freqRxAnalogico: freqRxAnalogico ? parseFloat(freqRxAnalogico) : null }),
+          ...(subtonoTx !== undefined && { subtonoTx: subtonoTx || null }),
+          ...(subtonoRx !== undefined && { subtonoRx: subtonoRx || null }),
+          ...(potenciaAnalogico !== undefined && { potenciaAnalogico: potenciaAnalogico ? parseFloat(potenciaAnalogico) : null }),
+          ...(freqTxDigital !== undefined && { freqTxDigital: freqTxDigital ? parseFloat(freqTxDigital) : null }),
+          ...(freqRxDigital !== undefined && { freqRxDigital: freqRxDigital ? parseFloat(freqRxDigital) : null }),
+          ...(colorCode !== undefined && { colorCode: colorCode ? parseInt(colorCode) : null }),
+          ...(timeslot !== undefined && { timeslot: timeslot ? parseInt(timeslot) : null }),
+          ...(potenciaDigital !== undefined && { potenciaDigital: potenciaDigital ? parseFloat(potenciaDigital) : null }),
+          ...(potenciaMaxima !== undefined && { potenciaMaxima: potenciaMaxima ? parseFloat(potenciaMaxima) : null }),
+          ...(bandaFrecuencia !== undefined && { bandaFrecuencia: bandaFrecuencia || null }),
+          ...(canalAnalogico !== undefined && { canalAnalogico: canalAnalogico || null }),
+          ...(canalDigital !== undefined && { canalDigital: canalDigital || null }),
+          ...(latitud !== undefined && { latitud: latitud ? parseFloat(latitud) : null }),
+          ...(longitud !== undefined && { longitud: longitud ? parseFloat(longitud) : null }),
+          ...(alturaAntena !== undefined && { alturaAntena: alturaAntena ? parseFloat(alturaAntena) : null }),
+          ...(radioCobertura !== undefined && { radioCobertura: radioCobertura ? parseFloat(radioCobertura) : null }),
         }
       })
       return NextResponse.json({ success: true, equipo })
