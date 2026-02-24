@@ -72,7 +72,7 @@ const COLORES_COBERTURA: Record<string, { fill: string; stroke: string }> = {
   repetidor: { fill: '#7c3aed', stroke: '#6d28d9' },
   base_junta: { fill: '#dc2626', stroke: '#b91c1c' },
 }
-function createMapIcon(color, label, size = 36) {
+function createMapIcon(color: string, label: string, size: number = 36) {
   if (typeof window === 'undefined') return undefined;
   return L.divIcon({ className: '', html: '<div style="width:'+size+'px;height:'+size+'px;background:'+color+';border:3px solid white;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:'+(size*0.35)+'px;font-family:system-ui,sans-serif;">'+label+'</div>', iconSize: [size, size], iconAnchor: [size/2, size/2], popupAnchor: [0, -size/2] });
 }
