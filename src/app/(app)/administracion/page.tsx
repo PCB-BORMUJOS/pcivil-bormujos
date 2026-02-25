@@ -656,8 +656,8 @@ export default function AdministracionPage() {
     try {
       let voluntarioId = selectedVoluntario.id;
 
-      // Si es una nueva ficha, primero crear el voluntario
-      if (esNuevaFicha) {
+      // Si es una nueva ficha y estamos en modo 'nuevo', primero crear el voluntario
+      if (esNuevaFicha && modoNuevaFicha === 'nuevo') {
         const resVoluntario = await fetch('/api/admin/personal', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
