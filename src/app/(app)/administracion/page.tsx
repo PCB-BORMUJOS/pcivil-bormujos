@@ -2151,7 +2151,7 @@ export default function AdministracionPage() {
                             if (vol.fichaVoluntario) {
                               setFichaData({
                                 ...vol.fichaVoluntario,
-                                rolId: vol.rolId || vol.fichaVoluntario.rolId || '',
+                                rolId: vol.rolId || '',
                               });
                             } else {
                               setFichaData({
