@@ -406,6 +406,7 @@ export default function AdministracionPage() {
   const [roles, setRoles] = useState<any[]>([]);
   const [servicios, setServicios] = useState<any[]>([]);
   const [nuevoPassword, setNuevoPassword] = useState('');
+  const [modoNuevaFicha, setModoNuevaFicha] = useState<'existente' | 'nuevo'>('existente');
   const [showFichaModal, setShowFichaModal] = useState(false);
   const [showNuevoVoluntario, setShowNuevoVoluntario] = useState(false);
   const [selectedVoluntario, setSelectedVoluntario] = useState<Voluntario | null>(null);
@@ -636,17 +637,19 @@ export default function AdministracionPage() {
     // Verificar que los campos obligatorios estén preenchidos para nueva ficha
     const esNuevaFicha = !selectedVoluntario.id;
     if (esNuevaFicha) {
-      if (!selectedVoluntario.nombre || !selectedVoluntario.apellidos || !selectedVoluntario.email) {
-        alert('Por favor, completa los datos del voluntario: Nombre, Apellidos y Email');
-        return;
-      }
-      if (!nuevoPassword) {
-        alert('Por favor, introduce una contraseña para el nuevo voluntario');
-        return;
-      }
-      if (!fichaData.servicioId && !fichaData.rolId) {
-        alert('Por favor, selecciona un rol y un servicio');
-        return;
+      if (modoNuevaFicha === 'nuevo') {
+        if (!selectedVoluntario.nombre || !selectedVoluntario.apellidos || !selectedVoluntario.email) {
+          alert('Por favor, completa los datos del voluntario: Nombre, Apellidos y Email');
+          return;
+        }
+        if (!nuevoPassword) {
+          alert('Por favor, introduce una contraseña para el nuevo voluntario');
+          return;
+        }
+        if (!fichaData.servicioId && !fichaData.rolId) {
+          alert('Por favor, selecciona un rol y un servicio');
+          return;
+        }
       }
     }
 
@@ -2107,6 +2110,71 @@ export default function AdministracionPage() {
               </div>
             </div>
 
+            {/* Selector de modo — solo cuando es nueva ficha */}
+            {!selectedVoluntario?.id && (
+              <div className="border border-slate-200 rounded-xl overflow-hidden">
+                <div className="bg-slate-50 border-b border-slate-200 px-4 py-3">
+                  <p className="text-xs font-bold text-slate-600 uppercase">Origen de los datos del voluntario</p>
+                </div>
+                <div className="p-4 space-y-3">
+                  {/* Tabs de modo */}
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => { setModoNuevaFicha('existente'); }}
+                      className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-semibold border transition-colors ${modoNuevaFicha === 'existente' ? 'bg-orange-500 text-white border-orange-500' : 'bg-white text-slate-600 border-slate-200 hover:border-orange-300'}`}
+                    >
+                      Vincular usuario ya registrado
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setModoNuevaFicha('nuevo'); setSelectedVoluntario(prev => ({ ...prev!, id: '' })); }}
+                      className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-semibold border transition-colors ${modoNuevaFicha === 'nuevo' ? 'bg-orange-500 text-white border-orange-500' : 'bg-white text-slate-600 border-slate-200 hover:border-orange-300'}`}
+                    >
+                      Crear nuevo usuario
+                    </button>
+                  </div>
+
+                  {/* Modo: vincular existente */}
+                  {modoNuevaFicha === 'existente' && (
+                    <div>
+                      <p className="text-xs text-slate-500 mb-2">Selecciona el usuario ya registrado en Configuración → Roles y Permisos al que quieres asignar esta ficha:</p>
+                      <select
+                        className="w-full border border-slate-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-orange-500"
+                        value={selectedVoluntario?.id || ''}
+                        onChange={(e) => {
+                          const uid = e.target.value;
+                          const vol = voluntarios.find(v => v.id === uid);
+                          if (vol) {
+                            setSelectedVoluntario(vol);
+                            setFichaData((prev: any) => ({
+                              ...prev,
+                              rolId: vol.rolId || '',
+                              fechaAlta: prev.fechaAlta || new Date().toISOString().split('T')[0],
+                              localidad: prev.localidad || 'BORMUJOS',
+                              provincia: prev.provincia || 'SEVILLA',
+                            }));
+                          }
+                        }}
+                      >
+                        <option value="">-- Seleccionar usuario existente --</option>
+                        {voluntarios
+                          .filter(v => !v.fichaVoluntario)
+                          .map(v => (
+                            <option key={v.id} value={v.id}>
+                              {v.numeroVoluntario ? `${v.numeroVoluntario} — ` : ''}{v.nombre} {v.apellidos} ({v.email})
+                            </option>
+                          ))}
+                      </select>
+                      {voluntarios.filter(v => !v.fichaVoluntario).length === 0 && (
+                        <p className="text-xs text-green-600 mt-2 font-medium">Todos los usuarios del sistema ya tienen ficha asignada.</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Indicativos y fechas */}
             <div className="grid grid-cols-4 gap-4">
               <div>
@@ -2241,8 +2309,8 @@ export default function AdministracionPage() {
               </div>
             </div>
 
-            {/* Acceso al sistema (solo nueva ficha) */}
-            {!selectedVoluntario?.id && (
+            {/* Acceso al sistema (solo nueva ficha en modo nuevo) */}
+            {!selectedVoluntario?.id && modoNuevaFicha === 'nuevo' && (
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <p className="text-xs font-bold text-blue-700 uppercase mb-3">Acceso al Sistema — obligatorio para nuevo voluntario</p>
                 <div className="grid grid-cols-2 gap-4">
