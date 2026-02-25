@@ -1366,3 +1366,77 @@ model AuditLog {
   @@index([modulo])
   @@map("audit_logs")
 }
+
+model EspacioAcogida {
+  id             String   @id @default(cuid())
+  nombre         String
+  tipo           String   // hotel, hostal, apartamento, pension, albergue, otro
+  direccion      String
+  telefono       String?
+  email          String?
+  contacto       String?
+  plazas         Int?
+  plazasUrgencia Int?
+  latitud        Float?
+  longitud       Float?
+  estado         String   @default("activo")
+  notas          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model CentroEmergencia {
+  id          String   @id @default(cuid())
+  nombre      String
+  tipo        String   // pabellon, centro_multifuncional, ceu, otro
+  direccion   String
+  telefono    String?
+  responsable String?
+  capacidad   Int?
+  latitud     Float?
+  longitud    Float?
+  descripcion String?
+  activo      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model ContactoDirectorio {
+  id             String   @id @default(cuid())
+  nombre         String
+  entidad        String?
+  categoria      String   // servicios_sociales, policia, sanidad, juzgado, vivienda, otro
+  cargo          String?
+  telefono       String
+  telefonoAlt    String?
+  email          String?
+  disponibilidad String?  // 24h, horario_oficina, guardia
+  notas          String?
+  activo         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model CasoViogen {
+  id                 String   @id @default(cuid())
+  numeroCaso         String   @unique
+  fechaIntervencion  DateTime
+  victimaNombre      String
+  victimaDni         String?
+  victimaTelefono    String?
+  victimaDireccion   String
+  victimaEdad        Int?
+  tieneHijos         Boolean  @default(false)
+  numeroHijos        Int?
+  edadesHijos        String?
+  agresorNombre      String?
+  agresorDni         String?
+  motivoIntervencion String
+  recursosActivados  String?
+  derivadoA          String?
+  observaciones      String?
+  estado             String   @default("activo")
+  registradoPorId    String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
