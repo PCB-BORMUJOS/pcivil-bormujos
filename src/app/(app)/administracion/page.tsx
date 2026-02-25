@@ -1022,62 +1022,68 @@ export default function AdministracionPage() {
           <h1 className="text-2xl font-bold text-slate-800">Administración de Personal</h1>
           <p className="text-slate-500 text-sm">Gestión del Registro de Voluntarios (FRI) y Disponibilidad.</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2">
           <button
-            onClick={() => {/* Implementar exportación */ }}
-            className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-slate-700 hover:bg-slate-50 transition-colors"
+            onClick={() => {/* Exportar */ }}
+            className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-white border border-slate-200 rounded-lg text-slate-700 hover:bg-slate-50 transition-colors text-sm"
           >
-            <Download size={18} /> Exportar Listado
+            <Download size={16} />
+            <span className="hidden sm:inline">Exportar</span>
           </button>
           <button
             onClick={() => {
               if (activeTab === 'personal') {
-                // Crear voluntario temporal para nueva ficha
-                setSelectedVoluntario({
-                  id: '',
-                  numeroVoluntario: '',
-                  nombre: '',
-                  apellidos: '',
-                  email: '',
-                  telefono: '',
-                  activo: true,
-                  rolId: '',
-                  rol: { id: '', nombre: '' }
-                } as Voluntario);
-                setFichaData({
-                  fechaAlta: new Date().toISOString().split('T')[0],
-                  localidad: 'BORMUJOS',
-                  provincia: 'SEVILLA',
-                  areaAsignada: '',
-                  categoria: 'VOLUNTARIO'
-                });
+                setSelectedVoluntario({ id: '', numeroVoluntario: '', nombre: '', apellidos: '', email: '', telefono: '', activo: true, rolId: '', rol: { id: '', nombre: '' } } as Voluntario);
+                setFichaData({ fechaAlta: new Date().toISOString().split('T')[0], localidad: 'BORMUJOS', provincia: 'SEVILLA', areaAsignada: '', categoria: 'VOLUNTARIO' });
                 setShowFichaModal(true);
               }
               else if (activeTab === 'polizas') setShowNuevaPoliza(true);
               else if (activeTab === 'caja') setShowNuevoMovimiento(true);
               else if (activeTab === 'combustible') setShowNuevoTicket(true);
             }}
-            className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+            className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm"
           >
-            <Plus size={18} />
-            {activeTab === 'personal' ? 'Nueva Ficha' :
-              activeTab === 'polizas' ? 'Nueva Póliza' :
-                activeTab === 'caja' ? 'Nuevo Movimiento' :
-                  activeTab === 'combustible' ? 'Nuevo Ticket' : 'Nuevo'}
+            <Plus size={16} />
+            <span className="hidden sm:inline">
+              {activeTab === 'personal' ? 'Nueva Ficha' :
+                activeTab === 'polizas' ? 'Nueva Póliza' :
+                  activeTab === 'caja' ? 'Nuevo Movimiento' :
+                    activeTab === 'combustible' ? 'Nuevo Ticket' : 'Nuevo'}
+            </span>
           </button>
         </div>
       </div>
 
       {/* Tabs */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-        <div className="flex overflow-x-auto border-b border-slate-200 bg-slate-50/50">
+
+        {/* Selector móvil — visible solo en pantallas pequeñas */}
+        <div className="sm:hidden border-b border-slate-200 bg-slate-50/50 p-3">
+          <select
+            value={activeTab}
+            onChange={(e) => setActiveTab(e.target.value as any)}
+            className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm font-medium text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-orange-400"
+          >
+            <option value="personal">👥 Listado Personal ({voluntarios.length})</option>
+            <option value="disponibilidad">📅 Gestión Disponibilidad</option>
+            <option value="dietas">💰 Control Dietas</option>
+            <option value="caja">💳 Caja Efectivo</option>
+            <option value="combustible">⛽ Control Combustible</option>
+            <option value="polizas">🛡️ Pólizas Seguro{polizasAlerta > 0 ? ` (⚠️${polizasAlerta})` : ''}</option>
+            <option value="areas">🏢 Asignación Áreas</option>
+            <option value="aspirantes">👤 Aspirantes</option>
+          </select>
+        </div>
+
+        {/* Tabs horizontales — visibles solo en sm+ */}
+        <div className="hidden sm:flex overflow-x-auto border-b border-slate-200 bg-slate-50/50">
           <TabButton active={activeTab === 'personal'} onClick={() => setActiveTab('personal')} icon={Users} label="Listado Personal" count={voluntarios.length} />
-          <TabButton active={activeTab === 'disponibilidad'} onClick={() => setActiveTab('disponibilidad')} icon={Calendar} label="Gestión Disponibilidad" />
-          <TabButton active={activeTab === 'dietas'} onClick={() => setActiveTab('dietas')} icon={DollarSign} label="Control Dietas" />
-          <TabButton active={activeTab === 'caja'} onClick={() => setActiveTab('caja')} icon={Wallet} label="Caja Efectivo" />
-          <TabButton active={activeTab === 'combustible'} onClick={() => setActiveTab('combustible')} icon={Fuel} label="Control Combustible" />
-          <TabButton active={activeTab === 'polizas'} onClick={() => setActiveTab('polizas')} icon={Shield} label="Pólizas Seguro" alert={polizasAlerta > 0} />
-          <TabButton active={activeTab === 'areas'} onClick={() => setActiveTab('areas')} icon={Building2} label="Asignación Áreas" />
+          <TabButton active={activeTab === 'disponibilidad'} onClick={() => setActiveTab('disponibilidad')} icon={Calendar} label="Disponibilidad" />
+          <TabButton active={activeTab === 'dietas'} onClick={() => setActiveTab('dietas')} icon={DollarSign} label="Dietas" />
+          <TabButton active={activeTab === 'caja'} onClick={() => setActiveTab('caja')} icon={Wallet} label="Caja" />
+          <TabButton active={activeTab === 'combustible'} onClick={() => setActiveTab('combustible')} icon={Fuel} label="Combustible" />
+          <TabButton active={activeTab === 'polizas'} onClick={() => setActiveTab('polizas')} icon={Shield} label="Pólizas" alert={polizasAlerta > 0} />
+          <TabButton active={activeTab === 'areas'} onClick={() => setActiveTab('areas')} icon={Building2} label="Áreas" />
           <TabButton active={activeTab === 'aspirantes'} onClick={() => setActiveTab('aspirantes')} icon={UserPlus} label="Aspirantes" />
         </div>
 
@@ -1087,8 +1093,8 @@ export default function AdministracionPage() {
           {/* ============================================ */}
           {activeTab === 'personal' && (
             <div>
-              <div className="flex items-center gap-4 mb-6">
-                <div className="relative flex-1 max-w-md">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-6">
+                <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                   <input
                     type="text"
@@ -1100,7 +1106,7 @@ export default function AdministracionPage() {
                 </div>
                 <button
                   onClick={cargarVoluntarios}
-                  className="p-2.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                  className="p-2.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors self-start"
                 >
                   <RefreshCw size={18} />
                 </button>
@@ -1112,13 +1118,13 @@ export default function AdministracionPage() {
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full">
+                  <table className="w-full min-w-[600px]">
                     <thead>
                       <tr className="bg-slate-50 border-b border-slate-200">
                         <th className="text-left py-3 px-4 text-xs font-bold text-slate-500 uppercase">Indicativo</th>
                         <th className="text-left py-3 px-4 text-xs font-bold text-slate-500 uppercase">Voluntario</th>
-                        <th className="text-left py-3 px-4 text-xs font-bold text-slate-500 uppercase">Área Asignada</th>
-                        <th className="text-left py-3 px-4 text-xs font-bold text-slate-500 uppercase">Teléfono</th>
+                        <th className="text-left py-3 px-4 text-xs font-bold text-slate-500 uppercase hidden sm:table-cell">Área Asignada</th>
+                        <th className="text-left py-3 px-4 text-xs font-bold text-slate-500 uppercase hidden md:table-cell">Teléfono</th>
                         <th className="text-left py-3 px-4 text-xs font-bold text-slate-500 uppercase">Estado</th>
                         <th className="text-right py-3 px-4 text-xs font-bold text-slate-500 uppercase">Acción</th>
                       </tr>
@@ -1135,7 +1141,7 @@ export default function AdministracionPage() {
                               <span className="font-medium text-slate-700">{v.nombre} {v.apellidos}</span>
                             </div>
                           </td>
-                          <td className="py-3 px-4">
+                          <td className="py-3 px-4 hidden sm:table-cell">
                             <div>
                               <span className="font-medium text-slate-700">
                                 {AREAS_SERVICIO.find(a => a.id === v.fichaVoluntario?.areaAsignada)?.nombre || 'Sin asignar'}
@@ -1143,7 +1149,7 @@ export default function AdministracionPage() {
                               <p className="text-xs text-slate-500">{v.rol?.nombre}</p>
                             </div>
                           </td>
-                          <td className="py-3 px-4 text-slate-600">{v.telefono || '-'}</td>
+                          <td className="py-3 px-4 text-slate-600 hidden md:table-cell">{v.telefono || '-'}</td>
                           <td className="py-3 px-4">
                             <button
                               onClick={() => toggleActivo(v.id, !v.activo)}
@@ -1192,7 +1198,7 @@ export default function AdministracionPage() {
           {/* ============================================ */}
           {activeTab === 'disponibilidad' && (
             <div>
-              <div className="flex items-center justify-between mb-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                 <div className="flex items-center gap-2">
                   <Filter size={18} className="text-slate-400" />
                   <span className="text-sm text-slate-600">Visualizando semana:</span>
@@ -1201,7 +1207,7 @@ export default function AdministracionPage() {
                   <button onClick={() => cambiarSemana('prev')} className="p-2 hover:bg-white rounded-lg transition-colors">
                     <ChevronLeft size={18} className="text-slate-500" />
                   </button>
-                  <span className="text-sm font-medium text-slate-700 px-4 min-w-[220px] text-center">
+                  <span className="text-sm font-medium text-slate-700 px-2 sm:px-4 min-w-[150px] sm:min-w-[220px] text-center">
                     {formatearSemana(semanaDisp)}
                   </span>
                   <button onClick={() => cambiarSemana('next')} className="p-2 hover:bg-white rounded-lg transition-colors">
@@ -1221,7 +1227,7 @@ export default function AdministracionPage() {
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full">
+                  <table className="w-full min-w-[640px]">
                     <thead>
                       <tr className="bg-slate-50 border-b border-slate-200">
                         <th className="text-left py-3 px-4 text-xs font-bold text-slate-500 uppercase">Indicativo / Nombre</th>
@@ -1290,7 +1296,7 @@ export default function AdministracionPage() {
           {/* ============================================ */}
           {activeTab === 'dietas' && (
             <div>
-              <div className="flex items-center justify-between mb-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                 <div className="flex items-center gap-4">
                   <div>
                     <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Periodo</label>
@@ -1303,14 +1309,14 @@ export default function AdministracionPage() {
                   </div>
                 </div>
                 <button className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors">
-                  <Printer size={18} /> Imprimir Informe
+                  <Printer size={18} /> <span className="hidden sm:inline">Imprimir Informe</span>
                 </button>
               </div>
 
               {/* Resumen */}
               <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-6 text-white mb-6">
                 <h3 className="text-blue-100 text-sm font-medium mb-4">RESUMEN DEL PERIODO</h3>
-                <div className="grid grid-cols-4 gap-6">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6">
                   <div>
                     <p className="text-blue-100 text-sm">Total Días</p>
                     <p className="text-3xl font-bold">{resumenDietas.reduce((sum, r) => sum + (r.dias || 0), 0)}</p>
@@ -1341,7 +1347,7 @@ export default function AdministracionPage() {
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full">
+                  <table className="w-full min-w-[640px]">
                     <thead>
                       <tr className="bg-slate-50">
                         <th className="text-left py-3 px-4 text-xs font-bold text-slate-600">IND</th>
@@ -1379,14 +1385,14 @@ export default function AdministracionPage() {
           {/* ============================================ */}
           {activeTab === 'caja' && (
             <div>
-              <div className="flex items-center justify-between mb-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                 <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-xl px-6 py-4 text-white">
                   <p className="text-green-100 text-sm">Saldo Actual</p>
                   <p className="text-3xl font-bold">{saldoActual.toFixed(2)} €</p>
                 </div>
                 <button
                   onClick={() => setShowNuevoMovimiento(true)}
-                  className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+                  className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors self-start sm:self-auto"
                 >
                   <Plus size={18} /> Nuevo Movimiento
                 </button>
@@ -1403,13 +1409,13 @@ export default function AdministracionPage() {
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full">
+                  <table className="w-full min-w-[600px]">
                     <thead>
                       <tr className="bg-slate-50 border-b border-slate-200">
                         <th className="text-left py-3 px-4 text-xs font-bold text-slate-500 uppercase">Fecha</th>
                         <th className="text-left py-3 px-4 text-xs font-bold text-slate-500 uppercase">Tipo</th>
                         <th className="text-left py-3 px-4 text-xs font-bold text-slate-500 uppercase">Concepto</th>
-                        <th className="text-left py-3 px-4 text-xs font-bold text-slate-500 uppercase">Descripción</th>
+                        <th className="text-left py-3 px-4 text-xs font-bold text-slate-500 uppercase hidden sm:table-cell">Descripción</th>
                         <th className="text-right py-3 px-4 text-xs font-bold text-slate-500 uppercase">Importe</th>
                         <th className="text-right py-3 px-4 text-xs font-bold text-slate-500 uppercase">Saldo</th>
                         <th className="text-center py-3 px-4 text-xs font-bold text-slate-500 uppercase">Adjunto</th>
@@ -1427,7 +1433,7 @@ export default function AdministracionPage() {
                             </span>
                           </td>
                           <td className="py-3 px-4 font-medium text-slate-700">{m.concepto}</td>
-                          <td className="py-3 px-4 text-sm text-slate-500">{m.descripcion || '-'}</td>
+                          <td className="py-3 px-4 text-sm text-slate-500 hidden sm:table-cell">{m.descripcion || '-'}</td>
                           <td className={`py-3 px-4 text-right font-bold ${m.tipo === 'entrada' ? 'text-green-600' : 'text-red-600'}`}>
                             {m.tipo === 'entrada' ? '+' : '-'}{Number(m.importe).toFixed(2)} €
                           </td>
@@ -1765,8 +1771,8 @@ export default function AdministracionPage() {
           {/* ============================================ */}
           {activeTab === 'combustible' && (
             <div>
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                <div className="flex flex-wrap items-center gap-4">
                   <div>
                     <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Periodo</label>
                     <input
@@ -1785,13 +1791,13 @@ export default function AdministracionPage() {
                 </div>
                 <div className="flex gap-2">
                   <button className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors">
-                    <Printer size={18} /> Generar Informe
+                    <Printer size={18} /> <span className="hidden sm:inline">Generar Informe</span>
                   </button>
                   <button
                     onClick={() => setShowNuevoTicket(true)}
                     className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
                   >
-                    <Plus size={18} /> Nuevo Ticket
+                    <Plus size={18} /> <span className="hidden sm:inline">Nuevo Ticket</span>
                   </button>
                 </div>
               </div>
@@ -1807,7 +1813,7 @@ export default function AdministracionPage() {
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full">
+                  <table className="w-full min-w-[560px]">
                     <thead>
                       <tr className="bg-slate-50 border-b border-slate-200">
                         <th className="text-left py-3 px-4 text-xs font-bold text-slate-500 uppercase">Fecha</th>
@@ -1860,11 +1866,11 @@ export default function AdministracionPage() {
                 </div>
               )}
 
-              <div className="flex items-center justify-between mb-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
                 <h3 className="text-lg font-bold text-slate-800">Listado de Pólizas</h3>
                 <button
                   onClick={() => setShowNuevaPoliza(true)}
-                  className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+                  className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors self-start"
                 >
                   <Plus size={18} /> Nueva Póliza
                 </button>
@@ -1888,16 +1894,16 @@ export default function AdministracionPage() {
 
                     return (
                       <div key={p.id} className="bg-white border border-slate-200 rounded-xl p-4 hover:shadow-md transition-shadow">
-                        <div className="flex items-center justify-between">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                           <div className="flex items-center gap-4">
-                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${p.estado === 'vigente' ? 'bg-green-100 text-green-600' :
+                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${p.estado === 'vigente' ? 'bg-green-100 text-green-600' :
                               p.estado === 'por_vencer' ? 'bg-yellow-100 text-yellow-600' :
                                 'bg-red-100 text-red-600'
                               }`}>
                               <IconoTipo size={24} />
                             </div>
                             <div>
-                              <div className="flex items-center gap-2">
+                              <div className="flex flex-wrap items-center gap-2">
                                 <h4 className="font-bold text-slate-800">{tipoInfo?.nombre || p.tipo}</h4>
                                 <span className={`px-2 py-0.5 rounded-full text-xs font-bold flex items-center gap-1 ${estado.color}`}>
                                   <estado.icon size={12} />
@@ -1908,27 +1914,26 @@ export default function AdministracionPage() {
                               {p.descripcion && <p className="text-xs text-slate-500 mt-1">{p.descripcion}</p>}
                             </div>
                           </div>
-                          <div className="text-right">
-                            <p className="text-sm text-slate-500">Vencimiento</p>
-                            <p className="font-bold text-slate-800">{new Date(p.fechaVencimiento).toLocaleDateString('es-ES')}</p>
-                            {p.primaAnual && <p className="text-sm text-slate-600">{Number(p.primaAnual).toFixed(2)} €/año</p>}
-                          </div>
-                          <div className="flex items-center gap-2 ml-4">
-                            <button
-                              onClick={() => {
-                                setPolizaEditando(p);
-                                setShowNuevaPoliza(true);
-                              }}
-                              className="p-2 text-slate-400 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
-                            >
-                              <Edit size={18} />
-                            </button>
-                            <button
-                              onClick={() => handleEliminarPoliza(p.id)}
-                              className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                            >
-                              <Trash2 size={18} />
-                            </button>
+                          <div className="flex items-center justify-between sm:justify-end gap-4">
+                            <div className="text-right">
+                              <p className="text-sm text-slate-500">Vencimiento</p>
+                              <p className="font-bold text-slate-800">{new Date(p.fechaVencimiento).toLocaleDateString('es-ES')}</p>
+                              {p.primaAnual && <p className="text-sm text-slate-600">{Number(p.primaAnual).toFixed(2)} €/año</p>}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => { setPolizaEditando(p); setShowNuevaPoliza(true); }}
+                                className="p-2 text-slate-400 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
+                              >
+                                <Edit size={18} />
+                              </button>
+                              <button
+                                onClick={() => handleEliminarPoliza(p.id)}
+                                className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                              >
+                                <Trash2 size={18} />
+                              </button>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -1952,7 +1957,7 @@ export default function AdministracionPage() {
               onDragStart={(event) => setActiveId(event.active.id as string)}
             >
               <div>
-                <div className="flex items-center justify-between mb-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                   <div>
                     <h3 className="text-lg font-bold text-slate-800">Distribución por Áreas</h3>
                     <p className="text-sm text-slate-500">{voluntarios.length} voluntarios activos • {sinArea.length} sin área asignada</p>
@@ -1962,7 +1967,7 @@ export default function AdministracionPage() {
                   </div>
                   <button
                     onClick={cargarVoluntarios}
-                    className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors"
+                    className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors self-start"
                   >
                     <RefreshCw size={18} /> Actualizar
                   </button>
