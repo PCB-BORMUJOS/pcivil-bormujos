@@ -321,7 +321,7 @@ export default function AccionSocialPage() {
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-sm text-gray-500">{s.label}</p>
-                <p className={`text-3xl font-bold mt-1 ${s.color}`}>{s.value}</p>
+                <p className="text-3xl font-bold mt-1 text-gray-900">{s.value}</p>
                 {s.sub && <p className="text-xs text-gray-400 mt-0.5">{s.sub}</p>}
               </div>
               <div className={`w-10 h-10 rounded-lg ${s.bg} flex items-center justify-center`}>
