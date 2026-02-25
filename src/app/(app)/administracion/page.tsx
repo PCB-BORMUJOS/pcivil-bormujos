@@ -1079,14 +1079,14 @@ export default function AdministracionPage() {
             onChange={(e) => setActiveTab(e.target.value as any)}
             className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm font-medium text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-orange-400"
           >
-            <option value="personal">👥 Listado Personal ({voluntarios.length})</option>
-            <option value="disponibilidad">📅 Gestión Disponibilidad</option>
-            <option value="dietas">💰 Control Dietas</option>
-            <option value="caja">💳 Caja Efectivo</option>
-            <option value="combustible">⛽ Control Combustible</option>
-            <option value="polizas">🛡️ Pólizas Seguro{polizasAlerta > 0 ? ` (⚠️${polizasAlerta})` : ''}</option>
-            <option value="areas">🏢 Asignación Áreas</option>
-            <option value="aspirantes">👤 Aspirantes</option>
+            <option value="personal">Listado Personal ({voluntarios.length})</option>
+            <option value="disponibilidad">Gestión Disponibilidad</option>
+            <option value="dietas">Control Dietas</option>
+            <option value="caja">Caja Efectivo</option>
+            <option value="combustible">Control Combustible</option>
+            <option value="polizas">Pólizas Seguro{polizasAlerta > 0 ? ` (⚠️${polizasAlerta})` : ''}</option>
+            <option value="areas">Asignación Áreas</option>
+            <option value="aspirantes">Aspirantes</option>
           </select>
         </div>
 
@@ -2208,7 +2208,7 @@ export default function AdministracionPage() {
             {/* Acceso al sistema (solo nueva ficha) */}
             {!selectedVoluntario?.id && (
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <p className="text-xs font-bold text-blue-700 uppercase mb-3">🔐 Acceso al Sistema (obligatorio para nuevo voluntario)</p>
+                <p className="text-xs font-bold text-blue-700 uppercase mb-3">Acceso al Sistema — obligatorio para nuevo voluntario</p>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Email *</label>
