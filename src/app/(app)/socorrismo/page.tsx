@@ -109,11 +109,11 @@ export default function SocorrismoPage() {
   const [mapReady, setMapReady] = useState(false)
   const createDEAIcon = (estado: string) => {
     if (typeof window === 'undefined') return undefined
-    
+
     // Importar L dinámicamente solo en el cliente
     const L = require('leaflet')
-    
-    const color = estado === 'operativo' ? '#10b981' : 
+
+    const color = estado === 'operativo' ? '#10b981' :
       estado === 'revision_pendiente' ? '#f59e0b' : '#ef4444'
     return L.divIcon({
       className: 'custom-dea-icon',
@@ -142,6 +142,10 @@ export default function SocorrismoPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedFamiliaFilter, setSelectedFamiliaFilter] = useState('all')
   const [filtroPeticiones, setFiltroPeticiones] = useState('all')
+
+  // Paginación
+  const [currentPage, setCurrentPage] = useState(1)
+  const PAGE_SIZE = 30
 
   // Estados de modales
   const [showNuevoArticulo, setShowNuevoArticulo] = useState(false)
@@ -194,10 +198,10 @@ export default function SocorrismoPage() {
       // Cargar artículos de socorrismo
       const resArticulos = await fetch('/api/logistica?inventario=socorrismo')
       const dataArticulos = await resArticulos.json()
-      
+
       setArticulos(dataArticulos.articulos || [])
       setFamilias(dataArticulos.familias || [])
-      
+
       // Obtener ID de categoría socorrismo
       const resCat = await fetch('/api/logistica?tipo=categoria&slug=socorrismo')
       const dataCat = await resCat.json()
@@ -255,10 +259,10 @@ export default function SocorrismoPage() {
       const params = new URLSearchParams()
       params.append('area', 'socorrismo')
       if (filtroPeticiones !== 'all') params.append('estado', filtroPeticiones)
-      
+
       const res = await fetch(`/api/logistica/peticiones?${params.toString()}`)
       const data = await res.json()
-      
+
       setPeticiones(data.peticiones || [])
       setPeticionStats(data.stats || {
         total: 0,
@@ -276,14 +280,18 @@ export default function SocorrismoPage() {
   // Posición del mapa (Bormujos)
   const centerPosition: [number, number] = [37.3710, -6.0710]
 
-   // Filtrar artículos
+  // Filtrar artículos
   const articulosFiltrados = articulos.filter(a => {
-    const matchSearch = searchTerm === '' || 
-      a.nombre.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    const matchSearch = searchTerm === '' ||
+      a.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
       a.codigo.toLowerCase().includes(searchTerm.toLowerCase())
     const matchFamilia = selectedFamiliaFilter === 'all' || a.familia.id === selectedFamiliaFilter
     return matchSearch && matchFamilia
   })
+
+  // Paginación
+  const totalPaginas = Math.ceil(articulosFiltrados.length / PAGE_SIZE)
+  const articulosPaginados = articulosFiltrados.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
 
   return (
     <div className="space-y-6">
@@ -300,43 +308,44 @@ export default function SocorrismoPage() {
             <p className="text-slate-500 text-sm hidden sm:block">Material sanitario, DEAs y recursos de socorrismo</p>
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <button 
-            onClick={cargarDatos} 
+        <div className="flex items-center gap-3">
+          <button
+            onClick={cargarDatos}
             className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg"
           >
             <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
           </button>
-          <button 
-            onClick={() => setShowNuevaPeticion(true)} 
-            className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-1.5 text-sm font-medium"
+          <button
+            onClick={() => setShowNuevaPeticion(true)}
+            className="px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 font-medium"
           >
-            <ShoppingCart size={16} />
-            <span className="hidden sm:inline">Petición</span>
+            <ShoppingCart size={18} />
+            Nueva Petición
           </button>
-          <button 
-            onClick={() => setShowNuevoArticulo(true)} 
-            className="px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center gap-1.5 text-sm font-medium"
+          <button
+            onClick={() => setShowNuevoArticulo(true)}
+            className="px-4 py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center gap-2 font-medium"
           >
-            <Plus size={16} />
-            <span className="hidden sm:inline">Artículo</span>
+            <Plus size={18} />
+            Nuevo Artículo
           </button>
-          <button 
-            onClick={() => setShowNuevoDEA(true)} 
-            className="px-3 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 flex items-center gap-1.5 text-sm font-medium"
+          <button
+            onClick={() => setShowNuevoDEA(true)}
+            className="px-4 py-2.5 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 flex items-center gap-2 font-medium"
           >
-            <Droplet size={16} />
-            <span className="hidden sm:inline">DEA</span>
+            <Droplet size={18} />
+            Nuevo DEA
           </button>
         </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         {[
           { label: 'Material del Área', value: statsArticulos.totalArticulos, icon: Package, bg: 'bg-purple-100', color: 'text-purple-600' },
           { label: 'Stock Bajo', value: statsArticulos.stockBajo, icon: AlertTriangle, bg: 'bg-yellow-100', color: 'text-yellow-600' },
           { label: 'DEAs Totales', value: deasStats.total, icon: Droplet, bg: 'bg-cyan-100', color: 'text-cyan-600' },
+          { label: 'Botiquines', value: botiquinesStats.total, icon: Heart, bg: 'bg-red-100', color: 'text-red-600' },
           { label: 'Edificios', value: edificios.length, icon: Building2, bg: 'bg-slate-100', color: 'text-slate-600' },
         ].map((stat, i) => (
           <div key={i} className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
@@ -356,8 +365,8 @@ export default function SocorrismoPage() {
       {/* Main Content */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
 
-        {/* Tabs Principales */}
-        <div className="flex overflow-x-auto border-b border-slate-200 -mx-4 px-4 sm:mx-0 sm:px-0">
+        {/* Tabs Principales — fondo blanco, iconos y texto en gris */}
+        <div className="flex overflow-x-auto border-b border-slate-200">
           {[
             { id: 'inventario', label: 'Inventario', labelFull: 'Inventario del Área', icon: Package },
             { id: 'deas', label: 'DEAs', labelFull: 'Red de DEAs', icon: Droplet },
@@ -366,11 +375,10 @@ export default function SocorrismoPage() {
             <button
               key={tab.id}
               onClick={() => setMainTab(tab.id as any)}
-              className={`flex items-center gap-1.5 px-3 sm:px-6 py-3 text-sm font-medium border-b-2 transition-all whitespace-nowrap ${
-                mainTab === tab.id
-                  ? 'border-red-500 text-red-600 bg-red-50'
-                  : 'border-transparent text-slate-500 hover:text-slate-700'
-              }`}
+              className={`flex items-center gap-2 px-4 sm:px-6 py-3 text-sm font-medium border-b-2 transition-all whitespace-nowrap ${mainTab === tab.id
+                ? 'border-red-500 text-red-600 bg-red-50'
+                : 'border-transparent text-slate-500 hover:text-slate-700'
+                }`}
             >
               <tab.icon size={18} />
               <span className="hidden sm:inline">{tab.labelFull}</span>
@@ -382,24 +390,24 @@ export default function SocorrismoPage() {
         {/* Contenido de Inventario */}
         {mainTab === 'inventario' && (
           <div>
-            {/* Sub-tabs */}
-            <div className="flex border-b border-slate-200 bg-slate-50">
+            {/* Sub-tabs Stock / Peticiones / Movimientos — gris oscuro sobre fondo gris, activo blanco/rojo-área */}
+            <div className="flex border-b border-slate-200 bg-slate-50 overflow-x-auto">
               {[
                 { id: 'stock', label: 'Stock', icon: Package },
                 { id: 'peticiones', label: 'Peticiones', icon: ShoppingCart },
-                { id: 'movimientos', label: 'Movimientos', icon: RefreshCw },
+                { id: 'movimientos', label: 'Movimientos', icon: History },
               ].map(tab => (
                 <button
                   key={tab.id}
                   onClick={() => {
                     setInventoryTab(tab.id as any)
                     if (tab.id === 'peticiones') cargarPeticiones()
+                    setCurrentPage(1)
                   }}
-                  className={`flex items-center gap-2 px-6 py-3 text-sm font-medium border-b-2 transition-all ${
-                    inventoryTab === tab.id
-                      ? 'border-purple-500 text-purple-600 bg-white'
-                      : 'border-transparent text-slate-500 hover:text-slate-700'
-                  }`}
+                  className={`flex items-center gap-2 px-6 py-3 text-sm font-medium border-b-2 transition-all whitespace-nowrap ${inventoryTab === tab.id
+                    ? 'border-red-500 text-red-600 bg-white'
+                    : 'border-transparent text-slate-600 hover:text-slate-800'
+                    }`}
                 >
                   <tab.icon size={16} />
                   {tab.label}
@@ -408,25 +416,25 @@ export default function SocorrismoPage() {
             </div>
 
             <div className="p-6">
-              {/* Tab Stock */}
+              {/* Tab Stock con paginación de 30 */}
               {inventoryTab === 'stock' && (
                 <div>
                   {/* Filtros */}
-                  <div className="flex gap-3 mb-6">
+                  <div className="flex flex-col sm:flex-row gap-3 mb-6">
                     <div className="flex-1 relative">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
                       <input
                         type="text"
                         placeholder="Buscar artículos..."
                         value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+                        className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-400"
                       />
                     </div>
                     <select
                       value={selectedFamiliaFilter}
-                      onChange={(e) => setSelectedFamiliaFilter(e.target.value)}
-                      className="px-4 py-2.5 border border-slate-200 rounded-lg"
+                      onChange={(e) => { setSelectedFamiliaFilter(e.target.value); setCurrentPage(1); }}
+                      className="px-4 py-2.5 border border-slate-200 rounded-lg text-sm"
                     >
                       <option value="all">Todas las familias</option>
                       {familias.map(fam => (
@@ -435,10 +443,10 @@ export default function SocorrismoPage() {
                     </select>
                     <button
                       onClick={() => setShowGestionFamilias(true)}
-                      className="px-4 py-2.5 bg-slate-600 text-white rounded-lg hover:bg-slate-700 flex items-center gap-2"
+                      className="px-4 py-2.5 bg-slate-600 text-white rounded-lg hover:bg-slate-700 flex items-center gap-2 text-sm"
                     >
                       <Layers size={18} />
-                      Familias
+                      <span className="hidden sm:inline">Familias</span>
                     </button>
                   </div>
 
@@ -454,54 +462,87 @@ export default function SocorrismoPage() {
                       <p>No hay artículos</p>
                     </div>
                   ) : (
-                    <table className="w-full">
-                      <thead className="bg-slate-50 border-y border-slate-200">
-                        <tr>
-                          <th className="text-left p-3 text-xs font-semibold text-slate-500 uppercase">Artículo</th>
-                          <th className="text-left p-3 text-xs font-semibold text-slate-500 uppercase">Familia</th>
-                          <th className="text-center p-3 text-xs font-semibold text-slate-500 uppercase">Stock</th>
-                          <th className="text-center p-3 text-xs font-semibold text-slate-500 uppercase">Estado</th>
-                          <th className="text-center p-3 text-xs font-semibold text-slate-500 uppercase">Acciones</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {articulosFiltrados.map(art => (
-                          <tr key={art.id} className="hover:bg-slate-50">
-                            <td className="p-3">
-                              <p className="font-medium text-slate-800">{art.nombre}</p>
-                              <p className="text-xs text-slate-500">Cód: {art.codigo}</p>
-                            </td>
-                            <td className="p-3 text-sm text-slate-600">{art.familia?.nombre || '-'}</td>
-                            <td className="p-3 text-center">
-                              <div className="flex flex-col">
-                                <span className="font-bold text-slate-800">{art.stockActual - (art.stockAsignado || 0)} <span className="text-slate-400 font-normal text-xs">disponible</span></span>
-                                {(art.stockAsignado || 0) > 0 && (
-                                  <span className="text-xs text-amber-600">{art.stockAsignado} en botiquines</span>
-                                )}
-                                <span className="text-slate-400 text-xs">{art.stockActual} total {art.unidad}</span>
-                              </div>
-                            </td>
-                            <td className="p-3 text-center">
-                              {art.stockActual <= art.stockMinimo ? (
-                                <span className="bg-red-100 text-red-700 px-2 py-1 rounded text-xs font-bold">⚠ Bajo</span>
-                              ) : (
-                                <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-bold">✓ OK</span>
-                              )}
-                            </td>
-                            <td className="p-3">
-                              <div className="flex justify-center gap-2">
-                                <button
-                                  onClick={() => setArticuloSeleccionado(art)}
-                                  className="p-1.5 text-slate-600 hover:bg-slate-100 rounded"
-                                >
-                                  <Edit size={16} />
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                    <>
+                      <div className="overflow-x-auto">
+                        <table className="w-full min-w-[600px]">
+                          <thead className="bg-slate-50 border-y border-slate-200">
+                            <tr>
+                              <th className="text-left p-3 text-xs font-semibold text-slate-500 uppercase">Artículo</th>
+                              <th className="text-left p-3 text-xs font-semibold text-slate-500 uppercase hidden sm:table-cell">Familia</th>
+                              <th className="text-center p-3 text-xs font-semibold text-slate-500 uppercase">Stock</th>
+                              <th className="text-center p-3 text-xs font-semibold text-slate-500 uppercase">Estado</th>
+                              <th className="text-center p-3 text-xs font-semibold text-slate-500 uppercase">Acciones</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100">
+                            {articulosPaginados.map(art => (
+                              <tr key={art.id} className="hover:bg-slate-50">
+                                <td className="p-3">
+                                  <p className="font-medium text-slate-800">{art.nombre}</p>
+                                  <p className="text-xs text-slate-500">Cód: {art.codigo}</p>
+                                </td>
+                                <td className="p-3 text-sm text-slate-600 hidden sm:table-cell">{art.familia?.nombre || '-'}</td>
+                                <td className="p-3 text-center">
+                                  <div className="flex flex-col items-center">
+                                    <span className="font-bold text-slate-800">{art.stockActual - (art.stockAsignado || 0)} <span className="text-slate-400 font-normal text-xs">disp.</span></span>
+                                    {(art.stockAsignado || 0) > 0 && (
+                                      <span className="text-xs text-amber-600">{art.stockAsignado} en botiq.</span>
+                                    )}
+                                    <span className="text-slate-400 text-xs">{art.stockActual} total {art.unidad}</span>
+                                  </div>
+                                </td>
+                                <td className="p-3 text-center">
+                                  {art.stockActual <= art.stockMinimo ? (
+                                    <span className="bg-red-100 text-red-700 px-2 py-1 rounded text-xs font-bold">⚠ Bajo</span>
+                                  ) : (
+                                    <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-bold">✓ OK</span>
+                                  )}
+                                </td>
+                                <td className="p-3">
+                                  <div className="flex justify-center gap-2">
+                                    <button
+                                      onClick={() => setArticuloSeleccionado(art)}
+                                      className="p-1.5 text-slate-600 hover:bg-slate-100 rounded"
+                                      title="Editar"
+                                    >
+                                      <Edit size={16} />
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* Paginación */}
+                      {totalPaginas > 1 && (
+                        <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-200">
+                          <p className="text-sm text-slate-500">
+                            Mostrando {((currentPage - 1) * PAGE_SIZE) + 1}–{Math.min(currentPage * PAGE_SIZE, articulosFiltrados.length)} de {articulosFiltrados.length} artículos
+                          </p>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => setCurrentPage((p: number) => Math.max(1, p - 1))}
+                              disabled={currentPage === 1}
+                              className="px-3 py-1.5 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                            >
+                              Anterior
+                            </button>
+                            <span className="text-sm text-slate-600 font-medium px-2">
+                              {currentPage} / {totalPaginas}
+                            </span>
+                            <button
+                              onClick={() => setCurrentPage((p: number) => Math.min(totalPaginas, p + 1))}
+                              disabled={currentPage === totalPaginas}
+                              className="px-3 py-1.5 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                            >
+                              Siguiente
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               )}
@@ -614,11 +655,11 @@ export default function SocorrismoPage() {
               {/* Mapa */}
               <div className="h-[400px] relative z-0">
                 {mapReady && deas.length > 0 && deas.some(d => d.latitud && d.longitud) ? (
-                  <MapContainer 
-                   center={centerPosition} 
-                   zoom={15} 
-                   style={{ height: '100%', width: '100%' }}
-                   key={`deas-map-${deas.length}`}
+                  <MapContainer
+                    center={centerPosition}
+                    zoom={15}
+                    style={{ height: '100%', width: '100%' }}
+                    key={`deas-map-${deas.length}`}
                   >
                     <TileLayer
                       attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
@@ -685,18 +726,17 @@ export default function SocorrismoPage() {
                           )}
                         </td>
                         <td className="p-3 text-center">
-                          <span className={`px-2 py-1 rounded text-xs font-bold ${
-                            dea.estado === 'operativo' 
-                              ? 'bg-green-100 text-green-700' 
-                              : dea.estado === 'revision_pendiente' 
-                              ? 'bg-yellow-100 text-yellow-700' 
+                          <span className={`px-2 py-1 rounded text-xs font-bold ${dea.estado === 'operativo'
+                            ? 'bg-green-100 text-green-700'
+                            : dea.estado === 'revision_pendiente'
+                              ? 'bg-yellow-100 text-yellow-700'
                               : 'bg-red-100 text-red-700'
-                          }`}>
-                            {dea.estado === 'operativo' 
-                              ? 'Operativo' 
-                              : dea.estado === 'revision_pendiente' 
-                              ? 'Rev. Pendiente' 
-                              : 'Fuera Servicio'}
+                            }`}>
+                            {dea.estado === 'operativo'
+                              ? 'Operativo'
+                              : dea.estado === 'revision_pendiente'
+                                ? 'Rev. Pendiente'
+                                : 'Fuera Servicio'}
                           </span>
                         </td>
                         <td className="p-3">
@@ -747,13 +787,12 @@ export default function SocorrismoPage() {
                   <div key={botiquin.id} className="bg-white border-2 border-slate-200 rounded-xl p-5 hover:shadow-lg transition-shadow">
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex items-center gap-3">
-                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                          botiquin.estado === 'operativo' ? 'bg-green-100' :
+                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${botiquin.estado === 'operativo' ? 'bg-green-100' :
                           botiquin.estado === 'revision_pendiente' ? 'bg-yellow-100' : 'bg-red-100'
-                        }`}>
+                          }`}>
                           <Heart size={24} className={
                             botiquin.estado === 'operativo' ? 'text-green-600' :
-                            botiquin.estado === 'revision_pendiente' ? 'text-yellow-600' : 'text-red-600'
+                              botiquin.estado === 'revision_pendiente' ? 'text-yellow-600' : 'text-red-600'
                           } />
                         </div>
                         <div>
@@ -781,14 +820,13 @@ export default function SocorrismoPage() {
                     </div>
 
                     <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 pt-3 border-t border-slate-200">
-                      <div className={`flex items-center justify-center px-2 py-1.5 rounded-lg text-xs font-semibold ${
-                        botiquin.estado === 'operativo' ? 'bg-green-100 text-green-700' :
+                      <div className={`flex items-center justify-center px-2 py-1.5 rounded-lg text-xs font-semibold ${botiquin.estado === 'operativo' ? 'bg-green-100 text-green-700' :
                         botiquin.estado === 'revision_pendiente' ? 'bg-yellow-100 text-yellow-700' :
-                        'bg-red-100 text-red-700'
-                      }`}>
+                          'bg-red-100 text-red-700'
+                        }`}>
                         {botiquin.estado === 'operativo' ? '✓ OK' :
-                         botiquin.estado === 'revision_pendiente' ? '⚠ Pdte' :
-                         '✗ Incomp'}
+                          botiquin.estado === 'revision_pendiente' ? '⚠ Pdte' :
+                            '✗ Incomp'}
                       </div>
                       <button
                         onClick={() => { setBotiquinSeleccionado(botiquin); setShowEditarBotiquin(true); }}
@@ -866,7 +904,7 @@ export default function SocorrismoPage() {
       </div>
 
       {/* MODALES */}
-      
+
       {/* Modal Nuevo Artículo */}
       {showNuevoArticulo && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60" onClick={() => setShowNuevoArticulo(false)}>
@@ -1248,7 +1286,7 @@ export default function SocorrismoPage() {
               const form = e.target as HTMLFormElement
               const latitudValue = (form.elements.namedItem('latitud') as HTMLInputElement).value
               const longitudValue = (form.elements.namedItem('longitud') as HTMLInputElement).value
-              
+
               const formData = {
                 codigo: (form.elements.namedItem('codigo') as HTMLInputElement).value,
                 tipoDea: (form.elements.namedItem('tipoDea') as HTMLSelectElement).value,
@@ -1378,7 +1416,7 @@ export default function SocorrismoPage() {
               const form = e.target as HTMLFormElement
               const latitudValue = (form.elements.namedItem('latitud') as HTMLInputElement).value
               const longitudValue = (form.elements.namedItem('longitud') as HTMLInputElement).value
-              
+
               const formData = {
                 codigo: (form.elements.namedItem('codigo') as HTMLInputElement).value,
                 tipoDea: (form.elements.namedItem('tipoDea') as HTMLSelectElement).value,
@@ -1751,14 +1789,14 @@ export default function SocorrismoPage() {
 
       {/* Modal Gestión de Items */}
       {showGestionItems && botiquinSeleccionado && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60" onClick={() => {setShowGestionItems(false); setBotiquinSeleccionado(null)}}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60" onClick={() => { setShowGestionItems(false); setBotiquinSeleccionado(null) }}>
           <div className="bg-white rounded-xl w-full max-w-4xl shadow-2xl max-h-[90vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
             <div className="bg-red-600 p-5 text-white flex items-center justify-between">
               <h2 className="text-xl font-bold flex items-center gap-2">
                 <Layers className="w-5 h-5" />
                 Gestión de Items - {botiquinSeleccionado.codigo}
               </h2>
-              <button onClick={() => {setShowGestionItems(false); setBotiquinSeleccionado(null)}} className="text-white hover:bg-red-700 p-1 rounded">
+              <button onClick={() => { setShowGestionItems(false); setBotiquinSeleccionado(null) }} className="text-white hover:bg-red-700 p-1 rounded">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -1796,13 +1834,13 @@ export default function SocorrismoPage() {
                           </div>
                         </div>
                         <div className="flex gap-2 ml-4">
-                          <button onClick={() => {setItemSeleccionado(item); setShowEditarItem(true)}} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg">
+                          <button onClick={() => { setItemSeleccionado(item); setShowEditarItem(true) }} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg">
                             <Edit className="w-4 h-4" />
                           </button>
                           <button onClick={async () => {
                             if (confirm(`¿Eliminar "${item.nombreItem}"?`)) {
                               try {
-                                const res = await fetch(`/api/logistica?tipo=botiquin-item&id=${item.id}`, {method: 'DELETE'})
+                                const res = await fetch(`/api/logistica?tipo=botiquin-item&id=${item.id}`, { method: 'DELETE' })
                                 if (res.ok) {
                                   const resReload = await fetch(`/api/logistica?tipo=botiquines&id=${botiquinSeleccionado.id}`)
                                   const dataReload = await resReload.json()
@@ -1845,18 +1883,18 @@ export default function SocorrismoPage() {
               const articuloId = (form.elements.namedItem('articuloId') as HTMLSelectElement).value
               const cantidadActual = parseInt((form.elements.namedItem('cantidadActual') as HTMLInputElement).value)
               const articuloSel = articulos.find(a => a.id === articuloId)
-              
+
               if (!articuloSel) {
                 alert('❌ Selecciona un artículo')
                 return
               }
-              
+
               const stockDisponible = articuloSel.stockActual - (articuloSel.stockAsignado || 0)
               if (cantidadActual > stockDisponible) {
                 alert(`❌ Stock insuficiente. Disponible: ${stockDisponible} ${articuloSel.unidad}`)
                 return
               }
-              
+
               const formData = {
                 botiquinId: botiquinSeleccionado.id,
                 articuloId,
@@ -1867,8 +1905,8 @@ export default function SocorrismoPage() {
               try {
                 const res = await fetch('/api/logistica', {
                   method: 'POST',
-                  headers: {'Content-Type': 'application/json'},
-                  body: JSON.stringify({tipo: 'botiquin-item', ...formData})
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ tipo: 'botiquin-item', ...formData })
                 })
                 if (res.ok) {
                   const resReload = await fetch(`/api/logistica?tipo=botiquines&id=${botiquinSeleccionado.id}`)
@@ -1929,11 +1967,11 @@ export default function SocorrismoPage() {
 
       {/* Modal Editar Item */}
       {showEditarItem && itemSeleccionado && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60" onClick={() => {setShowEditarItem(false); setItemSeleccionado(null)}}>
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60" onClick={() => { setShowEditarItem(false); setItemSeleccionado(null) }}>
           <div className="bg-white rounded-xl w-full max-w-2xl shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="bg-blue-600 p-5 text-white flex items-center justify-between rounded-t-xl">
               <h3 className="text-lg font-bold">Editar Item</h3>
-              <button onClick={() => {setShowEditarItem(false); setItemSeleccionado(null)}} className="text-white hover:bg-blue-700 p-1 rounded">
+              <button onClick={() => { setShowEditarItem(false); setItemSeleccionado(null) }} className="text-white hover:bg-blue-700 p-1 rounded">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -1950,8 +1988,8 @@ export default function SocorrismoPage() {
               try {
                 const res = await fetch('/api/logistica', {
                   method: 'PUT',
-                  headers: {'Content-Type': 'application/json'},
-                  body: JSON.stringify({tipo: 'botiquin-item', id: itemSeleccionado.id, ...formData})
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ tipo: 'botiquin-item', id: itemSeleccionado.id, ...formData })
                 })
                 if (res.ok) {
                   const resReload = await fetch(`/api/logistica?tipo=botiquines&id=${botiquinSeleccionado.id}`)
@@ -1997,7 +2035,7 @@ export default function SocorrismoPage() {
                 <input name="caducidad" type="date" defaultValue={itemSeleccionado.caducidad ? new Date(itemSeleccionado.caducidad).toISOString().split('T')[0] : ''} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
               </div>
               <div className="flex gap-3 pt-4 border-t">
-                <button type="button" onClick={() => {setShowEditarItem(false); setItemSeleccionado(null)}} className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">Cancelar</button>
+                <button type="button" onClick={() => { setShowEditarItem(false); setItemSeleccionado(null) }} className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">Cancelar</button>
                 <button type="submit" className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Guardar</button>
               </div>
             </form>
@@ -2025,7 +2063,7 @@ export default function SocorrismoPage() {
               e.preventDefault()
               const form = e.target as HTMLFormElement
               const items = botiquinSeleccionado.items || []
-              
+
               // Recopilar datos de cada item
               const itemsData = items.map((item: any) => {
                 const checkbox = form.elements.namedItem(`verificado-${item.id}`) as HTMLInputElement
@@ -2037,16 +2075,16 @@ export default function SocorrismoPage() {
                   cantidadRequerida: item.cantidadRequerida
                 }
               })
-              
+
               const itemsVerificados = itemsData.filter((i: any) => i.verificado).length
               const itemsFaltantes = itemsData.filter((i: any) => i.cantidadActual < i.cantidadRequerida).length
               const itemsCaducados = items.filter((item: any) => item.caducidad && new Date(item.caducidad) < new Date()).length
               const observaciones = (form.elements.namedItem('observaciones') as HTMLTextAreaElement).value
-              
+
               try {
                 const res = await fetch('/api/logistica', {
                   method: 'POST',
-                  headers: {'Content-Type': 'application/json'},
+                  headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({
                     tipo: 'revision-botiquin',
                     botiquinId: botiquinSeleccionado.id,
@@ -2076,7 +2114,7 @@ export default function SocorrismoPage() {
                     <strong>Instrucciones:</strong> Verifica cada item del botiquín, actualiza las cantidades si es necesario y marca como verificado.
                   </p>
                 </div>
-                
+
                 {(!botiquinSeleccionado.items || botiquinSeleccionado.items.length === 0) ? (
                   <div className="text-center py-8 text-slate-500">
                     <Package size={40} className="mx-auto mb-2 opacity-50" />
@@ -2098,8 +2136,8 @@ export default function SocorrismoPage() {
                       return (
                         <div key={item.id} className={`grid grid-cols-12 gap-2 p-2 rounded border ${caducado ? 'bg-red-50 border-red-200' : faltante ? 'bg-yellow-50 border-yellow-200' : 'bg-white border-slate-200'}`}>
                           <div className="col-span-1 flex items-center justify-center">
-                            <input 
-                              type="checkbox" 
+                            <input
+                              type="checkbox"
                               name={`verificado-${item.id}`}
                               defaultChecked={item.verificado}
                               className="w-5 h-5 text-green-600 rounded"
@@ -2118,8 +2156,8 @@ export default function SocorrismoPage() {
                             <span className="text-slate-600">{item.cantidadRequerida} {item.unidad}</span>
                           </div>
                           <div className="col-span-2 flex items-center justify-center">
-                            <input 
-                              type="number" 
+                            <input
+                              type="number"
                               name={`cantidad-${item.id}`}
                               defaultValue={item.cantidadActual}
                               min="0"
@@ -2140,28 +2178,28 @@ export default function SocorrismoPage() {
                     })}
                   </div>
                 )}
-                
+
                 <div className="mt-4">
                   <label className="block text-sm font-medium text-slate-700 mb-1">Observaciones</label>
-                  <textarea 
-                    name="observaciones" 
+                  <textarea
+                    name="observaciones"
                     rows={3}
                     placeholder="Añade observaciones sobre el estado del botiquín, items a reponer, etc."
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg resize-none"
                   ></textarea>
                 </div>
               </div>
-              
+
               <div className="p-4 border-t bg-slate-50 flex gap-3">
-                <button 
-                  type="button" 
-                  onClick={() => setShowChecklist(false)} 
+                <button
+                  type="button"
+                  onClick={() => setShowChecklist(false)}
                   className="flex-1 px-4 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300"
                 >
                   Cancelar
                 </button>
-                <button 
-                  type="submit" 
+                <button
+                  type="submit"
                   className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center justify-center gap-2"
                   disabled={!botiquinSeleccionado.items || botiquinSeleccionado.items.length === 0}
                 >
@@ -2174,7 +2212,7 @@ export default function SocorrismoPage() {
         </div>
       )}
 
-       {/* Modal Historial de Revisiones */}
+      {/* Modal Historial de Revisiones */}
       {showHistorial && botiquinSeleccionado && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
@@ -2190,7 +2228,7 @@ export default function SocorrismoPage() {
                 <X size={20} />
               </button>
             </div>
-            
+
             <div className="flex-1 overflow-y-auto">
               {revisionesHistorial.length === 0 ? (
                 <div className="text-center py-12 text-slate-500">
@@ -2246,11 +2284,11 @@ export default function SocorrismoPage() {
                 </div>
               )}
             </div>
-            
+
             <div className="p-3 border-t bg-slate-50 flex justify-between items-center">
               <span className="text-xs text-slate-500">{revisionesHistorial.length} revisiones</span>
-              <button 
-                onClick={() => { setShowHistorial(false); setBotiquinSeleccionado(null); }} 
+              <button
+                onClick={() => { setShowHistorial(false); setBotiquinSeleccionado(null); }}
                 className="px-4 py-1.5 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 text-sm font-medium"
               >
                 Cerrar

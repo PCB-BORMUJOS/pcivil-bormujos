@@ -143,6 +143,10 @@ export default function IncendiosPage() {
   const [filterEstado, setFilterEstado] = useState('all');
   const [searchEquipos, setSearchEquipos] = useState('');
 
+  // Paginación stock
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 30;
+
   const [loading, setLoading] = useState(true);
   const [showNuevoArticulo, setShowNuevoArticulo] = useState(false);
   const [showNuevaPeticion, setShowNuevaPeticion] = useState(false);
@@ -402,6 +406,9 @@ export default function IncendiosPage() {
     return matchSearch && matchFamilia;
   });
 
+  const totalPaginas = Math.ceil(articulosFiltrados.length / PAGE_SIZE);
+  const articulosPaginados = articulosFiltrados.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
   const equiposFiltrados = todosEquiposECI.filter(eq => {
     const matchTipo = filterTipoEquipo === 'all' || eq.tipo === filterTipoEquipo;
     const matchEdificio = filterEdificio === 'all' || eq.edificioId === filterEdificio;
@@ -413,7 +420,7 @@ export default function IncendiosPage() {
   return (
     <div className="space-y-6">
       {/* HEADER */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <div className="bg-red-100 p-3 rounded-xl">
             <Flame className="text-red-600" size={28} />
@@ -421,10 +428,10 @@ export default function IncendiosPage() {
           <div>
             <p className="text-xs font-bold text-red-600 uppercase tracking-wider">INCENDIOS</p>
             <h1 className="text-2xl font-bold text-slate-800">Gestión y Equipamiento</h1>
-            <p className="text-slate-500 text-sm">Inventario, equipos ECI y red de hidrantes</p>
+            <p className="text-slate-500 text-sm hidden sm:block">Inventario, equipos ECI y red de hidrantes</p>
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <button onClick={cargarDatos} className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg">
             <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
           </button>
@@ -444,7 +451,7 @@ export default function IncendiosPage() {
       </div>
 
       {/* STATS */}
-      <div className="grid grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
           <div className="flex justify-between items-start">
             <div>
@@ -508,9 +515,9 @@ export default function IncendiosPage() {
         </div>
       </div>
 
-      {/* TABS PRINCIPALES - Continuará en el siguiente archivo... */}
+      {/* TABS PRINCIPALES */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-        <div className="flex border-b border-slate-200">
+        <div className="flex overflow-x-auto border-b border-slate-200">
           {[
             { id: 'inventario', label: 'Inventario del Área', icon: Package },
             { id: 'eci-edificios', label: 'ECI Edificios', icon: Building2 },
@@ -520,7 +527,7 @@ export default function IncendiosPage() {
             <button
               key={tab.id}
               onClick={() => setMainTab(tab.id as any)}
-              className={`flex items-center gap-2 px-6 py-3 text-sm font-medium border-b-2 transition-all ${mainTab === tab.id
+              className={`flex items-center gap-2 px-4 sm:px-6 py-3 text-sm font-medium border-b-2 transition-all whitespace-nowrap ${mainTab === tab.id
                 ? 'border-red-500 text-red-600 bg-red-50'
                 : 'border-transparent text-slate-500 hover:text-slate-700'
                 }`}
@@ -534,7 +541,7 @@ export default function IncendiosPage() {
         {/* TAB: INVENTARIO DEL ÁREA */}
         {mainTab === 'inventario' && (
           <div>
-            <div className="flex border-b border-slate-200 bg-slate-50">
+            <div className="flex border-b border-slate-200 bg-slate-50 overflow-x-auto">
               {[
                 { id: 'stock', label: 'Stock', icon: Package },
                 { id: 'peticiones', label: 'Peticiones', icon: ShoppingCart },
@@ -542,10 +549,10 @@ export default function IncendiosPage() {
               ].map(tab => (
                 <button
                   key={tab.id}
-                  onClick={() => { setInventoryTab(tab.id as any); if (tab.id === 'peticiones') cargarPeticiones(); }}
-                  className={`flex items-center gap-2 px-6 py-3 text-sm font-medium border-b-2 transition-all ${inventoryTab === tab.id
-                    ? 'border-purple-500 text-purple-600 bg-white'
-                    : 'border-transparent text-slate-500 hover:text-slate-700'
+                  onClick={() => { setInventoryTab(tab.id as any); if (tab.id === 'peticiones') cargarPeticiones(); setCurrentPage(1); }}
+                  className={`flex items-center gap-2 px-6 py-3 text-sm font-medium border-b-2 transition-all whitespace-nowrap ${inventoryTab === tab.id
+                    ? 'border-red-500 text-red-600 bg-white'
+                    : 'border-transparent text-slate-600 hover:text-slate-800'
                     }`}
                 >
                   <tab.icon size={16} />
@@ -557,30 +564,30 @@ export default function IncendiosPage() {
             <div className="p-6">
               {inventoryTab === 'stock' && (
                 <div>
-                  <div className="flex gap-3 mb-6">
+                  <div className="flex flex-col sm:flex-row gap-3 mb-6">
                     <div className="flex-1 relative">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
                       <input
                         type="text"
                         placeholder="Buscar artículos..."
                         value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+                        className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-400"
                       />
                     </div>
                     <select
                       value={selectedFamiliaFilter}
-                      onChange={(e) => setSelectedFamiliaFilter(e.target.value)}
-                      className="px-4 py-2.5 border border-slate-200 rounded-lg"
+                      onChange={(e) => { setSelectedFamiliaFilter(e.target.value); setCurrentPage(1); }}
+                      className="px-4 py-2.5 border border-slate-200 rounded-lg text-sm"
                     >
                       <option value="all">Todas las familias</option>
                       {familias.map(fam => (
                         <option key={fam.id} value={fam.id}>{fam.nombre}</option>
                       ))}
                     </select>
-                    <button onClick={() => setShowGestionFamilias(true)} className="px-4 py-2.5 bg-slate-600 text-white rounded-lg hover:bg-slate-700 flex items-center gap-2">
+                    <button onClick={() => setShowGestionFamilias(true)} className="px-4 py-2.5 bg-slate-600 text-white rounded-lg hover:bg-slate-700 flex items-center gap-2 text-sm">
                       <Layers size={18} />
-                      Familias
+                      <span className="hidden sm:inline">Familias</span>
                     </button>
                   </div>
 
@@ -595,52 +602,82 @@ export default function IncendiosPage() {
                       <p>No hay artículos</p>
                     </div>
                   ) : (
-                    <table className="w-full">
-                      <thead className="bg-slate-50 border-y border-slate-200">
-                        <tr>
-                          <th className="text-left p-3 text-xs font-semibold text-slate-500 uppercase">Artículo</th>
-                          <th className="text-left p-3 text-xs font-semibold text-slate-500 uppercase">Familia</th>
-                          <th className="text-center p-3 text-xs font-semibold text-slate-500 uppercase">Stock</th>
-                          <th className="text-center p-3 text-xs font-semibold text-slate-500 uppercase">Estado</th>
-                          <th className="text-center p-3 text-xs font-semibold text-slate-500 uppercase">Acciones</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {articulosFiltrados.map(art => (
-                          <tr key={art.id} className="hover:bg-slate-50">
-                            <td className="p-3">
-                              <p className="font-medium text-slate-800">{art.nombre}</p>
-                              <p className="text-xs text-slate-500">Cód: {art.codigo}</p>
-                            </td>
-                            <td className="p-3 text-sm text-slate-600">{art.familia?.nombre || '-'}</td>
-                            <td className="p-3 text-center">
-                              <span className="font-bold text-slate-800">{art.stockActual}</span>
-                              <span className="text-slate-400 text-sm ml-1">{art.unidad}</span>
-                            </td>
-                            <td className="p-3 text-center">
-                              {art.stockActual <= art.stockMinimo ? (
-                                <span className="bg-red-100 text-red-700 px-2 py-1 rounded text-xs font-bold">⚠ Bajo</span>
-                              ) : (
-                                <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-bold">✓ OK</span>
-                              )}
-                            </td>
-                            <td className="p-3">
-                              <div className="flex justify-center gap-2">
-                                <button onClick={() => setArticuloSeleccionado(art)} className="p-1.5 text-slate-600 hover:bg-slate-100 rounded" title="Ver detalles">
-                                  <Eye size={16} />
-                                </button>
-                                <button onClick={() => setArticuloSeleccionado(art)} className="p-1.5 text-slate-600 hover:bg-slate-100 rounded" title="Editar">
-                                  <Edit size={16} />
-                                </button>
-                                <button onClick={async () => { if (confirm(`¿Eliminar "${art.nombre}"?`)) { await eliminarItem('articulo', art.id); } }} className="p-1.5 text-red-600 hover:bg-red-50 rounded" title="Eliminar">
-                                  <Trash2 size={16} />
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                    <>
+                      <div className="overflow-x-auto">
+                        <table className="w-full min-w-[600px]">
+                          <thead className="bg-slate-50 border-y border-slate-200">
+                            <tr>
+                              <th className="text-left p-3 text-xs font-semibold text-slate-500 uppercase">Artículo</th>
+                              <th className="text-left p-3 text-xs font-semibold text-slate-500 uppercase hidden sm:table-cell">Familia</th>
+                              <th className="text-center p-3 text-xs font-semibold text-slate-500 uppercase">Stock</th>
+                              <th className="text-center p-3 text-xs font-semibold text-slate-500 uppercase">Estado</th>
+                              <th className="text-center p-3 text-xs font-semibold text-slate-500 uppercase">Acciones</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100">
+                            {articulosPaginados.map(art => (
+                              <tr key={art.id} className="hover:bg-slate-50">
+                                <td className="p-3">
+                                  <p className="font-medium text-slate-800">{art.nombre}</p>
+                                  <p className="text-xs text-slate-500">Cód: {art.codigo}</p>
+                                </td>
+                                <td className="p-3 text-sm text-slate-600 hidden sm:table-cell">{art.familia?.nombre || '-'}</td>
+                                <td className="p-3 text-center">
+                                  <span className="font-bold text-slate-800">{art.stockActual}</span>
+                                  <span className="text-slate-400 text-sm ml-1">{art.unidad}</span>
+                                </td>
+                                <td className="p-3 text-center">
+                                  {art.stockActual <= art.stockMinimo ? (
+                                    <span className="bg-red-100 text-red-700 px-2 py-1 rounded text-xs font-bold">⚠ Bajo</span>
+                                  ) : (
+                                    <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-bold">✓ OK</span>
+                                  )}
+                                </td>
+                                <td className="p-3">
+                                  <div className="flex justify-center gap-2">
+                                    <button onClick={() => setArticuloSeleccionado(art)} className="p-1.5 text-slate-600 hover:bg-slate-100 rounded" title="Ver detalles">
+                                      <Eye size={16} />
+                                    </button>
+                                    <button onClick={() => setArticuloSeleccionado(art)} className="p-1.5 text-slate-600 hover:bg-slate-100 rounded" title="Editar">
+                                      <Edit size={16} />
+                                    </button>
+                                    <button onClick={async () => { if (confirm(`¿Eliminar "${art.nombre}"?`)) { await eliminarItem('articulo', art.id); } }} className="p-1.5 text-red-600 hover:bg-red-50 rounded" title="Eliminar">
+                                      <Trash2 size={16} />
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* Paginación */}
+                      {totalPaginas > 1 && (
+                        <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-200">
+                          <p className="text-sm text-slate-500">
+                            Mostrando {((currentPage - 1) * PAGE_SIZE) + 1}–{Math.min(currentPage * PAGE_SIZE, articulosFiltrados.length)} de {articulosFiltrados.length} artículos
+                          </p>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => setCurrentPage((p: number) => Math.max(1, p - 1))}
+                              disabled={currentPage === 1}
+                              className="px-3 py-1.5 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                            >
+                              Anterior
+                            </button>
+                            <span className="text-sm text-slate-600 font-medium px-2">{currentPage} / {totalPaginas}</span>
+                            <button
+                              onClick={() => setCurrentPage((p: number) => Math.min(totalPaginas, p + 1))}
+                              disabled={currentPage === totalPaginas}
+                              className="px-3 py-1.5 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                            >
+                              Siguiente
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               )}
