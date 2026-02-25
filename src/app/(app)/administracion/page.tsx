@@ -404,6 +404,8 @@ export default function AdministracionPage() {
   // Estados para Personal
   const [voluntarios, setVoluntarios] = useState<Voluntario[]>([]);
   const [roles, setRoles] = useState<any[]>([]);
+  const [servicios, setServicios] = useState<any[]>([]);
+  const [nuevoPassword, setNuevoPassword] = useState('');
   const [showFichaModal, setShowFichaModal] = useState(false);
   const [showNuevoVoluntario, setShowNuevoVoluntario] = useState(false);
   const [selectedVoluntario, setSelectedVoluntario] = useState<Voluntario | null>(null);
@@ -520,6 +522,7 @@ export default function AdministracionPage() {
       const data = await res.json();
       setVoluntarios(data.voluntarios || []);
       setRoles(data.roles || []);
+      setServicios(data.servicios || []);
     } catch (error) {
       console.error('Error cargando voluntarios:', error);
     }
@@ -637,6 +640,14 @@ export default function AdministracionPage() {
         alert('Por favor, completa los datos del voluntario: Nombre, Apellidos y Email');
         return;
       }
+      if (!nuevoPassword) {
+        alert('Por favor, introduce una contraseña para el nuevo voluntario');
+        return;
+      }
+      if (!fichaData.servicioId && !fichaData.rolId) {
+        alert('Por favor, selecciona un rol y un servicio');
+        return;
+      }
     }
 
     try {
@@ -654,17 +665,20 @@ export default function AdministracionPage() {
             email: selectedVoluntario.email,
             telefono: selectedVoluntario.telefono || '',
             rolId: fichaData.rolId || null,
+            servicioId: fichaData.servicioId || null,
+            password: nuevoPassword,
             activo: true
           })
         });
         const dataVoluntario = await resVoluntario.json();
 
-        if (!dataVoluntario.success) {
-          alert('Error al crear el voluntario: ' + dataVoluntario.error);
+        // La API devuelve el usuario directamente (status 201) o un error
+        if (!resVoluntario.ok) {
+          alert('Error al crear el voluntario: ' + (dataVoluntario.error || 'Error desconocido'));
           return;
         }
 
-        voluntarioId = dataVoluntario.voluntario.id;
+        voluntarioId = dataVoluntario.id;
       }
 
       // Guardar la ficha
@@ -691,6 +705,7 @@ export default function AdministracionPage() {
 
         alert('✅ Ficha guardada correctamente');
         setShowFichaModal(false);
+        setNuevoPassword('');
         cargarVoluntarios();
       } else {
         alert('Error: ' + data.error);
@@ -2189,6 +2204,51 @@ export default function AdministracionPage() {
                 <input type="text" value={fichaData.telefonoFijo || selectedVoluntario?.telefono || ''} onChange={e => setFichaData({ ...fichaData, telefonoFijo: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm" />
               </div>
             </div>
+
+            {/* Acceso al sistema (solo nueva ficha) */}
+            {!selectedVoluntario?.id && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-xs font-bold text-blue-700 uppercase mb-3">🔐 Acceso al Sistema (obligatorio para nuevo voluntario)</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Email *</label>
+                    <input
+                      type="email"
+                      value={selectedVoluntario?.email || ''}
+                      onChange={e => setSelectedVoluntario({ ...selectedVoluntario!, email: e.target.value })}
+                      placeholder="email@ejemplo.com"
+                      className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Contraseña inicial *</label>
+                    <input
+                      type="password"
+                      value={nuevoPassword}
+                      onChange={e => setNuevoPassword(e.target.value)}
+                      placeholder="Mínimo 6 caracteres"
+                      className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Servicio *</label>
+                    <select
+                      value={fichaData.servicioId || ''}
+                      onChange={e => setFichaData({ ...fichaData, servicioId: e.target.value })}
+                      className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
+                    >
+                      <option value="">-- Seleccionar servicio --</option>
+                      {servicios.map((s: any) => (
+                        <option key={s.id} value={s.id}>{s.nombre}</option>
+                      ))}
+                      {servicios.length === 0 && (
+                        <option value="default">Protección Civil Bormujos</option>
+                      )}
+                    </select>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Área, rol y categoría */}
             <div className="grid grid-cols-4 gap-4">

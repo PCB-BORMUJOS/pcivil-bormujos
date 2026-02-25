@@ -30,13 +30,15 @@ export async function GET(request: NextRequest) {
 
     // Si se piden los roles, también los devolvemos
     let roles: any[] = []
+    let servicios: any[] = []
     if (incluirRoles) {
-      roles = await prisma.rol.findMany({
-        orderBy: { nombre: 'asc' }
-      })
+      [roles, servicios] = await Promise.all([
+        prisma.rol.findMany({ orderBy: { nombre: 'asc' } }),
+        prisma.servicio.findMany({ orderBy: { nombre: 'asc' } }),
+      ])
     }
 
-    return NextResponse.json({ voluntarios, roles: incluirRoles ? roles : undefined })
+    return NextResponse.json({ voluntarios, roles: incluirRoles ? roles : undefined, servicios: incluirRoles ? servicios : undefined })
   } catch (error) {
     console.error('Error al obtener personal:', error)
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
