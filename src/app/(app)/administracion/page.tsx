@@ -2147,28 +2147,32 @@ export default function AdministracionPage() {
                           const vol = voluntarios.find(v => v.id === uid);
                           if (vol) {
                             setSelectedVoluntario(vol);
-                            setFichaData((prev: any) => ({
-                              ...prev,
-                              rolId: vol.rolId || '',
-                              fechaAlta: prev.fechaAlta || new Date().toISOString().split('T')[0],
-                              localidad: prev.localidad || 'BORMUJOS',
-                              provincia: prev.provincia || 'SEVILLA',
-                            }));
+                            // Si ya tiene ficha, cargar todos sus datos
+                            if (vol.fichaVoluntario) {
+                              setFichaData({
+                                ...vol.fichaVoluntario,
+                                rolId: vol.rolId || vol.fichaVoluntario.rolId || '',
+                              });
+                            } else {
+                              setFichaData({
+                                rolId: vol.rolId || '',
+                                fechaAlta: new Date().toISOString().split('T')[0],
+                                localidad: 'BORMUJOS',
+                                provincia: 'SEVILLA',
+                              });
+                            }
                           }
                         }}
                       >
                         <option value="">-- Seleccionar usuario existente --</option>
                         {voluntarios
-                          .filter(v => !v.fichaVoluntario)
                           .map(v => (
                             <option key={v.id} value={v.id}>
-                              {v.numeroVoluntario ? `${v.numeroVoluntario} — ` : ''}{v.nombre} {v.apellidos} ({v.email})
+                              {v.numeroVoluntario ? `${v.numeroVoluntario} — ` : ''}{v.nombre} {v.apellidos} ({v.email}){v.fichaVoluntario ? ' · Ficha existente' : ''}
                             </option>
                           ))}
                       </select>
-                      {voluntarios.filter(v => !v.fichaVoluntario).length === 0 && (
-                        <p className="text-xs text-green-600 mt-2 font-medium">Todos los usuarios del sistema ya tienen ficha asignada.</p>
-                      )}
+                      <p className="text-xs text-slate-400 mt-1">Los usuarios marcados con "Ficha existente" ya tienen datos registrados que se cargarán para edición.</p>
                     </div>
                   )}
                 </div>
