@@ -1545,7 +1545,7 @@ export default function AdministracionPage() {
                     <div key={a.id} className="border border-slate-200 rounded-xl overflow-hidden">
                       {/* Fila principal */}
                       <div
-                        className={`flex items-center p-4 cursor-pointer hover:bg-slate-50 transition-colors ${aspiranteExpandido === a.id ? 'bg-slate-50' : ''}`}
+                        className={`flex items-start sm:items-center p-4 cursor-pointer hover:bg-slate-50 transition-colors ${aspiranteExpandido === a.id ? 'bg-slate-50' : ''}`}
                         onClick={() => {
                           if (aspiranteExpandido === a.id) {
                             setAspiranteExpandido(null);
@@ -1556,41 +1556,77 @@ export default function AdministracionPage() {
                           }
                         }}
                       >
-                        <div className="flex-1 grid grid-cols-7 gap-4 items-center">
-                          <div className="text-sm text-slate-600">{new Date(a.fecha).toLocaleDateString('es-ES')}</div>
-                          <div className="font-medium text-slate-700">{a.nombre} {a.apellidos}</div>
-                          <div className="text-sm text-slate-600">{a.dni}</div>
-                          <div className="text-sm text-slate-600">{a.telefono}</div>
-                          <div className="text-sm text-slate-600 truncate">{a.email}</div>
-                          <div>
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${a.estado === 'pendiente' ? 'bg-yellow-100 text-yellow-800' :
-                              a.estado === 'entrevistado' ? 'bg-blue-100 text-blue-800' :
-                                a.estado === 'aceptado' ? 'bg-green-100 text-green-800' :
-                                  'bg-red-100 text-red-800'
-                              }`}>
-                              {a.estado.charAt(0).toUpperCase() + a.estado.slice(1)}
-                            </span>
+                        <div className="flex-1 min-w-0">
+                          {/* Móvil: apilado */}
+                          <div className="sm:hidden">
+                            <div className="flex items-center justify-between gap-2 mb-1">
+                              <span className="font-semibold text-slate-800 text-sm truncate">{a.nombre} {a.apellidos}</span>
+                              <span className={`flex-shrink-0 px-2 py-0.5 rounded-full text-xs font-medium ${a.estado === 'pendiente' ? 'bg-yellow-100 text-yellow-800' :
+                                a.estado === 'entrevistado' ? 'bg-blue-100 text-blue-800' :
+                                  a.estado === 'aceptado' ? 'bg-green-100 text-green-800' :
+                                    'bg-red-100 text-red-800'
+                                }`}>
+                                {a.estado.charAt(0).toUpperCase() + a.estado.slice(1)}
+                              </span>
+                            </div>
+                            <div className="text-xs text-slate-500 space-y-0.5">
+                              <p>{new Date(a.fecha).toLocaleDateString('es-ES')} · {a.telefono}</p>
+                              <p className="truncate">{a.email}</p>
+                            </div>
+                            <div className="flex items-center gap-2 mt-2" onClick={e => e.stopPropagation()}>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); setAspiranteEditando(a); setShowNuevoAspirante(true); }}
+                                className="p-1.5 bg-slate-100 text-slate-600 rounded hover:bg-slate-200 transition-colors"
+                                title="Editar"
+                              >
+                                <Edit size={14} />
+                              </button>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleEliminarAspirante(a.id); }}
+                                className="p-1.5 bg-slate-100 text-slate-600 rounded hover:bg-red-100 hover:text-red-600 transition-colors"
+                                title="Eliminar"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={(e) => { e.stopPropagation(); setAspiranteEditando(a); setShowNuevoAspirante(true); }}
-                              className="p-1.5 bg-slate-100 text-slate-600 rounded hover:bg-slate-200 transition-colors"
-                              title="Editar"
-                            >
-                              <Edit size={14} />
-                            </button>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); handleEliminarAspirante(a.id); }}
-                              className="p-1.5 bg-slate-100 text-slate-600 rounded hover:bg-red-100 hover:text-red-600 transition-colors"
-                              title="Eliminar"
-                            >
-                              <Trash2 size={14} />
-                            </button>
+                          {/* Desktop: grid 7 columnas */}
+                          <div className="hidden sm:grid grid-cols-7 gap-4 items-center">
+                            <div className="text-sm text-slate-600">{new Date(a.fecha).toLocaleDateString('es-ES')}</div>
+                            <div className="font-medium text-slate-700">{a.nombre} {a.apellidos}</div>
+                            <div className="text-sm text-slate-600">{a.dni}</div>
+                            <div className="text-sm text-slate-600">{a.telefono}</div>
+                            <div className="text-sm text-slate-600 truncate">{a.email}</div>
+                            <div>
+                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${a.estado === 'pendiente' ? 'bg-yellow-100 text-yellow-800' :
+                                a.estado === 'entrevistado' ? 'bg-blue-100 text-blue-800' :
+                                  a.estado === 'aceptado' ? 'bg-green-100 text-green-800' :
+                                    'bg-red-100 text-red-800'
+                                }`}>
+                                {a.estado.charAt(0).toUpperCase() + a.estado.slice(1)}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={(e) => { e.stopPropagation(); setAspiranteEditando(a); setShowNuevoAspirante(true); }}
+                                className="p-1.5 bg-slate-100 text-slate-600 rounded hover:bg-slate-200 transition-colors"
+                                title="Editar"
+                              >
+                                <Edit size={14} />
+                              </button>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleEliminarAspirante(a.id); }}
+                                className="p-1.5 bg-slate-100 text-slate-600 rounded hover:bg-red-100 hover:text-red-600 transition-colors"
+                                title="Eliminar"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
                           </div>
                         </div>
                         <ChevronDown
                           size={20}
-                          className={`ml-4 text-slate-400 transition-transform ${aspiranteExpandido === a.id ? 'rotate-180' : ''}`}
+                          className={`ml-4 mt-1 sm:mt-0 text-slate-400 transition-transform flex-shrink-0 ${aspiranteExpandido === a.id ? 'rotate-180' : ''}`}
                         />
                       </div>
 
