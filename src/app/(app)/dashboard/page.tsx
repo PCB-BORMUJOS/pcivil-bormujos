@@ -503,6 +503,7 @@ export default function DashboardPage() {
   const [turnoSeleccionado, setTurnoSeleccionado] = useState<{ fecha: string; turno: string; diaSemanaNombre: string } | null>(null);
   const [loadingDisponibilidad, setLoadingDisponibilidad] = useState(false);
 
+  const [editEventId, setEditEventId] = useState<string | null>(null);
   const [newEvent, setNewEvent] = useState({
     titulo: '', descripcion: '', tipo: 'preventivo', horaInicio: '09:00', horaFin: '14:00',
     ubicacion: '', color: '#EC4899', voluntariosMin: 0, voluntariosMax: 0, visible: true, privado: false
@@ -612,20 +613,25 @@ export default function DashboardPage() {
   const handleCreateEvent = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      const esEdicion = !!editEventId;
       const response = await fetch('/api/eventos', {
-        method: 'POST',
+        method: esEdicion ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...newEvent, fecha: selectedDate })
+        body: JSON.stringify(esEdicion
+          ? { ...newEvent, id: editEventId }
+          : { ...newEvent, fecha: selectedDate }
+        )
       });
       const data = await response.json();
       if (data.success) {
         cargarEventos();
         setShowCreateEvent(false);
+        setEditEventId(null);
       } else {
-        alert('Error: ' + (data.error || 'No se pudo crear el evento'));
+        alert('Error: ' + (data.error || 'No se pudo guardar el evento'));
       }
     } catch (error) {
-      alert('Error al crear el evento');
+      alert('Error al guardar el evento');
     }
   };
 
@@ -873,6 +879,50 @@ export default function DashboardPage() {
             </div>
             {showEventDetail.descripcion && <div><h4 className="text-sm font-bold text-slate-500 uppercase mb-2">Descripción</h4><p className="text-slate-700">{showEventDetail.descripcion}</p></div>}
 
+            {/* Acciones admin: Editar / Eliminar */}
+            {['superadmin', 'admin'].includes(userRole) && (
+              <div className="flex gap-3 pt-4 border-t border-slate-200">
+                <button
+                  onClick={() => {
+                    setNewEvent({
+                      titulo: showEventDetail.titulo,
+                      descripcion: showEventDetail.descripcion || '',
+                      tipo: showEventDetail.tipo,
+                      horaInicio: showEventDetail.horaInicio || '09:00',
+                      horaFin: showEventDetail.horaFin || '14:00',
+                      ubicacion: showEventDetail.ubicacion || '',
+                      color: showEventDetail.color || '#EC4899',
+                      voluntariosMin: showEventDetail.voluntariosMin || 0,
+                      voluntariosMax: showEventDetail.voluntariosMax || 0,
+                      visible: showEventDetail.visible !== false,
+                      privado: showEventDetail.privado || false,
+                    });
+                    setSelectedDate(showEventDetail.fecha?.split('T')[0] || '');
+                    setEditEventId(showEventDetail.id);
+                    setShowEventDetail(null);
+                    setShowCreateEvent(true);
+                  }}
+                  className="flex-1 flex items-center justify-center gap-2 py-2.5 border border-slate-300 text-slate-700 rounded-lg font-medium hover:bg-slate-50 transition-colors"
+                >
+                  <Edit size={16} /> Editar
+                </button>
+                <button
+                  onClick={async () => {
+                    if (!confirm('¿Eliminar este evento? Esta acción no se puede deshacer.')) return;
+                    const res = await fetch(`/api/eventos?id=${showEventDetail.id}`, { method: 'DELETE' });
+                    if (res.ok) {
+                      setShowEventDetail(null);
+                      cargarEventos();
+                    } else {
+                      alert('Error al eliminar el evento');
+                    }
+                  }}
+                  className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors"
+                >
+                  <Trash2 size={16} /> Eliminar
+                </button>
+              </div>
+            )}
             {/* Si es un evento de formación, permitir inscripción */}
             {showEventDetail.tipo === 'formacion' && (
               <div className="pt-4 border-t mt-4">
@@ -915,7 +965,7 @@ export default function DashboardPage() {
 
       {/* Modal Create Event */}
       {showCreateEvent && (
-        <Modal title={`Crear Evento - ${new Date(selectedDate + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}`} onClose={() => setShowCreateEvent(false)} wide>
+        <Modal title={editEventId ? 'Editar Evento' : `Crear Evento - ${new Date(selectedDate + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}`} onClose={() => { setShowCreateEvent(false); setEditEventId(null); }} wide>
           <form onSubmit={handleCreateEvent} className="space-y-4">
             {esAdmin && (
               <div className="flex gap-2 p-1 bg-slate-100 rounded-lg">
@@ -965,12 +1015,12 @@ export default function DashboardPage() {
                   if (tipo === 'emergencia') color = '#DC2626';
                   setNewEvent({ ...newEvent, tipo, color });
                 }}>
-                  <option value="preventivo">🚨 Preventivo</option>
-                  <option value="formacion">📚 Formación</option>
-                  <option value="reunion">👥 Reunión</option>
-                  <option value="simulacro">🎯 Simulacro</option>
-                  <option value="emergencia">🆘 Emergencia</option>
-                  <option value="otro">📌 Otro</option>
+                  <option value="preventivo">Preventivo</option>
+                  <option value="formacion">Formación</option>
+                  <option value="reunion">Reunión</option>
+                  <option value="simulacro">Simulacro</option>
+                  <option value="emergencia">Emergencia</option>
+                  <option value="otro">Otro</option>
                 </select>
               </div>
               <div>
