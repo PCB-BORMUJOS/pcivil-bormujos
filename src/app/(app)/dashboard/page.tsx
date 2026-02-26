@@ -1041,7 +1041,7 @@ export default function DashboardPage() {
             <div className="flex gap-3 pt-2">
               <button type="button" onClick={() => setShowCreateEvent(false)} className="flex-1 py-2.5 border border-slate-300 text-slate-700 rounded-lg font-medium hover:bg-slate-50">Cancelar</button>
               <button type="submit" className="flex-1 py-2.5 bg-orange-600 text-white rounded-lg font-medium hover:bg-orange-700 flex items-center justify-center gap-2">
-                <Plus size={18} /> Crear {newEvent.privado ? 'Evento Privado' : 'Evento'}
+                {editEventId ? <><Edit size={18} /> Guardar Cambios</> : <><Plus size={18} /> {newEvent.privado ? 'Crear Evento Privado' : 'Crear Evento'}</>}
               </button>
             </div>
           </form>
