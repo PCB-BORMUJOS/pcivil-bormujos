@@ -662,7 +662,7 @@ export default function AdministracionPage() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            numeroVoluntario: selectedVoluntario.numeroVoluntario,
+            numeroVoluntario: selectedVoluntario.numeroVoluntario || null,
             nombre: selectedVoluntario.nombre,
             apellidos: selectedVoluntario.apellidos,
             email: selectedVoluntario.email,

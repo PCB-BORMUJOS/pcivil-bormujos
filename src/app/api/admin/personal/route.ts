@@ -123,8 +123,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(usuario, { status: 201 })
   } catch (error) {
     console.error('Error al crear usuario:', error)
+    const msg = error instanceof Error ? error.message : String(error)
+    console.error('Error crear usuario:', msg)
     return NextResponse.json(
-      { error: 'Error al crear usuario' },
+      { error: msg },
       { status: 500 }
     )
   }
