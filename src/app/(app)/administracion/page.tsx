@@ -1053,6 +1053,8 @@ export default function AdministracionPage() {
               if (activeTab === 'personal') {
                 setSelectedVoluntario({ id: '', numeroVoluntario: '', nombre: '', apellidos: '', email: '', telefono: '', activo: true, rolId: '', rol: { id: '', nombre: '' } } as Voluntario);
                 setFichaData({ fechaAlta: new Date().toISOString().split('T')[0], localidad: 'BORMUJOS', provincia: 'SEVILLA', areaAsignada: '', categoria: 'VOLUNTARIO' });
+                setModoNuevaFicha('existente');
+                setNuevoPassword('');
                 setShowFichaModal(true);
               }
               else if (activeTab === 'polizas') setShowNuevaPoliza(true);
