@@ -635,7 +635,7 @@ export default function AdministracionPage() {
     if (!selectedVoluntario) return;
 
     // Verificar que los campos obligatorios estén preenchidos para nueva ficha
-    const esNuevaFicha = !selectedVoluntario.id;
+    const esNuevaFicha = modoNuevaFicha === 'nuevo';
     if (esNuevaFicha) {
       if (modoNuevaFicha === 'nuevo') {
         if (!selectedVoluntario.nombre || !selectedVoluntario.apellidos || !selectedVoluntario.email) {
