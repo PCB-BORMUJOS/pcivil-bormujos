@@ -17,7 +17,7 @@ export async function GET() {
         experiencia: true,
         avatar: true,
       },
-      orderBy: { numeroVoluntario: 'asc' }
+      orderBy: [{ numeroVoluntario: 'asc' }, { apellidos: 'asc' }]
     })
 
     // Contar estadísticas
