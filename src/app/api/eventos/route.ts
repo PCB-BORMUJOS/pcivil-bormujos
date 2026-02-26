@@ -196,14 +196,43 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'No tienes permisos para mover este evento' }, { status: 403 })
     }
 
-    const evento = await prisma.evento.update({
-      where: { id },
-      data: { fecha: new Date(fecha) }
-    })
-
+    const updateData: any = {}
+    if (fecha) updateData.fecha = new Date(fecha)
+    if (body.titulo) updateData.titulo = body.titulo
+    if (body.descripcion !== undefined) updateData.descripcion = body.descripcion
+    if (body.tipo) updateData.tipo = body.tipo
+    if (body.horaInicio) updateData.horaInicio = body.horaInicio
+    if (body.horaFin !== undefined) updateData.horaFin = body.horaFin
+    if (body.ubicacion !== undefined) updateData.ubicacion = body.ubicacion
+    if (body.color) updateData.color = body.color
+    if (body.privado !== undefined) updateData.privado = body.privado
+    if (body.visible !== undefined) updateData.visible = body.visible
+    const evento = await prisma.evento.update({ where: { id }, data: updateData })
     return NextResponse.json({ success: true, evento })
   } catch (error) {
     console.error('Error al actualizar evento:', error)
+    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 })
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.email) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    const usuario = await prisma.usuario.findUnique({ where: { email: session.user.email }, include: { rol: true } })
+    if (!usuario) return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
+    const { searchParams } = new URL(request.url)
+    const id = searchParams.get('id')
+    if (!id) return NextResponse.json({ error: 'ID requerido' }, { status: 400 })
+    const evento = await prisma.evento.findUnique({ where: { id } })
+    if (!evento) return NextResponse.json({ error: 'Evento no encontrado' }, { status: 404 })
+    const esAdmin = ['superadmin', 'admin'].includes(usuario.rol.nombre)
+    const esPropietario = evento.creadorId === usuario.id
+    if (!esAdmin && !esPropietario) return NextResponse.json({ error: 'Sin permisos' }, { status: 403 })
+    await prisma.evento.delete({ where: { id } })
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('Error al eliminar evento:', error)
     return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 })
   }
 }
