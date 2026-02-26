@@ -489,6 +489,7 @@ export default function DashboardPage() {
   const [userRole, setUserRole] = useState<string>('');
   const [userId, setUserId] = useState<string>('');
   const [voluntarios, setVoluntarios] = useState<any[]>([]);
+  const [enTurno, setEnTurno] = useState<any[]>([]);
   const [stats, setStats] = useState({ total: 0, responsablesTurno: 0, conCarnet: 0, experienciaAlta: 0 });
   const [vehiculos, setVehiculos] = useState<any[]>([]);
   const [statsVeh, setStatsVeh] = useState({ total: 0, disponibles: 0, enServicio: 0, mantenimiento: 0 });
@@ -544,6 +545,7 @@ export default function DashboardPage() {
     ])
       .then(([volData, vehData, climaData, eventosData, guardiasData]: any[]) => {
         setVoluntarios(volData.voluntarios || []);
+        setEnTurno(volData.enTurno || []);
         setStats(volData.stats || { total: 0, responsablesTurno: 0, conCarnet: 0, experienciaAlta: 0 });
         setVehiculos(vehData.vehiculos || []);
         setStatsVeh(vehData.stats || { total: 0, disponibles: 0, enServicio: 0, mantenimiento: 0 });
@@ -638,6 +640,7 @@ export default function DashboardPage() {
 
       if (res.ok) {
         setVoluntarios(data.voluntarios || []);
+        setEnTurno(data.enTurno || []);
         setStats(data.stats || { total: 0, responsablesTurno: 0, conCarnet: 0, experienciaAlta: 0 });
         setTurnoSeleccionado({ fecha, turno, diaSemanaNombre: data.diaSemanaNombre });
         setShowPersonnel(true); // Abrir modal automáticamente
@@ -661,6 +664,7 @@ export default function DashboardPage() {
       .then(res => res.json())
       .then(data => {
         setVoluntarios(data.voluntarios || []);
+        setEnTurno(data.enTurno || []);
         setStats(data.stats || { total: 0, responsablesTurno: 0, conCarnet: 0, experienciaAlta: 0 });
       })
       .catch(() => { });
@@ -698,13 +702,13 @@ export default function DashboardPage() {
                     Disponibles <span className="font-bold text-slate-700">{turnoSeleccionado.diaSemanaNombre?.charAt(0).toUpperCase() + turnoSeleccionado.diaSemanaNombre?.slice(1)} {turnoSeleccionado.turno === 'mañana' ? '🌅' : '🌆'}</span>
                   </>
                 ) : (
-                  <>Personal Activo<ChevronDown size={14} className="text-slate-400" /></>
+                  <>En Turno / Activos<ChevronDown size={14} className="text-slate-400" /></>
                 )}
               </p>
               <h3 className="text-3xl font-bold text-slate-800 mt-1">
-                {loadingVol || loadingDisponibilidad ? '...' : stats.total}
+                {loadingVol || loadingDisponibilidad ? '...' : enTurno.length}
                 <span className="text-base text-slate-400 font-normal ml-1">
-                  {turnoSeleccionado ? 'disponibles' : `/ ${stats.total}`}
+                  / {stats.total}
                 </span>
               </h3>
             </div>
@@ -1035,30 +1039,54 @@ export default function DashboardPage() {
       {/* Modal Personnel */}
       {showPersonnel && (
         <Modal
-          title={turnoSeleccionado
-            ? `Disponibles ${turnoSeleccionado.diaSemanaNombre?.charAt(0).toUpperCase() + turnoSeleccionado.diaSemanaNombre?.slice(1)} - Turno ${turnoSeleccionado.turno === 'mañana' ? 'Mañana 🌅' : 'Tarde 🌆'} (${stats.total})`
-            : `Personal Activo (${stats.total})`
-          }
+          title={`Personal — ${enTurno.length} en turno / ${stats.total} activos`}
           onClose={() => { setShowPersonnel(false); setTurnoSeleccionado(null); }}
         >
-          <div className="mb-4 grid grid-cols-3 gap-2 text-center">
-            <div className="bg-green-50 p-2 rounded-lg"><div className="text-xl font-bold text-green-600">{stats.responsablesTurno}</div><div className="text-[10px] text-green-700">Resp. Turno</div></div>
-            <div className="bg-blue-50 p-2 rounded-lg"><div className="text-xl font-bold text-blue-600">{stats.conCarnet}</div><div className="text-[10px] text-blue-700">Con Carnet</div></div>
-            <div className="bg-purple-50 p-2 rounded-lg"><div className="text-xl font-bold text-purple-600">{stats.experienciaAlta}</div><div className="text-[10px] text-purple-700">Exp. Alta</div></div>
-          </div>
-          <div className="space-y-2 max-h-[400px] overflow-y-auto">
-            {voluntarios.map(v => (
-              <div key={v.id} className="flex items-center gap-3 p-2 bg-slate-50 rounded-lg border border-slate-100">
-                <div className="w-10 h-10 rounded-full bg-orange-500 text-white flex items-center justify-center font-bold text-sm">{v.nombre?.charAt(0)}{v.apellidos?.charAt(0)}</div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-slate-800 text-sm">{v.numeroVoluntario}</span>
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${v.experiencia === 'ALTA' ? 'bg-green-100 text-green-700' : v.experiencia === 'MEDIA' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>{v.experiencia}</span>
-                  </div>
-                  <p className="text-xs text-slate-600 truncate">{v.nombre} {v.apellidos}</p>
+          <div className="space-y-4 max-h-[500px] overflow-y-auto">
+            {/* En Turno Hoy */}
+            <div>
+              <h4 className="text-xs font-bold text-slate-500 uppercase mb-2 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-green-500 inline-block"></span>
+                En Turno Hoy ({enTurno.length})
+              </h4>
+              {enTurno.length === 0 ? (
+                <p className="text-xs text-slate-400 italic pl-4">Sin guardias programadas hoy</p>
+              ) : (
+                <div className="space-y-1.5">
+                  {enTurno.map((v: any) => (
+                    <div key={v.id} className="flex items-center gap-3 p-2 bg-green-50 rounded-lg border border-green-100">
+                      <div className="w-9 h-9 rounded-full bg-green-600 text-white flex items-center justify-center font-bold text-sm">{v.nombre?.charAt(0)}{v.apellidos?.charAt(0)}</div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-slate-800 text-sm">{v.numeroVoluntario}</span>
+                          {v.turno && <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-100 text-green-700 font-bold">{v.turno}</span>}
+                          {v.rol && <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">{v.rol}</span>}
+                        </div>
+                        <p className="text-xs text-slate-600 truncate">{v.nombre} {v.apellidos}</p>
+                      </div>
+                    </div>
+                  ))}
                 </div>
+              )}
+            </div>
+            {/* Todos los Activos */}
+            <div>
+              <h4 className="text-xs font-bold text-slate-500 uppercase mb-2 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-orange-500 inline-block"></span>
+                Personal Activo ({stats.total})
+              </h4>
+              <div className="space-y-1.5">
+                {voluntarios.map((v: any) => (
+                  <div key={v.id} className="flex items-center gap-3 p-2 bg-slate-50 rounded-lg border border-slate-100">
+                    <div className="w-9 h-9 rounded-full bg-orange-500 text-white flex items-center justify-center font-bold text-sm">{v.nombre?.charAt(0)}{v.apellidos?.charAt(0)}</div>
+                    <div className="flex-1 min-w-0">
+                      <span className="font-bold text-slate-800 text-sm">{v.numeroVoluntario}</span>
+                      <p className="text-xs text-slate-600 truncate">{v.nombre} {v.apellidos}</p>
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
+            </div>
           </div>
         </Modal>
       )}
