@@ -519,7 +519,7 @@ export default function AdministracionPage() {
   // ============================================
   const cargarVoluntarios = async () => {
     try {
-      const res = await fetch('/api/admin/personal?roles=true');
+      const res = await fetch('/api/admin/personal?roles=true&bajas=true');
       const data = await res.json();
       setVoluntarios(data.voluntarios || []);
       setRoles(data.roles || []);
@@ -646,8 +646,12 @@ export default function AdministracionPage() {
           alert('Por favor, introduce una contraseña para el nuevo voluntario');
           return;
         }
-        if (!fichaData.servicioId && !fichaData.rolId) {
-          alert('Por favor, selecciona un rol y un servicio');
+        if (!fichaData.rolId) {
+          alert('Por favor, selecciona un rol para el voluntario');
+          return;
+        }
+        if (!fichaData.servicioId) {
+          alert('Por favor, selecciona un servicio para el voluntario');
           return;
         }
       }
