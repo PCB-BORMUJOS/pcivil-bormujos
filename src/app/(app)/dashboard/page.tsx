@@ -7,7 +7,7 @@ import {
   CheckSquare, Square, Save, Droplets,
   Calendar as CalendarIcon, X, AlertTriangle,
   Search, Bell, ChevronDown, Thermometer,
-  CloudRain, Cloud, CloudSun, Plus, Lock, Globe
+  CloudRain, Cloud, CloudSun, Plus, Lock, Globe, Edit, Trash2
 } from 'lucide-react';
 
 const DAYS_OF_WEEK = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
