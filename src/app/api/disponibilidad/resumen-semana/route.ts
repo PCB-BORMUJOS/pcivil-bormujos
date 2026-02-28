@@ -9,18 +9,22 @@ export async function GET(request: NextRequest) {
     if (!session?.user) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
-
     const { searchParams } = new URL(request.url)
     const semana = searchParams.get('semana')
-
     if (!semana) {
       return NextResponse.json({ error: 'Semana requerida' }, { status: 400 })
     }
-
     const esAdmin = ['superadmin', 'admin', 'coordinador'].includes((session.user as any).rol)
 
+    // Buscar por rango UTC para evitar desfase de timezone
+    const semanaInicioBD = new Date(semana + 'T00:00:00.000Z')
+    const semanaFinBD = new Date(semana + 'T23:59:59.999Z')
+
     const disponibilidades = await prisma.disponibilidad.findMany({
-      where: { semanaInicio: new Date(semana), noDisponible: false },
+      where: {
+        semanaInicio: { gte: semanaInicioBD, lte: semanaFinBD },
+        noDisponible: false,
+      },
       include: {
         usuario: {
           select: {
@@ -40,7 +44,10 @@ export async function GET(request: NextRequest) {
     for (let i = 0; i < 7; i++) {
       const fechaDia = new Date(lunesDate)
       fechaDia.setDate(lunesDate.getDate() + i)
-      const fechaStr = fechaDia.toISOString().split('T')[0]
+      const y2 = fechaDia.getFullYear();
+      const m2 = String(fechaDia.getMonth() + 1).padStart(2, '0');
+      const d2 = String(fechaDia.getDate()).padStart(2, '0');
+      const fechaStr = `${y2}-${m2}-${d2}`
       const dia = dias[i]
       resumen[fechaStr] = {}
 
@@ -50,11 +57,9 @@ export async function GET(request: NextRequest) {
           const turnosDia = detalles[dia] || []
           return turnosDia.includes(turno)
         })
-
         const total = disponibles.length
         const responsables = disponibles.filter(d => d.usuario.responsableTurno).length
         const conCarnet = disponibles.filter(d => d.usuario.carnetConducir).length
-
         let color: string
         if (total < 3) color = 'rojo'
         else if (total === 3) color = 'naranja'
@@ -74,12 +79,11 @@ export async function GET(request: NextRequest) {
             responsableTurno: d.usuario.responsableTurno,
             carnetConducir: d.usuario.carnetConducir,
             experiencia: d.usuario.experiencia,
-            turnosDeseados: d.turnosDeseados,
+            turnosDeseados: (d as any).turnosDeseados,
           })) : []
         }
       }
     }
-
     return NextResponse.json({ resumen, semana })
   } catch (error) {
     console.error('Error en resumen-semana:', error)

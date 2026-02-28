@@ -459,7 +459,7 @@ function CalendarView({ eventos, guardias, resumenDisponibilidad, onEventClick, 
                       ) : resMañana ? (
                         <div
                           className={`text-[9px] px-1.5 py-1 rounded border-l-2 cursor-pointer ${colorClass(resMañana.color)}`}
-                          onClick={(e) => { e.stopPropagation(); onGuardiaClick(day.date, 'mañana', []); }}
+                          onClick={(e) => { e.stopPropagation(); e.preventDefault(); onGuardiaClick(day.date, 'mañana', []); }}
                           title={`Mañana: ${resMañana.total} disponibles | Resp: ${resMañana.responsables} | Carnet: ${resMañana.conCarnet}`}
                         >
                           <span className="font-bold">Mañana</span> <span className="font-semibold">{resMañana.total}</span>
@@ -475,7 +475,7 @@ function CalendarView({ eventos, guardias, resumenDisponibilidad, onEventClick, 
                       ) : resTarde ? (
                         <div
                           className={`text-[9px] px-1.5 py-1 rounded border-l-2 cursor-pointer ${colorClass(resTarde.color)}`}
-                          onClick={(e) => { e.stopPropagation(); onGuardiaClick(day.date, 'tarde', []); }}
+                          onClick={(e) => { e.stopPropagation(); e.preventDefault(); onGuardiaClick(day.date, 'tarde', []); }}
                           title={`Tarde: ${resTarde.total} disponibles | Resp: ${resTarde.responsables} | Carnet: ${resTarde.conCarnet}`}
                         >
                           <span className="font-bold">Tarde</span> <span className="font-semibold">{resTarde.total}</span>
@@ -626,7 +626,10 @@ export default function DashboardPage() {
     for (let i = -1; i < 7; i++) {
       const lunes = new Date(primerLunes);
       lunes.setDate(primerLunes.getDate() + i * 7);
-      semanas.push(lunes.toISOString().split('T')[0]);
+      const y = lunes.getFullYear();
+      const m = String(lunes.getMonth() + 1).padStart(2, '0');
+      const d = String(lunes.getDate()).padStart(2, '0');
+      semanas.push(`${y}-${m}-${d}`);
     }
     try {
       const resultados = await Promise.all(

@@ -24,7 +24,8 @@ export async function GET(req: NextRequest) {
         const lunesDate = new Date(fechaObj);
         lunesDate.setDate(fechaObj.getDate() + diasHastaLunes);
         const semanaInicio = lunesDate.toISOString().split('T')[0];
-        const semanaInicioDate = new Date(semanaInicio + 'T12:00:00');
+        const semanaInicioDate = new Date(semanaInicio + 'T00:00:00.000Z');
+        const semanaInicioDateFin = new Date(semanaInicio + 'T23:59:59.999Z');
 
         // Obtener el día de la semana en español
         const nombresDias = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
@@ -33,7 +34,7 @@ export async function GET(req: NextRequest) {
         // Buscar disponibilidades para esa semana
         const disponibilidades = await prisma.disponibilidad.findMany({
             where: {
-                semanaInicio: semanaInicioDate,
+                semanaInicio: { gte: semanaInicioDate, lte: semanaInicioDateFin },
                 noDisponible: false, // Excluir los que marcaron "no disponible"
             },
             include: {
