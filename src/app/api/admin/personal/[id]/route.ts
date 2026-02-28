@@ -14,7 +14,7 @@ export async function PUT(
     }
 
     const body = await request.json()
-    const { activo, responsableTurno, carnetConducir, experiencia, nivelCompromiso } = body
+    const { activo, responsableTurno, carnetConducir, experiencia, nivelCompromiso, esOperativo, esJefeServicio } = body
 
     if (!params.id) {
       return NextResponse.json({ error: 'ID requerido' }, { status: 400 })
@@ -42,6 +42,12 @@ export async function PUT(
 
     if (typeof carnetConducir === 'boolean') {
       dataToUpdate.carnetConducir = carnetConducir
+    }
+    if (typeof esOperativo === 'boolean') {
+      dataToUpdate.esOperativo = esOperativo
+    }
+    if (typeof esJefeServicio === 'boolean') {
+      dataToUpdate.esJefeServicio = esJefeServicio
     }
 
     if (experiencia && ['BAJA', 'MEDIA', 'ALTA'].includes(experiencia)) {

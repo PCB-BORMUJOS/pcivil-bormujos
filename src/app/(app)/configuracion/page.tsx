@@ -15,6 +15,8 @@ interface Usuario {
   activo: boolean;
   responsableTurno?: boolean;
   carnetConducir?: boolean;
+  esOperativo?: boolean;
+  esJefeServicio?: boolean;
   experiencia?: string;
   nivelCompromiso?: string;
   rol: {
@@ -380,15 +382,17 @@ export default function ConfiguracionPage() {
               <table className="w-full text-left">
                 <thead className="bg-slate-50 border-b">
                   <tr>
-                    <th className="p-4 text-xs font-bold text-slate-400 uppercase">Indicativo</th>
-                    <th className="p-4 text-xs font-bold text-slate-400 uppercase">Nombre</th>
-                    <th className="p-4 text-xs font-bold text-slate-400 uppercase">Municipio</th>
-                    <th className="p-4 text-xs font-bold text-slate-400 uppercase text-center">Turnos</th>
-                    <th className="p-4 text-xs font-bold text-slate-400 uppercase text-right">Dietas</th>
-                    <th className="p-4 text-xs font-bold text-slate-400 uppercase text-right">KM</th>
-                    <th className="p-4 text-xs font-bold text-slate-400 uppercase text-right">TOTAL</th>
-                  </tr>
-                </thead>
+                      <th className="p-4 text-xs font-bold text-slate-400 uppercase">Indicativo</th>
+                      <th className="p-4 text-xs font-bold text-slate-400 uppercase">Nombre</th>
+                      <th className="p-4 text-xs font-bold text-slate-400 uppercase text-center">Jefe Serv.</th>
+                      <th className="p-4 text-xs font-bold text-slate-400 uppercase text-center">Operativo</th>
+                      <th className="p-4 text-xs font-bold text-slate-400 uppercase text-center">Responsable</th>
+                      <th className="p-4 text-xs font-bold text-slate-400 uppercase text-center">Conductor</th>
+                      <th className="p-4 text-xs font-bold text-slate-400 uppercase">Experiencia</th>
+                      <th className="p-4 text-xs font-bold text-slate-400 uppercase">Compromiso</th>
+                      <th className="p-4 text-xs font-bold text-slate-400 uppercase text-center">Estado</th>
+                    </tr>
+                  </thead>
                 <tbody className="divide-y">
                   {reportData.map((row, i) => (
                     <tr key={i} className="hover:bg-slate-50">
@@ -573,6 +577,8 @@ export default function ConfiguracionPage() {
                     <tr>
                       <th className="p-4 text-xs font-bold text-slate-400 uppercase">Indicativo</th>
                       <th className="p-4 text-xs font-bold text-slate-400 uppercase">Nombre</th>
+                      <th className="p-4 text-xs font-bold text-slate-400 uppercase text-center">Jefe Serv.</th>
+                      <th className="p-4 text-xs font-bold text-slate-400 uppercase text-center">Operativo</th>
                       <th className="p-4 text-xs font-bold text-slate-400 uppercase text-center">Responsable</th>
                       <th className="p-4 text-xs font-bold text-slate-400 uppercase text-center">Conductor</th>
                       <th className="p-4 text-xs font-bold text-slate-400 uppercase">Experiencia</th>
@@ -581,11 +587,57 @@ export default function ConfiguracionPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y">
-                    {usuarios.map(usuario => (
+                    {[...usuarios].sort((a, b) => {
+                        const orden = (v: string) => v?.startsWith('J') ? 0 : v?.startsWith('S') ? 1 : 2;
+                        const oa = orden(a.numeroVoluntario || '');
+                        const ob = orden(b.numeroVoluntario || '');
+                        if (oa !== ob) return oa - ob;
+                        return (a.numeroVoluntario || '').localeCompare(b.numeroVoluntario || '');
+                      }).map(usuario => (
                       <tr key={usuario.id} className="hover:bg-slate-50">
                         <td className="p-4 font-mono font-bold text-slate-700">{usuario.numeroVoluntario || '-'}</td>
                         <td className="p-4">
                           <div className="font-bold text-slate-800">{usuario.nombre} {usuario.apellidos}</div>
+                        </td>
+                        <td className="p-4 text-center">
+                          <input
+                            type="checkbox"
+                            checked={usuario.esJefeServicio || false}
+                            onChange={async (e) => {
+                              const newValue = e.target.checked;
+                              try {
+                                await fetch(`/api/admin/personal/${usuario.id}`, {
+                                  method: 'PUT',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ esJefeServicio: newValue })
+                                });
+                                fetchData();
+                              } catch (error) {
+                                console.error('Error updating:', error);
+                              }
+                            }}
+                            className="w-5 h-5 text-orange-600 rounded focus:ring-2 focus:ring-orange-500"
+                          />
+                        </td>
+                        <td className="p-4 text-center">
+                          <input
+                            type="checkbox"
+                            checked={usuario.esOperativo !== false}
+                            onChange={async (e) => {
+                              const newValue = e.target.checked;
+                              try {
+                                await fetch(`/api/admin/personal/${usuario.id}`, {
+                                  method: 'PUT',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ esOperativo: newValue })
+                                });
+                                fetchData();
+                              } catch (error) {
+                                console.error('Error updating:', error);
+                              }
+                            }}
+                            className="w-5 h-5 text-orange-600 rounded focus:ring-2 focus:ring-orange-500"
+                          />
                         </td>
                         <td className="p-4 text-center">
                           <input

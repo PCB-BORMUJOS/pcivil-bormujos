@@ -19,6 +19,8 @@ model Usuario {
   avatar                 String?
   responsableTurno       Boolean               @default(false) @map("responsable_turno")
   carnetConducir         Boolean               @default(false) @map("carnet_conducir")
+  esOperativo            Boolean               @default(true) @map("es_operativo")
+  esJefeServicio         Boolean               @default(false) @map("es_jefe_servicio")
   experiencia            String                @default("MEDIA")
   nivelCompromiso        String                @default("MEDIO") @map("nivel_compromiso")
   activo                 Boolean               @default(true)
