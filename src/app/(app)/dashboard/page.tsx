@@ -79,12 +79,13 @@ function AvailabilityForm({ onClose }: { onClose: () => void }) {
     { key: 'domingo', label: 'Domingo' }
   ];
 
-  // Generar próximas 4 semanas
+  // Generar próximas 6 semanas (mínimo 3 semanas de antelación)
   useEffect(() => {
     const semanas: { value: string, label: string }[] = [];
+    // Empezar desde la semana actual
     const hoy = new Date();
 
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < 6; i++) {
       const inicioSemana = new Date(hoy);
       const diasHastaLunes = (8 - hoy.getDay()) % 7 || 7;
       inicioSemana.setDate(hoy.getDate() + diasHastaLunes + (i * 7));
@@ -308,13 +309,15 @@ function AvailabilityForm({ onClose }: { onClose: () => void }) {
 }
 
 // Calendar Component with Events, Guardias and Drag & Drop
-function CalendarView({ eventos, guardias, onEventClick, onDayClick, onGuardiaClick, onEventDrop, userRole }: {
+function CalendarView({ eventos, guardias, resumenDisponibilidad, onEventClick, onDayClick, onGuardiaClick, onEventDrop, onMesChange, userRole }: {
   eventos: any[];
   guardias: any[];
+  resumenDisponibilidad: Record<string, any>;
   onEventClick: (evento: any) => void;
   onDayClick: (date: string) => void;
   onGuardiaClick: (date: string, turno: string, guardias: any[]) => void;
   onEventDrop: (eventoId: string, nuevaFecha: string) => void;
+  onMesChange: (fecha: Date) => void;
   userRole: string;
 }) {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -336,7 +339,11 @@ function CalendarView({ eventos, guardias, onEventClick, onDayClick, onGuardiaCl
   }
 
   const monthName = currentDate.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
-  const changeMonth = (dir: 'prev' | 'next') => setCurrentDate(new Date(year, month + (dir === 'next' ? 1 : -1), 1));
+  const changeMonth = (dir: 'prev' | 'next') => {
+    const newDate = new Date(year, month + (dir === 'next' ? 1 : -1), 1);
+    setCurrentDate(newDate);
+    onMesChange(newDate);
+  };
   const today = new Date();
   const isToday = (d: typeof days[0]) => d.current && d.num === today.getDate() && month === today.getMonth() && year === today.getFullYear();
 
@@ -430,22 +437,53 @@ function CalendarView({ eventos, guardias, onEventClick, onDayClick, onGuardiaCl
                 </span>
               )}
               <div className="mt-8 space-y-1">
-                {guardiasMañana.length > 0 && (
-                  <div
-                    className="text-[9px] px-1.5 py-1 rounded bg-green-100 text-green-700 border-l-2 border-green-500 cursor-pointer hover:bg-green-200"
-                    onClick={(e) => { e.stopPropagation(); onGuardiaClick(day.date, 'mañana', guardiasMañana); }}
-                  >
-                    <span className="font-bold">T. Mañana</span> ({guardiasMañana.length})
-                  </div>
-                )}
-                {guardiasTarde.length > 0 && (
-                  <div
-                    className="text-[9px] px-1.5 py-1 rounded bg-blue-100 text-blue-700 border-l-2 border-blue-500 cursor-pointer hover:bg-blue-200"
-                    onClick={(e) => { e.stopPropagation(); onGuardiaClick(day.date, 'tarde', guardiasTarde); }}
-                  >
-                    <span className="font-bold">T. Tarde</span> ({guardiasTarde.length})
-                  </div>
-                )}
+                {(() => {
+                  const resumenDia = resumenDisponibilidad[day.date] || {};
+                  const resMañana = resumenDia['mañana'];
+                  const resTarde = resumenDia['tarde'];
+                  const colorClass = (color: string) => {
+                    if (color === 'rojo') return 'bg-red-100 text-red-700 border-red-500';
+                    if (color === 'naranja') return 'bg-orange-100 text-orange-700 border-orange-500';
+                    if (color === 'verde') return 'bg-green-100 text-green-700 border-green-500';
+                    return 'bg-blue-100 text-blue-700 border-blue-500';
+                  };
+                  return (
+                    <>
+                      {guardiasMañana.length > 0 ? (
+                        <div
+                          className="text-[9px] px-1.5 py-1 rounded bg-green-100 text-green-700 border-l-2 border-green-500 cursor-pointer hover:bg-green-200"
+                          onClick={(e) => { e.stopPropagation(); onGuardiaClick(day.date, 'mañana', guardiasMañana); }}
+                        >
+                          <span className="font-bold">T. Mañana</span> ({guardiasMañana.length})
+                        </div>
+                      ) : resMañana ? (
+                        <div
+                          className={`text-[9px] px-1.5 py-1 rounded border-l-2 cursor-pointer ${colorClass(resMañana.color)}`}
+                          onClick={(e) => { e.stopPropagation(); onGuardiaClick(day.date, 'mañana', []); }}
+                          title={`Mañana: ${resMañana.total} disponibles | Resp: ${resMañana.responsables} | Carnet: ${resMañana.conCarnet}`}
+                        >
+                          <span className="font-bold">Mañana</span> {resMañana.total}👤
+                        </div>
+                      ) : null}
+                      {guardiasTarde.length > 0 ? (
+                        <div
+                          className="text-[9px] px-1.5 py-1 rounded bg-blue-100 text-blue-700 border-l-2 border-blue-500 cursor-pointer hover:bg-blue-200"
+                          onClick={(e) => { e.stopPropagation(); onGuardiaClick(day.date, 'tarde', guardiasTarde); }}
+                        >
+                          <span className="font-bold">T. Tarde</span> ({guardiasTarde.length})
+                        </div>
+                      ) : resTarde ? (
+                        <div
+                          className={`text-[9px] px-1.5 py-1 rounded border-l-2 cursor-pointer ${colorClass(resTarde.color)}`}
+                          onClick={(e) => { e.stopPropagation(); onGuardiaClick(day.date, 'tarde', []); }}
+                          title={`Tarde: ${resTarde.total} disponibles | Resp: ${resTarde.responsables} | Carnet: ${resTarde.conCarnet}`}
+                        >
+                          <span className="font-bold">Tarde</span> {resTarde.total}👤
+                        </div>
+                      ) : null}
+                    </>
+                  );
+                })()}
                 {eventosDelDia.slice(0, 2).map((evento, i) => (
                   <div
                     key={evento.id || i}
@@ -497,6 +535,7 @@ export default function DashboardPage() {
   const [loadingVol, setLoadingVol] = useState(true);
   const [eventos, setEventos] = useState<any[]>([]);
   const [guardias, setGuardias] = useState<any[]>([]);
+  const [resumenDisponibilidad, setResumenDisponibilidad] = useState<Record<string, any>>({});
   const [formaciones, setFormaciones] = useState<any[]>([]);
 
   // Estados para disponibilidad contextual
@@ -553,6 +592,8 @@ export default function DashboardPage() {
         setClima(climaData);
         setEventos(eventosData.eventos || []);
         setGuardias(guardiasData.guardias || []);
+        // Cargar resumen disponibilidad mes actual
+        cargarResumenMes(new Date());
       })
       .catch((err) => {
         console.error('Error cargando datos:', err);
@@ -569,6 +610,38 @@ export default function DashboardPage() {
       if (data?.user?.id) setUserId(data.user.id);
     }).catch(() => { });
   }, []);
+
+  // Carga el resumen de disponibilidad de todas las semanas del mes visible
+  const cargarResumenMes = async (fecha: Date) => {
+    const year = fecha.getFullYear();
+    const month = fecha.getMonth();
+    // Obtener lunes de la semana que contiene el día 1 del mes
+    const primerDia = new Date(year, month, 1);
+    const primerDiaSemana = primerDia.getDay();
+    const diasHastaLunes = primerDiaSemana === 0 ? -6 : 1 - primerDiaSemana;
+    const primerLunes = new Date(primerDia);
+    primerLunes.setDate(primerDia.getDate() + diasHastaLunes);
+    // Cargar hasta 6 semanas (cubre cualquier mes)
+    const semanas: string[] = [];
+    for (let i = 0; i < 6; i++) {
+      const lunes = new Date(primerLunes);
+      lunes.setDate(primerLunes.getDate() + i * 7);
+      semanas.push(lunes.toISOString().split('T')[0]);
+    }
+    try {
+      const resultados = await Promise.all(
+        semanas.map(s =>
+          fetch('/api/disponibilidad/resumen-semana?semana=' + s)
+            .then(r => r.json())
+            .then(d => d.resumen || {})
+            .catch(() => ({}))
+        )
+      );
+      const resumenTotal: Record<string, any> = {};
+      resultados.forEach(r => Object.assign(resumenTotal, r));
+      setResumenDisponibilidad(resumenTotal);
+    } catch {}
+  };
 
   const handleEventClick = (evento: any) => setShowEventDetail(evento);
 
@@ -759,10 +832,12 @@ export default function DashboardPage() {
       <CalendarView
         eventos={eventos}
         guardias={guardias}
+        resumenDisponibilidad={resumenDisponibilidad}
         onEventClick={handleEventClick}
         onDayClick={handleDayClick}
         onGuardiaClick={handleGuardiaClick}
         onEventDrop={handleEventDrop}
+        onMesChange={cargarResumenMes}
         userRole={userRole}
       />
 
