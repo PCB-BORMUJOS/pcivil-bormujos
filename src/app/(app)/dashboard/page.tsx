@@ -462,7 +462,7 @@ function CalendarView({ eventos, guardias, resumenDisponibilidad, onEventClick, 
                           onClick={(e) => { e.stopPropagation(); onGuardiaClick(day.date, 'mañana', []); }}
                           title={`Mañana: ${resMañana.total} disponibles | Resp: ${resMañana.responsables} | Carnet: ${resMañana.conCarnet}`}
                         >
-                          <span className="font-bold">Mañana</span> {resMañana.total}👤
+                          <span className="font-bold">Mañana</span> <span className="font-semibold">{resMañana.total}</span>
                         </div>
                       ) : null}
                       {guardiasTarde.length > 0 ? (
@@ -478,7 +478,7 @@ function CalendarView({ eventos, guardias, resumenDisponibilidad, onEventClick, 
                           onClick={(e) => { e.stopPropagation(); onGuardiaClick(day.date, 'tarde', []); }}
                           title={`Tarde: ${resTarde.total} disponibles | Resp: ${resTarde.responsables} | Carnet: ${resTarde.conCarnet}`}
                         >
-                          <span className="font-bold">Tarde</span> {resTarde.total}👤
+                          <span className="font-bold">Tarde</span> <span className="font-semibold">{resTarde.total}</span>
                         </div>
                       ) : null}
                     </>
@@ -623,7 +623,7 @@ export default function DashboardPage() {
     primerLunes.setDate(primerDia.getDate() + diasHastaLunes);
     // Cargar hasta 6 semanas (cubre cualquier mes)
     const semanas: string[] = [];
-    for (let i = 0; i < 6; i++) {
+    for (let i = -1; i < 7; i++) {
       const lunes = new Date(primerLunes);
       lunes.setDate(primerLunes.getDate() + i * 7);
       semanas.push(lunes.toISOString().split('T')[0]);
