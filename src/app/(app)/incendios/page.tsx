@@ -803,7 +803,7 @@ export default function IncendiosPage() {
                   </button>
                 </div>
 
-                <div className="grid grid-cols-4 gap-4 mb-6">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                   <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
                     <p className="text-xs text-slate-500 font-medium">Total Equipos</p>
                     <p className="text-2xl font-bold text-slate-800 mt-1">{equiposECI.length}</p>
@@ -834,7 +834,7 @@ export default function IncendiosPage() {
                     <p>No hay equipos</p>
                   </div>
                 ) : (
-                  <table className="w-full">
+                  <div className="overflow-x-auto"><table className="w-full min-w-[600px]">
                     <thead className="bg-slate-50 border-y border-slate-200">
                       <tr>
                         <th className="text-left p-3 text-xs font-semibold text-slate-500 uppercase">Tipo</th>
@@ -888,7 +888,7 @@ export default function IncendiosPage() {
                         </tr>
                       ))}
                     </tbody>
-                  </table>
+                  </table></div>
                 )}
               </div>
             ) : (
@@ -907,7 +907,7 @@ export default function IncendiosPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   {edificios.map(ed => (
                     <div key={ed.id} className="bg-white border border-slate-200 rounded-lg p-5 hover:shadow-lg transition-all">
                       <div className="flex items-start gap-3">
@@ -1007,7 +1007,7 @@ export default function IncendiosPage() {
                 <p>No se encontraron equipos</p>
               </div>
             ) : (
-              <table className="w-full">
+              <div className="overflow-x-auto"><table className="w-full min-w-[600px]">
                 <thead className="bg-slate-50 border-y border-slate-200">
                   <tr>
                     <th className="text-left p-3 text-xs font-semibold text-slate-500 uppercase">Tipo</th>
@@ -1058,7 +1058,7 @@ export default function IncendiosPage() {
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </table></div>
             )}
           </div>
         )}
@@ -1112,7 +1112,7 @@ export default function IncendiosPage() {
                   <p>No hay hidrantes</p>
                 </div>
               ) : (
-                <table className="w-full">
+                <div className="overflow-x-auto"><table className="w-full min-w-[600px]">
                   <thead className="bg-slate-50 border-y border-slate-200">
                     <tr>
                       <th className="text-left p-3 text-xs font-semibold text-slate-500 uppercase">Código</th>
@@ -1161,7 +1161,7 @@ export default function IncendiosPage() {
                       </tr>
                     ))}
                   </tbody>
-                </table>
+                </table></div>
               )}
             </div>
           </div>
@@ -1190,7 +1190,7 @@ export default function IncendiosPage() {
               })
               if (success) { setShowNuevoArticulo(false); e.currentTarget.reset(); alert('Artículo creado') }
             }} className="p-6 overflow-y-auto space-y-5">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">Código</label>
                   <input name="codigo" type="text" className="w-full border border-slate-300 rounded-lg p-2.5" placeholder="ART-001" />
@@ -1204,7 +1204,7 @@ export default function IncendiosPage() {
                 <label className="block text-sm font-medium text-slate-700 mb-2">Descripción</label>
                 <textarea name="descripcion" className="w-full border border-slate-300 rounded-lg p-2.5" rows={3} placeholder="Descripción del artículo"></textarea>
               </div>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">Stock Actual</label>
                   <input name="stockActual" type="number" className="w-full border border-slate-300 rounded-lg p-2.5" placeholder="0" />
@@ -1264,7 +1264,7 @@ export default function IncendiosPage() {
                 alert('Hidrante creado correctamente')
               }
             }} className="p-6 overflow-y-auto space-y-5">
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">Código *</label>
                   <input name="codigo" type="text" className="w-full border border-slate-300 rounded-lg p-2.5" placeholder="H-001" required />
@@ -1289,7 +1289,7 @@ export default function IncendiosPage() {
                 <label className="block text-sm font-medium text-slate-700 mb-2">Ubicación *</label>
                 <input name="ubicacion" type="text" className="w-full border border-slate-300 rounded-lg p-2.5" placeholder="Calle, número..." required />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">Latitud</label>
                   <input name="latitud" type="text" className="w-full border border-slate-300 rounded-lg p-2.5" placeholder="37.371234" />
@@ -1299,7 +1299,7 @@ export default function IncendiosPage() {
                   <input name="longitud" type="text" className="w-full border border-slate-300 rounded-lg p-2.5" placeholder="-6.072000" />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">Presión (bar)</label>
                   <input name="presion" type="number" step="0.1" className="w-full border border-slate-300 rounded-lg p-2.5" placeholder="3.5" />
@@ -1346,7 +1346,7 @@ export default function IncendiosPage() {
                 <label className="block text-sm font-medium text-slate-700 mb-2">Dirección</label>
                 <input name="direccion" type="text" defaultValue={edificioSeleccionado.direccion || ''} className="w-full border border-slate-300 rounded-lg p-2.5" />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">Responsable</label>
                   <input name="responsable" type="text" defaultValue={edificioSeleccionado.responsable || ''} className="w-full border border-slate-300 rounded-lg p-2.5" />
@@ -1386,7 +1386,7 @@ export default function IncendiosPage() {
               const success = await editarEquipo(equipoSeleccionado.id, formData)
               if (success) setEquipoSeleccionado(null)
             }} className="p-6 overflow-y-auto space-y-5">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">Tipo</label>
                   <select name="tipo" defaultValue={equipoSeleccionado.tipo} className="w-full border border-slate-300 rounded-lg p-2.5">
@@ -1407,7 +1407,7 @@ export default function IncendiosPage() {
                 <label className="block text-sm font-medium text-slate-700 mb-2">Ubicación</label>
                 <input name="ubicacion" type="text" defaultValue={equipoSeleccionado.ubicacion} className="w-full border border-slate-300 rounded-lg p-2.5" />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">Nº Serie</label>
                   <input name="numeroSerie" type="text" defaultValue={equipoSeleccionado.numeroSerie || ''} className="w-full border border-slate-300 rounded-lg p-2.5" />
@@ -1454,7 +1454,7 @@ export default function IncendiosPage() {
               const success = await editarHidrante(hidranteSeleccionado.id, formData)
               if (success) setHidranteSeleccionado(null)
             }} className="p-6 overflow-y-auto space-y-5">
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">Código</label>
                   <input name="codigo" type="text" defaultValue={hidranteSeleccionado.codigo} className="w-full border border-slate-300 rounded-lg p-2.5" />
@@ -1479,7 +1479,7 @@ export default function IncendiosPage() {
                 <label className="block text-sm font-medium text-slate-700 mb-2">Ubicación</label>
                 <input name="ubicacion" type="text" defaultValue={hidranteSeleccionado.ubicacion} className="w-full border border-slate-300 rounded-lg p-2.5" />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">Latitud</label>
                   <input name="latitud" type="text" defaultValue={hidranteSeleccionado.latitud?.toFixed(8) || ''} className="w-full border border-slate-300 rounded-lg p-2.5" />
@@ -1489,7 +1489,7 @@ export default function IncendiosPage() {
                   <input name="longitud" type="text" defaultValue={hidranteSeleccionado.longitud?.toFixed(8) || ''} className="w-full border border-slate-300 rounded-lg p-2.5" />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">Presión (bar)</label>
                   <input name="presion" type="number" step="0.1" defaultValue={hidranteSeleccionado.presion || ''} className="w-full border border-slate-300 rounded-lg p-2.5" />
