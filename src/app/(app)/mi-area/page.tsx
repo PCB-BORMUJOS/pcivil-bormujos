@@ -477,23 +477,23 @@ export default function MiAreaPage() {
     <div className="space-y-6">
       {/* Header con info del usuario */}
       <div className="bg-gradient-to-r from-slate-800 to-slate-900 rounded-2xl p-6 text-white">
-        <div className="flex items-center gap-6">
-          <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center text-3xl font-bold shadow-lg">
+        <div className="flex flex-col md:flex-row items-center md:items-start gap-4 md:gap-6">
+          <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center text-3xl font-bold shadow-lg flex-shrink-0">
             {datosPersonales.nombre?.charAt(0)}{datosPersonales.apellidos?.charAt(0)}
           </div>
-          <div className="flex-1">
-            <div className="flex items-center gap-3">
+          <div className="flex-1 text-center md:text-left">
+            <div className="flex flex-wrap items-center justify-center md:justify-start gap-3">
               <h1 className="text-2xl font-bold">{datosPersonales.nombre} {datosPersonales.apellidos}</h1>
               <span className="bg-orange-500 px-3 py-1 rounded-full text-sm font-bold">{datosPersonales.numeroVoluntario}</span>
             </div>
             <p className="text-slate-300 mt-1">{datosPersonales.rol} • {datosPersonales.areaAsignada || 'Sin área asignada'}</p>
-            <div className="flex items-center gap-4 mt-3 text-sm text-slate-400">
+            <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 mt-3 text-sm text-slate-400">
               <span className="flex items-center gap-1"><Mail size={14} /> {datosPersonales.email}</span>
               <span className="flex items-center gap-1"><Phone size={14} /> {datosPersonales.telefono}</span>
               <span className="flex items-center gap-1"><MapPin size={14} /> {datosPersonales.localidad}</span>
             </div>
           </div>
-          <div className="text-right">
+          <div className="text-center md:text-right">
             <p className="text-slate-400 text-sm">Fecha de alta</p>
             <p className="text-xl font-bold">{datosPersonales.fechaAlta ? new Date(datosPersonales.fechaAlta).toLocaleDateString('es-ES') : '-'}</p>
           </div>
@@ -502,7 +502,7 @@ export default function MiAreaPage() {
 
       {/* Tabs */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-        <div className="flex border-b border-slate-200 bg-slate-50/50">
+        <div className="flex border-b border-slate-200 bg-slate-50/50 overflow-x-auto scrollbar-hide">
           {[
             { id: 'datos', label: 'Mis Datos', icon: User },
             { id: 'formacion', label: 'Formación', icon: GraduationCap },
@@ -1401,7 +1401,7 @@ export default function MiAreaPage() {
                         </div>
                       ) : (
                         <div className="overflow-x-auto">
-                          <table className="w-full">
+                          <div className="overflow-x-auto"><table className="w-full min-w-[600px]">
                             <thead>
                               <tr className="bg-slate-50 border-b border-slate-200">
                                 <th className="text-left py-3 px-4 text-xs font-bold text-slate-500 uppercase">Prenda</th>
@@ -1472,7 +1472,7 @@ export default function MiAreaPage() {
                                 </tr>
                               ))}
                             </tbody>
-                          </table>
+                          </table></div>
                         </div>
                       )}
                     </div>
@@ -1669,7 +1669,7 @@ export default function MiAreaPage() {
                     </div>
                   ) : (
                     <div className="overflow-x-auto">
-                      <table className="w-full">
+                      <div className="overflow-x-auto"><table className="w-full min-w-[600px]">
                         <thead>
                           <tr className="bg-slate-50 border-b border-slate-200">
                             <th className="text-left py-3 px-4 text-xs font-bold text-slate-500 uppercase">Fecha</th>
@@ -1718,7 +1718,7 @@ export default function MiAreaPage() {
                             </tr>
                           ))}
                         </tbody>
-                      </table>
+                      </table></div>
                     </div>
                   )}
                 </div>
@@ -1746,7 +1746,7 @@ export default function MiAreaPage() {
                 placeholder="Ej: Curso Básico de Protección Civil"
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Tipo *</label>
                 <select
@@ -1769,7 +1769,7 @@ export default function MiAreaPage() {
                 />
               </div>
             </div>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Fecha Obtención *</label>
                 <input
