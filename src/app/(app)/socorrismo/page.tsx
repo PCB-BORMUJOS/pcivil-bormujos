@@ -293,6 +293,15 @@ export default function SocorrismoPage() {
   const totalPaginas = Math.ceil(articulosFiltrados.length / PAGE_SIZE)
   const articulosPaginados = articulosFiltrados.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
 
+  const eliminarArticulo = async (id: string, nombre: string) => {
+    if (!confirm(`¿Eliminar "${nombre}"?`)) return
+    try {
+      const res = await fetch(`/api/logistica?tipo=articulo&id=${id}`, { method: 'DELETE' })
+      if (res.ok) { cargarDatos(); alert('Artículo eliminado') }
+      else { alert('Error al eliminar') }
+    } catch (error) { console.error('Error:', error) }
+  }
+
   return (
     <div className="space-y-6">
 
@@ -317,14 +326,14 @@ export default function SocorrismoPage() {
           </button>
           <button
             onClick={() => setShowNuevaPeticion(true)}
-            className="px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 font-medium"
+            className="px-3 py-2 sm:px-4 sm:py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-1.5 font-medium text-sm"
           >
             <ShoppingCart size={18} />
             Nueva Petición
           </button>
           <button
             onClick={() => setShowNuevoArticulo(true)}
-            className="px-4 py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center gap-2 font-medium"
+            className="px-3 py-2 sm:px-4 sm:py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center gap-1.5 font-medium text-sm"
           >
             <Plus size={18} />
             Nuevo Artículo
@@ -503,9 +512,23 @@ export default function SocorrismoPage() {
                                     <button
                                       onClick={() => setArticuloSeleccionado(art)}
                                       className="p-1.5 text-slate-600 hover:bg-slate-100 rounded"
+                                      title="Ver detalles"
+                                    >
+                                      <Eye size={16} />
+                                    </button>
+                                    <button
+                                      onClick={() => setArticuloSeleccionado(art)}
+                                      className="p-1.5 text-slate-600 hover:bg-slate-100 rounded"
                                       title="Editar"
                                     >
                                       <Edit size={16} />
+                                    </button>
+                                    <button
+                                      onClick={() => eliminarArticulo(art.id, art.nombre)}
+                                      className="p-1.5 text-red-600 hover:bg-red-50 rounded"
+                                      title="Eliminar"
+                                    >
+                                      <Trash2 size={16} />
                                     </button>
                                   </div>
                                 </td>
@@ -942,7 +965,7 @@ export default function SocorrismoPage() {
                 console.error('Error:', error)
               }
             }} className="p-6 overflow-y-auto space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">Código</label>
                   <input name="codigo" type="text" className="w-full border border-slate-300 rounded-lg p-2.5" placeholder="Ej: BOT-001" />
@@ -965,7 +988,7 @@ export default function SocorrismoPage() {
                 <label className="block text-sm font-medium text-slate-700 mb-2">Descripción</label>
                 <textarea name="descripcion" className="w-full border border-slate-300 rounded-lg p-2.5" rows={3} placeholder="Descripción opcional..."></textarea>
               </div>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">Stock Inicial</label>
                   <input name="stockActual" type="number" defaultValue="0" className="w-full border border-slate-300 rounded-lg p-2.5" />
@@ -1033,7 +1056,7 @@ export default function SocorrismoPage() {
                 console.error('Error:', error)
               }
             }} className="p-6 overflow-y-auto space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">Código</label>
                   <input name="codigo" type="text" defaultValue={articuloSeleccionado.codigo} className="w-full border border-slate-300 rounded-lg p-2.5" />
@@ -1056,7 +1079,7 @@ export default function SocorrismoPage() {
                 <label className="block text-sm font-medium text-slate-700 mb-2">Descripción</label>
                 <textarea name="descripcion" defaultValue={articuloSeleccionado.descripcion || ''} className="w-full border border-slate-300 rounded-lg p-2.5" rows={3}></textarea>
               </div>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">Stock Actual</label>
                   <input name="stockActual" type="number" defaultValue={articuloSeleccionado.stockActual} className="w-full border border-slate-300 rounded-lg p-2.5" />
@@ -1141,7 +1164,7 @@ export default function SocorrismoPage() {
                   ))}
                 </select>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">Cantidad *</label>
                   <input name="cantidad" type="number" min="1" defaultValue="1" className="w-full border border-slate-300 rounded-lg p-2.5" required />
@@ -1321,7 +1344,7 @@ export default function SocorrismoPage() {
                 alert('Error al crear DEA')
               }
             }} className="p-6 overflow-y-auto space-y-5">
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">Código *</label>
                   <input name="codigo" type="text" className="w-full border border-slate-300 rounded-lg p-2.5" placeholder="DEA-001" required />
@@ -1342,7 +1365,7 @@ export default function SocorrismoPage() {
                   </select>
                 </div>
               </div>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">Marca</label>
                   <input name="marca" type="text" className="w-full border border-slate-300 rounded-lg p-2.5" placeholder="Ej: Philips" />
@@ -1360,7 +1383,7 @@ export default function SocorrismoPage() {
                 <label className="block text-sm font-medium text-slate-700 mb-2">Ubicación *</label>
                 <input name="ubicacion" type="text" className="w-full border border-slate-300 rounded-lg p-2.5" placeholder="Calle, número..." required />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">Latitud</label>
                   <input name="latitud" type="text" className="w-full border border-slate-300 rounded-lg p-2.5" placeholder="37.371234" />
@@ -1370,7 +1393,7 @@ export default function SocorrismoPage() {
                   <input name="longitud" type="text" className="w-full border border-slate-300 rounded-lg p-2.5" placeholder="-6.072000" />
                 </div>
               </div>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">Caducidad Batería</label>
                   <input name="caducidadBateria" type="date" className="w-full border border-slate-300 rounded-lg p-2.5" />
@@ -1450,7 +1473,7 @@ export default function SocorrismoPage() {
                 alert('Error al actualizar DEA')
               }
             }} className="p-6 overflow-y-auto space-y-5">
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">Código</label>
                   <input name="codigo" type="text" defaultValue={deaSeleccionado.codigo} className="w-full border border-slate-300 rounded-lg p-2.5" />
@@ -1471,7 +1494,7 @@ export default function SocorrismoPage() {
                   </select>
                 </div>
               </div>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">Marca</label>
                   <input name="marca" type="text" defaultValue={deaSeleccionado.marca || ''} className="w-full border border-slate-300 rounded-lg p-2.5" />
@@ -1489,7 +1512,7 @@ export default function SocorrismoPage() {
                 <label className="block text-sm font-medium text-slate-700 mb-2">Ubicación</label>
                 <input name="ubicacion" type="text" defaultValue={deaSeleccionado.ubicacion} className="w-full border border-slate-300 rounded-lg p-2.5" />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">Latitud</label>
                   <input name="latitud" type="text" defaultValue={deaSeleccionado.latitud?.toFixed(8) || ''} className="w-full border border-slate-300 rounded-lg p-2.5" />
@@ -1499,7 +1522,7 @@ export default function SocorrismoPage() {
                   <input name="longitud" type="text" defaultValue={deaSeleccionado.longitud?.toFixed(8) || ''} className="w-full border border-slate-300 rounded-lg p-2.5" />
                 </div>
               </div>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">Caducidad Batería</label>
                   <input name="caducidadBateria" type="date" defaultValue={deaSeleccionado.caducidadBateria ? new Date(deaSeleccionado.caducidadBateria).toISOString().split('T')[0] : ''} className="w-full border border-slate-300 rounded-lg p-2.5" />
@@ -1569,7 +1592,7 @@ export default function SocorrismoPage() {
                 alert('❌ Error al crear botiquín')
               }
             }} className="p-6 overflow-y-auto space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">Código *</label>
                   <input name="codigo" type="text" className="w-full border border-slate-300 rounded-lg p-2.5" placeholder="BOT-UMJ-01" required />
@@ -1587,7 +1610,7 @@ export default function SocorrismoPage() {
                 <label className="block text-sm font-medium text-slate-700 mb-2">Nombre *</label>
                 <input name="nombre" type="text" className="w-full border border-slate-300 rounded-lg p-2.5" placeholder="Botiquín SVB UMJ" required />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">Ubicación Actual *</label>
                   <input name="ubicacionActual" type="text" className="w-full border border-slate-300 rounded-lg p-2.5" placeholder="En vehículo UMJ" required />
@@ -1686,7 +1709,7 @@ export default function SocorrismoPage() {
               }}
               className="p-6 space-y-4"
             >
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Código</label>
                   <input
@@ -1940,7 +1963,7 @@ export default function SocorrismoPage() {
                 </select>
                 <p className="text-xs text-gray-500 mt-1">Solo se muestran artículos del inventario de Socorrismo</p>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Cantidad Requerida *</label>
                   <input name="cantidadRequerida" type="number" min="1" defaultValue="1" required className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
@@ -2011,7 +2034,7 @@ export default function SocorrismoPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Nombre del Item *</label>
                 <input name="nombreItem" type="text" defaultValue={itemSeleccionado.nombreItem} required className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
               </div>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Cantidad Requerida *</label>
                   <input name="cantidadRequerida" type="number" min="1" defaultValue={itemSeleccionado.cantidadRequerida} required className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
