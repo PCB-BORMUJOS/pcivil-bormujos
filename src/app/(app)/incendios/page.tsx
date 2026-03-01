@@ -149,6 +149,7 @@ export default function IncendiosPage() {
 
   const [loading, setLoading] = useState(true);
   const [showNuevoArticulo, setShowNuevoArticulo] = useState(false);
+  const [showEditarArticulo, setShowEditarArticulo] = useState(false);
   const [showNuevaPeticion, setShowNuevaPeticion] = useState(false);
   const [showGestionFamilias, setShowGestionFamilias] = useState(false);
   const [showNuevoEdificio, setShowNuevoEdificio] = useState(false);
@@ -435,17 +436,17 @@ export default function IncendiosPage() {
           <button onClick={cargarDatos} className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg">
             <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
           </button>
-          <button onClick={() => setShowNuevaPeticion(true)} className="px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 font-medium">
-            <ShoppingCart size={18} />
-            Nueva Petición
+          <button onClick={() => setShowNuevaPeticion(true)} className="px-3 py-2 sm:px-4 sm:py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-1.5 font-medium text-sm">
+            <ShoppingCart size={16} />
+            <span className="hidden sm:inline">Nueva </span>Petición
           </button>
-          <button onClick={() => setShowNuevoArticulo(true)} className="px-4 py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center gap-2 font-medium">
-            <Plus size={18} />
-            Nuevo Artículo
+          <button onClick={() => setShowNuevoArticulo(true)} className="px-3 py-2 sm:px-4 sm:py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center gap-1.5 font-medium text-sm">
+            <Plus size={16} />
+            <span className="hidden sm:inline">Nuevo </span>Artículo
           </button>
-          <button onClick={() => setShowNuevoHidrante(true)} className="px-4 py-2.5 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 flex items-center gap-2 font-medium">
-            <HidranteIcon size={20} />
-            Nuevo Hidrante
+          <button onClick={() => setShowNuevoHidrante(true)} className="px-3 py-2 sm:px-4 sm:py-2.5 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 flex items-center gap-1.5 font-medium text-sm">
+            <HidranteIcon size={16} />
+            <span className="hidden sm:inline">Nuevo </span>Hidrante
           </button>
         </div>
       </div>
@@ -635,10 +636,10 @@ export default function IncendiosPage() {
                                 </td>
                                 <td className="p-3">
                                   <div className="flex justify-center gap-2">
-                                    <button onClick={() => setArticuloSeleccionado(art)} className="p-1.5 text-slate-600 hover:bg-slate-100 rounded" title="Ver detalles">
+                                    <button onClick={() => { setArticuloSeleccionado(art); setShowEditarArticulo(false); }} className="p-1.5 text-slate-600 hover:bg-slate-100 rounded" title="Ver detalles">
                                       <Eye size={16} />
                                     </button>
-                                    <button onClick={() => setArticuloSeleccionado(art)} className="p-1.5 text-slate-600 hover:bg-slate-100 rounded" title="Editar">
+                                    <button onClick={() => { setArticuloSeleccionado(art); setShowEditarArticulo(true); }} className="p-1.5 text-slate-600 hover:bg-slate-100 rounded" title="Editar">
                                       <Edit size={16} />
                                     </button>
                                     <button onClick={async () => { if (confirm(`¿Eliminar "${art.nombre}"?`)) { await eliminarItem('articulo', art.id); } }} className="p-1.5 text-red-600 hover:bg-red-50 rounded" title="Eliminar">
@@ -1169,6 +1170,192 @@ export default function IncendiosPage() {
       </div>
 
       {/* ======================================== MODAL: NUEVO ARTÍCULO ======================================== */}
+
+      {/* MODAL: NUEVA PETICIÓN */}
+      {showNuevaPeticion && (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/60" onClick={() => setShowNuevaPeticion(false)}>
+          <div className="bg-white rounded-xl w-full max-w-2xl" onClick={e => e.stopPropagation()}>
+            <div className="bg-blue-600 p-5 text-white flex justify-between items-center">
+              <h2 className="text-xl font-bold">Nueva Petición</h2>
+              <button onClick={() => setShowNuevaPeticion(false)}><X size={24} /></button>
+            </div>
+            <form onSubmit={async (e) => {
+              e.preventDefault()
+              const form = e.target as HTMLFormElement
+              const articuloIdInput = (form.elements.namedItem('articuloId') as HTMLSelectElement)
+              const articuloSelec = articulos.find(a => a.id === articuloIdInput.value)
+              const formData = {
+                articuloId: articuloIdInput.value || null,
+                nombreArticulo: articuloSelec?.nombre || 'Material solicitado',
+                cantidad: parseInt((form.elements.namedItem('cantidad') as HTMLInputElement).value),
+                unidad: articuloSelec?.unidad || 'Unidad',
+                prioridad: (form.elements.namedItem('prioridad') as HTMLSelectElement).value,
+                descripcion: (form.elements.namedItem('motivo') as HTMLTextAreaElement).value,
+                areaOrigen: 'incendios'
+              }
+              try {
+                const res = await fetch('/api/logistica', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ tipo: 'peticion', ...formData })
+                })
+                if (res.ok) {
+                  setShowNuevaPeticion(false)
+                  form.reset()
+                  alert('Petición creada correctamente')
+                  if (inventoryTab === 'peticiones') cargarPeticiones()
+                }
+              } catch (error) { console.error('Error:', error) }
+            }} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Artículo</label>
+                <select name="articuloId" className="w-full border border-slate-300 rounded-lg p-2.5">
+                  <option value="">Seleccionar artículo...</option>
+                  {articulos.map(art => (
+                    <option key={art.id} value={art.id}>{art.nombre} (Stock: {art.stockActual})</option>
+                  ))}
+                </select>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Cantidad *</label>
+                  <input name="cantidad" type="number" min="1" defaultValue="1" className="w-full border border-slate-300 rounded-lg p-2.5" required />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Prioridad</label>
+                  <select name="prioridad" className="w-full border border-slate-300 rounded-lg p-2.5">
+                    <option value="normal">Normal</option>
+                    <option value="alta">Alta</option>
+                    <option value="urgente">Urgente</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Motivo</label>
+                <textarea name="motivo" className="w-full border border-slate-300 rounded-lg p-2.5" rows={3} placeholder="Razón de la petición..."></textarea>
+              </div>
+              <div className="flex justify-end gap-3 pt-4 border-t">
+                <button type="button" onClick={() => setShowNuevaPeticion(false)} className="px-5 py-2.5 text-slate-600 hover:bg-slate-100 rounded-lg font-medium">Cancelar</button>
+                <button type="submit" className="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">Crear Petición</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: GESTIÓN DE FAMILIAS */}
+      {showGestionFamilias && (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/60" onClick={() => setShowGestionFamilias(false)}>
+          <div className="bg-white rounded-xl w-full max-w-lg" onClick={e => e.stopPropagation()}>
+            <div className="bg-slate-800 p-5 text-white flex justify-between items-center">
+              <h2 className="text-xl font-bold">Gestión de Familias</h2>
+              <button onClick={() => setShowGestionFamilias(false)}><X size={24} /></button>
+            </div>
+            <div className="p-6 space-y-4">
+              <form onSubmit={async (e) => {
+                e.preventDefault()
+                const fd = new FormData(e.currentTarget)
+                const nombre = fd.get('nuevaFamilia') as string
+                if (!nombre.trim() || !categoriaIncendios) return
+                const res = await fetch('/api/logistica', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ tipo: 'familia', nombre: nombre.trim(), categoriaId: categoriaIncendios })
+                })
+                if (res.ok) { cargarDatos(); e.currentTarget.reset(); }
+              }} className="flex gap-2">
+                <input name="nuevaFamilia" type="text" placeholder="Nueva familia..." className="flex-1 border border-slate-300 rounded-lg p-2.5 text-sm" required />
+                <button type="submit" className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 text-sm font-medium">Añadir</button>
+              </form>
+              <div className="space-y-2 max-h-80 overflow-y-auto">
+                {familias.map(fam => (
+                  <div key={fam.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                    <span className="font-medium text-slate-700">{fam.nombre}</span>
+                    <span className="text-xs text-slate-400">{0} artículos</span>
+                  </div>
+                ))}
+              </div>
+              <div className="flex justify-end pt-4 border-t">
+                <button onClick={() => setShowGestionFamilias(false)} className="px-5 py-2.5 text-slate-600 hover:bg-slate-100 rounded-lg font-medium">Cerrar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showEditarArticulo && articuloSeleccionado && (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/60" onClick={() => { setShowEditarArticulo(false); setArticuloSeleccionado(null); }}>
+          <div className="bg-white rounded-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="bg-purple-600 p-5 text-white flex justify-between items-center">
+              <h2 className="text-xl font-bold">Editar Artículo</h2>
+              <button onClick={() => { setShowEditarArticulo(false); setArticuloSeleccionado(null); }}><X size={24} /></button>
+            </div>
+            <form onSubmit={async (e) => {
+              e.preventDefault()
+              const fd = new FormData(e.currentTarget)
+              const res = await fetch('/api/logistica', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  tipo: 'articulo',
+                  id: articuloSeleccionado.id,
+                  codigo: fd.get('codigo'),
+                  nombre: fd.get('nombre'),
+                  descripcion: fd.get('descripcion'),
+                  stockActual: Number(fd.get('stockActual')),
+                  stockMinimo: Number(fd.get('stockMinimo')),
+                  unidad: fd.get('unidad'),
+                  familiaId: fd.get('familiaId')
+                })
+              })
+              if (res.ok) { setShowEditarArticulo(false); setArticuloSeleccionado(null); cargarDatos(); alert('Artículo actualizado') }
+            }} className="p-6 overflow-y-auto space-y-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Código</label>
+                  <input name="codigo" type="text" defaultValue={articuloSeleccionado.codigo || ''} className="w-full border border-slate-300 rounded-lg p-2.5" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Nombre *</label>
+                  <input name="nombre" type="text" defaultValue={articuloSeleccionado.nombre} className="w-full border border-slate-300 rounded-lg p-2.5" required />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Descripción</label>
+                <textarea name="descripcion" defaultValue={articuloSeleccionado.descripcion || ''} className="w-full border border-slate-300 rounded-lg p-2.5" rows={3}></textarea>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Stock Actual</label>
+                  <input name="stockActual" type="number" defaultValue={articuloSeleccionado.stockActual} className="w-full border border-slate-300 rounded-lg p-2.5" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Stock Mínimo</label>
+                  <input name="stockMinimo" type="number" defaultValue={articuloSeleccionado.stockMinimo} className="w-full border border-slate-300 rounded-lg p-2.5" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Unidad</label>
+                  <input name="unidad" type="text" defaultValue={articuloSeleccionado.unidad} className="w-full border border-slate-300 rounded-lg p-2.5" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Familia *</label>
+                <select name="familiaId" defaultValue={articuloSeleccionado.familia?.id} className="w-full border border-slate-300 rounded-lg p-2.5" required>
+                  <option value="">Seleccionar familia...</option>
+                  {familias.map(fam => (
+                    <option key={fam.id} value={fam.id}>{fam.nombre}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex justify-end gap-3 pt-4 border-t">
+                <button type="button" onClick={() => { setShowEditarArticulo(false); setArticuloSeleccionado(null); }} className="px-5 py-2.5 text-slate-600 hover:bg-slate-100 rounded-lg font-medium">Cancelar</button>
+                <button type="submit" className="px-5 py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium">Guardar Cambios</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {showNuevoArticulo && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60" onClick={() => setShowNuevoArticulo(false)}>
           <div className="bg-white rounded-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
