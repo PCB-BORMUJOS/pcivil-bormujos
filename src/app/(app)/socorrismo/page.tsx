@@ -326,14 +326,14 @@ export default function SocorrismoPage() {
           </button>
           <button
             onClick={() => setShowNuevaPeticion(true)}
-            className="px-3 py-2 sm:px-4 sm:py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-1.5 font-medium text-sm"
+            className="flex items-center justify-center gap-2 px-3 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm flex-shrink-0" title="Nueva Petición"
           >
             <ShoppingCart size={18} />
             Nueva Petición
           </button>
           <button
             onClick={() => setShowNuevoArticulo(true)}
-            className="px-3 py-2 sm:px-4 sm:py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center gap-1.5 font-medium text-sm"
+            className="flex items-center justify-center gap-2 px-3 py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium text-sm flex-shrink-0" title="Nuevo Artículo"
           >
             <Plus size={18} />
             Nuevo Artículo
