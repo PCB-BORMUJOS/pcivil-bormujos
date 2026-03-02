@@ -9,7 +9,7 @@ import {
   Heart, Phone, Building2, MapPin, Users, AlertTriangle,
   Plus, RefreshCw, Search, ChevronDown, ChevronUp, Edit,
   Trash2, X, ShieldAlert, BookUser, Hotel, Package,
-  Calendar, User, Baby, Shield, UserCheck, Clock
+  Calendar, User, Baby, Shield, UserCheck, Clock, ShoppingCart
 } from 'lucide-react'
 
 const MapContainer = dynamic(() => import('react-leaflet').then(m => m.MapContainer), { ssr: false })
@@ -290,21 +290,10 @@ export default function AccionSocialPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => setShowNuevaPeticion(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg border border-rose-600 text-rose-600 hover:bg-rose-50 text-sm font-medium">
-            <Package className="w-4 h-4" /> Nueva Petición
-          </button>
-          <button onClick={() => setShowNuevoArticulo(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-violet-600 text-white hover:bg-violet-700 text-sm font-medium">
-            <Plus className="w-4 h-4" /> Nuevo Artículo
-          </button>
-          <button onClick={() => setShowNuevoCaso(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-rose-600 text-white hover:bg-rose-700 text-sm font-medium">
-            <ShieldAlert className="w-4 h-4" /> Nuevo Caso VIOGEN
-          </button>
-          <button onClick={cargarDatos} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg">
-            <RefreshCw className="w-4 h-4" />
-          </button>
+          <button onClick={cargarDatos} className="flex items-center justify-center p-2.5 text-slate-600 hover:bg-slate-100 rounded-lg border border-slate-200 flex-shrink-0" title="Recargar"><RefreshCw className="w-4 h-4" /></button>
+          <button onClick={() => setShowNuevaPeticion(true)} className="flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm flex-shrink-0 min-w-[44px]" title="Nueva Petición"><ShoppingCart className="w-4 h-4" /><span className="hidden sm:inline whitespace-nowrap">Petición</span></button>
+          <button onClick={() => setShowNuevoArticulo(true)} className="flex items-center justify-center gap-2 px-4 py-2.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-400 font-medium text-sm flex-shrink-0 min-w-[44px]" title="Nuevo Artículo"><Plus className="w-4 h-4" /><span className="hidden sm:inline whitespace-nowrap">Artículo</span></button>
+          <button onClick={() => setShowNuevoCaso(true)} className="flex items-center justify-center gap-2 px-4 py-2.5 bg-violet-600 text-white rounded-lg hover:bg-violet-700 font-medium text-sm flex-shrink-0 min-w-[44px]" title="Nuevo Caso VIOGEN"><Shield className="w-4 h-4" /><span className="hidden sm:inline whitespace-nowrap">Caso VIOGEN</span></button>
         </div>
       </div>
 

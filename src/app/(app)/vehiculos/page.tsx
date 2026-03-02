@@ -171,9 +171,10 @@ export default function VehiculosPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={cargarDatos} className="p-2.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors" title="Recargar"><RefreshCw className="w-5 h-5" /></button>
-          <button onClick={() => setShowNuevaPeticion(true)} className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 text-sm font-semibold transition-colors shadow-sm"><ShoppingCart className="w-4 h-4" />Petición</button>
-          <button onClick={() => setShowNuevoArticulo(true)} className="flex items-center gap-2 px-5 py-2.5 bg-slate-800 text-white rounded-xl hover:bg-slate-900 text-sm font-semibold transition-colors shadow-sm"><Plus className="w-4 h-4" />Artículo</button>
+          <button onClick={cargarDatos} className="flex items-center justify-center p-2.5 text-slate-600 hover:bg-slate-100 rounded-lg border border-slate-200 flex-shrink-0" title="Recargar"><RefreshCw className="w-5 h-5" /></button>
+          <button onClick={() => setShowNuevaPeticion(true)} className="flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm flex-shrink-0 min-w-[44px]" title="Nueva Petición"><ShoppingCart size={18} /><span className="hidden sm:inline whitespace-nowrap">Petición</span></button>
+          <button onClick={() => setShowNuevoArticulo(true)} className="flex items-center justify-center gap-2 px-4 py-2.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-400 font-medium text-sm flex-shrink-0 min-w-[44px]" title="Nuevo Artículo"><Package size={18} /><span className="hidden sm:inline whitespace-nowrap">Artículo</span></button>
+          <button onClick={() => setShowGestionFamilias(true)} className="flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-700 text-white rounded-lg hover:bg-blue-800 font-medium text-sm flex-shrink-0 min-w-[44px]" title="Gestión Familias"><Layers size={18} /><span className="hidden sm:inline whitespace-nowrap">Familias</span></button>
         </div>
       </div>
 

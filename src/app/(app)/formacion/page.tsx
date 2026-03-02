@@ -1149,17 +1149,17 @@ export default function FormacionPage() {
           <div className="w-px h-8 bg-slate-200 mx-1 hidden sm:block"></div>
 
           {/* Botones de Acción */}
-          <button onClick={() => setShowNuevaPeticion(true)} className="flex items-center gap-2 px-3 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 border border-blue-200 transition-colors">
+          <button onClick={() => setShowNuevaPeticion(true)} className="flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm flex-shrink-0 min-w-[44px]" title="Nueva Petición">
             <Send size={18} /> <span className="hidden sm:inline">Nueva Petición</span>
           </button>
 
-          <button onClick={() => setShowNuevoArticulo(true)} className="flex items-center gap-2 px-3 py-2 bg-purple-50 text-purple-600 rounded-lg hover:bg-purple-100 border border-purple-200 transition-colors">
+          <button onClick={() => setShowNuevoArticulo(true)} className="flex items-center justify-center gap-2 px-4 py-2.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-400 font-medium text-sm flex-shrink-0 min-w-[44px]" title="Nuevo Artículo">
             <Package size={18} /> <span className="hidden sm:inline">Nuevo Artículo</span>
           </button>
 
           <button
             onClick={() => setShowNuevoCurso(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 shadow-md transition-colors font-medium"
+            className="flex items-center justify-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium text-sm flex-shrink-0 min-w-[44px]"
           >
             <Plus size={18} />
             <span>Nuevo Curso</span>
@@ -2151,7 +2151,7 @@ export default function FormacionPage() {
 
             <div className="flex justify-end gap-2 pt-4 bg-slate-50 -mx-6 -mb-6 p-4 mt-4 border-t">
               <button onClick={() => setShowNuevoArticulo(false)} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg font-medium">Cancelar</button>
-              <button onClick={handleGuardarArticulo} className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 shadow-sm font-medium">Crear Artículo</button>
+              <button onClick={handleGuardarArticulo} className="px-6 py-2 bg-yellow-500 text-black rounded-lg hover:bg-yellow-400 font-medium text-sm flex-shrink-0 text-white rounded-lg hover:bg-purple-700 shadow-sm font-medium">Crear Artículo</button>
             </div>
           </div>
         </Modal>
@@ -2323,7 +2323,7 @@ export default function FormacionPage() {
 
             <div className="flex justify-end gap-2 pt-4 bg-slate-50 -mx-6 -mb-6 p-4 mt-4 border-t">
               <button onClick={() => { setShowNuevoCurso(false); setCursoEditando(null); }} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg font-medium">Cancelar</button>
-              <button onClick={handleGuardarCurso} className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 shadow-sm font-medium">
+              <button onClick={handleGuardarCurso} className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium text-sm flex-shrink-0 text-white rounded-lg hover:bg-purple-700 shadow-sm font-medium">
                 {cursoEditando ? 'Guardar Cambios' : 'Crear Curso'}
               </button>
             </div>

@@ -2,7 +2,7 @@
 
 import dynamic from 'next/dynamic'
 import { useState, useEffect } from 'react'
-import { Plus, Search, Filter, AlertCircle, MapPin, Activity, Package, AlertTriangle, Building2, Eye, Edit, RefreshCw, ShoppingCart, Heart, History, Droplet, Calendar, User, Layers, Trash2, X, ClipboardCheck, Clock, Check, Info, TrendingDown } from 'lucide-react'
+import { Plus, Search, Filter, AlertCircle, MapPin, Activity, Package, AlertTriangle, Building2, Eye, Edit, RefreshCw, ShoppingCart, Heart, HeartPulse, History, Droplet, Calendar, User, Layers, Trash2, X, ClipboardCheck, Clock, Check, Info, TrendingDown } from 'lucide-react'
 import 'leaflet/dist/leaflet.css'
 
 // Imports dinámicos para Leaflet
@@ -324,27 +324,9 @@ export default function SocorrismoPage() {
           >
             <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
           </button>
-          <button
-            onClick={() => setShowNuevaPeticion(true)}
-            className="flex items-center justify-center gap-2 px-3 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm flex-shrink-0" title="Nueva Petición"
-          >
-            <ShoppingCart size={18} />
-            Nueva Petición
-          </button>
-          <button
-            onClick={() => setShowNuevoArticulo(true)}
-            className="flex items-center justify-center gap-2 px-3 py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium text-sm flex-shrink-0" title="Nuevo Artículo"
-          >
-            <Plus size={18} />
-            Nuevo Artículo
-          </button>
-          <button
-            onClick={() => setShowNuevoDEA(true)}
-            className="px-4 py-2.5 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 flex items-center gap-2 font-medium"
-          >
-            <Droplet size={18} />
-            Nuevo DEA
-          </button>
+          <button onClick={() => setShowNuevaPeticion(true)} className="flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm flex-shrink-0 min-w-[44px]" title="Nueva Petición"><ShoppingCart size={18} /><span className="hidden sm:inline whitespace-nowrap">Petición</span></button>
+          <button onClick={() => setShowNuevoArticulo(true)} className="flex items-center justify-center gap-2 px-4 py-2.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-400 font-medium text-sm flex-shrink-0 min-w-[44px]" title="Nuevo Artículo"><Plus size={18} /><span className="hidden sm:inline whitespace-nowrap">Artículo</span></button>
+          <button onClick={() => setShowNuevoDEA(true)} className="flex items-center justify-center gap-2 px-4 py-2.5 bg-pink-500 text-white rounded-lg hover:bg-pink-600 font-medium text-sm flex-shrink-0 min-w-[44px]" title="Nuevo DEA"><HeartPulse size={18} /><span className="hidden sm:inline whitespace-nowrap">Nuevo DEA</span></button>
         </div>
       </div>
 
@@ -1245,7 +1227,7 @@ export default function SocorrismoPage() {
                         ({articulos.filter(a => a.familia.id === fam.id).length} artículos)
                       </span>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 flex-wrap sm:flex-nowrap">
                       <button onClick={async () => {
                         const nuevoNombre = prompt('Nuevo nombre de la familia:', fam.nombre)
                         if (nuevoNombre && nuevoNombre.trim() !== fam.nombre) {
