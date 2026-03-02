@@ -689,6 +689,21 @@ export default function AdministracionPage() {
       }
 
       // Guardar la ficha
+      // Si es edición, actualizar también nombre/apellidos/indicativo
+      if (!esNuevaFicha && selectedVoluntario.id) {
+        await fetch('/api/admin/personal', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: voluntarioId,
+            nombre: selectedVoluntario.nombre,
+            apellidos: selectedVoluntario.apellidos,
+            telefono: selectedVoluntario.telefono,
+            numeroVoluntario: selectedVoluntario.numeroVoluntario,
+            accion: 'datos'
+          })
+        });
+      }
       const res = await fetch(`/api/admin/personal/${voluntarioId}/ficha`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -2193,8 +2208,7 @@ export default function AdministracionPage() {
                   type="text"
                   value={selectedVoluntario?.numeroVoluntario || ''}
                   onChange={e => setSelectedVoluntario({ ...selectedVoluntario!, numeroVoluntario: e.target.value })}
-                  disabled={!!selectedVoluntario?.id}
-                  className="w-full border border-slate-200 rounded-lg p-2.5 bg-slate-50 text-sm"
+                  className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
                 />
               </div>
               <div>
@@ -2219,8 +2233,7 @@ export default function AdministracionPage() {
                   type="text"
                   value={selectedVoluntario?.nombre || ''}
                   onChange={e => setSelectedVoluntario({ ...selectedVoluntario!, nombre: e.target.value })}
-                  disabled={!!selectedVoluntario?.id}
-                  className="w-full border border-slate-200 rounded-lg p-2.5 bg-slate-50 text-sm"
+                  className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
                 />
               </div>
               <div className="col-span-2">
@@ -2229,8 +2242,7 @@ export default function AdministracionPage() {
                   type="text"
                   value={selectedVoluntario?.apellidos || ''}
                   onChange={e => setSelectedVoluntario({ ...selectedVoluntario!, apellidos: e.target.value })}
-                  disabled={!!selectedVoluntario?.id}
-                  className="w-full border border-slate-200 rounded-lg p-2.5 bg-slate-50 text-sm"
+                  className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
                 />
               </div>
               <div>
@@ -2396,8 +2408,7 @@ export default function AdministracionPage() {
                   type="email"
                   value={selectedVoluntario?.email || ''}
                   onChange={e => setSelectedVoluntario({ ...selectedVoluntario!, email: e.target.value })}
-                  disabled={!!selectedVoluntario?.id}
-                  className="w-full border border-slate-200 rounded-lg p-2.5 bg-slate-50 text-sm"
+                  className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
                 />
               </div>
             </div>
