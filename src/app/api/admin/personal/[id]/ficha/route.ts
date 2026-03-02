@@ -60,6 +60,7 @@ export async function POST(
       telefonoFijo: body.telefonoFijo,
       dniNie: body.dniNie,
       areaAsignada: body.areaAsignada,
+      areaSecundaria: body.areaSecundaria || null,
       categoria: body.categoria,
       permisoConducir: body.permisoConducir,
       fechaExpedicion: body.fechaExpedicion ? new Date(body.fechaExpedicion) : null,

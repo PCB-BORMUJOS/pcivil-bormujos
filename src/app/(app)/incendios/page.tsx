@@ -432,22 +432,11 @@ export default function IncendiosPage() {
             <p className="text-slate-500 text-sm hidden sm:block">Inventario, equipos ECI y red de hidrantes</p>
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <button onClick={cargarDatos} className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg">
-            <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
-          </button>
-          <button onClick={() => setShowNuevaPeticion(true)} className="px-3 py-2 sm:px-4 sm:py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-1.5 font-medium text-sm">
-            <ShoppingCart size={16} />
-            <span className="hidden sm:inline">Nueva </span>Petición
-          </button>
-          <button onClick={() => setShowNuevoArticulo(true)} className="px-3 py-2 sm:px-4 sm:py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center gap-1.5 font-medium text-sm">
-            <Plus size={16} />
-            <span className="hidden sm:inline">Nuevo </span>Artículo
-          </button>
-          <button onClick={() => setShowNuevoHidrante(true)} className="px-3 py-2 sm:px-4 sm:py-2.5 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 flex items-center gap-1.5 font-medium text-sm">
-            <HidranteIcon size={16} />
-            <span className="hidden sm:inline">Nuevo </span>Hidrante
-          </button>
+        <div className="flex gap-2">
+          <button onClick={cargarDatos} className="flex items-center justify-center p-2.5 text-slate-600 hover:bg-slate-100 rounded-lg border border-slate-200 flex-shrink-0" title="Recargar"><RefreshCw size={18} /></button>
+          <button onClick={() => setShowNuevaPeticion(true)} className="flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm flex-shrink-0 min-w-[44px]" title="Nueva Petición"><ShoppingCart size={18} /><span className="hidden sm:inline whitespace-nowrap">Petición</span></button>
+          <button onClick={() => setShowNuevoArticulo(true)} className="flex items-center justify-center gap-2 px-4 py-2.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-400 font-medium text-sm flex-shrink-0 min-w-[44px]" title="Nuevo Artículo"><Package size={18} /><span className="hidden sm:inline whitespace-nowrap">Artículo</span></button>
+          <button onClick={() => setShowNuevoHidrante(true)} className="flex items-center justify-center gap-2 px-4 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium text-sm flex-shrink-0 min-w-[44px]" title="Nuevo Hidrante"><HidranteIcon size={18} /><span className="hidden sm:inline whitespace-nowrap">Hidrante</span></button>
         </div>
       </div>
 
@@ -1072,7 +1061,7 @@ export default function IncendiosPage() {
                 <h3 className="font-bold text-slate-800 flex items-center gap-2">
                   <MapPin size={18} className="text-cyan-600" /> Mapa de Hidrantes - Bormujos
                 </h3>
-                <button onClick={() => setShowNuevoHidrante(true)} className="px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 flex items-center gap-2">
+                <button onClick={() => setShowNuevoHidrante(true)} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center gap-2">
                   <Plus size={18} />
                   Nuevo Hidrante
                 </button>
@@ -1427,7 +1416,7 @@ export default function IncendiosPage() {
       {showNuevoHidrante && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60" onClick={() => setShowNuevoHidrante(false)}>
           <div className="bg-white rounded-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
-            <div className="bg-cyan-600 p-5 text-white flex justify-between items-center">
+            <div className="bg-red-600 p-5 text-white flex justify-between items-center">
               <h2 className="text-xl font-bold">Nuevo Hidrante</h2>
               <button onClick={() => setShowNuevoHidrante(false)}><X size={24} /></button>
             </div>
@@ -1498,7 +1487,7 @@ export default function IncendiosPage() {
               </div>
               <div className="flex justify-end gap-3 pt-4 border-t">
                 <button type="button" onClick={() => setShowNuevoHidrante(false)} className="px-5 py-2.5 text-slate-600 hover:bg-slate-100 rounded-lg font-medium">Cancelar</button>
-                <button type="submit" className="px-5 py-2.5 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 font-medium">Crear Hidrante</button>
+                <button type="submit" className="px-5 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium">Crear Hidrante</button>
               </div>
             </form>
           </div>
@@ -1621,7 +1610,7 @@ export default function IncendiosPage() {
       {hidranteSeleccionado && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60" onClick={() => setHidranteSeleccionado(null)}>
           <div className="bg-white rounded-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
-            <div className="bg-cyan-600 p-5 text-white flex justify-between items-center">
+            <div className="bg-red-600 p-5 text-white flex justify-between items-center">
               <h2 className="text-xl font-bold">Editar Hidrante</h2>
               <button onClick={() => setHidranteSeleccionado(null)}><X size={24} /></button>
             </div>
@@ -1688,7 +1677,7 @@ export default function IncendiosPage() {
               </div>
               <div className="flex justify-end gap-3 pt-4 border-t">
                 <button type="button" onClick={() => setHidranteSeleccionado(null)} className="px-5 py-2.5 text-slate-600 hover:bg-slate-100 rounded-lg font-medium">Cancelar</button>
-                <button type="submit" className="px-5 py-2.5 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 font-medium">Guardar Cambios</button>
+                <button type="submit" className="px-5 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium">Guardar Cambios</button>
               </div>
             </form>
           </div>

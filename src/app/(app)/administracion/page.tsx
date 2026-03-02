@@ -44,6 +44,7 @@ interface Voluntario {
   rol: { id: string; nombre: string };
   fichaVoluntario?: {
     areaAsignada?: string;
+    areaSecundaria?: string;
     categoria?: string;
     fechaAlta?: string;
   };
@@ -595,6 +596,7 @@ export default function AdministracionPage() {
         localidad: 'BORMUJOS',
         provincia: 'SEVILLA',
         areaAsignada: data.ficha?.areaAsignada || '',
+        areaSecundaria: data.ficha?.areaSecundaria || '',
         categoria: data.ficha?.categoria || 'VOLUNTARIO'
       });
     } catch (error) {
@@ -604,6 +606,7 @@ export default function AdministracionPage() {
         localidad: 'BORMUJOS',
         provincia: 'SEVILLA',
         areaAsignada: '',
+        areaSecundaria: '',
         categoria: 'VOLUNTARIO'
       });
     }
@@ -1040,10 +1043,10 @@ export default function AdministracionPage() {
   // Agrupar voluntarios por área
   const voluntariosPorArea = AREAS_SERVICIO.map(area => ({
     ...area,
-    voluntarios: voluntarios.filter(v => v.fichaVoluntario?.areaAsignada === area.id)
+    voluntarios: voluntarios.filter(v => (v.fichaVoluntario?.areaAsignada === area.id || v.fichaVoluntario?.areaSecundaria === area.id) && v.activo)
   }));
 
-  const sinArea = voluntarios.filter(v => !v.fichaVoluntario?.areaAsignada);
+  const sinArea = voluntarios.filter(v => !v.fichaVoluntario?.areaAsignada && v.activo);
 
   // Contar pólizas por vencer o vencidas
   const polizasAlerta = polizas.filter(p => p.estado === 'por_vencer' || p.estado === 'vencida').length;
@@ -2064,7 +2067,7 @@ export default function AdministracionPage() {
                     </AreaDroppable>
 
                     {/* ÁREAS DE SERVICIO */}
-                    {AREAS_SERVICIO.filter(a => a.id !== 'ADMINISTRACION').map(area => { // Excluir Administración si se desea, o mantenerla.
+                    {AREAS_SERVICIO.map(area => { // Excluir Administración si se desea, o mantenerla.
                       // Filter volunteers for this area
                       const areaVols = voluntarios.filter(v => v.fichaVoluntario?.areaAsignada === area.id);
                       return (
@@ -2396,6 +2399,14 @@ export default function AdministracionPage() {
                 <select value={fichaData.areaAsignada || ''} onChange={e => setFichaData({ ...fichaData, areaAsignada: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm">
                   <option value="">Seleccionar...</option>
                   {AREAS_SERVICIO.map(a => <option key={a.id} value={aspiranteEditandoTemp?.id || ""}>{a.nombre}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Área Secundaria</label>
+                <select value={fichaData.areaSecundaria || ''} onChange={e => setFichaData({ ...fichaData, areaSecundaria: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm">
+                  <option value="">Ninguna</option>
+                  <option value="ADMINISTRACION">Administración</option>
+                  <option value="LOGISTICA">Logística</option>
                 </select>
               </div>
               <div>

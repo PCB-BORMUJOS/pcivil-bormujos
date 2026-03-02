@@ -372,6 +372,7 @@ model FichaVoluntario {
   telefonoFijo           String?   @map("telefono_fijo")
   dniNie                 String?   @map("dni_nie")
   areaAsignada           String?   @map("area_asignada")
+  areaSecundaria         String?   @map("area_secundaria")
   categoria              String?
   permisoConducir        String?   @map("permiso_conducir")
   fechaExpedicion        DateTime? @map("fecha_expedicion") @db.Date
