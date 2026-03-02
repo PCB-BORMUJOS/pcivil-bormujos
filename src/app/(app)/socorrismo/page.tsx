@@ -2,7 +2,7 @@
 
 import dynamic from 'next/dynamic'
 import { useState, useEffect } from 'react'
-import { Plus, Search, Filter, AlertCircle, MapPin, Activity, Package, AlertTriangle, Building2, Eye, Edit, RefreshCw, ShoppingCart, Heart, HeartPulse, History, Droplet, Calendar, User, Layers, Trash2, X, ClipboardCheck, Clock, Check, Info, TrendingDown } from 'lucide-react'
+import { Plus, Search, Filter, AlertCircle, MapPin, Activity, Package, AlertTriangle, Building2, Eye, Edit, RefreshCw, ShoppingCart, Heart, HeartPulse, BriefcaseMedical, History, Droplet, Calendar, User, Layers, Trash2, X, ClipboardCheck, Clock, Check, Info, TrendingDown } from 'lucide-react'
 import 'leaflet/dist/leaflet.css'
 
 // Imports dinámicos para Leaflet
@@ -308,11 +308,11 @@ export default function SocorrismoPage() {
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <div className="bg-red-100 p-3 rounded-xl">
-            <Heart className="text-red-600" size={28} />
+          <div className="bg-pink-100 p-3 rounded-xl">
+            <Heart className="text-pink-500" size={28} />
           </div>
           <div>
-            <p className="text-xs font-bold text-red-600 uppercase tracking-wider">SOCORRISMO</p>
+            <p className="text-xs font-bold text-pink-500 uppercase tracking-wider">SOCORRISMO</p>
             <h1 className="text-xl sm:text-2xl font-bold text-slate-800">Área de Socorrismo</h1>
             <p className="text-slate-500 text-sm hidden sm:block">Material sanitario, DEAs y recursos de socorrismo</p>
           </div>
@@ -335,8 +335,8 @@ export default function SocorrismoPage() {
         {[
           { label: 'Material del Área', value: statsArticulos.totalArticulos, icon: Package, bg: 'bg-purple-100', color: 'text-purple-600' },
           { label: 'Stock Bajo', value: statsArticulos.stockBajo, icon: AlertTriangle, bg: 'bg-yellow-100', color: 'text-yellow-600' },
-          { label: 'DEAs Totales', value: deasStats.total, icon: Droplet, bg: 'bg-cyan-100', color: 'text-cyan-600' },
-          { label: 'Botiquines', value: botiquinesStats.total, icon: Heart, bg: 'bg-red-100', color: 'text-red-600' },
+          { label: 'DEAs Totales', value: deasStats.total, icon: HeartPulse, bg: 'bg-pink-100', color: 'text-pink-500' },
+          { label: 'Botiquines', value: botiquinesStats.total, icon: BriefcaseMedical, bg: 'bg-pink-100', color: 'text-pink-500' },
           { label: 'Edificios', value: edificios.length, icon: Building2, bg: 'bg-slate-100', color: 'text-slate-600' },
         ].map((stat, i) => (
           <div key={i} className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
@@ -360,14 +360,14 @@ export default function SocorrismoPage() {
         <div className="flex overflow-x-auto border-b border-slate-200">
           {[
             { id: 'inventario', label: 'Inventario', labelFull: 'Inventario del Área', icon: Package },
-            { id: 'deas', label: 'DEAs', labelFull: 'Red de DEAs', icon: Droplet },
-            { id: 'botiquines', label: 'Botiquines', labelFull: 'Botiquines SVB', icon: Heart },
+            { id: 'deas', label: 'DEAs', labelFull: 'Red de DEAs', icon: HeartPulse },
+            { id: 'botiquines', label: 'Botiquines', labelFull: 'Botiquines SVB', icon: BriefcaseMedical },
           ].map(tab => (
             <button
               key={tab.id}
               onClick={() => setMainTab(tab.id as any)}
               className={`flex items-center gap-2 px-4 sm:px-6 py-3 text-sm font-medium border-b-2 transition-all whitespace-nowrap ${mainTab === tab.id
-                ? 'border-red-500 text-red-600 bg-red-50'
+                ? 'border-pink-500 text-pink-500 bg-pink-50'
                 : 'border-transparent text-slate-500 hover:text-slate-700'
                 }`}
             >
@@ -396,7 +396,7 @@ export default function SocorrismoPage() {
                     setCurrentPage(1)
                   }}
                   className={`flex items-center gap-2 px-6 py-3 text-sm font-medium border-b-2 transition-all whitespace-nowrap ${inventoryTab === tab.id
-                    ? 'border-red-500 text-red-600 bg-white'
+                    ? 'border-pink-500 text-pink-500 bg-white'
                     : 'border-transparent text-slate-600 hover:text-slate-800'
                     }`}
                 >
@@ -646,11 +646,11 @@ export default function SocorrismoPage() {
             <div className="border-b border-slate-200">
               <div className="p-4 bg-slate-50 flex justify-between items-center">
                 <h3 className="font-bold text-slate-800 flex items-center gap-2">
-                  <MapPin size={18} className="text-cyan-600" /> Mapa de DEAs - Bormujos
+                  <MapPin size={18} className="text-pink-500" /> Mapa de DEAs - Bormujos
                 </h3>
                 <button
                   onClick={() => setShowNuevoDEA(true)}
-                  className="px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 flex items-center gap-2"
+                  className="px-4 py-2 bg-pink-500 text-white rounded-lg hover:bg-pink-600 flex items-center gap-2"
                 >
                   <Plus size={18} />
                   Nuevo DEA
@@ -771,7 +771,7 @@ export default function SocorrismoPage() {
                 <h3 className="text-lg font-bold text-slate-800">Botiquines SVB</h3>
                 <p className="text-slate-600 text-sm">Gestión de botiquines de Soporte Vital Básico ubicados en vehículos y PMA</p>
               </div>
-              <button onClick={() => setShowNuevoBotiquin(true)} className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium">
+              <button onClick={() => setShowNuevoBotiquin(true)} className="flex items-center gap-2 px-4 py-2 bg-pink-500 text-white rounded-lg hover:bg-pink-600 font-medium">
                 <Plus size={18} />
                 Nuevo Botiquín
               </button>
@@ -781,7 +781,7 @@ export default function SocorrismoPage() {
               <div className="text-center py-12 bg-slate-50 rounded-xl">
                 <Heart size={48} className="mx-auto mb-4 text-slate-300" />
                 <p className="text-slate-500 mb-4">No hay botiquines registrados</p>
-                <button onClick={() => setShowNuevoBotiquin(true)} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+                <button onClick={() => setShowNuevoBotiquin(true)} className="px-4 py-2 bg-pink-500 text-white rounded-lg hover:bg-pink-600">
                   <Plus size={18} className="inline mr-2" />
                   Crear Primer Botiquín
                 </button>
@@ -792,11 +792,11 @@ export default function SocorrismoPage() {
                   <div key={botiquin.id} className="bg-white border-2 border-slate-200 rounded-xl p-5 hover:shadow-lg transition-shadow">
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex items-center gap-3">
-                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${botiquin.estado === 'operativo' ? 'bg-green-100' :
+                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${botiquin.estado === 'operativo' ? 'bg-pink-100' :
                           botiquin.estado === 'revision_pendiente' ? 'bg-yellow-100' : 'bg-red-100'
                           }`}>
-                          <Heart size={24} className={
-                            botiquin.estado === 'operativo' ? 'text-green-600' :
+                          <BriefcaseMedical size={24} className={
+                            botiquin.estado === 'operativo' ? 'text-pink-500' :
                               botiquin.estado === 'revision_pendiente' ? 'text-yellow-600' : 'text-red-600'
                           } />
                         </div>
@@ -1280,7 +1280,7 @@ export default function SocorrismoPage() {
       {showNuevoDEA && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60" onClick={() => setShowNuevoDEA(false)}>
           <div className="bg-white rounded-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
-            <div className="bg-cyan-600 p-5 text-white flex justify-between items-center">
+            <div className="bg-pink-500 p-5 text-white flex justify-between items-center">
               <h2 className="text-xl font-bold">Nuevo DEA</h2>
               <button onClick={() => setShowNuevoDEA(false)}>
                 <X size={24} />
@@ -1397,7 +1397,7 @@ export default function SocorrismoPage() {
                 <button type="button" onClick={() => setShowNuevoDEA(false)} className="px-5 py-2.5 text-slate-600 hover:bg-slate-100 rounded-lg font-medium">
                   Cancelar
                 </button>
-                <button type="submit" className="px-5 py-2.5 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 font-medium">
+                <button type="submit" className="px-5 py-2.5 bg-pink-500 text-white rounded-lg hover:bg-pink-600 font-medium">
                   Crear DEA
                 </button>
               </div>
@@ -1410,7 +1410,7 @@ export default function SocorrismoPage() {
       {deaSeleccionado && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60" onClick={() => setDEASeleccionado(null)}>
           <div className="bg-white rounded-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
-            <div className="bg-cyan-600 p-5 text-white flex justify-between items-center">
+            <div className="bg-pink-500 p-5 text-white flex justify-between items-center">
               <h2 className="text-xl font-bold">Editar DEA</h2>
               <button onClick={() => setDEASeleccionado(null)}>
                 <X size={24} />
@@ -1526,7 +1526,7 @@ export default function SocorrismoPage() {
                 <button type="button" onClick={() => setDEASeleccionado(null)} className="px-5 py-2.5 text-slate-600 hover:bg-slate-100 rounded-lg font-medium">
                   Cancelar
                 </button>
-                <button type="submit" className="px-5 py-2.5 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 font-medium">
+                <button type="submit" className="px-5 py-2.5 bg-pink-500 text-white rounded-lg hover:bg-pink-600 font-medium">
                   Guardar Cambios
                 </button>
               </div>
@@ -1539,7 +1539,7 @@ export default function SocorrismoPage() {
       {showNuevoBotiquin && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60" onClick={() => setShowNuevoBotiquin(false)}>
           <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
-            <div className="bg-red-600 p-5 text-white flex justify-between items-center">
+            <div className="bg-pink-500 p-5 text-white flex justify-between items-center">
               <h2 className="text-xl font-bold">Nuevo Botiquín SVB</h2>
               <button onClick={() => setShowNuevoBotiquin(false)}>
                 <X size={24} />
@@ -1617,7 +1617,7 @@ export default function SocorrismoPage() {
                 <button type="button" onClick={() => setShowNuevoBotiquin(false)} className="px-5 py-2.5 text-slate-600 hover:bg-slate-100 rounded-lg font-medium">
                   Cancelar
                 </button>
-                <button type="submit" className="px-5 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium">
+                <button type="submit" className="px-5 py-2.5 bg-pink-500 text-white rounded-lg hover:bg-pink-600 font-medium">
                   Crear Botiquín
                 </button>
               </div>
@@ -1636,7 +1636,7 @@ export default function SocorrismoPage() {
             className="bg-white rounded-xl w-full max-w-2xl shadow-2xl max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="bg-red-600 p-5 text-white flex items-center justify-between rounded-t-xl sticky top-0 z-10">
+            <div className="bg-pink-500 p-5 text-white flex items-center justify-between rounded-t-xl sticky top-0 z-10">
               <h2 className="text-xl font-bold flex items-center gap-2">
                 <Edit className="w-5 h-5" />
                 Editar Botiquín
@@ -1781,7 +1781,7 @@ export default function SocorrismoPage() {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium flex items-center justify-center gap-2"
+                  className="flex-1 px-4 py-2 bg-pink-500 text-white rounded-lg hover:bg-pink-600 transition-colors font-medium flex items-center justify-center gap-2"
                 >
                   <Check className="w-4 h-4" />
                   Guardar Cambios
@@ -1796,7 +1796,7 @@ export default function SocorrismoPage() {
       {showGestionItems && botiquinSeleccionado && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60" onClick={() => { setShowGestionItems(false); setBotiquinSeleccionado(null) }}>
           <div className="bg-white rounded-xl w-full max-w-4xl shadow-2xl max-h-[90vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
-            <div className="bg-red-600 p-5 text-white flex items-center justify-between">
+            <div className="bg-pink-500 p-5 text-white flex items-center justify-between">
               <h2 className="text-xl font-bold flex items-center gap-2">
                 <Layers className="w-5 h-5" />
                 Gestión de Items - {botiquinSeleccionado.codigo}
@@ -1809,7 +1809,7 @@ export default function SocorrismoPage() {
             <div className="p-6 overflow-y-auto">
               <div className="flex justify-between items-center mb-4">
                 <p className="text-slate-600">{botiquinSeleccionado.items?.length || 0} items en el botiquín</p>
-                <button onClick={() => setShowNuevoItem(true)} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center gap-2">
+                <button onClick={() => setShowNuevoItem(true)} className="px-4 py-2 bg-pink-500 text-white rounded-lg hover:bg-pink-600 flex items-center gap-2">
                   <Plus size={18} />Añadir Item
                 </button>
               </div>
@@ -1818,7 +1818,7 @@ export default function SocorrismoPage() {
                 <div className="text-center py-12 bg-slate-50 rounded-xl">
                   <Package size={48} className="mx-auto mb-4 text-slate-300" />
                   <p className="text-slate-500 mb-4">No hay items en este botiquín</p>
-                  <button onClick={() => setShowNuevoItem(true)} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+                  <button onClick={() => setShowNuevoItem(true)} className="px-4 py-2 bg-pink-500 text-white rounded-lg hover:bg-pink-600">
                     Añadir Primer Item
                   </button>
                 </div>
@@ -1963,7 +1963,7 @@ export default function SocorrismoPage() {
               </div>
               <div className="flex gap-3 pt-4 border-t">
                 <button type="button" onClick={() => setShowNuevoItem(false)} className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">Cancelar</button>
-                <button type="submit" className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">Añadir Item</button>
+                <button type="submit" className="flex-1 px-4 py-2 bg-pink-500 text-white rounded-lg hover:bg-pink-600">Añadir Item</button>
               </div>
             </form>
           </div>
