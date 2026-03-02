@@ -2069,7 +2069,7 @@ export default function AdministracionPage() {
                     {/* ÁREAS DE SERVICIO */}
                     {AREAS_SERVICIO.map(area => { // Excluir Administración si se desea, o mantenerla.
                       // Filter volunteers for this area
-                      const areaVols = voluntarios.filter(v => v.fichaVoluntario?.areaAsignada === area.id);
+                      const areaVols = voluntarios.filter(v => (v.fichaVoluntario?.areaAsignada === area.id || v.fichaVoluntario?.areaSecundaria === area.id) && v.activo);
                       return (
                         <AreaDroppable key={area.id} id={area.id} nombre={area.nombre} color={area.color} count={areaVols.length}>
                           <SortableContext items={areaVols.map(v => v.id)} strategy={rectSortingStrategy}>
@@ -2398,7 +2398,7 @@ export default function AdministracionPage() {
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Área Asignada</label>
                 <select value={fichaData.areaAsignada || ''} onChange={e => setFichaData({ ...fichaData, areaAsignada: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm">
                   <option value="">Seleccionar...</option>
-                  {AREAS_SERVICIO.map(a => <option key={a.id} value={aspiranteEditandoTemp?.id || ""}>{a.nombre}</option>)}
+                  {AREAS_SERVICIO.map(a => <option key={a.id} value={a.id}>{a.nombre}</option>)}
                 </select>
               </div>
               <div>
