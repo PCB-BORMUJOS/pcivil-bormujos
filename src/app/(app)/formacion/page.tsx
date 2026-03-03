@@ -1167,29 +1167,40 @@ export default function FormacionPage() {
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {[
-          { label: 'Total Cursos', value: stats.totalCursos, icon: BookOpen, bg: 'bg-purple-100', color: 'text-purple-600' },
-          { label: 'Convocatorias Activas', value: stats.convocatoriasActivas, icon: Calendar, bg: 'bg-blue-100', color: 'text-blue-600' },
-          { label: 'Certificaciones Vigentes', value: stats.certificacionesVigentes, icon: Award, bg: 'bg-green-100', color: 'text-green-600' },
-          { label: 'Necesidades Pendientes', value: stats.necesidadesPendientes, icon: AlertCircle, bg: 'bg-amber-100', color: 'text-amber-600' },
-        ].map((stat, i) => (
-          <div key={i} className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-slate-500 text-xs font-medium">{stat.label}</p>
-                <h3 className="text-3xl font-bold text-slate-800 mt-1">{stat.value}</h3>
-              </div>
-              <div className={`${stat.bg} p-2.5 rounded-xl`}>
-                <stat.icon size={22} className={stat.color} />
-              </div>
-            </div>
+      {/* STATS */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+          <div className="flex justify-between items-start">
+            <div><p className="text-slate-500 text-xs font-medium">Material del Área</p><h3 className="text-3xl font-bold text-slate-800 mt-1">{articulos.length}</h3></div>
+            <div className="bg-purple-100 p-2.5 rounded-xl"><Package size={22} className="text-purple-600" /></div>
           </div>
-        ))}
+        </div>
+        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+          <div className="flex justify-between items-start">
+            <div><p className="text-slate-500 text-xs font-medium">Total Cursos</p><h3 className="text-3xl font-bold text-slate-800 mt-1">{stats.totalCursos}</h3></div>
+            <div className="bg-green-100 p-2.5 rounded-xl"><BookOpen size={22} className="text-green-600" /></div>
+          </div>
+        </div>
+        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+          <div className="flex justify-between items-start">
+            <div><p className="text-slate-500 text-xs font-medium">Convocatorias Activas</p><h3 className="text-3xl font-bold text-slate-800 mt-1">{stats.convocatoriasActivas}</h3></div>
+            <div className="bg-blue-100 p-2.5 rounded-xl"><Calendar size={22} className="text-blue-600" /></div>
+          </div>
+        </div>
+        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+          <div className="flex justify-between items-start">
+            <div><p className="text-slate-500 text-xs font-medium">Certificaciones Vigentes</p><h3 className="text-3xl font-bold text-slate-800 mt-1">{stats.certificacionesVigentes}</h3></div>
+            <div className="bg-amber-100 p-2.5 rounded-xl"><Award size={22} className="text-amber-600" /></div>
+          </div>
+        </div>
+        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+          <div className="flex justify-between items-start">
+            <div><p className="text-slate-500 text-xs font-medium">Necesidades Pendientes</p><h3 className={`text-3xl font-bold mt-1 ${stats.necesidadesPendientes > 0 ? 'text-red-600' : 'text-slate-800'}`}>{stats.necesidadesPendientes}</h3></div>
+            <div className="bg-red-100 p-2.5 rounded-xl"><AlertCircle size={22} className="text-red-600" /></div>
+          </div>
+        </div>
       </div>
-
-      {/* Main Content */}
+            {/* Main Content */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
 
         {/* Tabs Principales */}
