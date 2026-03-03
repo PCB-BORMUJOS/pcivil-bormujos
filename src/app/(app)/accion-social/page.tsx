@@ -275,16 +275,16 @@ export default function AccionSocialPage() {
   )
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6">
 
       {/* ── HEADER ─────────────────────────────────────────────────────────── */}
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-rose-100 flex items-center justify-center">
-            <Heart className="w-6 h-6 text-rose-600" />
+          <div className="w-12 h-12 rounded-xl bg-violet-100 flex items-center justify-center">
+            <Users className="w-6 h-6 text-violet-600" />
           </div>
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-rose-600">ACCIÓN SOCIAL</p>
+            <p className="text-xs font-semibold uppercase tracking-wider text-violet-600">ACCIÓN SOCIAL</p>
             <h1 className="text-2xl font-bold text-gray-900">Gestión Social y VIOGEN</h1>
             <p className="text-sm text-gray-500">Espacios de acogida, directorio de emergencias y coordinación VIOGEN</p>
           </div>
