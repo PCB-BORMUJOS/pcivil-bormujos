@@ -47,8 +47,10 @@ export async function GET(request: NextRequest) {
         where: {
           activo: true,
           OR: [
-            { fichaVoluntario: { areaAsignada: { contains: 'accion', mode: 'insensitive' } } },
-            { fichaVoluntario: { areaSecundaria: { contains: 'accion', mode: 'insensitive' } } },
+            { fichaVoluntario: { areaAsignada: { contains: 'Acción Social', mode: 'insensitive' } } },
+            { fichaVoluntario: { areaSecundaria: { contains: 'Acción Social', mode: 'insensitive' } } },
+            { fichaVoluntario: { areaAsignada: { equals: 'accion_social' } } },
+            { fichaVoluntario: { areaSecundaria: { equals: 'accion_social' } } },
             { fichaVoluntario: { areaAsignada: { contains: 'social', mode: 'insensitive' } } },
             { fichaVoluntario: { areaSecundaria: { contains: 'social', mode: 'insensitive' } } },
           ]
