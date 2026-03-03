@@ -182,8 +182,8 @@ export async function PATCH(request: NextRequest) {
     const body = await request.json()
     const { id, fecha } = body
 
-    if (!id || !fecha) {
-      return NextResponse.json({ error: 'Faltan campos obligatorios' }, { status: 400 })
+    if (!id) {
+      return NextResponse.json({ error: 'Falta el id del evento' }, { status: 400 })
     }
 
     // Verificar que el evento existe
@@ -212,6 +212,12 @@ export async function PATCH(request: NextRequest) {
     if (body.color) updateData.color = body.color
     if (body.privado !== undefined) updateData.privado = body.privado
     if (body.visible !== undefined) updateData.visible = body.visible
+    if (body.tipo === 'formacion' || eventoExistente.tipo === 'formacion') {
+      if (body.modalidadFormacion !== undefined) updateData.modalidadFormacion = body.modalidadFormacion
+      if (body.formadoresIds !== undefined) updateData.formadoresIds = Array.isArray(body.formadoresIds) ? body.formadoresIds.join(',') : body.formadoresIds
+      if (body.destinatariosExternos !== undefined) updateData.destinatariosExternos = body.destinatariosExternos
+      if (body.numAsistentesExternos !== undefined) updateData.numAsistentesExternos = body.numAsistentesExternos
+    }
     const evento = await prisma.evento.update({ where: { id }, data: updateData })
     return NextResponse.json({ success: true, evento })
   } catch (error) {
