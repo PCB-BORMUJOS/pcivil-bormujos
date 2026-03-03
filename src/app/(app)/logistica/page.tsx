@@ -4,7 +4,7 @@ import { useSearchParams } from 'next/navigation';
 import React, { useState, useEffect } from 'react';
 import {
   Package, Search, AlertTriangle, Plus, TrendingUp, TrendingDown, 
-  BarChart3, Calendar, MapPin, Trash2, Eye, X, RefreshCw, ArrowUpDown,
+  BarChart3, Calendar, MapPin, Trash2, Eye, X, RefreshCw, ArrowUpDown, Pencil, Archive,
   AlertCircle, CheckCircle, Clock, Box, ChevronDown, ChevronRight,
   Flame, Heart, Truck, Radio, GraduationCap, Shirt, Shield, Layers,
   ClipboardList, ShoppingCart, Check, FileText, Send, Ban,
@@ -246,6 +246,8 @@ export default function LogisticaPage() {
   const [showNuevaPeticion, setShowNuevaPeticion] = useState(false);
   const [showDetallePeticion, setShowDetallePeticion] = useState<Peticion | null>(null);
   const [showAccionPeticion, setShowAccionPeticion] = useState<{ peticion: Peticion; accion: string } | null>(null);
+  const [paginaPeticiones, setPaginaPeticiones] = useState(1);
+  const PETICIONES_POR_PAGINA = 10;
   const [articuloMovimiento, setArticuloMovimiento] = useState<Articulo | null>(null);
 
   // Formularios
@@ -830,7 +832,7 @@ export default function LogisticaPage() {
               <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
                 <div className="flex items-center gap-2">
                   <Filter size={18} className="text-slate-400" />
-                  <select value={filtroPeticiones} onChange={e => setFiltroPeticiones(e.target.value)} className="border border-slate-200 rounded-lg px-3 py-2 text-sm">
+                  <select value={filtroPeticiones} onChange={e => { setFiltroPeticiones(e.target.value); setPaginaPeticiones(1); }} className="border border-slate-200 rounded-lg px-3 py-2 text-sm">
                     <option value="all">Todos los estados</option>
                     <option value="pendiente">Pendientes ({peticionStats.pendientes})</option>
                     <option value="aprobada">Aprobadas ({peticionStats.aprobadas})</option>
@@ -853,8 +855,9 @@ export default function LogisticaPage() {
                   <p>No hay peticiones</p>
                 </div>
               ) : (
+                <>
                 <div className="space-y-3">
-                  {peticiones.map(peticion => {
+                  {peticiones.slice((paginaPeticiones-1)*PETICIONES_POR_PAGINA, paginaPeticiones*PETICIONES_POR_PAGINA).map(peticion => {
                     const estadoInfo = ESTADOS_PETICION[peticion.estado as keyof typeof ESTADOS_PETICION] || ESTADOS_PETICION.pendiente;
                     const prioridadInfo = PRIORIDADES[peticion.prioridad as keyof typeof PRIORIDADES] || PRIORIDADES.normal;
                     const EstadoIcon = estadoInfo.icon;
@@ -885,7 +888,17 @@ export default function LogisticaPage() {
                             </div>
                           </div>
                           <div className="flex flex-col items-end gap-2">
-                            <button onClick={() => setShowDetallePeticion(peticion)} className="p-2 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg"><Eye size={18} /></button>
+                            <div className="flex items-center gap-1">
+                              <button onClick={() => setShowDetallePeticion(peticion)} className="p-2 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg" title="Ver detalle"><Eye size={18} /></button>
+                              {(peticion.estado === 'pendiente' || peticion.estado === 'aprobada') && (
+                                <button onClick={() => setShowAccionPeticion({ peticion, accion: 'editar' })} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg" title="Editar"><Pencil size={18} /></button>
+                              )}
+                              {(peticion.estado === 'recibida' || peticion.estado === 'rechazada') ? (
+                                <button onClick={() => { if(confirm('¿Archivar esta petición? Se eliminará del listado activo.')) { fetch(`/api/logistica/peticiones/${peticion.id}`, {method:'DELETE'}).then(() => cargarPeticiones()) } }} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg" title="Archivar"><Archive size={18} /></button>
+                              ) : (
+                                <button onClick={() => { if(confirm('¿Eliminar esta petición? Esta acción no se puede deshacer.')) { fetch(`/api/logistica/peticiones/${peticion.id}`, {method:'DELETE'}).then(() => cargarPeticiones()) } }} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg" title="Eliminar"><Trash2 size={18} /></button>
+                              )}
+                            </div>
                             
                             {/* Acciones según estado */}
                             <div className="flex items-center gap-1">
@@ -931,6 +944,22 @@ export default function LogisticaPage() {
                     );
                   })}
                 </div>
+                {/* Paginación */}
+                {peticiones.length > PETICIONES_POR_PAGINA && (
+                  <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-200">
+                    <span className="text-sm text-slate-500">
+                      Mostrando {Math.min((paginaPeticiones-1)*PETICIONES_POR_PAGINA+1, peticiones.length)}&ndash;{Math.min(paginaPeticiones*PETICIONES_POR_PAGINA, peticiones.length)} de {peticiones.length}
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <button onClick={() => setPaginaPeticiones(p => Math.max(1,p-1))} disabled={paginaPeticiones===1} className="px-3 py-1.5 border border-slate-200 rounded-lg text-sm disabled:opacity-40 hover:bg-slate-50">&larr; Anterior</button>
+                      {Array.from({length: Math.ceil(peticiones.length/PETICIONES_POR_PAGINA)}, (_,i) => i+1).map(n => (
+                        <button key={n} onClick={() => setPaginaPeticiones(n)} className={"w-8 h-8 rounded-lg text-sm font-medium " + (paginaPeticiones===n ? "bg-orange-600 text-white" : "border border-slate-200 hover:bg-slate-50")}>{n}</button>
+                      ))}
+                      <button onClick={() => setPaginaPeticiones(p => Math.min(Math.ceil(peticiones.length/PETICIONES_POR_PAGINA),p+1))} disabled={paginaPeticiones===Math.ceil(peticiones.length/PETICIONES_POR_PAGINA)} className="px-3 py-1.5 border border-slate-200 rounded-lg text-sm disabled:opacity-40 hover:bg-slate-50">Siguiente &rarr;</button>
+                    </div>
+                  </div>
+                )}
+                </>
               )}
             </>
           )}
