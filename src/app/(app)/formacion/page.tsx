@@ -724,7 +724,7 @@ export default function FormacionPage() {
       'socorrismo': 'bg-red-100 text-red-700',
       'incendios': 'bg-orange-100 text-orange-700',
       'transmisiones': 'bg-blue-100 text-blue-700',
-      'pma': 'bg-purple-100 text-purple-700',
+      'pma': 'bg-green-100 text-green-700',
       'logistica': 'bg-slate-100 text-slate-700',
       'general': 'bg-gray-100 text-gray-700',
       'vehiculos': 'bg-yellow-100 text-yellow-700'
@@ -736,7 +736,7 @@ export default function FormacionPage() {
     const map: Record<string, string> = {
       'inscripciones_abiertas': 'bg-green-100 text-green-700 border-green-200',
       'planificada': 'bg-blue-100 text-blue-700 border-blue-200',
-      'en_curso': 'bg-purple-100 text-purple-700 border-purple-200',
+      'en_curso': 'bg-green-100 text-green-700 border-purple-200',
       'finalizada': 'bg-slate-100 text-slate-600 border-slate-200',
       'cancelada': 'bg-red-100 text-red-700 border-red-200'
     };
@@ -1125,11 +1125,11 @@ export default function FormacionPage() {
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <div className="bg-purple-100 p-3 rounded-xl">
-            <BookOpen className="text-purple-600" size={28} />
+          <div className="bg-green-100 p-3 rounded-xl">
+            <BookOpen className="text-green-600" size={28} />
           </div>
           <div>
-            <p className="text-xs font-bold text-purple-600 uppercase tracking-wider">FORMACIÓN</p>
+            <p className="text-xs font-bold text-green-600 uppercase tracking-wider">FORMACIÓN</p>
             <h1 className="text-xl sm:text-2xl font-bold text-slate-800">Área de Formación</h1>
             <p className="text-slate-500 text-sm hidden sm:block">Gestión de cursos, certificaciones e inventario</p>
           </div>
@@ -1172,7 +1172,7 @@ export default function FormacionPage() {
         <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
           <div className="flex justify-between items-start">
             <div><p className="text-slate-500 text-xs font-medium">Material del Área</p><h3 className="text-3xl font-bold text-slate-800 mt-1">{articulos.length}</h3></div>
-            <div className="bg-purple-100 p-2.5 rounded-xl"><Package size={22} className="text-purple-600" /></div>
+            <div className="bg-green-100 p-2.5 rounded-xl"><Package size={22} className="text-green-600" /></div>
           </div>
         </div>
         <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
@@ -1287,7 +1287,7 @@ export default function FormacionPage() {
                     <div className="text-center py-12 border-2 border-dashed border-slate-200 rounded-xl">
                       <Package size={40} className="mx-auto text-slate-300 mb-2" />
                       <p className="text-slate-500">No hay artículos en el inventario</p>
-                      <button onClick={() => setShowNuevoArticulo(true)} className="mt-4 text-purple-600 font-medium hover:underline">Crear el primero</button>
+                      <button onClick={() => setShowNuevoArticulo(true)} className="mt-4 text-green-600 font-medium hover:underline">Crear el primero</button>
                     </div>
                   ) : (
                     <div className="overflow-hidden border border-slate-200 rounded-lg">
@@ -1526,14 +1526,14 @@ export default function FormacionPage() {
                           <span className="text-sm text-slate-600">{curso.validezMeses ? `${curso.validezMeses}m` : '∞'}</span>
                         </div>
                         <div className="col-span-1 text-center">
-                          <span className="text-sm font-semibold text-purple-600">{curso._count?.convocatorias || 0}</span>
+                          <span className="text-sm font-semibold text-green-600">{curso._count?.convocatorias || 0}</span>
                         </div>
                         <div className="col-span-1 text-center">
                           <span className="text-xs text-slate-500 capitalize">{curso.nivelFormacion || '—'}</span>
                         </div>
                         <div className="col-span-1 flex justify-end gap-1" onClick={e => e.stopPropagation()}>
                           {(isAdmin || isFormacionMember) && (
-                            <button onClick={() => setCursoEditando(curso)} className="p-1.5 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors" title="Editar">
+                            <button onClick={() => setCursoEditando(curso)} className="p-1.5 text-slate-400 hover:text-green-600 hover:bg-purple-50 rounded-lg transition-colors" title="Editar">
                               <Edit size={15} />
                             </button>
                           )}
@@ -1632,7 +1632,7 @@ export default function FormacionPage() {
                       <p className="font-semibold text-slate-800 text-sm leading-tight">{c.curso?.nombre}</p>
                       <div className="flex items-center gap-2 mt-0.5">
                         <span className="text-xs text-slate-400 font-mono">{c.codigo}</span>
-                        {(c as any).edicion && <span className="text-xs text-purple-600 font-medium">{(c as any).edicion}</span>}
+                        {(c as any).edicion && <span className="text-xs text-green-600 font-medium">{(c as any).edicion}</span>}
                       </div>
                     </div>
                     <div className="col-span-1">
@@ -2149,7 +2149,7 @@ export default function FormacionPage() {
 
             <div className="border-t pt-4 mt-2">
               <label className="flex items-center gap-2 mb-2 cursor-pointer">
-                <input type="checkbox" className="w-4 h-4 text-purple-600 rounded" checked={nuevoArticulo.tieneCaducidad} onChange={e => setNuevoArticulo({ ...nuevoArticulo, tieneCaducidad: e.target.checked })} />
+                <input type="checkbox" className="w-4 h-4 text-green-600 rounded" checked={nuevoArticulo.tieneCaducidad} onChange={e => setNuevoArticulo({ ...nuevoArticulo, tieneCaducidad: e.target.checked })} />
                 <span className="text-sm font-medium text-slate-700">Este artículo tiene fecha de caducidad</span>
               </label>
               {nuevoArticulo.tieneCaducidad && (
@@ -2325,7 +2325,7 @@ export default function FormacionPage() {
               <input
                 type="checkbox"
                 id="cursoActivo"
-                className="w-4 h-4 text-purple-600 rounded"
+                className="w-4 h-4 text-green-600 rounded"
                 checked={nuevoCurso.activo}
                 onChange={e => setNuevoCurso({ ...nuevoCurso, activo: e.target.checked })}
               />
@@ -2348,7 +2348,7 @@ export default function FormacionPage() {
           <div className="space-y-4">
             <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
               <h4 className="font-bold text-purple-900 text-lg">{convocatoriaSeleccionada.curso?.nombre}</h4>
-              <p className="text-purple-700 text-sm mt-1">{convocatoriaSeleccionada.codigo}</p>
+              <p className="text-green-700 text-sm mt-1">{convocatoriaSeleccionada.codigo}</p>
             </div>
 
             <div className="space-y-3">
@@ -2544,7 +2544,7 @@ export default function FormacionPage() {
                 </div>
                 <div>
                   <span className="block text-slate-500 text-xs uppercase font-bold">Estado</span>
-                  <span className={`inline-flex px-2 py-0.5 rounded text-xs font-bold uppercase ${selectedConvocatoriaForGrading.estado === 'finalizada' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
+                  <span className={`inline-flex px-2 py-0.5 rounded text-xs font-bold uppercase ${selectedConvocatoriaForGrading.estado === 'finalizada' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
                     {selectedConvocatoriaForGrading.estado}
                   </span>
                 </div>
@@ -2562,7 +2562,7 @@ export default function FormacionPage() {
               </div>
 
               {loadingGrading ? (
-                <div className="py-10 text-center"><RefreshCw className="animate-spin mx-auto text-purple-600" /></div>
+                <div className="py-10 text-center"><RefreshCw className="animate-spin mx-auto text-green-600" /></div>
               ) : inscripcionesGrading.length === 0 ? (
                 <div className="py-10 text-center text-slate-500 border-2 border-dashed rounded-xl">No hay alumnos inscritos.</div>
               ) : (
@@ -2610,7 +2610,7 @@ export default function FormacionPage() {
                           <td className="p-3 text-center">
                             <input
                               type="checkbox"
-                              className="w-5 h-5 text-purple-600 rounded focus:ring-purple-500"
+                              className="w-5 h-5 text-green-600 rounded focus:ring-purple-500"
                               checked={insc.apto || false}
                               onChange={(e) => handleUpdateInscripcion(insc.id, 'apto', e.target.checked)}
                               disabled={selectedConvocatoriaForGrading.estado === 'finalizada'}
