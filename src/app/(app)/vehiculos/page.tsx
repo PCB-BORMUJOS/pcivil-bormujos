@@ -197,27 +197,25 @@ export default function VehiculosPage() {
         ))}
       </div>
 
-      {/* MAIN TABS - Estilo Socorrismo: iconos + texto, borde inferior */}
-      <div className="border-b border-slate-200">
-        <nav className="flex gap-6">
+      {/* TABS PRINCIPALES */}
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div className="flex border-b border-slate-200 overflow-x-auto">
           {[
             { key: 'inventario', label: 'Inventario del Área', icon: Package },
             { key: 'flota', label: 'Gestión de Flota', icon: Truck },
             { key: 'documentacion', label: 'Documentación', icon: FileCheck },
             { key: 'localizacion', label: 'Localización', icon: MapPin },
           ].map(tab => (
-            <button key={tab.key} onClick={() => setMainTab(tab.key as any)} className={`flex items-center gap-2 px-1 py-3 text-sm font-medium border-b-2 transition-colors ${mainTab === tab.key ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
+            <button key={tab.key} onClick={() => setMainTab(tab.key as any)} className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${mainTab === tab.key ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
               <tab.icon className="w-4 h-4" />{tab.label}
             </button>
           ))}
-        </nav>
-      </div>
+        </div>
 
       {/* TAB: INVENTARIO */}
       {mainTab === 'inventario' && (
-        <div className="space-y-4">
-          {/* Sub-tabs */}
-          <div className="flex gap-6 border-b border-slate-100">
+        <div>
+          <div className="flex border-b border-slate-200 bg-slate-50 overflow-x-auto">
             {[
               { key: 'stock', label: 'Stock', icon: Package },
               { key: 'peticiones', label: 'Peticiones', icon: ShoppingCart },
@@ -405,6 +403,7 @@ export default function VehiculosPage() {
         </div>
       )}
 
+      </div>
       {/* MODAL: DETALLE VEHÍCULO */}
       {showDetalleVehiculo && vehiculoSeleccionado && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000] p-4" onClick={() => setShowDetalleVehiculo(false)}>
