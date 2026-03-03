@@ -285,9 +285,9 @@ export default function TransmisionesPage() {
         ))}
       </div>
 
-      {/* MAIN TABS */}
-      <div className="border-b border-slate-200">
-        <nav className="flex gap-4 overflow-x-auto">
+      {/* TABS PRINCIPALES */}
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div className="flex border-b border-slate-200 overflow-x-auto">
           {[
             { key: 'inventario', label: 'Inventario del Área', icon: Package },
             { key: 'equipos', label: 'Equipos de Radio', icon: Radio },
@@ -295,19 +295,18 @@ export default function TransmisionesPage() {
             { key: 'cobertura', label: 'Mapa de Cobertura', icon: Map },
             { key: 'codigos', label: 'Códigos Q / ICAO', icon: BookOpen },
           ].map(tab => (
-            <button key={tab.key} onClick={() => setMainTab(tab.key as any)} className={`flex items-center gap-2 px-1 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${mainTab === tab.key ? 'border-purple-600 text-purple-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
+            <button key={tab.key} onClick={() => setMainTab(tab.key as any)} className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${mainTab === tab.key ? 'border-purple-600 text-purple-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
               <tab.icon className="w-4 h-4" />{tab.label}
             </button>
           ))}
-        </nav>
-      </div>
+        </div>
 
       {/* TAB: INVENTARIO */}
       {mainTab === 'inventario' && (
-        <div className="space-y-4">
-          <div className="flex gap-6 border-b border-slate-100">
+        <div>
+          <div className="flex border-b border-slate-200 bg-slate-50 overflow-x-auto">
             {[{ key: 'stock', label: 'Stock', icon: Package }, { key: 'peticiones', label: 'Peticiones', icon: ShoppingCart }, { key: 'movimientos', label: 'Movimientos', icon: History }].map(tab => (
-              <button key={tab.key} onClick={() => setInventoryTab(tab.key as any)} className={`flex items-center gap-2 px-1 pb-3 text-sm font-medium border-b-2 transition-colors ${inventoryTab === tab.key ? 'border-purple-500 text-purple-600' : 'border-transparent text-slate-400 hover:text-slate-600'}`}><tab.icon className="w-4 h-4" />{tab.label}</button>
+              <button key={tab.key} onClick={() => setInventoryTab(tab.key as any)} className={`flex items-center gap-2 px-6 py-3 text-sm font-medium border-b-2 transition-colors ${inventoryTab === tab.key ? 'border-purple-500 text-purple-600 bg-white' : 'border-transparent text-slate-600 hover:text-slate-800'}`}><tab.icon className="w-4 h-4" />{tab.label}</button>
             ))}
           </div>
           {inventoryTab === 'stock' && (
@@ -490,7 +489,7 @@ export default function TransmisionesPage() {
         <div className="space-y-4">
           <div className="flex gap-6 border-b border-slate-100">
             {[{ key: 'codigo_q', label: 'Código Q', icon: Hash }, { key: 'icao', label: 'Alfabeto ICAO', icon: BookOpen }].map(tab => (
-              <button key={tab.key} onClick={() => { setCodigosTab(tab.key as any); setSearchCodigo('') }} className={`flex items-center gap-2 px-1 pb-3 text-sm font-medium border-b-2 transition-colors ${codigosTab === tab.key ? 'border-purple-500 text-purple-600' : 'border-transparent text-slate-400 hover:text-slate-600'}`}><tab.icon className="w-4 h-4" />{tab.label}</button>
+              <button key={tab.key} onClick={() => { setCodigosTab(tab.key as any); setSearchCodigo('') }} className={`flex items-center gap-2 px-6 py-3 text-sm font-medium border-b-2 transition-colors ${codigosTab === tab.key ? 'border-purple-500 text-purple-600' : 'border-transparent text-slate-400 hover:text-slate-600'}`}><tab.icon className="w-4 h-4" />{tab.label}</button>
             ))}
           </div>
 
@@ -540,8 +539,9 @@ export default function TransmisionesPage() {
           )}
         </div>
       )}
-
       {/* MODAL: DETALLE EQUIPO */}
+
+      </div>
       {showDetalleEquipo && equipoSeleccionado && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000] p-4" onClick={() => setShowDetalleEquipo(false)}>
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-3xl max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
@@ -555,7 +555,7 @@ export default function TransmisionesPage() {
             </div>
             <div className="flex gap-4 px-6 pt-4 border-b border-slate-100">
               {[{ key: 'ficha', label: 'Ficha Técnica', icon: FileText }, { key: 'bateria', label: 'Batería y Cargas', icon: Battery }, { key: 'mantenimiento', label: 'Mantenimiento', icon: Wrench }].map(tab => (
-                <button key={tab.key} onClick={() => setDetalleTab(tab.key as any)} className={`flex items-center gap-2 px-1 pb-3 text-sm font-medium border-b-2 transition-colors ${detalleTab === tab.key ? 'border-purple-500 text-purple-600' : 'border-transparent text-slate-400 hover:text-slate-600'}`}><tab.icon className="w-4 h-4" />{tab.label}</button>
+                <button key={tab.key} onClick={() => setDetalleTab(tab.key as any)} className={`flex items-center gap-2 px-6 py-3 text-sm font-medium border-b-2 transition-colors ${detalleTab === tab.key ? 'border-purple-500 text-purple-600' : 'border-transparent text-slate-400 hover:text-slate-600'}`}><tab.icon className="w-4 h-4" />{tab.label}</button>
               ))}
             </div>
             <div className="p-6">
