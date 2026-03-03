@@ -976,6 +976,10 @@ export default function DashboardPage() {
                       voluntariosMax: showEventDetail.voluntariosMax || 0,
                       visible: showEventDetail.visible !== false,
                       privado: showEventDetail.privado || false,
+                      modalidadFormacion: showEventDetail.modalidadFormacion || 'recibimos',
+                      formadoresIds: showEventDetail.formadoresIds ? showEventDetail.formadoresIds.split(',') : [],
+                      destinatariosExternos: showEventDetail.destinatariosExternos || '',
+                      numAsistentesExternos: showEventDetail.numAsistentesExternos || 0,
                     });
                     setSelectedDate(showEventDetail.fecha?.split('T')[0] || '');
                     setEditEventId(showEventDetail.id);
