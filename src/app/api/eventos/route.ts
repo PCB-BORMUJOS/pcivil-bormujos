@@ -112,7 +112,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { titulo, descripcion, tipo, fecha, horaInicio, horaFin, todoElDia, ubicacion, direccion, coordenadas, visible, privado, voluntariosMin, voluntariosMax, vehiculosNecesarios, color } = body
+    const { titulo, descripcion, tipo, fecha, horaInicio, horaFin, todoElDia, ubicacion, direccion, coordenadas, visible, privado, voluntariosMin, voluntariosMax, vehiculosNecesarios, color, modalidadFormacion, formadoresIds, destinatariosExternos, numAsistentesExternos } = body
 
     // Validaciones
     if (!titulo || !tipo || !fecha || !horaInicio) {
@@ -146,6 +146,10 @@ export async function POST(request: NextRequest) {
         voluntariosMax,
         vehiculosNecesarios,
         color,
+        modalidadFormacion: tipo === 'formacion' ? (modalidadFormacion || 'recibimos') : null,
+        formadoresIds: tipo === 'formacion' && formadoresIds ? formadoresIds.join(',') : null,
+        destinatariosExternos: tipo === 'formacion' ? destinatariosExternos : null,
+        numAsistentesExternos: tipo === 'formacion' ? (numAsistentesExternos || null) : null,
         creadorId: usuario.id,
         servicioId: usuario.servicioId
       }

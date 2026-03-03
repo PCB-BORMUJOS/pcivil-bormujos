@@ -545,7 +545,8 @@ export default function DashboardPage() {
   const [editEventId, setEditEventId] = useState<string | null>(null);
   const [newEvent, setNewEvent] = useState({
     titulo: '', descripcion: '', tipo: 'preventivo', horaInicio: '09:00', horaFin: '14:00',
-    ubicacion: '', color: '#EC4899', voluntariosMin: 0, voluntariosMax: 0, visible: true, privado: false
+    ubicacion: '', color: '#EC4899', voluntariosMin: 0, voluntariosMax: 0, visible: true, privado: false,
+    modalidadFormacion: 'recibimos', formadoresIds: [] as string[], destinatariosExternos: '', numAsistentesExternos: 0
   });
 
   const cargarEventos = () => {
@@ -655,6 +656,7 @@ export default function DashboardPage() {
       setNewEvent({
         titulo: '', descripcion: '', tipo: 'preventivo', horaInicio: '09:00', horaFin: '14:00',
         ubicacion: '', color: '#EC4899', voluntariosMin: 0, voluntariosMax: 0,
+        modalidadFormacion: 'recibimos', formadoresIds: [], destinatariosExternos: '', numAsistentesExternos: 0,
         visible: esAdmin, privado: !esAdmin
       });
       setShowCreateEvent(true);
@@ -1106,6 +1108,47 @@ export default function DashboardPage() {
                 <input type="text" className="w-full border border-slate-300 rounded-lg p-2.5 text-sm" value={newEvent.ubicacion} onChange={e => setNewEvent({ ...newEvent, ubicacion: e.target.value })} />
               </div>
             </div>
+            {newEvent.tipo === 'formacion' && (
+              <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 space-y-3">
+                <label className="block text-sm font-semibold text-purple-700">Modalidad de Formación</label>
+                <div className="flex gap-2">
+                  <button type="button" onClick={() => setNewEvent({ ...newEvent, modalidadFormacion: 'recibimos' })}
+                    className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium border transition-colors ${newEvent.modalidadFormacion === 'recibimos' ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'}`}>
+                    Recibimos formación
+                  </button>
+                  <button type="button" onClick={() => setNewEvent({ ...newEvent, modalidadFormacion: 'impartimos' })}
+                    className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium border transition-colors ${newEvent.modalidadFormacion === 'impartimos' ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'}`}>
+                    Impartimos formación
+                  </button>
+                </div>
+                {newEvent.modalidadFormacion === 'impartimos' && (
+                  <div className="space-y-3 pt-1">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Formadores (voluntarios del servicio)</label>
+                      <select multiple className="w-full border border-slate-300 rounded-lg p-2 text-sm h-24"
+                        onChange={e => setNewEvent({ ...newEvent, formadoresIds: Array.from(e.target.selectedOptions).map(o => o.value) })}>
+                        {voluntarios.map((v: any) => (
+                          <option key={v.id} value={v.id}>{v.nombre} {v.apellidos}</option>
+                        ))}
+                      </select>
+                      <p className="text-xs text-slate-400 mt-1">Ctrl+clic para seleccionar varios</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Destinatarios (personas externas)</label>
+                      <input type="text" className="w-full border border-slate-300 rounded-lg p-2.5 text-sm"
+                        placeholder="Ej: Vecinos del barrio, alumnos IES..." value={newEvent.destinatariosExternos}
+                        onChange={e => setNewEvent({ ...newEvent, destinatariosExternos: e.target.value })} />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Nº asistentes estimados</label>
+                      <input type="number" min={0} className="w-full border border-slate-300 rounded-lg p-2.5 text-sm"
+                        value={newEvent.numAsistentesExternos}
+                        onChange={e => setNewEvent({ ...newEvent, numAsistentesExternos: parseInt(e.target.value) || 0 })} />
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Hora Inicio *</label>

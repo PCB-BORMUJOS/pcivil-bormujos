@@ -117,6 +117,10 @@ model Evento {
   voluntariosMax      Int?                 @map("voluntarios_max")
   vehiculosNecesarios String?              @map("vehiculos_necesarios")
   color               String?
+  modalidadFormacion  String?              @map("modalidad_formacion")
+  formadoresIds       String?              @map("formadores_ids")
+  destinatariosExternos String?            @map("destinatarios_externos")
+  numAsistentesExternos Int?               @map("num_asistentes_externos")
   creadorId           String               @map("creador_id")
   servicioId          String               @map("servicio_id")
   createdAt           DateTime             @default(now()) @map("created_at")
