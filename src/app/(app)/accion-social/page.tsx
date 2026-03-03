@@ -297,34 +297,42 @@ export default function AccionSocialPage() {
         </div>
       </div>
 
-      {/* ── STATS CARDS (5) ─────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-5 gap-4">
-        {[
-          { label: 'Material del Área', value: articulos.length, icon: Package, color: 'text-violet-600', bg: 'bg-violet-50' },
-          { label: 'Stock Bajo', value: stockBajo, icon: AlertTriangle, color: stockBajo > 0 ? 'text-yellow-600' : 'text-gray-400', bg: stockBajo > 0 ? 'bg-yellow-50' : 'bg-gray-50' },
-          { label: 'Plazas Urgencia', value: plazasTotales, sub: `${stats.espacios} espacios activos`, icon: Hotel, color: 'text-blue-600', bg: 'bg-blue-50' },
-          { label: 'Centros Emergencia', value: stats.centros, sub: `${stats.contactos} en directorio`, icon: Building2, color: 'text-teal-600', bg: 'bg-teal-50' },
-          { label: 'Casos VIOGEN Activos', value: stats.casosActivos, icon: ShieldAlert, color: stats.casosActivos > 0 ? 'text-red-600' : 'text-gray-400', bg: stats.casosActivos > 0 ? 'bg-red-50' : 'bg-gray-50' }
-        ].map((s, i) => (
-          <div key={i} className="bg-white rounded-xl border border-gray-200 p-4">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm text-gray-500">{s.label}</p>
-                <p className="text-3xl font-bold mt-1 text-gray-900">{s.value}</p>
-                {s.sub && <p className="text-xs text-gray-400 mt-0.5">{s.sub}</p>}
-              </div>
-              <div className={`w-10 h-10 rounded-lg ${s.bg} flex items-center justify-center`}>
-                <s.icon className={`w-5 h-5 ${s.color}`} />
-              </div>
-            </div>
+      {/* STATS */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+          <div className="flex justify-between items-start">
+            <div><p className="text-slate-500 text-xs font-medium">Material del Área</p><h3 className="text-3xl font-bold text-slate-800 mt-1">{articulos.length}</h3></div>
+            <div className="bg-purple-100 p-2.5 rounded-xl"><Package size={22} className="text-purple-600" /></div>
           </div>
-        ))}
+        </div>
+        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+          <div className="flex justify-between items-start">
+            <div><p className="text-slate-500 text-xs font-medium">Stock Bajo</p><h3 className={`text-3xl font-bold mt-1 ${stockBajo > 0 ? 'text-red-600' : 'text-slate-800'}`}>{stockBajo}</h3></div>
+            <div className="bg-amber-100 p-2.5 rounded-xl"><AlertTriangle size={22} className="text-amber-600" /></div>
+          </div>
+        </div>
+        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+          <div className="flex justify-between items-start">
+            <div><p className="text-slate-500 text-xs font-medium">Plazas Urgencia</p><h3 className="text-3xl font-bold text-slate-800 mt-1">{plazasTotales}</h3></div>
+            <div className="bg-blue-100 p-2.5 rounded-xl"><Hotel size={22} className="text-blue-600" /></div>
+          </div>
+        </div>
+        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+          <div className="flex justify-between items-start">
+            <div><p className="text-slate-500 text-xs font-medium">Centros Emergencia</p><h3 className="text-3xl font-bold text-slate-800 mt-1">{stats.centros}</h3></div>
+            <div className="bg-teal-100 p-2.5 rounded-xl"><Building2 size={22} className="text-teal-600" /></div>
+          </div>
+        </div>
+        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+          <div className="flex justify-between items-start">
+            <div><p className="text-slate-500 text-xs font-medium">Casos VIOGEN Activos</p><h3 className={`text-3xl font-bold mt-1 ${stats.casosActivos > 0 ? 'text-red-600' : 'text-slate-800'}`}>{stats.casosActivos}</h3></div>
+            <div className={`p-2.5 rounded-xl ${stats.casosActivos > 0 ? 'bg-red-100' : 'bg-slate-100'}`}><ShieldAlert size={22} className={`${stats.casosActivos > 0 ? 'text-red-600' : 'text-slate-400'}`} /></div>
+          </div>
+        </div>
       </div>
-
-      {/* ── TABS PRINCIPALES ────────────────────────────────────────────────── */}
-      <div className="bg-white rounded-xl border border-gray-200">
-        <div className="border-b border-gray-200 px-4">
-          <div className="flex gap-1 overflow-x-auto">
+            {/* ── TABS PRINCIPALES ────────────────────────────────────────────────── */}
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div className="flex border-b border-slate-200 overflow-x-auto">
             {[
               { key: 'inventario', icon: Package,    label: 'Inventario del Área' },
               { key: 'espacios',   icon: Hotel,       label: 'Espacios de Acogida' },
@@ -345,26 +353,19 @@ export default function AccionSocialPage() {
               </button>
             ))}
           </div>
-        </div>
-
-        <div className="p-4">
-
           {/* ══ TAB: INVENTARIO ═══════════════════════════════════════════════ */}
           {mainTab === 'inventario' && (
-            <div className="space-y-4">
-              <div className="flex border-b border-gray-100 gap-1 pb-1">
+            <div>
+              <div className="flex border-b border-slate-200 bg-slate-50 overflow-x-auto">
                 {(['stock', 'peticiones', 'movimientos'] as const).map(sub => (
                   <button key={sub} onClick={() => setInventoryTab(sub)}
-                    className={`px-4 py-2 text-sm font-medium rounded-lg capitalize ${
-                      inventoryTab === sub ? 'bg-rose-50 text-rose-700' : 'text-gray-500 hover:bg-gray-50'
-                    }`}>
+                    className={`flex items-center gap-2 px-6 py-3 text-sm font-medium border-b-2 transition-all whitespace-nowrap ${inventoryTab === sub ? 'border-violet-600 text-violet-600 bg-white' : 'border-transparent text-slate-600 hover:text-slate-800'}`}>
                     {sub === 'stock' ? 'Stock' : sub === 'peticiones' ? 'Peticiones' : 'Movimientos'}
                   </button>
                 ))}
               </div>
-
-              {inventoryTab === 'stock' && (
-                <div className="space-y-3">
+                            {inventoryTab === 'stock' && (
+                <div className="space-y-3 p-6">
                   <div className="flex gap-3">
                     <div className="relative flex-1">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -979,7 +980,6 @@ export default function AccionSocialPage() {
               </div>
             </div>
           )}
-        </div>
       </div>
 
       {/* ═══════════════════════════════ MODALES ═══════════════════════════════ */}
