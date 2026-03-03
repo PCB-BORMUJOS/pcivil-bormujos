@@ -693,7 +693,7 @@ export default function DashboardPage() {
     try {
       const esEdicion = !!editEventId;
       const response = await fetch('/api/eventos', {
-        method: esEdicion ? 'PUT' : 'POST',
+        method: esEdicion ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(esEdicion
           ? { ...newEvent, id: editEventId }
@@ -1125,13 +1125,21 @@ export default function DashboardPage() {
                   <div className="space-y-3 pt-1">
                     <div>
                       <label className="block text-sm font-medium text-slate-700 mb-1">Formadores (voluntarios del servicio)</label>
-                      <select multiple className="w-full border border-slate-300 rounded-lg p-2 text-sm h-24"
-                        onChange={e => setNewEvent({ ...newEvent, formadoresIds: Array.from(e.target.selectedOptions).map(o => o.value) })}>
+                      <div className="border border-slate-300 rounded-lg p-2 max-h-36 overflow-y-auto space-y-1">
                         {voluntarios.map((v: any) => (
-                          <option key={v.id} value={v.id}>{v.nombre} {v.apellidos}</option>
+                          <label key={v.id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-purple-50 cursor-pointer">
+                            <input type="checkbox" className="w-4 h-4 accent-purple-600"
+                              checked={(newEvent.formadoresIds || []).includes(v.id)}
+                              onChange={e => {
+                                const ids = e.target.checked
+                                  ? [...(newEvent.formadoresIds || []), v.id]
+                                  : (newEvent.formadoresIds || []).filter((id: string) => id !== v.id)
+                                setNewEvent({ ...newEvent, formadoresIds: ids })
+                              }} />
+                            <span className="text-sm text-slate-700">{v.nombre} {v.apellidos}</span>
+                          </label>
                         ))}
-                      </select>
-                      <p className="text-xs text-slate-400 mt-1">Ctrl+clic para seleccionar varios</p>
+                      </div>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-slate-700 mb-1">Destinatarios (personas externas)</label>
