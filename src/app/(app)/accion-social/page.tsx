@@ -104,11 +104,7 @@ const ESTADOS_PETICION: Record<string, { label: string; color: string }> = {
   rechazada: { label: 'Rechazada', color: 'bg-red-100 text-red-800' }
 }
 
-// Miembros fijos del área VIOGEN (8 personas)
-const MIEMBROS_VIOGEN = [
-  'Voluntario 1', 'Voluntario 2', 'Voluntario 3', 'Voluntario 4',
-  'Voluntario 5', 'Voluntario 6', 'Voluntario 7', 'Voluntario 8'
-]
+// Miembros VIOGEN cargados dinámicamente desde API
 
 // ─── Componente Principal ─────────────────────────────────────────────────────
 
@@ -144,6 +140,7 @@ export default function AccionSocialPage() {
   // Cuadrante VIOGEN - semana actual
   const [semanaOffset, setSemanaOffset] = useState(0)
   const [cuadrante, setCuadrante] = useState<Record<string, Record<string, boolean>>>({})
+  const [miembrosViogen, setMiembrosViogen] = useState<any[]>([])
 
   // Modales
   const [showNuevoArticulo, setShowNuevoArticulo] = useState(false)
@@ -168,18 +165,19 @@ export default function AccionSocialPage() {
   const cargarDatos = async () => {
     try {
       setLoading(true)
-      const [resInv, resCat, resEsp, resCent, resCont, resCasos, resStats] = await Promise.all([
+      const [resInv, resCat, resEsp, resCent, resCont, resCasos, resMiembros, resStats] = await Promise.all([
         fetch('/api/logistica?inventario=accion_social'),
         fetch('/api/logistica?tipo=categoria&slug=accion_social'),
         fetch('/api/accion-social?tipo=espacios'),
         fetch('/api/accion-social?tipo=centros'),
         fetch('/api/accion-social?tipo=directorio'),
         fetch('/api/accion-social?tipo=viogen'),
+        fetch('/api/accion-social?tipo=miembros-viogen'),
         fetch('/api/accion-social?tipo=stats')
       ])
-      const [dInv, dCat, dEsp, dCent, dCont, dCasos, dStats] = await Promise.all([
+      const [dInv, dCat, dEsp, dCent, dCont, dCasos, dMiembros, dStats] = await Promise.all([
         resInv.json(), resCat.json(), resEsp.json(),
-        resCent.json(), resCont.json(), resCasos.json(), resStats.json()
+        resCent.json(), resCont.json(), resCasos.json(), resMiembros.json(), resStats.json()
       ])
       setArticulos(dInv.articulos || [])
       setFamilias(dInv.familias || [])
@@ -188,6 +186,7 @@ export default function AccionSocialPage() {
       setCentros(dCent.centros || [])
       setContactos(dCont.contactos || [])
       setCasos(dCasos.casos || [])
+      setMiembrosViogen(dMiembros.miembros || [])
       setStats(dStats)
     } catch (e) { console.error(e) }
     finally { setLoading(false) }
@@ -899,29 +898,36 @@ export default function AccionSocialPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {MIEMBROS_VIOGEN.map((miembro, mi) => {
+                    {miembrosViogen.length === 0 ? (
+                      <tr><td colSpan={9} className="py-8 text-center text-gray-400 text-sm">No hay miembros asignados al área de Acción Social</td></tr>
+                    ) : miembrosViogen.map((miembro, mi) => {
+                      const nombreCompleto = `${miembro.nombre} ${miembro.apellidos}`
+                      const esAdmin = ['superadmin','admin','coordinador'].includes(session?.user?.rol || '')
+                      const esMiembro = miembro.id === (session?.user as any)?.id
+                      const puedeEditar = esAdmin || esMiembro
                       const totalDisp = diasSemana.filter(d => {
                         const k = d.toISOString().split('T')[0]
-                        return cuadrante[k]?.[miembro]
+                        return cuadrante[k]?.[miembro.id]
                       }).length
                       return (
                         <tr key={mi} className={`border-b border-gray-100 ${mi % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}`}>
                           <td className="py-3 px-4">
                             <div className="flex items-center gap-2">
-                              <div className="w-7 h-7 rounded-full bg-rose-100 flex items-center justify-center text-xs font-bold text-rose-700">
-                                {miembro.split(' ').map(w => w[0]).join('').slice(0, 2)}
+                              <div className="w-7 h-7 rounded-full bg-violet-100 flex items-center justify-center text-xs font-bold text-violet-700">
+                                {`${miembro.nombre[0]}${miembro.apellidos[0]}`}
                               </div>
-                              <span className="font-medium text-gray-800 text-sm">{miembro}</span>
+                              <span className="font-medium text-gray-800 text-sm">{nombreCompleto}</span>
                             </div>
                           </td>
                           {diasSemana.map((dia, di) => {
                             const fechaKey = dia.toISOString().split('T')[0]
-                            const disponible = cuadrante[fechaKey]?.[miembro] ?? false
+                            const disponible = cuadrante[fechaKey]?.[miembro.id] ?? false
                             const esHoy = dia.toDateString() === new Date().toDateString()
                             return (
                               <td key={di} className={`py-2 px-2 text-center ${esHoy ? 'bg-rose-50/50' : ''}`}>
                                 <button
-                                  onClick={() => toggleDisponibilidad(miembro, fechaKey)}
+                                  disabled={!puedeEditar}
+                                  onClick={() => puedeEditar && toggleDisponibilidad(miembro.id, fechaKey)}
                                   className={`w-full py-2 rounded-lg text-xs font-medium transition-all ${
                                     disponible
                                       ? 'bg-green-500 text-white hover:bg-green-600 shadow-sm'
@@ -955,7 +961,7 @@ export default function AccionSocialPage() {
                       <td className="py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Disponibles / día</td>
                       {diasSemana.map((dia, i) => {
                         const k = dia.toISOString().split('T')[0]
-                        const count = MIEMBROS_VIOGEN.filter(m => cuadrante[k]?.[m]).length
+                        const count = miembrosViogen.filter(m => cuadrante[k]?.[m.id]).length
                         return (
                           <td key={i} className="py-3 px-2 text-center">
                             <span className={`px-2 py-1 rounded-full text-xs font-bold ${

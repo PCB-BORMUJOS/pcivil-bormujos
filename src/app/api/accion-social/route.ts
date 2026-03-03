@@ -42,6 +42,26 @@ export async function GET(request: NextRequest) {
       })
       return NextResponse.json({ casos, reincidente: casos.length > 0 })
     }
+    if (tipo === 'miembros-viogen') {
+      const miembros = await prisma.usuario.findMany({
+        where: {
+          activo: true,
+          OR: [
+            { fichaVoluntario: { areaAsignada: { contains: 'accion', mode: 'insensitive' } } },
+            { fichaVoluntario: { areaSecundaria: { contains: 'accion', mode: 'insensitive' } } },
+            { fichaVoluntario: { areaAsignada: { contains: 'social', mode: 'insensitive' } } },
+            { fichaVoluntario: { areaSecundaria: { contains: 'social', mode: 'insensitive' } } },
+          ]
+        },
+        select: {
+          id: true, nombre: true, apellidos: true, numeroVoluntario: true,
+          rol: { select: { nombre: true } },
+          fichaVoluntario: { select: { areaAsignada: true, areaSecundaria: true } }
+        },
+        orderBy: { apellidos: 'asc' }
+      })
+      return NextResponse.json({ miembros })
+    }
     if (tipo === 'stats') {
       const [espacios, centros, contactos, casosActivos] = await Promise.all([
         prisma.espacioAcogida.count({ where: { estado: 'activo' } }),
