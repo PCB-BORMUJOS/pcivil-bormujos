@@ -554,14 +554,14 @@ export default function PMAPage() {
   if (loading) return <div className="flex items-center justify-center h-96"><RefreshCw className="w-8 h-8 animate-spin text-orange-500" /></div>
 
   return (
-    <div className="p-4 md:p-6 space-y-5 max-w-[1400px] mx-auto">
+    <div className="space-y-6">
       {/* ===== HEADER (patrón Transmisiones) ===== */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 bg-orange-100 rounded-2xl flex items-center justify-center"><Tent className="w-6 h-6 text-orange-600" /></div>
           <div>
-            <p className="text-xs font-bold text-orange-600 uppercase tracking-wider">PMA</p>
-            <h1 className="text-xl font-bold text-slate-800">Puesto de Mando Avanzado</h1>
+            <p className="text-sm font-bold text-orange-600 uppercase tracking-wide">PMA</p>
+            <h1 className="text-2xl font-bold text-slate-800">Puesto de Mando Avanzado</h1>
             <p className="text-sm text-slate-500">MasterTent Rescue 6×3 m — Gestión del remolque PMA</p>
           </div>
         </div>
@@ -578,49 +578,66 @@ export default function PMAPage() {
         </div>
       </div>
 
-      {/* ===== STATS (patrón Transmisiones) ===== */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        {[
-          { label: 'Material del Área', value: articulos.length, icon: Package, bg: 'bg-orange-50', ic: 'text-orange-600' },
-          { label: 'Stock Bajo', value: articulos.filter(a => a.stockActual <= a.stockMinimo && a.stockMinimo > 0).length, icon: AlertTriangle, bg: 'bg-red-50', ic: 'text-red-500' },
-          { label: 'Items Remolque', value: materialRemolque.length, icon: ClipboardCheck, bg: 'bg-blue-50', ic: 'text-blue-600' },
-          { label: 'Carpas MasterTent', value: 2, icon: Tent, bg: 'bg-emerald-50', ic: 'text-emerald-600' },
-          { label: 'Verificaciones', value: verificaciones.length, icon: CheckCircle, bg: 'bg-purple-50', ic: 'text-purple-600' },
-        ].map((s, i) => (
-          <div key={i} className="bg-white border border-slate-200 rounded-2xl p-4">
-            <div className="flex items-start justify-between">
-              <div><p className="text-xs text-slate-500 mb-1">{s.label}</p><p className="text-2xl font-bold text-slate-800">{s.value}</p></div>
-              <div className={`p-2 ${s.bg} rounded-xl`}><s.icon className={`w-5 h-5 ${s.ic}`} /></div>
-            </div>
+      {/* STATS */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+          <div className="flex justify-between items-start">
+            <div><p className="text-slate-500 text-xs font-medium">Material del Área</p><h3 className="text-3xl font-bold text-slate-800 mt-1">{articulos.length}</h3></div>
+            <div className="bg-purple-100 p-2.5 rounded-xl"><Package size={22} className="text-purple-600" /></div>
           </div>
-        ))}
+        </div>
+        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+          <div className="flex justify-between items-start">
+            <div><p className="text-slate-500 text-xs font-medium">Stock Bajo</p><h3 className={`text-3xl font-bold mt-1 ${articulos.filter(a => a.stockActual <= a.stockMinimo && a.stockMinimo > 0).length > 0 ? 'text-red-600' : 'text-slate-800'}`}>{articulos.filter(a => a.stockActual <= a.stockMinimo && a.stockMinimo > 0).length}</h3></div>
+            <div className="bg-amber-100 p-2.5 rounded-xl"><AlertTriangle size={22} className="text-amber-600" /></div>
+          </div>
+        </div>
+        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+          <div className="flex justify-between items-start">
+            <div><p className="text-slate-500 text-xs font-medium">Items Remolque</p><h3 className="text-3xl font-bold text-slate-800 mt-1">{materialRemolque.length}</h3></div>
+            <div className="bg-blue-100 p-2.5 rounded-xl"><ClipboardCheck size={22} className="text-blue-600" /></div>
+          </div>
+        </div>
+        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+          <div className="flex justify-between items-start">
+            <div><p className="text-slate-500 text-xs font-medium">Carpas MasterTent</p><h3 className="text-3xl font-bold text-slate-800 mt-1">2</h3></div>
+            <div className="bg-emerald-100 p-2.5 rounded-xl"><Tent size={22} className="text-emerald-600" /></div>
+          </div>
+        </div>
+        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+          <div className="flex justify-between items-start">
+            <div><p className="text-slate-500 text-xs font-medium">Verificaciones</p><h3 className="text-3xl font-bold text-slate-800 mt-1">{verificaciones.length}</h3></div>
+            <div className="bg-lime-100 p-2.5 rounded-xl"><CheckCircle size={22} className="text-lime-600" /></div>
+          </div>
+        </div>
       </div>
 
-      {/* ===== TABS PRINCIPALES (patrón Incendios) ===== */}
-      <div className="flex gap-6 border-b border-slate-200 overflow-x-auto">
-        {[
-          { key: 'inventario' as const, label: 'Inventario del Área', icon: Package },
-          { key: 'remolque' as const, label: 'Material Remolque', icon: ClipboardCheck },
-          { key: 'despliegues' as const, label: 'Configuraciones Despliegue', icon: Tent },
-          { key: 'ficha' as const, label: 'Ficha Técnica', icon: FileText },
-        ].map(tab => (
-          <button key={tab.key} onClick={() => setMainTab(tab.key)} className={`flex items-center gap-2 px-1 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-all ${mainTab === tab.key ? 'text-orange-600 border-orange-500' : 'text-slate-500 border-transparent hover:text-slate-700'}`}>
-            <tab.icon className="w-4 h-4" /> {tab.label}
-          </button>
-        ))}
-      </div>
+      {/* TABS PRINCIPALES */}
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div className="flex border-b border-slate-200 overflow-x-auto">
+          {[
+            { key: 'inventario' as const, label: 'Inventario del Área', icon: Package },
+            { key: 'remolque' as const, label: 'Material Remolque', icon: ClipboardCheck },
+            { key: 'despliegues' as const, label: 'Configuraciones Despliegue', icon: Tent },
+            { key: 'ficha' as const, label: 'Ficha Técnica', icon: FileText },
+          ].map(tab => (
+            <button key={tab.key} onClick={() => setMainTab(tab.key)} className={`flex items-center gap-2 px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-all ${mainTab === tab.key ? 'text-orange-600 border-orange-500' : 'text-slate-500 border-transparent hover:text-slate-700'}`}>
+              <tab.icon className="w-4 h-4" /> {tab.label}
+            </button>
+          ))}
+        </div>
 
       {/* ==================== TAB: INVENTARIO ==================== */}
       {mainTab === 'inventario' && (
-        <div className="space-y-4">
+        <div>
           {/* Sub-tabs */}
-          <div className="flex gap-4">
+          <div className="flex border-b border-slate-200 bg-slate-50 overflow-x-auto">
             {[
               { key: 'stock' as const, label: 'Stock', icon: Package },
               { key: 'peticiones' as const, label: 'Peticiones', icon: ShoppingCart },
               { key: 'movimientos' as const, label: 'Movimientos', icon: RefreshCw }
             ].map(tab => (
-              <button key={tab.key} onClick={() => { setInventoryTab(tab.key); setPaginaActual(1) }} className={`flex items-center gap-1.5 px-1 py-2 text-sm font-medium border-b-2 transition-all ${inventoryTab === tab.key ? 'text-orange-600 border-orange-400' : 'text-slate-400 border-transparent hover:text-slate-600'}`}><tab.icon className="w-3.5 h-3.5" /> {tab.label}</button>
+              <button key={tab.key} onClick={() => { setInventoryTab(tab.key); setPaginaActual(1) }} className={`flex items-center gap-2 px-6 py-3 text-sm font-medium border-b-2 transition-all whitespace-nowrap ${inventoryTab === tab.key ? 'border-lime-500 text-lime-600 bg-white' : 'border-transparent text-slate-600 hover:text-slate-800'}`}><tab.icon className="w-4 h-4" /> {tab.label}</button>
             ))}
           </div>
 
@@ -926,6 +943,7 @@ export default function PMAPage() {
           </div>
         </div>
       )}
+      </div>
 
       {/* ==================== MODALES ==================== */}
 
