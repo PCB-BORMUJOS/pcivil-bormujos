@@ -221,7 +221,7 @@ export default function VehiculosPage() {
               { key: 'peticiones', label: 'Peticiones', icon: ShoppingCart },
               { key: 'movimientos', label: 'Movimientos', icon: History },
             ].map(tab => (
-              <button key={tab.key} onClick={() => setInventoryTab(tab.key as any)} className={`flex items-center gap-2 px-1 pb-3 text-sm font-medium border-b-2 transition-colors ${inventoryTab === tab.key ? 'border-blue-500 text-blue-600' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>
+              <button key={tab.key} onClick={() => setInventoryTab(tab.key as any)} className={`flex items-center gap-2 px-6 py-3 text-sm font-medium border-b-2 transition-colors ${inventoryTab === tab.key ? 'border-blue-600 text-blue-600 bg-white' : 'border-transparent text-slate-600 hover:text-slate-800'}`}>
                 <tab.icon className="w-4 h-4" />{tab.label}
               </button>
             ))}
