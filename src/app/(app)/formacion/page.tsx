@@ -1218,7 +1218,7 @@ export default function FormacionPage() {
               key={tab.id}
               onClick={() => setMainTab(tab.id as any)}
               className={`flex items-center gap-1.5 px-3 sm:px-6 py-4 text-sm font-medium border-b-2 transition-all whitespace-nowrap ${mainTab === tab.id
-                ? 'border-purple-500 text-purple-600 bg-purple-50/50'
+                ? 'border-green-600 text-green-600 bg-green-50/50'
                 : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50'
                 }`}
             >
@@ -1244,7 +1244,7 @@ export default function FormacionPage() {
                   key={tab.id}
                   onClick={() => setInventoryTab(tab.id as any)}
                   className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-all ${inventoryTab === tab.id
-                    ? 'border-purple-500 text-purple-600 bg-white shadow-sm -mb-[2px] rounded-t-lg'
+                    ? 'border-green-600 text-green-600 bg-white'
                     : 'border-transparent text-slate-500 hover:text-slate-700'
                     }`}
                 >
