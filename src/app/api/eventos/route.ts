@@ -146,10 +146,6 @@ export async function POST(request: NextRequest) {
         voluntariosMax,
         vehiculosNecesarios,
         color,
-        modalidadFormacion: tipo === 'formacion' ? (modalidadFormacion || 'recibimos') : null,
-        formadoresIds: tipo === 'formacion' && formadoresIds ? formadoresIds.join(',') : null,
-        destinatariosExternos: tipo === 'formacion' ? destinatariosExternos : null,
-        numAsistentesExternos: tipo === 'formacion' ? (numAsistentesExternos || null) : null,
         creadorId: usuario.id,
         servicioId: usuario.servicioId
       }

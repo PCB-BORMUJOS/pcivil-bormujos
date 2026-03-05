@@ -48,17 +48,17 @@ export async function GET(request: NextRequest) {
           activo: true,
           OR: [
             { fichaVoluntario: { areaAsignada: { contains: 'Acción Social', mode: 'insensitive' } } },
-            { fichaVoluntario: { areaSecundaria: { contains: 'Acción Social', mode: 'insensitive' } } },
+
             { fichaVoluntario: { areaAsignada: { equals: 'accion_social' } } },
-            { fichaVoluntario: { areaSecundaria: { equals: 'accion_social' } } },
+
             { fichaVoluntario: { areaAsignada: { contains: 'social', mode: 'insensitive' } } },
-            { fichaVoluntario: { areaSecundaria: { contains: 'social', mode: 'insensitive' } } },
+
           ]
         },
         select: {
           id: true, nombre: true, apellidos: true, numeroVoluntario: true,
           rol: { select: { nombre: true } },
-          fichaVoluntario: { select: { areaAsignada: true, areaSecundaria: true } }
+          fichaVoluntario: { select: { areaAsignada: true } }
         },
         orderBy: { apellidos: 'asc' }
       })
