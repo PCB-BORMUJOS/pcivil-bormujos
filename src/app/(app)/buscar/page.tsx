@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { Search, User, Truck, Briefcase, ArrowLeft, Loader2 } from 'lucide-react'
 import Link from 'next/link'
@@ -22,7 +22,7 @@ const ESTADO_COLORS: Record<string, string> = {
   revision: 'bg-yellow-100 text-yellow-700',
 }
 
-export default function BuscarPage() {
+function BuscarContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const q = searchParams.get('q') || ''
@@ -184,5 +184,13 @@ export default function BuscarPage() {
         </div>
       )}
     </div>
+  )
+}
+
+export default function BuscarPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center py-16"><div className="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin"></div></div>}>
+      <BuscarContent />
+    </Suspense>
   )
 }
