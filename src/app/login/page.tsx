@@ -30,7 +30,7 @@ export default function LoginPage() {
         return
       }
 
-      router.push('/dashboard')
+      window.location.href = '/dashboard'
     } catch (err) {
       setError('Error al iniciar sesión')
       setLoading(false)

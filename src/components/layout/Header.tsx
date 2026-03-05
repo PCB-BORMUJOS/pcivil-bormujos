@@ -164,6 +164,12 @@ export default function Header({
     setSearchQuery(e.target.value)
     onSearch?.(e.target.value)
   }
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && searchQuery.trim()) {
+      router.push(`/buscar?q=${encodeURIComponent(searchQuery.trim())}`)
+      setSearchQuery("")
+    }
+  }
 
   const getInitials = (name: string) => {
     const parts = name.split(' ')
@@ -341,6 +347,7 @@ export default function Header({
                   placeholder="Buscar servicio, voluntario..."
                   value={searchQuery}
                   onChange={handleSearch}
+                  onKeyDown={handleSearchKeyDown}
                   className="w-80 pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 focus:bg-white transition-all"
                 />
               </div>
