@@ -207,9 +207,13 @@ export async function PUT(request: NextRequest) {
     }
 
     return NextResponse.json({ error: 'Acción no válida' }, { status: 400 })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error al actualizar voluntario:', error)
-    return NextResponse.json({ error: 'Error interno' }, { status: 500 })
+    if (error?.code === 'P2002') {
+      const campo = error?.meta?.target?.[0] || 'campo'
+      return NextResponse.json({ error: 'El ' + campo + ' ya esta en uso por otro usuario' }, { status: 400 })
+    }
+    return NextResponse.json({ error: error?.message || 'Error interno' }, { status: 500 })
   }
 }
 
