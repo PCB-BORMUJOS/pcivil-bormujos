@@ -8,7 +8,7 @@ import {
   AlertCircle, CheckCircle, Clock, Box, ChevronDown, ChevronRight,
   Flame, Heart, Truck, Radio, GraduationCap, Shirt, Shield, Layers,
   ClipboardList, ShoppingCart, Check, FileText, Send, Ban,
-  History, User, Building, Receipt, Filter, Users
+  History, User, Building, Receipt, Filter, Users, Tag
 } from 'lucide-react';
 
 // ============================================
@@ -45,6 +45,7 @@ interface Articulo {
   fechaCaducidad: string | null;
   familia: Familia;
   ubicacion: { id: string; nombre: string } | null;
+  metadatos?: { tallas?: string[] } | null;
 }
 
 interface Movimiento {
@@ -249,11 +250,15 @@ export default function LogisticaPage() {
   const [paginaPeticiones, setPaginaPeticiones] = useState(1);
   const PETICIONES_POR_PAGINA = 10;
   const [articuloMovimiento, setArticuloMovimiento] = useState<Articulo | null>(null);
+  // Familias
+  const [showGestionFamilias, setShowGestionFamilias] = useState(false);
+  const [familiaEditando, setFamiliaEditando] = useState<{id: string, nombre: string} | null>(null);
+  const [nuevaFamiliaText, setNuevaFamiliaText] = useState('');
 
   // Formularios
   const [nuevoArticulo, setNuevoArticulo] = useState({
     codigo: '', nombre: '', descripcion: '', stockActual: 0, stockMinimo: 0,
-    unidad: 'unidad', tieneCaducidad: false, fechaCaducidad: '', familiaId: ''
+    unidad: 'unidad', tieneCaducidad: false, fechaCaducidad: '', familiaId: '', tallas: [] as string[]
   });
   const [nuevoMovimiento, setNuevoMovimiento] = useState({ tipo: 'entrada', cantidad: 0, motivo: '', notas: '' });
   const [nuevaPeticion, setNuevaPeticion] = useState({
@@ -370,13 +375,70 @@ export default function LogisticaPage() {
       });
       if (res.ok) {
         setShowNuevoArticulo(false);
-        setNuevoArticulo({ codigo: '', nombre: '', descripcion: '', stockActual: 0, stockMinimo: 0, unidad: 'unidad', tieneCaducidad: false, fechaCaducidad: '', familiaId: '' });
+        setNuevoArticulo({ codigo: '', nombre: '', descripcion: '', stockActual: 0, stockMinimo: 0, unidad: 'unidad', tieneCaducidad: false, fechaCaducidad: '', familiaId: '', tallas: [] });
         cargarDatos();
         alert('✅ Artículo creado correctamente');
       }
     } catch (error) {
       alert('Error al guardar artículo');
     }
+  };
+
+  // ---- Gestión Familias ----
+  const handleGuardarFamilia = async () => {
+    const nombre = familiaEditando ? familiaEditando.nombre : nuevaFamiliaText;
+    if (!nombre.trim()) { alert('El nombre es requerido'); return; }
+    try {
+      if (familiaEditando) {
+        // Buscar categoría de la familia que editamos
+        const fam = familias.find(f => f.id === familiaEditando.id);
+        const res = await fetch('/api/logistica', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tipo: 'familia', id: familiaEditando.id, nombre, categoriaId: fam?.categoria?.id })
+        });
+        const data = await res.json();
+        if (data.success) { setFamiliaEditando(null); cargarDatos(); }
+        else alert('Error: ' + (data.error || 'No se pudo actualizar'));
+      } else {
+        // Obtener categoría vestuario
+        const catVestuario = categorias.find(c => c.slug === 'vestuario') || areas.find(a => a.slug === 'vestuario');
+        if (!catVestuario) { alert('No se encontró la categoría vestuario'); return; }
+        const res = await fetch('/api/logistica', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tipo: 'familia', nombre: nuevaFamiliaText.trim(), categoriaId: catVestuario.id })
+        });
+        const data = await res.json();
+        if (data.success || data.familia) { setNuevaFamiliaText(''); cargarDatos(); }
+        else alert('Error: ' + (data.error || 'No se pudo crear'));
+      }
+    } catch { alert('Error al guardar familia'); }
+  };
+
+  const handleEliminarFamilia = async (familiaId: string) => {
+    const fam = familias.find(f => f.id === familiaId);
+    if (!confirm(`¿Eliminar la familia "${fam?.nombre}"? Solo se puede eliminar si no tiene artículos.`)) return;
+    try {
+      const res = await fetch(`/api/logistica?tipo=familia&id=${familiaId}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success) cargarDatos();
+      else alert('Error: ' + (data.error || 'No se pudo eliminar. Puede que tenga artículos asociados.'));
+    } catch { alert('Error al eliminar familia'); }
+  };
+
+  const handleDevolverVestuario = async (asignacionId: string, articuloNombre: string, cantidad: number) => {
+    if (!confirm(`¿Confirmar devolución de ${cantidad} "${articuloNombre}"?`)) return;
+    try {
+      const res = await fetch('/api/logistica', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tipo: 'devolver-vestuario', id: asignacionId })
+      });
+      const data = await res.json();
+      if (data.success) { cargarAsignaciones(); cargarDatos(); }
+      else alert('Error: ' + (data.error || 'No se pudo registrar la devolución'));
+    } catch { alert('Error al registrar devolución'); }
   };
 
   const handleGuardarMovimiento = async () => {
@@ -697,7 +759,15 @@ export default function LogisticaPage() {
               </button>
             ))}
           </div>
-          <button onClick={() => { cargarDatos(); cargarPeticiones(); }} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg"><RefreshCw size={18} /></button>
+          <div className="flex items-center gap-2">
+            {inventarioActual === 'vestuario' && (
+              <button onClick={() => setShowGestionFamilias(true)} className="flex items-center gap-2 px-3 py-2 text-sm bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 font-medium">
+                <Tag size={16} />
+                Familias
+              </button>
+            )}
+            <button onClick={() => { cargarDatos(); cargarPeticiones(); }} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg"><RefreshCw size={18} /></button>
+          </div>
         </div>
 
         <div className="p-6">
@@ -744,7 +814,7 @@ export default function LogisticaPage() {
                       <tr className="bg-slate-50 border-b border-slate-200">
                         <th className="text-left py-3 px-4 text-xs font-bold text-slate-500 uppercase">Artículo</th>
                         <th className="text-left py-3 px-4 text-xs font-bold text-slate-500 uppercase">Área / Familia</th>
-                        <th className="text-center py-3 px-4 text-xs font-bold text-slate-500 uppercase">Stock</th>
+                        <th className="text-center py-3 px-4 text-xs font-bold text-slate-500 uppercase">{inventarioActual === 'vestuario' ? 'Total / Almacén / Asignado' : 'Stock'}</th>
                         <th className="text-left py-3 px-4 text-xs font-bold text-slate-500 uppercase">Ubicación</th>
                         <th className="text-left py-3 px-4 text-xs font-bold text-slate-500 uppercase">Caducidad</th>
                         <th className="text-right py-3 px-4 text-xs font-bold text-slate-500 uppercase">Acciones</th>
@@ -774,11 +844,26 @@ export default function LogisticaPage() {
                               <p className="text-xs text-slate-500 mt-1">{articulo.familia.nombre}</p>
                             </td>
                             <td className="py-3 px-4 text-center">
-                              <span className="text-lg font-bold text-slate-800">{articulo.stockActual}</span>
-                              <span className="text-xs text-slate-400 ml-1">{articulo.unidad}</span>
-                              <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold mt-1 ${estadoStock.color}`}>
-                                <EstadoIcon size={10} /> {estadoStock.label}
-                              </div>
+                              {inventarioActual === 'vestuario' ? (
+                                <div className="flex flex-col items-center gap-1">
+                                  <div className="flex items-center gap-2 text-xs">
+                                    <span className="px-2 py-0.5 bg-slate-100 rounded font-bold text-slate-700">Total: {articulo.stockActual}</span>
+                                    <span className="px-2 py-0.5 bg-green-100 rounded font-bold text-green-700">Almacén: {articulo.stockActual - (articulo.stockAsignado || 0)}</span>
+                                    <span className="px-2 py-0.5 bg-purple-100 rounded font-bold text-purple-700">Asignado: {articulo.stockAsignado || 0}</span>
+                                  </div>
+                                  <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${estadoStock.color}`}>
+                                    <EstadoIcon size={10} /> {estadoStock.label}
+                                  </div>
+                                </div>
+                              ) : (
+                                <>
+                                  <span className="text-lg font-bold text-slate-800">{articulo.stockActual}</span>
+                                  <span className="text-xs text-slate-400 ml-1">{articulo.unidad}</span>
+                                  <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold mt-1 ${estadoStock.color}`}>
+                                    <EstadoIcon size={10} /> {estadoStock.label}
+                                  </div>
+                                </>
+                              )}
                             </td>
                             <td className="py-3 px-4">
                               {articulo.ubicacion ? (
@@ -1006,10 +1091,10 @@ export default function LogisticaPage() {
           {/* ============================================ */}
           {activeTab === 'asignaciones' && (
             <>
-              <div className="flex justify-between items-center mb-6">
+              <div className="flex justify-between items-center mb-4">
                 <div>
                   <h3 className="font-bold text-slate-800">Vestuario Asignado</h3>
-                  <p className="text-sm text-slate-500">Gestión de asignaciones a voluntarios</p>
+                  <p className="text-sm text-slate-500">{asignaciones.length} asignación{asignaciones.length !== 1 ? 'es' : ''} registrada{asignaciones.length !== 1 ? 's' : ''}</p>
                 </div>
                 <button
                   onClick={() => setShowAsignarModal(true)}
@@ -1018,6 +1103,18 @@ export default function LogisticaPage() {
                   <Plus size={18} />
                   Asignar Vestuario
                 </button>
+              </div>
+              <div className="mb-4">
+                <input
+                  type="text"
+                  placeholder="Filtrar por voluntario o prenda..."
+                  onChange={e => {
+                    const term = e.target.value.toLowerCase();
+                    if (!term) { cargarAsignaciones(); return; }
+                  }}
+                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"
+                  id="filtro-asignaciones"
+                />
               </div>
 
               {asignaciones.length === 0 ? (
@@ -1054,12 +1151,21 @@ export default function LogisticaPage() {
                           <p className="text-xs text-slate-500 mt-1">{asig.observaciones}</p>
                         )}
                       </div>
-                      <div>
+                      <div className="flex items-center gap-2">
                         <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                          asig.estado === 'ASIGNADO' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'
+                          asig.estado === 'ASIGNADO' ? 'bg-green-100 text-green-700' :
+                          asig.estado === 'DEVUELTO' ? 'bg-slate-100 text-slate-500' : 'bg-slate-100 text-slate-500'
                         }`}>
                           {asig.estado}
                         </span>
+                        {asig.estado === 'ASIGNADO' && (
+                          <button
+                            onClick={() => handleDevolverVestuario(asig.id, asig.tipoPrenda, asig.cantidad)}
+                            className="px-2 py-1 text-xs bg-orange-50 text-orange-600 border border-orange-200 rounded-lg hover:bg-orange-100 font-medium"
+                          >
+                            Devolver
+                          </button>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -1115,6 +1221,36 @@ export default function LogisticaPage() {
                 <input type="number" value={nuevoArticulo.stockMinimo} onChange={e => setNuevoArticulo({ ...nuevoArticulo, stockMinimo: parseInt(e.target.value) || 0 })} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm" />
               </div>
             </div>
+            {inventarioActual === 'vestuario' && (
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Tallas disponibles</label>
+                <div className="flex flex-wrap gap-2">
+                  {['XS','S','M','L','XL','XXL','2XL','3XL','36','37','38','39','40','41','42','43','44','45'].map(talla => (
+                    <button
+                      key={talla}
+                      type="button"
+                      onClick={() => {
+                        const current = nuevoArticulo.tallas || [];
+                        const updated = current.includes(talla)
+                          ? current.filter((t: string) => t !== talla)
+                          : [...current, talla];
+                        setNuevoArticulo({ ...nuevoArticulo, tallas: updated });
+                      }}
+                      className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
+                        (nuevoArticulo.tallas || []).includes(talla)
+                          ? 'bg-purple-600 text-white border-purple-600'
+                          : 'bg-white text-slate-600 border-slate-300 hover:border-purple-400'
+                      }`}
+                    >
+                      {talla}
+                    </button>
+                  ))}
+                </div>
+                {(nuevoArticulo.tallas || []).length > 0 && (
+                  <p className="text-xs text-purple-600 mt-2">Seleccionadas: {(nuevoArticulo.tallas || []).join(', ')}</p>
+                )}
+              </div>
+            )}
             <div className="flex gap-3 pt-4">
               <button onClick={() => setShowNuevoArticulo(false)} className="flex-1 py-2.5 border border-slate-300 text-slate-700 rounded-lg font-medium hover:bg-slate-50">Cancelar</button>
               <button onClick={handleGuardarArticulo} className="flex-1 py-2.5 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700">Guardar</button>
@@ -1155,6 +1291,61 @@ export default function LogisticaPage() {
             <div className="flex gap-3 pt-2">
               <button onClick={() => { setShowMovimiento(false); setArticuloMovimiento(null); }} className="flex-1 py-2.5 border border-slate-300 text-slate-700 rounded-lg font-medium">Cancelar</button>
               <button onClick={handleGuardarMovimiento} className="flex-1 py-2.5 bg-purple-600 text-white rounded-lg font-medium">Registrar</button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Modal: Gestión de Familias */}
+      {showGestionFamilias && (
+        <Modal title="Gestión de Familias - Vestuario" onClose={() => { setShowGestionFamilias(false); setFamiliaEditando(null); setNuevaFamiliaText(''); }} size="lg">
+          <div className="space-y-4">
+            <div className="bg-slate-50 rounded-xl p-4">
+              <p className="text-sm font-bold text-slate-700 mb-3">{familiaEditando ? 'Editar familia' : 'Nueva familia'}</p>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={familiaEditando ? familiaEditando.nombre : nuevaFamiliaText}
+                  onChange={e => familiaEditando ? setFamiliaEditando({ ...familiaEditando, nombre: e.target.value }) : setNuevaFamiliaText(e.target.value)}
+                  placeholder="Nombre de la familia..."
+                  className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm"
+                />
+                <button onClick={handleGuardarFamilia} className="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700">
+                  {familiaEditando ? 'Actualizar' : 'Añadir'}
+                </button>
+                {familiaEditando && (
+                  <button onClick={() => { setFamiliaEditando(null); setNuevaFamiliaText(''); }} className="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-300">
+                    Cancelar
+                  </button>
+                )}
+              </div>
+            </div>
+            <div className="space-y-2 max-h-80 overflow-y-auto">
+              {familias.filter(f => f.categoria?.slug === 'vestuario' || inventarioActual === 'vestuario').map(fam => (
+                <div key={fam.id} className="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-lg">
+                  <div>
+                    <p className="font-medium text-slate-800">{fam.nombre}</p>
+                    <p className="text-xs text-slate-400">{fam.categoria?.nombre}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setFamiliaEditando({ id: fam.id, nombre: fam.nombre })}
+                      className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg"
+                    >
+                      <Pencil size={14} />
+                    </button>
+                    <button
+                      onClick={() => handleEliminarFamilia(fam.id)}
+                      className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+              {familias.filter(f => f.categoria?.slug === 'vestuario').length === 0 && (
+                <p className="text-center py-8 text-slate-400 text-sm">No hay familias creadas</p>
+              )}
             </div>
           </div>
         </Modal>
@@ -1388,36 +1579,54 @@ export default function LogisticaPage() {
               </select>
             </div>
 
+            {/* Info stock artículo seleccionado */}
+            {asignacionData.articuloId && (() => {
+              const art = articulos.find(a => a.id === asignacionData.articuloId);
+              if (!art) return null;
+              const disponible = art.stockActual - (art.stockAsignado || 0);
+              return (
+                <div className={`rounded-lg p-3 flex items-center gap-3 ${disponible <= 0 ? 'bg-red-50 border border-red-200' : 'bg-green-50 border border-green-200'}`}>
+                  <div className="flex-1">
+                    <p className="text-sm font-bold text-slate-800">{art.nombre}</p>
+                    <div className="flex gap-4 mt-1 text-xs">
+                      <span className="text-slate-600">Total: <strong>{art.stockActual}</strong></span>
+                      <span className="text-purple-700">Asignado: <strong>{art.stockAsignado || 0}</strong></span>
+                      <span className={disponible <= 0 ? 'text-red-700' : 'text-green-700'}>Disponible: <strong>{disponible}</strong></span>
+                    </div>
+                  </div>
+                  {disponible <= 0 && <span className="text-xs text-red-600 font-bold">SIN STOCK</span>}
+                </div>
+              );
+            })()}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">Talla *</label>
-                <select
-                  value={asignacionData.talla}
-                  onChange={e => setAsignacionData({...asignacionData, talla: e.target.value})}
-                  className="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                >
-                  <option value="">Seleccionar...</option>
-                  <option value="XS">XS</option>
-                  <option value="S">S</option>
-                  <option value="M">M</option>
-                  <option value="L">L</option>
-                  <option value="XL">XL</option>
-                  <option value="XXL">XXL</option>
-                  <option value="XXXL">XXXL</option>
-                  <option value="36">36</option>
-                  <option value="37">37</option>
-                  <option value="38">38</option>
-                  <option value="39">39</option>
-                  <option value="40">40</option>
-                  <option value="41">41</option>
-                  <option value="42">42</option>
-                  <option value="43">43</option>
-                  <option value="44">44</option>
-                  <option value="45">45</option>
-                  <option value="46">46</option>
-                  <option value="47">47</option>
-                  <option value="48">48</option>
-                </select>
+                {(() => {
+                  const art = articulos.find(a => a.id === asignacionData.articuloId);
+                  const tallasArt = art?.metadatos ? (art.metadatos as any)?.tallas as string[] : [];
+                  const tallasDisponibles = tallasArt && tallasArt.length > 0 ? tallasArt : ['XS','S','M','L','XL','XXL','2XL','3XL','36','37','38','39','40','41','42','43','44','45'];
+                  return (
+                    <div className="flex flex-wrap gap-1.5">
+                      {tallasDisponibles.map(talla => (
+                        <button
+                          key={talla}
+                          type="button"
+                          onClick={() => setAsignacionData({...asignacionData, talla})}
+                          className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
+                            asignacionData.talla === talla
+                              ? 'bg-purple-600 text-white border-purple-600'
+                              : 'bg-white text-slate-600 border-slate-300 hover:border-purple-400'
+                          }`}
+                        >
+                          {talla}
+                        </button>
+                      ))}
+                    </div>
+                  );
+                })()}
+                {asignacionData.talla && (
+                  <p className="text-xs text-purple-600 mt-1">Talla seleccionada: <strong>{asignacionData.talla}</strong></p>
+                )}
               </div>
 
               <div>

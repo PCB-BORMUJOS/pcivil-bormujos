@@ -409,7 +409,8 @@ export async function POST(request: NextRequest) {
 
     // ===== ARTÍCULO =====
     if (tipo === 'articulo') {
-      const { codigo, nombre, descripcion, stockActual, stockMinimo, unidad, tieneCaducidad, fechaCaducidad, ubicacionId, familiaId, metadatos } = body
+      const { codigo, nombre, descripcion, stockActual, stockMinimo, unidad, tieneCaducidad, fechaCaducidad, ubicacionId, familiaId, tallas, metadatos: metadatosRaw } = body
+      const metadatos = tallas && tallas.length > 0 ? { ...(metadatosRaw || {}), tallas } : metadatosRaw || null
 
       if (!nombre || !familiaId) {
         return NextResponse.json({ error: 'Nombre y familia son requeridos' }, { status: 400 })
@@ -514,11 +515,9 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json({ success: true, asignacion })
     }
-
     // ===== FAMILIA =====
     if (tipo === 'familia') {
       const { nombre, categoriaId } = body
-
       if (!nombre || !categoriaId) {
         return NextResponse.json({ error: 'Nombre y categoría son requeridos' }, { status: 400 })
       }
@@ -958,11 +957,11 @@ export async function PUT(request: NextRequest) {
 
     // ===== ARTÍCULO =====
     if (tipo === 'articulo') {
-      const { codigo, nombre, descripcion, stockActual, stockMinimo, unidad, familiaId } = body
-
+      const { codigo, nombre, descripcion, stockActual, stockMinimo, unidad, familiaId, tallas: tallasUpd } = body
+      const metaDatos = tallasUpd && tallasUpd.length > 0 ? { tallas: tallasUpd } : undefined
       const articulo = await prisma.articulo.update({
         where: { id },
-        data: { codigo, nombre, descripcion, stockActual, stockMinimo, unidad, familiaId },
+        data: { codigo, nombre, descripcion, stockActual, stockMinimo, unidad, familiaId, ...(metaDatos ? { metadatos: metaDatos } : {}) },
         include: {
           familia: { include: { categoria: true } },
           ubicacion: true
@@ -970,6 +969,25 @@ export async function PUT(request: NextRequest) {
       })
 
       return NextResponse.json({ success: true, articulo })
+    }
+
+    // ===== DEVOLVER VESTUARIO =====
+    if (tipo === 'devolver-vestuario') {
+      const asignacion = await prisma.asignacionVestuario.findUnique({ where: { id } })
+      if (!asignacion) return NextResponse.json({ error: 'Asignacion no encontrada' }, { status: 404 })
+      if (asignacion.estado === 'DEVUELTO') return NextResponse.json({ error: 'Ya fue devuelta' }, { status: 400 })
+      await prisma.asignacionVestuario.update({ where: { id }, data: { estado: 'DEVUELTO' } })
+      const articulosDev = await prisma.articulo.findMany({
+        where: { nombre: asignacion.tipoPrenda },
+        take: 1
+      })
+      if (articulosDev.length > 0) {
+        await prisma.articulo.update({
+          where: { id: articulosDev[0].id },
+          data: { stockAsignado: { decrement: asignacion.cantidad } }
+        })
+      }
+      return NextResponse.json({ success: true })
     }
 
     // ===== FAMILIA =====
@@ -1173,6 +1191,25 @@ export async function DELETE(request: NextRequest) {
         where: { id },
         data: { activo: false }
       })
+      return NextResponse.json({ success: true })
+    }
+
+    // ===== DEVOLVER VESTUARIO =====
+    if (tipo === 'devolver-vestuario') {
+      const asignacion = await prisma.asignacionVestuario.findUnique({ where: { id } })
+      if (!asignacion) return NextResponse.json({ error: 'Asignacion no encontrada' }, { status: 404 })
+      if (asignacion.estado === 'DEVUELTO') return NextResponse.json({ error: 'Ya fue devuelta' }, { status: 400 })
+      await prisma.asignacionVestuario.update({ where: { id }, data: { estado: 'DEVUELTO' } })
+      const articulosDev = await prisma.articulo.findMany({
+        where: { nombre: asignacion.tipoPrenda },
+        take: 1
+      })
+      if (articulosDev.length > 0) {
+        await prisma.articulo.update({
+          where: { id: articulosDev[0].id },
+          data: { stockAsignado: { decrement: asignacion.cantidad } }
+        })
+      }
       return NextResponse.json({ success: true })
     }
 
