@@ -703,6 +703,7 @@ export default function AdministracionPage() {
             apellidos: selectedVoluntario.apellidos,
             telefono: selectedVoluntario.telefono,
             numeroVoluntario: selectedVoluntario.numeroVoluntario,
+            servicioId: fichaData.servicioId || null,
             accion: 'datos'
           })
         });

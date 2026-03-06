@@ -140,7 +140,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { id, accion, activo, password, rolId, nombre, apellidos, telefono, dni, numeroVoluntario, email } = body
+    const { id, accion, activo, password, rolId, servicioId, nombre, apellidos, telefono, dni, numeroVoluntario, email } = body
 
     if (!id) {
       return NextResponse.json({ error: 'ID requerido' }, { status: 400 })
@@ -191,6 +191,7 @@ export async function PUT(request: NextRequest) {
           dni: dni !== undefined ? dni : usuarioExistente.dni,
           numeroVoluntario: numeroVoluntario !== undefined ? numeroVoluntario : usuarioExistente.numeroVoluntario,
           email: email || usuarioExistente.email,
+          servicioId: servicioId !== undefined ? servicioId : usuarioExistente.servicioId,
         }
       })
       return NextResponse.json({ success: true, usuario })
