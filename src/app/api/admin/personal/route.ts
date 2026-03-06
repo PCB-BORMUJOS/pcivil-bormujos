@@ -191,7 +191,6 @@ export async function PUT(request: NextRequest) {
           dni: dni !== undefined ? dni : usuarioExistente.dni,
           numeroVoluntario: numeroVoluntario !== undefined ? numeroVoluntario : usuarioExistente.numeroVoluntario,
           email: email || usuarioExistente.email,
-          servicioId: servicioId !== undefined ? servicioId : usuarioExistente.servicioId,
         }
       })
       return NextResponse.json({ success: true, usuario })
