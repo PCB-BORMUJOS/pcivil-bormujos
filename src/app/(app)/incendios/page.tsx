@@ -21,6 +21,51 @@ const HidranteIcon = ({ size = 22, className = '' }: { size?: number; className?
 const MapContainer = dynamic(() => import('react-leaflet').then((mod) => mod.MapContainer), { ssr: false });
 const TileLayer = dynamic(() => import('react-leaflet').then((mod) => mod.TileLayer), { ssr: false });
 const Marker = dynamic(() => import('react-leaflet').then((mod) => mod.Marker), { ssr: false });
+
+function HidrantesClusterInner({ hidrantes, createIcon }: { hidrantes: any[], createIcon: (tipo: string, estado: string) => any }) {
+  const { useMap } = require('react-leaflet');
+  const L = require('leaflet');
+  require('leaflet.markercluster');
+  const map = useMap();
+  const { useEffect } = require('react');
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const link1 = document.createElement('link');
+    link1.rel = 'stylesheet';
+    link1.href = 'https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css';
+    document.head.appendChild(link1);
+    const link2 = document.createElement('link');
+    link2.rel = 'stylesheet';
+    link2.href = 'https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css';
+    document.head.appendChild(link2);
+    const clusterGroup = L.markerClusterGroup({
+      maxClusterRadius: 50,
+      iconCreateFunction: (cluster: any) => {
+        const count = cluster.getChildCount();
+        return L.divIcon({
+          html: '<div style="width:36px;height:36px;border-radius:50%;background:#22c55e;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:13px;color:white;">' + count + '</div>',
+          className: '',
+          iconSize: [36, 36],
+          iconAnchor: [18, 18],
+        });
+      },
+      spiderfyOnMaxZoom: true,
+      showCoverageOnHover: false,
+      zoomToBoundsOnClick: true,
+    });
+    hidrantes.filter((h: any) => h.latitud && h.longitud).forEach((hid: any) => {
+      const marker = L.marker([hid.latitud, hid.longitud], { icon: createIcon(hid.tipo, hid.estado) });
+      const presionHtml = hid.presion ? '<p style="font-size:11px;margin-top:4px">Presion: ' + hid.presion + ' bar</p>' : '';
+      const caudalHtml = hid.caudal ? '<p style="font-size:11px">Caudal: ' + hid.caudal + ' l/min</p>' : '';
+      marker.bindPopup('<div style="text-align:center;min-width:150px"><strong style="font-size:15px;display:block">' + hid.codigo + '</strong><p style="font-size:13px;color:#475569">' + hid.tipo + '</p><p style="font-size:11px;color:#64748b;margin-top:4px">' + (hid.ubicacion || '') + '</p>' + presionHtml + caudalHtml + '</div>');
+      clusterGroup.addLayer(marker);
+    });
+    map.addLayer(clusterGroup);
+    return () => { map.removeLayer(clusterGroup); };
+  }, [map, hidrantes]);
+  return null;
+}
+const HidrantesCluster = dynamic(() => Promise.resolve(HidrantesClusterInner), { ssr: false });
 const Popup = dynamic(() => import('react-leaflet').then((mod) => mod.Popup), { ssr: false });
 
 const createHidranteIcon = (tipo: string, estado: string) => {
@@ -1073,23 +1118,7 @@ export default function IncendiosPage() {
                       attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                       url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                     />
-                    {hidrantes.filter(h => h.latitud && h.longitud).map((hid) => (
-                      <Marker
-                        key={hid.id}
-                        position={[hid.latitud!, hid.longitud!]}
-                        icon={createHidranteIcon(hid.tipo, hid.estado) || undefined}
-                      >
-                        <Popup>
-                          <div className="text-center min-w-[150px]">
-                            <strong className="text-lg block">{hid.codigo}</strong>
-                            <p className="text-sm text-slate-600">{hid.tipo}</p>
-                            <p className="text-xs text-slate-500 mt-1">{hid.ubicacion}</p>
-                            {hid.presion && <p className="text-xs mt-1">Presión: {hid.presion} bar</p>}
-                            {hid.caudal && <p className="text-xs">Caudal: {hid.caudal} l/min</p>}
-                          </div>
-                        </Popup>
-                      </Marker>
-                    ))}
+                    <HidrantesCluster hidrantes={hidrantes} createIcon={createHidranteIcon} />
                   </MapContainer>
                 )}
               </div>
