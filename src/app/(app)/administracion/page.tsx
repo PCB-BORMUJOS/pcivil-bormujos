@@ -701,6 +701,7 @@ export default function AdministracionPage() {
             id: voluntarioId,
             nombre: selectedVoluntario.nombre,
             apellidos: selectedVoluntario.apellidos,
+            email: selectedVoluntario.email,
             telefono: selectedVoluntario.telefono,
             numeroVoluntario: selectedVoluntario.numeroVoluntario,
             servicioId: fichaData.servicioId || null,
