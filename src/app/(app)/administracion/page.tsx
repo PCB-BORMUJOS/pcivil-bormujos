@@ -694,7 +694,7 @@ export default function AdministracionPage() {
       // Guardar la ficha
       // Si es edición, actualizar también nombre/apellidos/indicativo
       if (!esNuevaFicha && selectedVoluntario.id) {
-        await fetch('/api/admin/personal', {
+        const resDatos = await fetch('/api/admin/personal', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -708,6 +708,11 @@ export default function AdministracionPage() {
             accion: 'datos'
           })
         });
+        const dataDatos = await resDatos.json();
+        if (!resDatos.ok) {
+          alert('Error al actualizar datos: ' + (dataDatos.error || 'Error desconocido'));
+          return;
+        }
       }
       const res = await fetch(`/api/admin/personal/${voluntarioId}/ficha`, {
         method: 'POST',
