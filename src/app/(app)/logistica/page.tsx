@@ -5,9 +5,9 @@ import React, { useState, useEffect } from 'react';
 import {
   Package, Search, AlertTriangle, Plus, TrendingUp, TrendingDown, 
   BarChart3, Calendar, MapPin, Trash2, Eye, X, RefreshCw, ArrowUpDown, Pencil, Archive,
-  AlertCircle, CheckCircle, Clock, Box, ChevronDown, ChevronRight,
+  AlertCircle, CheckCircle, Clock, Box, ChevronDown, ChevronRight, ChevronUp, ExternalLink,
   Flame, Heart, Truck, Radio, GraduationCap, Shirt, Shield, Layers,
-  ClipboardList, ShoppingCart, Check, FileText, Send, Ban,
+  ClipboardList, ShoppingCart, Check, FileText, FileCheck, Send, Ban,
   History, User, Building, Receipt, Filter, Users, Tag
 } from 'lucide-react';
 
@@ -91,6 +91,8 @@ interface Peticion {
   notasCompra: string | null;
   notasRecepcion: string | null;
   motivoRechazo: string | null;
+  urlRc: string | null;
+  urlAlbaran: string | null;
   solicitante: { nombre: string; apellidos: string; numeroVoluntario: string };
   articulo: { nombre: string; codigo: string } | null;
   aprobadoPor: { nombre: string; apellidos: string } | null;
@@ -265,7 +267,8 @@ export default function LogisticaPage() {
     articuloId: '', nombreArticulo: '', cantidad: 1, unidad: 'unidad',
     motivo: 'reposicion', prioridad: 'normal', descripcion: '', areaOrigen: ''
   });
-  const [accionForm, setAccionForm] = useState({ comentario: '', proveedor: '', costeEstimado: '', costeFinal: '', numeroFactura: '' });
+  const [accionForm, setAccionForm] = useState({ comentario: '', proveedor: '', costeEstimado: '', costeFinal: '', numeroFactura: '', urlRc: '', urlAlbaran: '' });
+  const [peticionesExpandidas, setPeticionesExpandidas] = useState<Set<string>>(new Set());
 
   // ============================================
   // EFECTOS
@@ -528,7 +531,7 @@ export default function LogisticaPage() {
       });
       if (res.ok) {
         setShowAccionPeticion(null);
-        setAccionForm({ comentario: '', proveedor: '', costeEstimado: '', costeFinal: '', numeroFactura: '' });
+        setAccionForm({ comentario: '', proveedor: '', costeEstimado: '', costeFinal: '', numeroFactura: '', urlRc: '', urlAlbaran: '' });
         cargarPeticiones();
         alert('✅ Petición actualizada');
       } else {
@@ -954,82 +957,182 @@ export default function LogisticaPage() {
                     const AreaIcon = getIconoArea(peticion.areaOrigen);
                     
                     return (
-                      <div key={peticion.id} className="bg-white border border-slate-200 rounded-xl p-4 hover:shadow-md transition-shadow">
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex items-start gap-4 flex-1">
-                            <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center">
-                              <AreaIcon size={24} className="text-slate-600" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <span className="font-bold text-slate-800">{peticion.numero}</span>
-                                <span className={`px-2 py-0.5 rounded-full text-xs font-bold border ${estadoInfo.color}`}>
-                                  <EstadoIcon size={12} className="inline mr-1" />{estadoInfo.label}
-                                </span>
-                                <span className={`px-2 py-0.5 rounded text-xs font-medium ${prioridadInfo.color}`}>{prioridadInfo.label}</span>
+                      <div key={peticion.id} className="bg-white border border-slate-200 rounded-xl hover:shadow-md transition-all overflow-hidden">
+                        {/* Cabecera Compacta */}
+                        <div className="p-4">
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex items-start gap-4 flex-1">
+                              <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center flex-shrink-0 cursor-pointer" onClick={() => {
+                                const newExpanded = new Set(peticionesExpandidas);
+                                if (newExpanded.has(peticion.id)) newExpanded.delete(peticion.id);
+                                else newExpanded.add(peticion.id);
+                                setPeticionesExpandidas(newExpanded);
+                              }}>
+                                <AreaIcon size={24} className="text-slate-600" />
                               </div>
-                              <p className="font-medium text-slate-700 mt-1">{peticion.nombreArticulo} <span className="text-slate-400">× {peticion.cantidad} {peticion.unidad}</span></p>
-                              <div className="flex items-center gap-4 mt-2 text-xs text-slate-500">
-                                <span className="flex items-center gap-1"><User size={12} /> {peticion.solicitante.nombre} {peticion.solicitante.apellidos}</span>
-                                <span className="flex items-center gap-1"><Building size={12} /> {AREAS_NOMBRE[peticion.areaOrigen] || peticion.areaOrigen}</span>
-                                <span className="flex items-center gap-1"><Calendar size={12} /> {formatearFecha(peticion.fechaSolicitud)}</span>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap mb-1">
+                                  <span className="font-bold text-slate-800">{peticion.numero}</span>
+                                  <span className={`px-2 py-0.5 rounded-full text-xs font-bold border ${estadoInfo.color} flex items-center gap-1`}>
+                                    <EstadoIcon size={12} /> {estadoInfo.label}
+                                  </span>
+                                  <span className={`px-2 py-0.5 rounded text-[10px] font-medium uppercase tracking-wider ${prioridadInfo.color}`}>{prioridadInfo.label}</span>
+                                </div>
+                                <div 
+                                  className="font-medium text-slate-800 flex items-center gap-2 cursor-pointer group w-fit"
+                                  onClick={() => {
+                                    const newExpanded = new Set(peticionesExpandidas);
+                                    if (newExpanded.has(peticion.id)) newExpanded.delete(peticion.id);
+                                    else newExpanded.add(peticion.id);
+                                    setPeticionesExpandidas(newExpanded);
+                                  }}
+                                >
+                                  {peticion.nombreArticulo} <span className="text-slate-400 font-normal">× {peticion.cantidad} {peticion.unidad}</span>
+                                  {peticionesExpandidas.has(peticion.id) ? 
+                                    <ChevronUp size={16} className="text-slate-400 group-hover:text-blue-500" /> : 
+                                    <ChevronDown size={16} className="text-slate-400 group-hover:text-blue-500" />
+                                  }
+                                </div>
+                                <div className="flex items-center gap-4 mt-1 text-xs text-slate-500 flex-wrap">
+                                  <span className="flex items-center gap-1"><User size={12} /> {peticion.solicitante.nombre} {peticion.solicitante.apellidos}</span>
+                                  <span className="flex items-center gap-1"><Building size={12} /> {AREAS_NOMBRE[peticion.areaOrigen] || peticion.areaOrigen}</span>
+                                  <span className="flex items-center gap-1"><Calendar size={12} /> {formatearFecha(peticion.fechaSolicitud)}</span>
+                                </div>
                               </div>
-                              {peticion.descripcion && <p className="text-sm text-slate-500 mt-2 line-clamp-1">{peticion.descripcion}</p>}
-                            </div>
-                          </div>
-                          <div className="flex flex-col items-end gap-2">
-                            <div className="flex items-center gap-1">
-                              <button onClick={() => setShowDetallePeticion(peticion)} className="p-2 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg" title="Ver detalle"><Eye size={18} /></button>
-                              {(peticion.estado === 'pendiente' || peticion.estado === 'aprobada') && (
-                                <button onClick={() => setShowAccionPeticion({ peticion, accion: 'editar' })} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg" title="Editar"><Pencil size={18} /></button>
-                              )}
-                              {(peticion.estado === 'recibida' || peticion.estado === 'rechazada') ? (
-                                <button onClick={() => { if(confirm('¿Archivar esta petición? Se eliminará del listado activo.')) { fetch(`/api/logistica/peticiones/${peticion.id}`, {method:'DELETE'}).then(() => cargarPeticiones()) } }} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg" title="Archivar"><Archive size={18} /></button>
-                              ) : (
-                                <button onClick={() => { if(confirm('¿Eliminar esta petición? Esta acción no se puede deshacer.')) { fetch(`/api/logistica/peticiones/${peticion.id}`, {method:'DELETE'}).then(() => cargarPeticiones()) } }} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg" title="Eliminar"><Trash2 size={18} /></button>
-                              )}
                             </div>
                             
-                            {/* Acciones según estado */}
-                            <div className="flex items-center gap-1">
-                              {peticion.estado === 'pendiente' && (
-                                <>
-                                  <button onClick={() => setShowAccionPeticion({ peticion, accion: 'aprobar' })} className="px-3 py-1.5 bg-green-500 text-white rounded-lg text-xs font-medium hover:bg-green-600 flex items-center gap-1"><Check size={14} /> Aprobar</button>
-                                  <button onClick={() => setShowAccionPeticion({ peticion, accion: 'rechazar' })} className="px-3 py-1.5 bg-red-100 text-red-600 rounded-lg text-xs font-medium hover:bg-red-200 flex items-center gap-1"><X size={14} /> Rechazar</button>
-                                </>
-                              )}
-                              {peticion.estado === 'aprobada' && (
-                                <button onClick={() => setShowAccionPeticion({ peticion, accion: 'en_compra' })} className="px-3 py-1.5 bg-purple-500 text-white rounded-lg text-xs font-medium hover:bg-purple-600 flex items-center gap-1"><ShoppingCart size={14} /> Pasar a Compra</button>
-                              )}
-                              {(peticion.estado === 'aprobada' || peticion.estado === 'en_compra') && (
-                                <button onClick={() => setShowAccionPeticion({ peticion, accion: 'recibir' })} className="px-3 py-1.5 bg-green-500 text-white rounded-lg text-xs font-medium hover:bg-green-600 flex items-center gap-1"><CheckCircle size={14} /> Recepcionar</button>
-                              )}
+                            {/* Panel Botones Derecho */}
+                            <div className="flex flex-col items-end justify-between h-full gap-3 flex-shrink-0">
+                              <div className="flex items-center gap-1 bg-slate-50 rounded-lg p-1 border border-slate-100">
+                                <button onClick={() => setShowDetallePeticion(peticion)} className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-white rounded" title="Ver detalle"><Eye size={16} /></button>
+                                {(peticion.estado === 'pendiente' || peticion.estado === 'aprobada') && (
+                                  <button onClick={() => setShowAccionPeticion({ peticion, accion: 'editar' })} className="p-1.5 text-slate-500 hover:text-orange-600 hover:bg-white rounded" title="Editar"><Pencil size={16} /></button>
+                                )}
+                                {(peticion.estado === 'recibida' || peticion.estado === 'rechazada') ? (
+                                  <button onClick={() => { if(confirm('¿Archivar esta petición?')) { fetch(`/api/logistica/peticiones/${peticion.id}`, {method:'DELETE'}).then(() => cargarPeticiones()) } }} className="p-1.5 text-slate-500 hover:text-purple-600 hover:bg-white rounded" title="Archivar"><Archive size={16} /></button>
+                                ) : (
+                                  <button onClick={() => { if(confirm('¿Eliminar esta petición?')) { fetch(`/api/logistica/peticiones/${peticion.id}`, {method:'DELETE'}).then(() => cargarPeticiones()) } }} className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-white rounded" title="Eliminar"><Trash2 size={16} /></button>
+                                )}
+                              </div>
+                              
+                              {/* Botones de Acción Rápida */}
+                              <div className="flex items-center gap-2">
+                                {peticion.estado === 'pendiente' && (
+                                  <>
+                                    <button onClick={() => setShowAccionPeticion({ peticion, accion: 'rechazar' })} className="px-3 py-1.5 text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg text-xs font-semibold">Rechazar</button>
+                                    <button onClick={() => setShowAccionPeticion({ peticion, accion: 'aprobar' })} className="px-3 py-1.5 text-white bg-blue-600 hover:bg-blue-700 rounded-lg text-xs font-semibold flex items-center gap-1"><Check size={14} /> Aprobar</button>
+                                  </>
+                                )}
+                                {peticion.estado === 'aprobada' && (
+                                  <button onClick={() => setShowAccionPeticion({ peticion, accion: 'en_compra' })} className="px-3 py-1.5 text-white bg-purple-600 hover:bg-purple-700 rounded-lg text-xs font-semibold flex items-center gap-1"><ShoppingCart size={14} /> Compra</button>
+                                )}
+                                {(peticion.estado === 'aprobada' || peticion.estado === 'en_compra') && (
+                                  <button onClick={() => setShowAccionPeticion({ peticion, accion: 'recibir' })} className="px-3 py-1.5 text-white bg-green-600 hover:bg-green-700 rounded-lg text-xs font-semibold flex items-center gap-1"><CheckCircle size={14} /> Recibir</button>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Timeline Mejorado */}
+                          <div className="flex items-center justify-between mt-5 px-6">
+                            {/* Solicitada */}
+                            <div className="flex flex-col items-center flex-1 relative">
+                              <div className="w-4 h-4 rounded-full bg-green-500 z-10 border-4 border-white shadow-sm ring-1 ring-slate-200 flex items-center justify-center"></div>
+                              <span className="text-[10px] font-bold text-slate-600 uppercase mt-1">Solicitada</span>
+                              <span className="text-[10px] text-slate-400">{formatearFecha(peticion.fechaSolicitud)}</span>
+                            </div>
+                            
+                            <div className={`flex-1 h-0.5 -mx-4 ${peticion.fechaAprobacion ? 'bg-green-500' : 'bg-slate-200'} mb-5 block relative -z-0`}></div>
+                            
+                            {/* Aprobada */}
+                            <div className="flex flex-col items-center flex-1 relative">
+                              <div className={`w-4 h-4 rounded-full z-10 border-4 border-white shadow-sm ring-1 ${peticion.fechaAprobacion ? 'bg-green-500 ring-green-200' : 'bg-slate-200 ring-slate-200'}`}></div>
+                              <span className={`text-[10px] font-bold uppercase mt-1 ${peticion.fechaAprobacion ? 'text-slate-600' : 'text-slate-400'}`}>Aprobada</span>
+                              {peticion.fechaAprobacion && <span className="text-[10px] text-slate-400">{formatearFecha(peticion.fechaAprobacion)}</span>}
+                            </div>
+                            
+                            <div className={`flex-1 h-0.5 -mx-4 ${peticion.fechaCompra ? 'bg-purple-500' : 'bg-slate-200'} mb-5 block relative -z-0`}></div>
+                            
+                            {/* Compra */}
+                            <div className="flex flex-col items-center flex-1 relative">
+                              <div className={`w-4 h-4 rounded-full z-10 border-4 border-white shadow-sm ring-1 ${peticion.fechaCompra ? 'bg-purple-500 ring-purple-200' : 'bg-slate-200 ring-slate-200'}`}></div>
+                              <span className={`text-[10px] font-bold uppercase mt-1 ${peticion.fechaCompra ? 'text-slate-600' : 'text-slate-400'}`}>En Compra</span>
+                              {peticion.fechaCompra && <span className="text-[10px] text-slate-400">{formatearFecha(peticion.fechaCompra)}</span>}
+                            </div>
+                            
+                            <div className={`flex-1 h-0.5 -mx-4 ${peticion.fechaRecepcion ? 'bg-green-500' : 'bg-slate-200'} mb-5 block relative -z-0`}></div>
+                            
+                            {/* Recibida */}
+                            <div className="flex flex-col items-center flex-1 relative">
+                              <div className={`w-4 h-4 rounded-full z-10 border-4 border-white shadow-sm ring-1 ${peticion.fechaRecepcion ? 'bg-green-500 ring-green-200' : 'bg-slate-200 ring-slate-200'}`}></div>
+                              <span className={`text-[10px] font-bold uppercase mt-1 ${peticion.fechaRecepcion ? 'text-slate-600' : 'text-slate-400'}`}>Recibida</span>
+                              {peticion.fechaRecepcion && <span className="text-[10px] text-slate-400">{formatearFecha(peticion.fechaRecepcion)}</span>}
                             </div>
                           </div>
                         </div>
 
-                        {/* Timeline mini */}
-                        <div className="flex items-center gap-2 mt-4 pt-4 border-t border-slate-100">
-                          <div className={`flex items-center gap-1 text-xs ${peticion.fechaSolicitud ? 'text-green-600' : 'text-slate-300'}`}>
-                            <div className={`w-2 h-2 rounded-full ${peticion.fechaSolicitud ? 'bg-green-500' : 'bg-slate-200'}`}></div>
-                            Solicitada
+                        {/* Contenido Expandido */}
+                        {peticionesExpandidas.has(peticion.id) && (
+                          <div className="px-4 py-4 bg-slate-50 border-t border-slate-200 grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
+                            <div className="space-y-3">
+                              {peticion.descripcion && (
+                                <div>
+                                  <h4 className="text-xs font-bold text-slate-500 uppercase mb-1">Descripción</h4>
+                                  <p className="text-slate-700 bg-white p-2.5 rounded border border-slate-200">{peticion.descripcion}</p>
+                                </div>
+                              )}
+                              {peticion.notasAprobacion && (
+                                <div>
+                                  <h4 className="text-xs font-bold text-slate-500 uppercase mb-1 text-blue-600">Consideraciones Aprobación</h4>
+                                  <p className="text-slate-700 bg-blue-50 p-2.5 rounded border border-blue-100">{peticion.notasAprobacion}</p>
+                                </div>
+                              )}
+                              {peticion.notasCompra && (
+                                <div>
+                                  <h4 className="text-xs font-bold text-slate-500 uppercase mb-1 text-purple-600">Notas de Compra</h4>
+                                  <p className="text-slate-700 bg-purple-50 p-2.5 rounded border border-purple-100">{peticion.notasCompra}</p>
+                                </div>
+                              )}
+                            </div>
+                            
+                            <div className="space-y-3">
+                              {(peticion.proveedor || peticion.costeEstimado || peticion.costeFinal) && (
+                                <div className="bg-white p-3 rounded-lg border border-slate-200 max-w-sm">
+                                  <h4 className="text-xs font-bold text-slate-500 uppercase mb-2 border-b border-slate-100 pb-1">Datos Económicos</h4>
+                                  <div className="space-y-1">
+                                    {peticion.proveedor && <div className="flex justify-between"><span className="text-slate-500">Proveedor:</span> <span className="font-medium text-slate-800">{peticion.proveedor}</span></div>}
+                                    {peticion.costeEstimado !== null && <div className="flex justify-between"><span className="text-slate-500">Estimado:</span> <span className="font-medium text-slate-800">{Number(peticion.costeEstimado).toFixed(2)} €</span></div>}
+                                    {peticion.costeFinal !== null && <div className="flex justify-between"><span className="text-slate-500">Coste final:</span> <span className="font-bold text-green-700">{Number(peticion.costeFinal).toFixed(2)} €</span></div>}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Documentos */}
+                              {(peticion.urlRc || peticion.urlAlbaran || peticion.numeroFactura) && (
+                                <div className="bg-white p-3 rounded-lg border border-slate-200 max-w-sm">
+                                  <h4 className="text-xs font-bold text-slate-500 uppercase mb-2 border-b border-slate-100 pb-1">Documentos y Referencias</h4>
+                                  <div className="space-y-2">
+                                    {peticion.urlRc && (
+                                      <a href={peticion.urlRc} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-blue-600 hover:text-blue-800 hover:underline">
+                                        <FileText size={16} /> <span>Documento de RC</span> <ExternalLink size={12} className="opacity-50" />
+                                      </a>
+                                    )}
+                                    {peticion.urlAlbaran && (
+                                      <a href={peticion.urlAlbaran} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-green-600 hover:text-green-800 hover:underline">
+                                        <FileCheck size={16} /> <span>Albarán de Recepción</span> <ExternalLink size={12} className="opacity-50" />
+                                      </a>
+                                    )}
+                                    {peticion.numeroFactura && (
+                                      <div className="flex items-center gap-2 text-slate-600">
+                                        <Receipt size={16} className="text-slate-400" /> <span className="text-xs uppercase text-slate-500">Nº Factura:</span> <span className="font-mono font-medium">{peticion.numeroFactura}</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
                           </div>
-                          <div className="flex-1 h-px bg-slate-200"></div>
-                          <div className={`flex items-center gap-1 text-xs ${peticion.fechaAprobacion ? 'text-green-600' : 'text-slate-300'}`}>
-                            <div className={`w-2 h-2 rounded-full ${peticion.fechaAprobacion ? 'bg-green-500' : 'bg-slate-200'}`}></div>
-                            Aprobada
-                          </div>
-                          <div className="flex-1 h-px bg-slate-200"></div>
-                          <div className={`flex items-center gap-1 text-xs ${peticion.fechaCompra ? 'text-green-600' : 'text-slate-300'}`}>
-                            <div className={`w-2 h-2 rounded-full ${peticion.fechaCompra ? 'bg-green-500' : 'bg-slate-200'}`}></div>
-                            En Compra
-                          </div>
-                          <div className="flex-1 h-px bg-slate-200"></div>
-                          <div className={`flex items-center gap-1 text-xs ${peticion.fechaRecepcion ? 'text-green-600' : 'text-slate-300'}`}>
-                            <div className={`w-2 h-2 rounded-full ${peticion.fechaRecepcion ? 'bg-green-500' : 'bg-slate-200'}`}></div>
-                            Recibida
-                          </div>
-                        </div>
+                        )}
                       </div>
                     );
                   })}
@@ -1494,6 +1597,16 @@ export default function LogisticaPage() {
               <p className="text-sm text-slate-500">{showAccionPeticion.peticion.cantidad} {showAccionPeticion.peticion.unidad} - {AREAS_NOMBRE[showAccionPeticion.peticion.areaOrigen]}</p>
             </div>
 
+            {showAccionPeticion.accion === 'aprobar' && (
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Enlace / URL del documento RC (Opcional)</label>
+                <div className="flex rounded-lg overflow-hidden border border-slate-200 focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent">
+                  <span className="bg-slate-50 flex items-center px-3 border-r border-slate-200 text-slate-400"><FileText size={18} /></span>
+                  <input type="url" placeholder="https://..." value={accionForm.urlRc} onChange={e => setAccionForm({ ...accionForm, urlRc: e.target.value })} className="w-full p-2.5 text-sm bg-white border-0 focus:ring-0 outline-none" />
+                </div>
+              </div>
+            )}
+
             {showAccionPeticion.accion === 'en_compra' && (
               <>
                 <div>
@@ -1509,17 +1622,26 @@ export default function LogisticaPage() {
 
             {showAccionPeticion.accion === 'recibir' && (
               <>
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Coste Final (€)</label>
-                  <input type="number" step="0.01" value={accionForm.costeFinal} onChange={e => setAccionForm({ ...accionForm, costeFinal: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm" />
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Coste Final (€)</label>
+                    <input type="number" step="0.01" value={accionForm.costeFinal} onChange={e => setAccionForm({ ...accionForm, costeFinal: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Nº Factura</label>
+                    <input type="text" value={accionForm.numeroFactura} onChange={e => setAccionForm({ ...accionForm, numeroFactura: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm" />
+                  </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Nº Factura</label>
-                  <input type="text" value={accionForm.numeroFactura} onChange={e => setAccionForm({ ...accionForm, numeroFactura: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm" />
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Enlace / URL del Albarán de recepción (Opcional)</label>
+                  <div className="flex rounded-lg overflow-hidden border border-slate-200 focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent">
+                    <span className="bg-slate-50 flex items-center px-3 border-r border-slate-200 text-slate-400"><FileCheck size={18} /></span>
+                    <input type="url" placeholder="https://..." value={accionForm.urlAlbaran} onChange={e => setAccionForm({ ...accionForm, urlAlbaran: e.target.value })} className="w-full p-2.5 text-sm bg-white border-0 focus:ring-0 outline-none" />
+                  </div>
                 </div>
                 {showAccionPeticion.peticion.articulo && (
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-sm text-green-700">
-                    ✓ Al recepcionar, se añadirán {showAccionPeticion.peticion.cantidad} {showAccionPeticion.peticion.unidad} al stock del artículo
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-sm text-green-700 font-medium">
+                    ✓ Al recepcionar, se añadirán {showAccionPeticion.peticion.cantidad} {showAccionPeticion.peticion.unidad} al stock actual de este artículo
                   </div>
                 )}
               </>

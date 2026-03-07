@@ -63,7 +63,7 @@ export async function PUT(
     }
 
     const body = await request.json()
-    const { accion, comentario, proveedor, costeEstimado, costeFinal, numeroFactura } = body
+    const { accion, comentario, proveedor, costeEstimado, costeFinal, numeroFactura, urlRc, urlAlbaran } = body
 
     const peticionActual = await prisma.peticionMaterial.findUnique({
       where: { id: params.id },
@@ -91,7 +91,8 @@ export async function PUT(
           estado: nuevoEstado,
           fechaAprobacion: new Date(),
           aprobadoPorId: usuario.id,
-          notasAprobacion: comentario
+          notasAprobacion: comentario,
+          ...(urlRc ? { urlRc } : {})
         }
         break
 
@@ -133,7 +134,8 @@ export async function PUT(
           recibidoPorId: usuario.id,
           costeFinal: costeFinal ? parseFloat(costeFinal) : null,
           numeroFactura,
-          notasRecepcion: comentario
+          notasRecepcion: comentario,
+          ...(urlAlbaran ? { urlAlbaran } : {})
         }
         
         // Actualizar stock del artículo
