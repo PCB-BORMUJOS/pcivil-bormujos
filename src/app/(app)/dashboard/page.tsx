@@ -727,7 +727,7 @@ export default function DashboardPage() {
         setEnTurno(data.enTurno || []);
         setStats(data.stats || { total: 0, responsablesTurno: 0, conCarnet: 0, experienciaAlta: 0 });
         setTurnoSeleccionado({ fecha, turno, diaSemanaNombre: data.diaSemanaNombre });
-        setShowPersonnel(true); // Abrir modal automáticamente
+        // NO abrimos showPersonnel — ya queda integrado en showGuardiaDetail
       } else {
         console.error('Error al cargar disponibilidad:', data.error);
         // En caso de error, cargar todos los voluntarios como fallback
@@ -1181,40 +1181,107 @@ export default function DashboardPage() {
         </Modal>
       )}
 
-      {/* Modal Guardia Detail */}
+      {/* Modal Guardia Detail — unificado con disponibilidad */}
       {showGuardiaDetail && (
-        <Modal title={`Turno ${showGuardiaDetail.turno === 'mañana' ? 'Mañana' : 'Tarde'} - ${new Date(showGuardiaDetail.date + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}`} onClose={() => setShowGuardiaDetail(null)}>
-          <div className="space-y-3">
-            <div className={`p-3 rounded-lg ${showGuardiaDetail.turno === 'mañana' ? 'bg-green-50 border border-green-200' : 'bg-blue-50 border border-blue-200'}`}>
-              <div className="flex items-center gap-2">
-                <div className={`w-3 h-3 rounded-full ${showGuardiaDetail.turno === 'mañana' ? 'bg-green-500' : 'bg-blue-500'}`}></div>
-                <span className="font-bold text-slate-700">
-                  {showGuardiaDetail.turno === 'mañana' ? '08:00 - 15:00' : '15:00 - 22:00'}
-                </span>
-              </div>
+        <Modal
+          title={`Turno ${showGuardiaDetail.turno === 'mañana' ? 'Mañana' : 'Tarde'} — ${new Date(showGuardiaDetail.date + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}`}
+          onClose={() => { setShowGuardiaDetail(null); setTurnoSeleccionado(null); }}
+        >
+          <div className="space-y-5 max-h-[70vh] overflow-y-auto pr-1">
+
+            {/* Franja horaria */}
+            <div className={`p-3 rounded-lg flex items-center gap-3 ${showGuardiaDetail.turno === 'mañana' ? 'bg-green-50 border border-green-200' : 'bg-blue-50 border border-blue-200'}`}>
+              <div className={`w-3 h-3 rounded-full flex-shrink-0 ${showGuardiaDetail.turno === 'mañana' ? 'bg-green-500' : 'bg-blue-500'}`} />
+              <span className="font-bold text-slate-700">
+                {showGuardiaDetail.turno === 'mañana' ? '08:00 – 15:00' : '15:00 – 22:00'}
+              </span>
             </div>
 
-            <h4 className="text-sm font-bold text-slate-500 uppercase">Personal Asignado ({showGuardiaDetail.guardias.length})</h4>
-
-            <div className="space-y-2">
-              {showGuardiaDetail.guardias.map((g, i) => (
-                <div key={i} className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-slate-100">
-                  <div className="w-10 h-10 rounded-full bg-orange-500 text-white flex items-center justify-center font-bold text-sm">
-                    {g.usuario?.nombre?.charAt(0)}{g.usuario?.apellidos?.charAt(0)}
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-slate-800">{g.usuario?.numeroVoluntario}</span>
-                      {i === 0 && <span className="text-[10px] px-2 py-0.5 rounded bg-orange-100 text-orange-700 font-bold">RESPONSABLE</span>}
+            {/* Personal asignado a la guardia */}
+            <div>
+              <h4 className="text-xs font-bold text-slate-500 uppercase mb-2 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-orange-500 inline-block" />
+                Personal Asignado ({showGuardiaDetail.guardias.length})
+              </h4>
+              {showGuardiaDetail.guardias.length === 0 ? (
+                <p className="text-xs text-slate-400 italic pl-4">Sin personal asignado a esta guardia</p>
+              ) : (
+                <div className="space-y-2">
+                  {showGuardiaDetail.guardias.map((g, i) => (
+                    <div key={i} className="flex items-center gap-3 p-2.5 bg-orange-50 rounded-lg border border-orange-100">
+                      <div className="w-9 h-9 rounded-full bg-orange-500 text-white flex items-center justify-center font-bold text-sm flex-shrink-0">
+                        {g.usuario?.nombre?.charAt(0)}{g.usuario?.apellidos?.charAt(0)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-slate-800 text-sm">{g.usuario?.numeroVoluntario}</span>
+                          {i === 0 && <span className="text-[10px] px-1.5 py-0.5 rounded bg-orange-100 text-orange-700 font-bold">RESPONSABLE</span>}
+                        </div>
+                        <p className="text-xs text-slate-600 truncate">{g.usuario?.nombre} {g.usuario?.apellidos}</p>
+                      </div>
+                      <div className={`px-2 py-1 rounded text-[10px] font-bold flex-shrink-0 ${g.estado === 'programada' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}`}>
+                        {g.estado?.toUpperCase() || 'PROGRAMADA'}
+                      </div>
                     </div>
-                    <p className="text-sm text-slate-600">{g.usuario?.nombre} {g.usuario?.apellidos}</p>
-                  </div>
-                  <div className={`px-2 py-1 rounded text-[10px] font-bold ${g.estado === 'programada' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}`}>
-                    {g.estado?.toUpperCase() || 'PROGRAMADA'}
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Separador */}
+            <div className="border-t border-slate-100" />
+
+            {/* Disponibilidad del turno */}
+            {loadingDisponibilidad ? (
+              <p className="text-xs text-slate-400 text-center py-2">Cargando disponibilidad...</p>
+            ) : (
+              <>
+                {/* Voluntarios disponibles para este turno */}
+                <div>
+                  <h4 className="text-xs font-bold text-slate-500 uppercase mb-2 flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-green-500 inline-block" />
+                    Disponibles este turno ({enTurno.length})
+                  </h4>
+                  {enTurno.length === 0 ? (
+                    <p className="text-xs text-slate-400 italic pl-4">Sin disponibilidad confirmada</p>
+                  ) : (
+                    <div className="space-y-1.5">
+                      {enTurno.map((v: any) => (
+                        <div key={v.id} className="flex items-center gap-3 p-2 bg-green-50 rounded-lg border border-green-100">
+                          <div className="w-8 h-8 rounded-full bg-green-600 text-white flex items-center justify-center font-bold text-xs flex-shrink-0">{v.nombre?.charAt(0)}{v.apellidos?.charAt(0)}</div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-bold text-slate-800 text-xs">{v.numeroVoluntario}</span>
+                              {v.turno && <span className="text-[9px] px-1 py-0.5 rounded bg-green-100 text-green-700 font-bold">{v.turno}</span>}
+                            </div>
+                            <p className="text-xs text-slate-600 truncate">{v.nombre} {v.apellidos}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Personal activo total */}
+                <div>
+                  <h4 className="text-xs font-bold text-slate-500 uppercase mb-2 flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-slate-400 inline-block" />
+                    Personal Activo ({stats.total})
+                  </h4>
+                  <div className="space-y-1.5">
+                    {voluntarios.map((v: any) => (
+                      <div key={v.id} className="flex items-center gap-3 p-2 bg-slate-50 rounded-lg border border-slate-100">
+                        <div className="w-8 h-8 rounded-full bg-slate-400 text-white flex items-center justify-center font-bold text-xs flex-shrink-0">{v.nombre?.charAt(0)}{v.apellidos?.charAt(0)}</div>
+                        <div className="flex-1 min-w-0">
+                          <span className="font-bold text-slate-800 text-xs">{v.numeroVoluntario}</span>
+                          <p className="text-xs text-slate-600 truncate">{v.nombre} {v.apellidos}</p>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
-              ))}
-            </div>
+              </>
+            )}
           </div>
         </Modal>
       )}
