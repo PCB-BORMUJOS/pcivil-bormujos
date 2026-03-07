@@ -566,11 +566,11 @@ export default function PMAPage() {
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <button onClick={cargarDatos} className="p-2.5 bg-white border border-slate-200 rounded-xl text-slate-400 hover:bg-slate-50 transition-all"><RefreshCw className="w-4 h-4" /></button>
+          <button onClick={cargarDatos} className="flex items-center justify-center p-2.5 text-slate-600 hover:bg-slate-100 rounded-lg border border-slate-200 flex-shrink-0" title="Recargar"><RefreshCw size={18} /></button>
           {mainTab === 'inventario' && (<>
-            <button onClick={() => setShowNuevaPeticion(true)} className="flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm flex-shrink-0 min-w-[44px]" title="Nueva Petición"><ShoppingCart className="w-4 h-4" /><span className="hidden sm:inline whitespace-nowrap">Petición</span></button>
-            <button onClick={() => setShowNuevoArticulo(true)} className="flex items-center justify-center gap-2 px-4 py-2.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-400 font-medium text-sm flex-shrink-0 min-w-[44px]" title="Nuevo Artículo"><Plus className="w-4 h-4" /><span className="hidden sm:inline whitespace-nowrap">Artículo</span></button>
-            <button onClick={() => setShowNuevoItemRemolque(true)} className="flex items-center justify-center gap-2 px-4 py-2.5 bg-lime-500 text-white rounded-lg hover:bg-lime-600 font-medium text-sm flex-shrink-0 min-w-[44px]" title="Nuevo Item"><Plus className="w-4 h-4" /><span className="hidden sm:inline whitespace-nowrap">Item PMA</span></button>
+            <button onClick={() => setShowNuevaPeticion(true)} className="flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm flex-shrink-0 min-w-[44px]" title="Nueva Petición"><ShoppingCart size={18} /><span className="hidden sm:inline whitespace-nowrap">Petición</span></button>
+            <button onClick={() => setShowNuevoArticulo(true)} className="flex items-center justify-center gap-2 px-4 py-2.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-400 font-medium text-sm flex-shrink-0 min-w-[44px]" title="Nuevo Artículo"><Package size={18} /><span className="hidden sm:inline whitespace-nowrap">Artículo</span></button>
+            <button onClick={() => setShowNuevoItemRemolque(true)} className="flex items-center justify-center gap-2 px-4 py-2.5 bg-orange-500 text-white rounded-lg hover:bg-orange-600 font-medium text-sm flex-shrink-0 min-w-[44px]" title="Item PMA"><Tent size={18} /><span className="hidden sm:inline whitespace-nowrap">Item PMA</span></button>
           </>)}
           {mainTab === 'remolque' && !verificando && materialRemolque.length > 0 && (
             <button onClick={iniciarVerificacion} className="flex items-center gap-2 px-4 py-2.5 bg-orange-500 text-white rounded-xl text-sm font-medium hover:bg-orange-600 transition-all"><ClipboardCheck className="w-4 h-4" /> Verificar</button>
