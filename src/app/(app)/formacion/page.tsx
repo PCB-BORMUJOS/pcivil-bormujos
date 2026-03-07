@@ -1136,23 +1136,23 @@ export default function FormacionPage() {
         </div>
 
         {/* Actions Bar */}
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex gap-2">
           <button
             onClick={() => cargarDatos()}
-            className="flex items-center justify-center p-2.5 text-slate-600 hover:bg-slate-100 rounded-lg border border-slate-200 flex-shrink-0"
+            className="flex-1 flex items-center justify-center p-2.5 text-slate-600 hover:bg-slate-100 rounded-lg border border-slate-200"
             title="Recargar datos"
           >
             <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
           </button>
-          <button onClick={() => setShowNuevaPeticion(true)} className="flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm flex-shrink-0 min-w-[44px]" title="Nueva Petición"><ShoppingCart size={18} /><span className="hidden sm:inline whitespace-nowrap">Petición</span></button>
-          <button onClick={() => setShowNuevoArticulo(true)} className="flex items-center justify-center gap-2 px-4 py-2.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-400 font-medium text-sm flex-shrink-0 min-w-[44px]" title="Nuevo Artículo"><Package size={18} /><span className="hidden sm:inline whitespace-nowrap">Artículo</span></button>
+          <button onClick={() => setShowNuevaPeticion(true)} className="flex-1 flex items-center justify-center gap-1.5 px-2 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm" title="Nueva Petición"><ShoppingCart size={18} /><span className="hidden xs:inline whitespace-nowrap">Petición</span></button>
+          <button onClick={() => setShowNuevoArticulo(true)} className="flex-1 flex items-center justify-center gap-1.5 px-2 py-2.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-400 font-medium text-sm" title="Nuevo Artículo"><Package size={18} /><span className="hidden xs:inline whitespace-nowrap">Artículo</span></button>
           <button
             onClick={() => setShowNuevoCurso(true)}
-            className="flex items-center justify-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium text-sm flex-shrink-0 min-w-[44px]"
+            className="flex-1 flex items-center justify-center gap-1.5 px-2 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium text-sm"
             title="Nuevo Curso"
           >
-            <Plus size={18} />
-            <span className="hidden sm:inline whitespace-nowrap">Nuevo Curso</span>
+            <BookOpen size={18} />
+            <span className="hidden xs:inline whitespace-nowrap">Curso</span>
           </button>
         </div>
       </div>

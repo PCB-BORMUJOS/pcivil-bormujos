@@ -466,22 +466,22 @@ export default function IncendiosPage() {
   return (
     <div className="space-y-6">
       {/* HEADER */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+      <div className="space-y-3">
         <div className="flex items-center gap-4">
-          <div className="bg-red-100 p-3 rounded-xl">
+          <div className="bg-red-100 p-3 rounded-xl flex-shrink-0">
             <Flame className="text-red-600" size={28} />
           </div>
           <div>
             <p className="text-xs font-bold text-red-600 uppercase tracking-wider">INCENDIOS</p>
-            <h1 className="text-2xl font-bold text-slate-800">Gestión y Equipamiento</h1>
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-800">Gestión y Equipamiento</h1>
             <p className="text-slate-500 text-sm hidden sm:block">Inventario, equipos ECI y red de hidrantes</p>
           </div>
         </div>
         <div className="flex gap-2">
-          <button onClick={cargarDatos} className="flex items-center justify-center p-2.5 text-slate-600 hover:bg-slate-100 rounded-lg border border-slate-200 flex-shrink-0" title="Recargar"><RefreshCw size={18} /></button>
-          <button onClick={() => setShowNuevaPeticion(true)} className="flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm flex-shrink-0 min-w-[44px]" title="Nueva Petición"><ShoppingCart size={18} /><span className="hidden sm:inline whitespace-nowrap">Petición</span></button>
-          <button onClick={() => setShowNuevoArticulo(true)} className="flex items-center justify-center gap-2 px-4 py-2.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-400 font-medium text-sm flex-shrink-0 min-w-[44px]" title="Nuevo Artículo"><Package size={18} /><span className="hidden sm:inline whitespace-nowrap">Artículo</span></button>
-          <button onClick={() => setShowNuevoHidrante(true)} className="flex items-center justify-center gap-2 px-4 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium text-sm flex-shrink-0 min-w-[44px]" title="Nuevo Hidrante"><HidranteIcon size={18} /><span className="hidden sm:inline whitespace-nowrap">Hidrante</span></button>
+          <button onClick={cargarDatos} className="flex-1 flex items-center justify-center p-2.5 text-slate-600 hover:bg-slate-100 rounded-lg border border-slate-200" title="Recargar"><RefreshCw size={18} /></button>
+          <button onClick={() => setShowNuevaPeticion(true)} className="flex-1 flex items-center justify-center gap-1.5 px-2 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm" title="Nueva Petición"><ShoppingCart size={18} /><span className="hidden xs:inline whitespace-nowrap">Petición</span></button>
+          <button onClick={() => setShowNuevoArticulo(true)} className="flex-1 flex items-center justify-center gap-1.5 px-2 py-2.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-400 font-medium text-sm" title="Nuevo Artículo"><Package size={18} /><span className="hidden xs:inline whitespace-nowrap">Artículo</span></button>
+          <button onClick={() => setShowNuevoHidrante(true)} className="flex-1 flex items-center justify-center gap-1.5 px-2 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium text-sm" title="Nuevo Hidrante"><HidranteIcon size={18} /><span className="hidden xs:inline whitespace-nowrap">Hidrante</span></button>
         </div>
       </div>
 

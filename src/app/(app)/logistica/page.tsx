@@ -590,85 +590,87 @@ export default function LogisticaPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
           {/* Selector de Inventario */}
-          <div className="relative">
-            <button
-              onClick={() => setShowSelectorInventario(!showSelectorInventario)}
-              className="flex items-center gap-3 px-4 py-3 bg-white border border-slate-200 rounded-xl shadow-sm hover:shadow-md transition-all"
-              style={{ borderLeftColor: getColorInventario(), borderLeftWidth: '4px' }}
-            >
-              <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white" style={{ backgroundColor: getColorInventario() }}>
-                {React.createElement(getIconoArea(inventarioActual === 'all' ? 'logistica' : inventarioActual), { size: 20 })}
-              </div>
-              <div className="text-left">
-                <p className="text-xs text-slate-500 uppercase font-bold">Inventario</p>
-                <p className="font-bold text-slate-800">{getNombreInventario()}</p>
-              </div>
-              <ChevronDown size={20} className="text-slate-400 ml-2" />
-            </button>
+          <div className="flex items-center gap-4">
+            <div className="relative">
+              <button
+                onClick={() => setShowSelectorInventario(!showSelectorInventario)}
+                className="flex items-center gap-3 px-4 py-3 bg-white border border-slate-200 rounded-xl shadow-sm hover:shadow-md transition-all"
+                style={{ borderLeftColor: getColorInventario(), borderLeftWidth: '4px' }}
+              >
+                <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white" style={{ backgroundColor: getColorInventario() }}>
+                  {React.createElement(getIconoArea(inventarioActual === 'all' ? 'logistica' : inventarioActual), { size: 20 })}
+                </div>
+                <div className="text-left">
+                  <p className="text-xs text-slate-500 uppercase font-bold">Inventario</p>
+                  <p className="font-bold text-slate-800">{getNombreInventario()}</p>
+                </div>
+                <ChevronDown size={20} className="text-slate-400 ml-2" />
+              </button>
 
-            {showSelectorInventario && (
-              <div className="absolute top-full left-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-slate-200 z-50 overflow-hidden">
-                <div className="p-2 bg-slate-50 border-b border-slate-200">
-                  <p className="text-xs font-bold text-slate-500 uppercase px-2">Seleccionar Inventario</p>
-                </div>
-                <div className="max-h-96 overflow-y-auto">
-                  <button
-                    onClick={() => handleCambiarInventario('all')}
-                    className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-purple-50 transition-colors ${inventarioActual === 'all' ? 'bg-purple-50' : ''}`}
-                  >
-                    <div className="w-10 h-10 rounded-lg bg-purple-500 flex items-center justify-center text-white"><Layers size={20} /></div>
-                    <div className="text-left flex-1">
-                      <p className="font-medium text-slate-800">Inventario General</p>
-                      <p className="text-xs text-slate-500">Todos los artículos</p>
-                    </div>
-                  </button>
-                  <div className="border-t border-slate-100"></div>
-                  {statsPorArea.map(area => {
-                    const IconoArea = getIconoArea(area.slug);
-                    return (
-                      <div key={area.id}>
-                        <button
-                          onClick={() => handleCambiarInventario(area.slug)}
-                          className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors ${inventarioActual === area.slug ? 'bg-slate-100' : ''}`}
-                        >
-                          <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white" style={{ backgroundColor: area.color }}><IconoArea size={20} /></div>
-                          <div className="text-left flex-1">
-                            <p className="font-medium text-slate-800">{area.nombre}</p>
-                            <p className="text-xs text-slate-500">{area.totalArticulos} artículos</p>
-                          </div>
-                          {area.stockBajo > 0 && (
-                            <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full font-bold flex items-center gap-1"><AlertTriangle size={12} />{area.stockBajo}</span>
-                          )}
-                        </button>
-                        {area.subInventarios.map(sub => (
-                          <button
-                            key={sub.id}
-                            onClick={() => handleCambiarInventario(sub.slug)}
-                            className={`w-full flex items-center gap-3 px-4 py-2 pl-12 hover:bg-slate-50 ${inventarioActual === sub.slug ? 'bg-slate-100' : ''}`}
-                          >
-                            <div className="w-6 h-6 rounded bg-slate-200 flex items-center justify-center"><Box size={14} className="text-slate-500" /></div>
-                            <span className="text-sm text-slate-600">{sub.nombre}</span>
-                          </button>
-                        ))}
+              {showSelectorInventario && (
+                <div className="absolute top-full left-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-slate-200 z-50 overflow-hidden">
+                  <div className="p-2 bg-slate-50 border-b border-slate-200">
+                    <p className="text-xs font-bold text-slate-500 uppercase px-2">Seleccionar Inventario</p>
+                  </div>
+                  <div className="max-h-96 overflow-y-auto">
+                    <button
+                      onClick={() => handleCambiarInventario('all')}
+                      className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-purple-50 transition-colors ${inventarioActual === 'all' ? 'bg-purple-50' : ''}`}
+                    >
+                      <div className="w-10 h-10 rounded-lg bg-purple-500 flex items-center justify-center text-white"><Layers size={20} /></div>
+                      <div className="text-left flex-1">
+                        <p className="font-medium text-slate-800">Inventario General</p>
+                        <p className="text-xs text-slate-500">Todos los artículos</p>
                       </div>
-                    );
-                  })}
+                    </button>
+                    <div className="border-t border-slate-100"></div>
+                    {statsPorArea.map(area => {
+                      const IconoArea = getIconoArea(area.slug);
+                      return (
+                        <div key={area.id}>
+                          <button
+                            onClick={() => handleCambiarInventario(area.slug)}
+                            className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors ${inventarioActual === area.slug ? 'bg-slate-100' : ''}`}
+                          >
+                            <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white" style={{ backgroundColor: area.color }}><IconoArea size={20} /></div>
+                            <div className="text-left flex-1">
+                              <p className="font-medium text-slate-800">{area.nombre}</p>
+                              <p className="text-xs text-slate-500">{area.totalArticulos} artículos</p>
+                            </div>
+                            {area.stockBajo > 0 && (
+                              <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full font-bold flex items-center gap-1"><AlertTriangle size={12} />{area.stockBajo}</span>
+                            )}
+                          </button>
+                          {area.subInventarios.map(sub => (
+                            <button
+                              key={sub.id}
+                              onClick={() => handleCambiarInventario(sub.slug)}
+                              className={`w-full flex items-center gap-3 px-4 py-2 pl-12 hover:bg-slate-50 ${inventarioActual === sub.slug ? 'bg-slate-100' : ''}`}
+                            >
+                              <div className="w-6 h-6 rounded bg-slate-200 flex items-center justify-center"><Box size={14} className="text-slate-500" /></div>
+                              <span className="text-sm text-slate-600">{sub.nombre}</span>
+                            </button>
+                          ))}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-slate-800">{getNombreInventario()}</h1>
-            <p className="text-slate-500 text-sm">{inventarioActual === 'all' ? 'Gestión centralizada de todos los inventarios' : 'Gestión de artículos del área'}</p>
+              )}
+            </div>
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold text-slate-800">{getNombreInventario()}</h1>
+              <p className="text-slate-500 text-sm">{inventarioActual === 'all' ? 'Gestión centralizada de todos los inventarios' : 'Gestión de artículos del área'}</p>
+            </div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <button onClick={() => { cargarDatos(); cargarPeticiones(); }} className="flex items-center justify-center p-2.5 text-slate-600 hover:bg-slate-100 rounded-lg border border-slate-200 flex-shrink-0" title="Recargar"><RefreshCw size={18} /></button>
-          <button onClick={() => setShowNuevaPeticion(true)} className="flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm flex-shrink-0" title="Nueva Petición"><ShoppingCart size={18} /><span className="hidden sm:inline whitespace-nowrap">Petición</span></button>
-          <button onClick={() => setShowNuevoArticulo(true)} className="flex items-center justify-center gap-2 px-4 py-2.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-400 font-medium text-sm flex-shrink-0" title="Nuevo Artículo"><Package size={18} /><span className="hidden sm:inline whitespace-nowrap">Artículo</span></button>
+        <div className="flex flex-wrap gap-2 w-full">
+          <button onClick={() => { cargarDatos(); cargarPeticiones(); }} className="flex-1 flex items-center justify-center p-2.5 text-slate-600 hover:bg-slate-100 rounded-lg border border-slate-200" title="Recargar"><RefreshCw size={18} /></button>
+          <button onClick={() => setShowNuevaPeticion(true)} className="flex-1 flex items-center justify-center gap-1.5 px-2 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm" title="Nueva Petición"><ShoppingCart size={18} /><span className="hidden xs:inline whitespace-nowrap">Petición</span></button>
+          <button onClick={() => setShowNuevoArticulo(true)} className="flex-1 flex items-center justify-center gap-1.5 px-2 py-2.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-400 font-medium text-sm" title="Nuevo Artículo"><Package size={18} /><span className="hidden xs:inline whitespace-nowrap">Artículo</span></button>
         </div>
       </div>
 
