@@ -1,5 +1,5 @@
-'use client';
 import { useSearchParams } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 
 import React, { useState, useEffect } from 'react';
 import {
@@ -94,7 +94,7 @@ interface Peticion {
   urlRc: string | null;
   urlAlbaran: string | null;
   solicitante: { nombre: string; apellidos: string; numeroVoluntario: string };
-  articulo: { nombre: string; codigo: string } | null;
+  articulo: { id: string; nombre: string; codigo: string } | null;
   aprobadoPor: { nombre: string; apellidos: string } | null;
   recibidoPor: { nombre: string; apellidos: string } | null;
   historial: HistorialPeticion[];
@@ -208,6 +208,8 @@ function Modal({ title, children, onClose, size = 'md' }: {
 // ============================================
 export default function LogisticaPage() {
   // Estados principales
+  const { data: session } = useSession();
+  const isAdmin = session?.user?.rol === 'admin' || session?.user?.rol === 'superadmin' || session?.user?.rol === 'jefe_agrupacion';
   const searchParams = useSearchParams();
   const tabInicial = searchParams.get('tab') as 'stock' | 'peticiones' | 'movimientos' || 'stock';
   const [activeTab, setActiveTab] = useState<'stock' | 'peticiones' | 'movimientos' | 'asignaciones'>(tabInicial);
@@ -247,6 +249,7 @@ export default function LogisticaPage() {
   const [showNuevoArticulo, setShowNuevoArticulo] = useState(false);
   const [showMovimiento, setShowMovimiento] = useState(false);
   const [showNuevaPeticion, setShowNuevaPeticion] = useState(false);
+  const [peticionEditando, setPeticionEditando] = useState<Peticion | null>(null);
   const [showDetallePeticion, setShowDetallePeticion] = useState<Peticion | null>(null);
   const [showAccionPeticion, setShowAccionPeticion] = useState<{ peticion: Peticion; accion: string } | null>(null);
   const [paginaPeticiones, setPaginaPeticiones] = useState(1);
@@ -473,16 +476,27 @@ export default function LogisticaPage() {
       return;
     }
     try {
-      const res = await fetch('/api/logistica/peticiones', {
-        method: 'POST',
+      const url = peticionEditando ? `/api/logistica/peticiones/${peticionEditando.id}` : '/api/logistica/peticiones';
+      const method = peticionEditando ? 'PUT' : 'POST';
+      const body = peticionEditando ? { accion: 'editar', ...nuevaPeticion } : nuevaPeticion;
+
+      const res = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(nuevaPeticion)
+        body: JSON.stringify(body)
       });
       if (res.ok) {
         setShowNuevaPeticion(false);
-        setNuevaPeticion({ articuloId: '', nombreArticulo: '', cantidad: 1, unidad: 'unidad', motivo: 'reposicion', prioridad: 'normal', descripcion: '', areaOrigen: '' });
+        setPeticionEditando(null);
+        setNuevaPeticion({
+          articuloId: '', nombreArticulo: '', cantidad: 1, unidad: 'unidad',
+          motivo: 'reposicion', prioridad: 'normal', descripcion: '', areaOrigen: ''
+        });
         cargarPeticiones();
-        alert('✅ Petición creada correctamente');
+        alert(peticionEditando ? '✅ Petición actualizada' : '✅ Petición creada');
+      } else {
+        const data = await res.json();
+        alert('Error: ' + (data.error || 'No se pudo guardar la petición'));
       }
     } catch (error) {
       alert('Error al crear petición');
@@ -551,6 +565,42 @@ export default function LogisticaPage() {
     } catch (error) {
       alert('Error al eliminar');
     }
+  };
+
+  const handleActualizarDoc = async (peticionId: string, tipo: 'rc' | 'albaran') => {
+    const inputEl = document.getElementById(`${tipo}-${peticionId}`) as HTMLInputElement;
+    if (!inputEl || !inputEl.value) return;
+    try {
+      const body = { accion: 'actualizar_docs', [tipo === 'rc' ? 'urlRc' : 'urlAlbaran']: inputEl.value };
+      const res = await fetch(`/api/logistica/peticiones/${peticionId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      if (res.ok) {
+        alert('✅ Documento adjuntado');
+        cargarPeticiones();
+      } else {
+        alert('Error al adjuntar documento');
+      }
+    } catch {
+      alert('Error de conexión');
+    }
+  };
+
+  const abrirEditarPeticion = (peticion: Peticion) => {
+    setPeticionEditando(peticion);
+    setNuevaPeticion({
+      articuloId: peticion.articulo?.id || '', 
+      nombreArticulo: peticion.nombreArticulo, 
+      cantidad: peticion.cantidad, 
+      unidad: peticion.unidad,
+      motivo: peticion.motivo, 
+      prioridad: peticion.prioridad, 
+      descripcion: peticion.descripcion || '', 
+      areaOrigen: peticion.areaOrigen
+    });
+    setShowNuevaPeticion(true);
   };
 
   // ============================================
@@ -1005,14 +1055,11 @@ export default function LogisticaPage() {
                             <div className="flex flex-col items-end justify-between h-full gap-3 flex-shrink-0">
                               <div className="flex items-center gap-1 bg-slate-50 rounded-lg p-1 border border-slate-100">
                                 <button onClick={() => setShowDetallePeticion(peticion)} className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-white rounded" title="Ver detalle"><Eye size={16} /></button>
-                                {(peticion.estado === 'pendiente' || peticion.estado === 'aprobada') && (
-                                  <button onClick={() => setShowAccionPeticion({ peticion, accion: 'editar' })} className="p-1.5 text-slate-500 hover:text-orange-600 hover:bg-white rounded" title="Editar"><Pencil size={16} /></button>
+                                {(peticion.estado === 'pendiente' || peticion.estado === 'aprobada' || isAdmin) && (
+                                  <button onClick={() => abrirEditarPeticion(peticion)} className="p-1.5 text-slate-500 hover:text-orange-600 hover:bg-white rounded" title="Editar"><Pencil size={16} /></button>
                                 )}
-                                {(peticion.estado === 'recibida' || peticion.estado === 'rechazada') ? (
-                                  <button onClick={() => { if(confirm('¿Archivar esta petición?')) { fetch(`/api/logistica/peticiones/${peticion.id}`, {method:'DELETE'}).then(() => cargarPeticiones()) } }} className="p-1.5 text-slate-500 hover:text-purple-600 hover:bg-white rounded" title="Archivar"><Archive size={16} /></button>
-                                ) : (
-                                  <button onClick={() => { if(confirm('¿Eliminar esta petición?')) { fetch(`/api/logistica/peticiones/${peticion.id}`, {method:'DELETE'}).then(() => cargarPeticiones()) } }} className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-white rounded" title="Eliminar"><Trash2 size={16} /></button>
-                                )}
+                                <button onClick={() => { if(confirm('¿Archivar esta petición?')) { fetch(`/api/logistica/peticiones/${peticion.id}`, {method:'DELETE'}).then(() => cargarPeticiones()) } }} className="p-1.5 text-slate-500 hover:text-purple-600 hover:bg-white rounded" title="Archivar"><Archive size={16} /></button>
+                                <button onClick={() => { if(confirm('¿Eliminar esta petición de forma permanente?')) { fetch(`/api/logistica/peticiones/${peticion.id}?force=true`, {method:'DELETE'}).then(() => cargarPeticiones()) } }} className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-white rounded" title="Eliminar"><Trash2 size={16} /></button>
                               </div>
                               
                               {/* Botones de Acción Rápida */}
@@ -1108,28 +1155,38 @@ export default function LogisticaPage() {
                               )}
 
                               {/* Documentos */}
-                              {(peticion.urlRc || peticion.urlAlbaran || peticion.numeroFactura) && (
-                                <div className="bg-white p-3 rounded-lg border border-slate-200 max-w-sm">
-                                  <h4 className="text-xs font-bold text-slate-500 uppercase mb-2 border-b border-slate-100 pb-1">Documentos y Referencias</h4>
-                                  <div className="space-y-2">
-                                    {peticion.urlRc && (
-                                      <a href={peticion.urlRc} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-blue-600 hover:text-blue-800 hover:underline">
-                                        <FileText size={16} /> <span>Documento de RC</span> <ExternalLink size={12} className="opacity-50" />
-                                      </a>
-                                    )}
-                                    {peticion.urlAlbaran && (
-                                      <a href={peticion.urlAlbaran} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-green-600 hover:text-green-800 hover:underline">
-                                        <FileCheck size={16} /> <span>Albarán de Recepción</span> <ExternalLink size={12} className="opacity-50" />
-                                      </a>
-                                    )}
-                                    {peticion.numeroFactura && (
-                                      <div className="flex items-center gap-2 text-slate-600">
-                                        <Receipt size={16} className="text-slate-400" /> <span className="text-xs uppercase text-slate-500">Nº Factura:</span> <span className="font-mono font-medium">{peticion.numeroFactura}</span>
-                                      </div>
-                                    )}
-                                  </div>
+                              <div className="bg-white p-3 rounded-lg border border-slate-200 max-w-sm">
+                                <h4 className="text-xs font-bold text-slate-500 uppercase mb-2 border-b border-slate-100 pb-1">Documentos y Referencias</h4>
+                                <div className="space-y-3">
+                                  {peticion.urlRc ? (
+                                    <a href={peticion.urlRc} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-blue-600 hover:text-blue-800 hover:underline">
+                                      <FileText size={16} /> <span>Documento de RC</span> <ExternalLink size={12} className="opacity-50" />
+                                    </a>
+                                  ) : (peticion.estado === 'aprobada' || peticion.estado === 'en_compra' || peticion.estado === 'recibida' || isAdmin) ? (
+                                    <div className="flex gap-2">
+                                      <input type="url" placeholder="Añadir URL del RC" id={`rc-${peticion.id}`} className="text-xs p-1.5 border border-slate-200 rounded flex-1 focus:ring-1 focus:ring-blue-500 outline-none"/>
+                                      <button onClick={() => handleActualizarDoc(peticion.id, 'rc')} className="text-xs font-medium bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1.5 rounded transition-colors whitespace-nowrap">Adjuntar RC</button>
+                                    </div>
+                                  ) : null}
+
+                                  {peticion.urlAlbaran ? (
+                                    <a href={peticion.urlAlbaran} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-green-600 hover:text-green-800 hover:underline">
+                                      <FileCheck size={16} /> <span>Albarán de Recepción</span> <ExternalLink size={12} className="opacity-50" />
+                                    </a>
+                                  ) : (peticion.estado === 'recibida' || isAdmin) ? (
+                                    <div className="flex gap-2">
+                                      <input type="url" placeholder="Añadir URL del Albarán" id={`albaran-${peticion.id}`} className="text-xs p-1.5 border border-slate-200 rounded flex-1 focus:ring-1 focus:ring-green-500 outline-none"/>
+                                      <button onClick={() => handleActualizarDoc(peticion.id, 'albaran')} className="text-xs font-medium bg-green-50 hover:bg-green-100 text-green-700 px-3 py-1.5 rounded transition-colors whitespace-nowrap">Adjuntar Albarán</button>
+                                    </div>
+                                  ) : null}
+
+                                  {peticion.numeroFactura && (
+                                    <div className="flex items-center gap-2 text-slate-600">
+                                      <Receipt size={16} className="text-slate-400" /> <span className="text-xs uppercase text-slate-500">Nº Factura:</span> <span className="font-mono font-medium">{peticion.numeroFactura}</span>
+                                    </div>
+                                  )}
                                 </div>
-                              )}
+                              </div>
                             </div>
                           </div>
                         )}
@@ -1461,7 +1518,9 @@ export default function LogisticaPage() {
 
       {/* Modal: Nueva Petición */}
       {showNuevaPeticion && (
-        <Modal title="Nueva Petición de Material" onClose={() => setShowNuevaPeticion(false)} size="lg">
+        <Modal
+          title={peticionEditando ? "Editar Petición" : "Nueva Petición de Material"}
+          onClose={() => { setShowNuevaPeticion(false); setPeticionEditando(null); }} size="lg">
           <div className="space-y-4">
             <div>
               <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Área Solicitante *</label>
@@ -1507,9 +1566,11 @@ export default function LogisticaPage() {
               <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Descripción</label>
               <textarea value={nuevaPeticion.descripcion} onChange={e => setNuevaPeticion({ ...nuevaPeticion, descripcion: e.target.value })} rows={3} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm" placeholder="Detalles adicionales..." />
             </div>
-            <div className="flex gap-3 pt-2">
-              <button onClick={() => setShowNuevaPeticion(false)} className="flex-1 py-2.5 border border-slate-300 text-slate-700 rounded-lg font-medium">Cancelar</button>
-              <button onClick={handleGuardarPeticion} className="flex-1 py-2.5 bg-blue-600 text-white rounded-lg font-medium">Crear Petición</button>
+            <div className="flex gap-3 pt-4 border-t">
+              <button onClick={() => { setShowNuevaPeticion(false); setPeticionEditando(null); }} className="flex-1 py-2 text-slate-600 hover:bg-slate-50 rounded-lg border border-slate-200">Cancelar</button>
+              <button onClick={handleGuardarPeticion} className="flex-1 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex justify-center items-center gap-2 font-medium">
+                {peticionEditando ? <Pencil size={18} /> : <Send size={18} />} {peticionEditando ? 'Guardar Cambios' : 'Enviar Petición'}
+              </button>
             </div>
           </div>
         </Modal>
