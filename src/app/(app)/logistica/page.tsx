@@ -609,7 +609,6 @@ export default function LogisticaPage() {
                 </div>
                 <ChevronDown size={20} className="text-slate-400 ml-2" />
               </button>
-
               {showSelectorInventario && (
                 <div className="absolute top-full left-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-slate-200 z-50 overflow-hidden">
                   <div className="p-2 bg-slate-50 border-b border-slate-200">
@@ -666,11 +665,18 @@ export default function LogisticaPage() {
               <p className="text-slate-500 text-sm">{inventarioActual === 'all' ? 'Gestión centralizada de todos los inventarios' : 'Gestión de artículos del área'}</p>
             </div>
           </div>
+          {/* Desktop: botones a la derecha */}
+          <div className="hidden sm:flex items-center gap-2">
+            <button onClick={() => { cargarDatos(); cargarPeticiones(); }} className="flex items-center justify-center p-2.5 text-slate-600 hover:bg-slate-100 rounded-lg border border-slate-200" title="Recargar"><RefreshCw size={18} /></button>
+            <button onClick={() => setShowNuevaPeticion(true)} className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm"><ShoppingCart size={18} />Petición</button>
+            <button onClick={() => setShowNuevoArticulo(true)} className="flex items-center gap-2 px-4 py-2.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-400 font-medium text-sm"><Package size={18} />Artículo</button>
+          </div>
         </div>
-        <div className="flex flex-wrap gap-2 w-full">
-          <button onClick={() => { cargarDatos(); cargarPeticiones(); }} className="flex-1 flex items-center justify-center p-2.5 text-slate-600 hover:bg-slate-100 rounded-lg border border-slate-200" title="Recargar"><RefreshCw size={18} /></button>
-          <button onClick={() => setShowNuevaPeticion(true)} className="flex-1 flex items-center justify-center gap-1.5 px-2 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm" title="Nueva Petición"><ShoppingCart size={18} /><span className="hidden xs:inline whitespace-nowrap">Petición</span></button>
-          <button onClick={() => setShowNuevoArticulo(true)} className="flex-1 flex items-center justify-center gap-1.5 px-2 py-2.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-400 font-medium text-sm" title="Nuevo Artículo"><Package size={18} /><span className="hidden xs:inline whitespace-nowrap">Artículo</span></button>
+        {/* Móvil: fila completa */}
+        <div className="flex sm:hidden gap-2 w-full">
+          <button onClick={() => { cargarDatos(); cargarPeticiones(); }} className="flex-1 flex items-center justify-center p-2.5 text-slate-600 hover:bg-slate-100 rounded-lg border border-slate-200"><RefreshCw size={18} /></button>
+          <button onClick={() => setShowNuevaPeticion(true)} className="flex-1 flex items-center justify-center px-2 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700"><ShoppingCart size={18} /></button>
+          <button onClick={() => setShowNuevoArticulo(true)} className="flex-1 flex items-center justify-center px-2 py-2.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-400"><Package size={18} /></button>
         </div>
       </div>
 
