@@ -248,16 +248,15 @@ export default function CuadrantesPage() {
       const fallidas = resultados.filter(r => !r.ok).length
       if (fallidas > 0) {
         alert(`⚠ Cuadrante publicado con ${fallidas} error(es). Recarga para verificar.`)
-      } else {
-        // Enviar notificaciones a los voluntarios asignados
+      }
+      // Notificar siempre, independientemente de errores parciales
       const asigParaNotif = cuerpos.map(b => ({ usuarioId: b.usuarioId, fecha: b.fecha, turno: b.turno }))
       await fetch('/api/cuadrantes/notificar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ asignaciones: asigParaNotif, semanaLabel: formatRange(semanaStart) })
       })
-      alert('✅ Cuadrante publicado correctamente')
-      }
+      if (cuerpos.length > 0) alert('Cuadrante publicado correctamente')
       await cargarDatos()
     } catch (e) {
       console.error(e)
