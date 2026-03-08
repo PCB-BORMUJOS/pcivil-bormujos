@@ -127,36 +127,40 @@ export async function POST(request: NextRequest) {
                 const seleccionados: any[] = [];
                 let responsablesAsignados = 0;
                 let conductoresAsignados = 0;
-                let apoyosAsignados = 0;
+
+                // Helper: Añadir seguro recalculando el contador temporalmente en este paso (para que no parezca que necesita infinitos para turnos futuros)
+                const addSeleccionado = (c: any) => {
+                    seleccionados.push(c);
+                    conteoAsignaciones[c.usuarioId]++;
+                }
 
                 // Pass 1: Buscar 1 Responsable
                 for (let i = 0; i < clasificados.length && responsablesAsignados < 1; i++) {
                     const c = clasificados[i];
-                    if (c.usuario.responsableTurno && !seleccionados.some(s => s.usuarioId === c.usuarioId)) {
-                        seleccionados.push(c);
+                    if (c.usuario.responsableTurno && !seleccionados.some(s => s.usuarioId === c.usuarioId) && conteoAsignaciones[c.usuarioId] < c.turnosDeseados) {
+                        addSeleccionado(c);
                         responsablesAsignados++;
                     }
                 }
 
-                // Pass 2: Buscar hasta 2 Conductores (si un responsable ya es conductor, cuenta)
-                // Primero chequeamos cuántos conductores de los seleccionados ya lo son
+                // Pass 2: Buscar hasta 2 Conductores (si un responsable ya es conductor cuenta como uno)
                 conductoresAsignados += seleccionados.filter(s => s.usuario.carnetConducir).length;
                 
                 for (let i = 0; i < clasificados.length && conductoresAsignados < 2; i++) {
                     const c = clasificados[i];
-                    if (c.usuario.carnetConducir && !seleccionados.some(s => s.usuarioId === c.usuarioId)) {
-                        seleccionados.push(c);
+                    if (c.usuario.carnetConducir && !seleccionados.some(s => s.usuarioId === c.usuarioId) && conteoAsignaciones[c.usuarioId] < c.turnosDeseados) {
+                        addSeleccionado(c);
                         conductoresAsignados++;
                     }
                 }
 
-                // Pass 3: Buscar hasta 1 Apoyo (o llenar vacíos hasta llegar a 4 efectivos)
+                // Pass 3: Buscar hasta Apoyos (o llenar vacíos hasta llegar a 4 efectivos)
                 const objetivoPlazas = 4;
                 for (let i = 0; i < clasificados.length && seleccionados.length < objetivoPlazas; i++) {
                     const c = clasificados[i];
-                    if (!seleccionados.some(s => s.usuarioId === c.usuarioId)) {
-                        seleccionados.push(c);
-                        apoyosAsignados++;
+                    // Aseguramos de que esta persona no esté ya en la patrulla Y que aún tenga cupo de turnos
+                    if (!seleccionados.some(s => s.usuarioId === c.usuarioId) && conteoAsignaciones[c.usuarioId] < c.turnosDeseados) {
+                        addSeleccionado(c);
                     }
                 }
 
@@ -183,7 +187,6 @@ export async function POST(request: NextRequest) {
                     })
 
                     usuariosAsignados.add(seleccionado.usuarioId)
-                    conteoAsignaciones[seleccionado.usuarioId]++
                 })
             })
         })
