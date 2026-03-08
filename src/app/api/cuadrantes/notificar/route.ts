@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
         tipo: 'cuadrante',
         titulo: `Turnos asignados - ${semanaLabel}`,
         mensaje: `Tus turnos de la semana:\n${lineas.join('\n')}`,
-        enlace: '/cuadrantes',
+        enlace: '/mi-area?tab=actividad',
         leida: false,
         usuarioId,
       }
