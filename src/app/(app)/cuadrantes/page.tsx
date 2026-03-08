@@ -440,8 +440,29 @@ export default function CuadrantesPage() {
                                   {!u.esOperativo && <span className="text-[7px] font-bold text-slate-400 bg-slate-100 px-0.5 rounded">ADM</span>}
                                 </span>
                                 <span className={`text-[8px] font-mono flex-shrink-0 ${isAsig ? 'text-green-600' : restantes === 0 ? 'text-red-400' : 'text-slate-400'}`}>
-                                  [{restantes}↓]
-                                </span>
+                                  [{restantes}↓]</span>
+                                {isAsig && (
+                                  <span className="flex gap-0.5 ml-0.5" onClick={e => e.stopPropagation()}>
+                                    <button
+                                      onClick={() => setRolEspecial(prev => {
+                                        const actual = prev[sk] || {}
+                                        const nuevo = actual.responsable === u.id ? undefined : u.id
+                                        return { ...prev, [sk]: { ...actual, responsable: nuevo } }
+                                      })}
+                                      title="Responsable de turno"
+                                      className={rolEspecial[sk]?.responsable === u.id ? "text-[7px] font-bold px-0.5 rounded bg-indigo-500 text-white" : "text-[7px] font-bold px-0.5 rounded bg-slate-100 text-slate-400 hover:bg-indigo-100"}
+                                    >R</button>
+                                    <button
+                                      onClick={() => setRolEspecial(prev => {
+                                        const actual = prev[sk] || {}
+                                        const nuevo = actual.cecopal === u.id ? undefined : u.id
+                                        return { ...prev, [sk]: { ...actual, cecopal: nuevo } }
+                                      })}
+                                      title="Responsable CECOPAL"
+                                      className={rolEspecial[sk]?.cecopal === u.id ? "text-[7px] font-bold px-0.5 rounded bg-orange-500 text-white" : "text-[7px] font-bold px-0.5 rounded bg-slate-100 text-slate-400 hover:bg-orange-100"}
+                                    >C</button>
+                                  </span>
+                                )}
                               </div>
                             )
                           })}
