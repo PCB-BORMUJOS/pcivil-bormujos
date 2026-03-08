@@ -1119,6 +1119,35 @@ export default function LogisticaPage() {
                           </div>
                         </div>
 
+                        {/* Adjuntar Documentos - Siempre Visible cuando corresponde */}
+                        {(!peticion.urlRc && (peticion.estado === 'aprobada' || peticion.estado === 'en_compra' || peticion.estado === 'recibida' || isAdmin)) && (
+                          <div className="px-4 pb-3 pt-1 border-t border-slate-100 flex items-center gap-3 flex-wrap bg-blue-50/50">
+                            <span className="flex items-center gap-1.5 text-xs font-semibold text-blue-700 whitespace-nowrap"><FileText size={14} /> RC / Resolución:</span>
+                            <div className="flex flex-1 gap-2 min-w-0">
+                              <input type="url" placeholder="Pega aquí la URL del documento RC..." id={`rc-${peticion.id}`} className="text-xs p-1.5 border border-blue-200 rounded flex-1 bg-white focus:ring-1 focus:ring-blue-500 outline-none min-w-0" />
+                              <button onClick={() => handleActualizarDoc(peticion.id, 'rc')} className="text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded transition-colors whitespace-nowrap">Guardar</button>
+                            </div>
+                          </div>
+                        )}
+                        {(peticion.urlRc && !peticion.urlAlbaran && (peticion.estado === 'recibida' || isAdmin)) && (
+                          <div className="px-4 pb-3 pt-1 border-t border-slate-100 flex items-center gap-3 flex-wrap bg-green-50/50">
+                            <span className="flex items-center gap-1.5 text-xs font-semibold text-green-700 whitespace-nowrap"><FileCheck size={14} /> Albarán:</span>
+                            <div className="flex flex-1 gap-2 min-w-0">
+                              <input type="url" placeholder="Pega aquí la URL del albarán de recepción..." id={`albaran-${peticion.id}`} className="text-xs p-1.5 border border-green-200 rounded flex-1 bg-white focus:ring-1 focus:ring-green-500 outline-none min-w-0" />
+                              <button onClick={() => handleActualizarDoc(peticion.id, 'albaran')} className="text-xs font-semibold bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded transition-colors whitespace-nowrap">Guardar</button>
+                            </div>
+                          </div>
+                        )}
+                        {(!peticion.urlRc && !peticion.urlAlbaran && (peticion.estado === 'recibida' || isAdmin)) && (
+                          <div className="px-4 pb-3 pt-1 border-t border-slate-100 flex items-center gap-3 flex-wrap bg-green-50/50">
+                            <span className="flex items-center gap-1.5 text-xs font-semibold text-green-700 whitespace-nowrap"><FileCheck size={14} /> Albarán:</span>
+                            <div className="flex flex-1 gap-2 min-w-0">
+                              <input type="url" placeholder="Pega aquí la URL del albarán de recepción..." id={`albaran-${peticion.id}`} className="text-xs p-1.5 border border-green-200 rounded flex-1 bg-white focus:ring-1 focus:ring-green-500 outline-none min-w-0" />
+                              <button onClick={() => handleActualizarDoc(peticion.id, 'albaran')} className="text-xs font-semibold bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded transition-colors whitespace-nowrap">Guardar</button>
+                            </div>
+                          </div>
+                        )}
+
                         {/* Contenido Expandido */}
                         {peticionesExpandidas.has(peticion.id) && (
                           <div className="px-4 py-4 bg-slate-50 border-t border-slate-200 grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
