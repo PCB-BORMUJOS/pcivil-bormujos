@@ -809,6 +809,31 @@ export default function DashboardPage() {
     }
   };
 
+  // Eliminar guardia directamente desde el modal (solo admin)
+  const handleEliminarGuardia = async (guardiaId: string, fecha: string, turno: string) => {
+    if (!confirm('¿Eliminar esta asignación de turno? Esta acción no se puede deshacer.')) return;
+    setSavingGuardia(true);
+    try {
+      const res = await fetch(`/api/cuadrantes?id=${guardiaId}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Error al eliminar');
+      // Recargar guardias del calendario
+      const guardiasRes = await fetch('/api/guardias');
+      const guardiasData = await guardiasRes.json();
+      setGuardias(guardiasData.guardias || []);
+      // Actualizar modal con guardias restantes del mismo turno
+      const restantes = (guardiasData.guardias || []).filter((g: any) =>
+        new Date(g.fecha).toISOString().split('T')[0] === fecha && g.turno === turno
+      );
+      setShowGuardiaDetail(prev => prev ? { ...prev, guardias: restantes } : null);
+      setEditarGuardiaId(null);
+      setEditarVoluntarioId('');
+    } catch (e) {
+      alert('Error al eliminar la guardia. Inténtalo de nuevo.');
+    } finally {
+      setSavingGuardia(false);
+    }
+  };
+
   const esAdmin = ['superadmin', 'admin', 'coordinador'].includes(userRole);
 
   return (
@@ -1327,8 +1352,16 @@ export default function DashboardPage() {
                               )}
                             </button>
                             <button
+                              onClick={() => handleEliminarGuardia(g.id, showGuardiaDetail.date, showGuardiaDetail.turno)}
+                              disabled={savingGuardia}
+                              className="py-1.5 px-3 bg-red-100 hover:bg-red-200 disabled:opacity-50 text-red-700 text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 transition-colors"
+                              title="Eliminar esta asignación"
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                            <button
                               onClick={() => { setEditarGuardiaId(null); setEditarVoluntarioId(''); }}
-                              className="flex-1 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold rounded-lg transition-colors"
+                              className="py-1.5 px-3 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold rounded-lg transition-colors"
                             >
                               Cancelar
                             </button>
