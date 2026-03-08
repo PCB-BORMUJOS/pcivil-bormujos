@@ -1,3 +1,5 @@
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 
@@ -5,6 +7,11 @@ const prisma = new PrismaClient();
 
 // GET: Obtener voluntarios disponibles para un día y turno específico
 export async function GET(req: NextRequest) {
+  const session = await getServerSession(authOptions)
+  if (!session) {
+    return new Response(JSON.stringify({ error: 'No autorizado' }), { status: 401 })
+  }
+
     try {
         const { searchParams } = new URL(req.url);
         const fecha = searchParams.get('fecha'); // YYYY-MM-DD
