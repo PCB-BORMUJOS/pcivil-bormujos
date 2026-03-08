@@ -188,7 +188,7 @@ export default function AccionSocialPage() {
       setCasos(dCasos.casos || [])
       setMiembrosViogen(dMiembros.miembros || [])
       setStats(dStats)
-    } catch (e) { console.error(e) }
+    } catch (e) { /* error silenciado */ }
     finally { setLoading(false) }
   }
 
@@ -197,7 +197,7 @@ export default function AccionSocialPage() {
       const r = await fetch('/api/logistica/peticiones?area=accion_social')
       const d = await r.json()
       setPeticiones(d.peticiones || [])
-    } catch (e) { console.error(e) }
+    } catch (e) { /* error silenciado */ }
   }
 
   useEffect(() => { cargarDatos() }, [])

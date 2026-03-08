@@ -176,7 +176,7 @@ export default function IncendiosPage() {
       setHidrantes(dataHid.hidrantes || []);
       setHidrantesStats({ total: dataHid.stats?.total || 0, operativos: dataHid.stats?.operativos || 0 });
     } catch (error) {
-      console.error("Error:", error);
+      /* error silenciado */;
     } finally {
       setLoading(false);
     }
@@ -187,7 +187,7 @@ export default function IncendiosPage() {
       const data = await res.json();
       setEquiposECI(data.equipos || []);
     } catch (error) {
-      console.error('Error:', error);
+      /* error silenciado */;
     }
   };
 
@@ -203,7 +203,7 @@ export default function IncendiosPage() {
       setPeticiones(data.peticiones || []);
       setPeticionStats(data.stats || { total: 0, pendientes: 0, aprobadas: 0, enCompra: 0, recibidas: 0, rechazadas: 0 });
     } catch (error) {
-      console.error("Error cargando peticiones:", error);
+      /* error silenciado */;
     }
   };
   const guardarArticulo = async (formData: any) => {
@@ -216,7 +216,7 @@ export default function IncendiosPage() {
       if (res.ok) { await cargarDatos(); return true }
       return false
     } catch (error) {
-      console.error('Error:', error)
+      /* error silenciado */
       return false
     }
   }
@@ -231,7 +231,7 @@ export default function IncendiosPage() {
       if (res.ok) { await cargarDatos(); return true }
       return false
     } catch (error) {
-      console.error('Error:', error)
+      /* error silenciado */
       return false
     }
   }
@@ -246,7 +246,7 @@ export default function IncendiosPage() {
       if (res.ok) { await cargarDatos(); return true }
       return false
     } catch (error) {
-      console.error('Error:', error)
+      /* error silenciado */
       return false
     }
   }
@@ -261,7 +261,7 @@ export default function IncendiosPage() {
       if (res.ok) { await cargarDatos(); return true }
       return false
     } catch (error) {
-      console.error('Error:', error)
+      /* error silenciado */
       return false
     }
   }
@@ -276,7 +276,7 @@ export default function IncendiosPage() {
       if (res.ok) { await cargarDatos(); return true }
       return false
     } catch (error) {
-      console.error('Error:', error)
+      /* error silenciado */
       return false
     }
   }
@@ -291,7 +291,7 @@ export default function IncendiosPage() {
       if (res.ok) { await cargarDatos(); return true }
       return false
     } catch (error) {
-      console.error('Error:', error)
+      /* error silenciado */
       return false
     }
   }
@@ -306,7 +306,7 @@ export default function IncendiosPage() {
       if (res.ok) { await cargarDatos(); return true }
       return false
     } catch (error) {
-      console.error('Error:', error)
+      /* error silenciado */
       return false
     }
   }
@@ -321,7 +321,7 @@ export default function IncendiosPage() {
       if (res.ok) { await cargarDatos(); return true }
       return false
     } catch (error) {
-      console.error('Error:', error)
+      /* error silenciado */
       return false
     }
   }
@@ -332,7 +332,7 @@ export default function IncendiosPage() {
       if (res.ok) { await cargarDatos(); return true }
       return false
     } catch (error) {
-      console.error('Error:', error)
+      /* error silenciado */
       return false
     }
   }
@@ -1253,7 +1253,7 @@ export default function IncendiosPage() {
                   alert('Petición creada correctamente')
                 }
               } catch (error) {
-                console.error('Error:', error)
+                /* error silenciado */
               }
             }} className="p-6 space-y-4">
               <div>
@@ -1330,7 +1330,7 @@ export default function IncendiosPage() {
                     nombreInput.value = ''
                   }
                 } catch (error) {
-                  console.error('Error:', error)
+                  /* error silenciado */
                 }
               }} className="mb-6 flex gap-2">
                 <input 
@@ -1368,7 +1368,7 @@ export default function IncendiosPage() {
                               })
                               if (res.ok) await cargarDatos()
                             } catch (error) {
-                              console.error('Error:', error)
+                              /* error silenciado */
                             }
                           }
                         }}
@@ -1391,7 +1391,7 @@ export default function IncendiosPage() {
                               })
                               if (res.ok) await cargarDatos()
                             } catch (error) {
-                              console.error('Error:', error)
+                              /* error silenciado */
                             }
                           }
                         }}

@@ -247,7 +247,7 @@ export default function SocorrismoPage() {
         incompletos: dataBotiquines.botiquines?.filter((b: any) => b.estado === 'incompleto').length || 0
       })
     } catch (error) {
-      console.error('Error:', error)
+      /* error silenciado */
     } finally {
       setLoading(false)
     }
@@ -273,7 +273,7 @@ export default function SocorrismoPage() {
         rechazadas: 0
       })
     } catch (error) {
-      console.error('Error:', error)
+      /* error silenciado */
     }
   }
 
@@ -299,7 +299,7 @@ export default function SocorrismoPage() {
       const res = await fetch(`/api/logistica?tipo=articulo&id=${id}`, { method: 'DELETE' })
       if (res.ok) { cargarDatos(); alert('Artículo eliminado') }
       else { alert('Error al eliminar') }
-    } catch (error) { console.error('Error:', error) }
+    } catch (error) { /* error silenciado */ }
   }
 
   return (
@@ -852,7 +852,7 @@ export default function SocorrismoPage() {
                             setBotiquinSeleccionado(data.botiquin)
                             setShowGestionItems(true)
                           } catch (error) {
-                            console.error('Error:', error)
+                            /* error silenciado */
                             alert('Error al cargar items')
                           }
                         }}
@@ -885,7 +885,7 @@ export default function SocorrismoPage() {
                             setBotiquinSeleccionado(botiquin)
                             setShowHistorial(true)
                           } catch (error) {
-                            console.error('Error:', error)
+                            /* error silenciado */
                             alert('Error al cargar historial')
                           }
                         }}
@@ -947,7 +947,7 @@ export default function SocorrismoPage() {
                   form.reset()
                 }
               } catch (error) {
-                console.error('Error:', error)
+                /* error silenciado */
               }
             }} className="p-6 overflow-y-auto space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1038,7 +1038,7 @@ export default function SocorrismoPage() {
                   setArticuloSeleccionado(null)
                 }
               } catch (error) {
-                console.error('Error:', error)
+                /* error silenciado */
               }
             }} className="p-6 overflow-y-auto space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1135,7 +1135,7 @@ export default function SocorrismoPage() {
                   }
                 }
               } catch (error) {
-                console.error('Error:', error)
+                /* error silenciado */
               }
             }} className="p-6 space-y-4">
               <div>
@@ -1212,7 +1212,7 @@ export default function SocorrismoPage() {
                     nombreInput.value = ''
                   }
                 } catch (error) {
-                  console.error('Error:', error)
+                  /* error silenciado */
                 }
               }} className="mb-6 flex gap-2">
                 <input name="nombreFamilia" type="text" placeholder="Nueva familia..." className="flex-1 border border-slate-300 rounded-lg p-2.5" />
@@ -1242,7 +1242,7 @@ export default function SocorrismoPage() {
                             })
                             if (res.ok) await cargarDatos()
                           } catch (error) {
-                            console.error('Error:', error)
+                            /* error silenciado */
                           }
                         }
                       }} className="p-1.5 text-slate-600 hover:bg-slate-100 rounded">
@@ -1259,7 +1259,7 @@ export default function SocorrismoPage() {
                             const res = await fetch(`/api/logistica?tipo=familia&id=${fam.id}`, { method: 'DELETE' })
                             if (res.ok) await cargarDatos()
                           } catch (error) {
-                            console.error('Error:', error)
+                            /* error silenciado */
                           }
                         }
                       }} className="p-1.5 text-red-600 hover:bg-red-50 rounded">
@@ -1325,7 +1325,7 @@ export default function SocorrismoPage() {
                   alert(`Error: ${error.error || 'No se pudo crear el DEA'}`)
                 }
               } catch (error) {
-                console.error('Error:', error)
+                /* error silenciado */
                 alert('Error al crear DEA')
               }
             }} className="p-6 overflow-y-auto space-y-5">
@@ -1454,7 +1454,7 @@ export default function SocorrismoPage() {
                   alert(`Error: ${error.error || 'No se pudo actualizar el DEA'}`)
                 }
               } catch (error) {
-                console.error('Error:', error)
+                /* error silenciado */
                 alert('Error al actualizar DEA')
               }
             }} className="p-6 overflow-y-auto space-y-5">
@@ -1560,8 +1560,7 @@ export default function SocorrismoPage() {
                 observaciones: (form.elements.namedItem('observaciones') as HTMLTextAreaElement).value
               }
               try {
-                console.log('Enviando botiquín:', formData)
-                const res = await fetch('/api/logistica', {
+                                const res = await fetch('/api/logistica', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ tipo: 'botiquin', tipoBotiquin: formData.tipo, codigo: formData.codigo, nombre: formData.nombre, ubicacionActual: formData.ubicacionActual, vehiculoId: formData.vehiculoId, observaciones: formData.observaciones })
@@ -1573,7 +1572,7 @@ export default function SocorrismoPage() {
                   alert('✅ Botiquín creado correctamente')
                 }
               } catch (error) {
-                console.error('Error:', error)
+                /* error silenciado */
                 alert('❌ Error al crear botiquín')
               }
             }} className="p-6 overflow-y-auto space-y-4">
@@ -1688,7 +1687,7 @@ export default function SocorrismoPage() {
                     alert('Error: ' + (error.message || 'No se pudo actualizar'))
                   }
                 } catch (error) {
-                  console.error('Error al actualizar botiquín:', error)
+                  /* error silenciado */
                   alert('Error al actualizar el botiquín')
                 }
               }}
@@ -1857,7 +1856,7 @@ export default function SocorrismoPage() {
                                   alert('✅ Item eliminado')
                                 }
                               } catch (error) {
-                                console.error('Error:', error)
+                                /* error silenciado */
                                 alert('❌ Error al eliminar')
                               }
                             }
@@ -1929,7 +1928,7 @@ export default function SocorrismoPage() {
                   alert(`❌ ${errorData.error || 'Error al crear item'}`)
                 }
               } catch (error) {
-                console.error('Error:', error)
+                /* error silenciado */
                 alert('❌ Error al crear item')
               }
             }} className="p-6 space-y-4">
@@ -2011,7 +2010,7 @@ export default function SocorrismoPage() {
                   alert('❌ Error al actualizar')
                 }
               } catch (error) {
-                console.error('Error:', error)
+                /* error silenciado */
                 alert('❌ Error al actualizar')
               }
             }} className="p-6 space-y-4">
@@ -2112,7 +2111,7 @@ export default function SocorrismoPage() {
                   alert(`❌ ${error.error || 'Error al guardar revisión'}`)
                 }
               } catch (error) {
-                console.error('Error:', error)
+                /* error silenciado */
                 alert('❌ Error al guardar revisión')
               }
             }} className="flex flex-col max-h-[calc(90vh-100px)]">

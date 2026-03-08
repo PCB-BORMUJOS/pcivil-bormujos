@@ -619,7 +619,7 @@ export default function DashboardPage() {
         cargarResumenMes(new Date());
       })
       .catch((err) => {
-        console.error('Error cargando datos:', err);
+        /* error silenciado */;
       })
       .finally(() => {
         setLoadingVol(false);
@@ -751,12 +751,12 @@ export default function DashboardPage() {
         setTurnoSeleccionado({ fecha, turno, diaSemanaNombre: data.diaSemanaNombre });
         // NO abrimos showPersonnel — ya queda integrado en showGuardiaDetail
       } else {
-        console.error('Error al cargar disponibilidad:', data.error);
+        /* error silenciado */;
         // En caso de error, cargar todos los voluntarios como fallback
         cargarTodosVoluntarios();
       }
     } catch (error) {
-      console.error('Error en cargarDisponibilidadPorTurno:', error);
+      /* error silenciado */;
       cargarTodosVoluntarios();
     } finally {
       setLoadingDisponibilidad(false);

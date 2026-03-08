@@ -42,7 +42,7 @@ function BuscarContent() {
       setVehiculos(data.vehiculos || [])
       setServicios(data.servicios || [])
     } catch (e) {
-      console.error(e)
+      /* error silenciado */
     } finally {
       setLoading(false)
     }

@@ -248,7 +248,7 @@ export default function MiAreaPage() {
           setInscripcionesReales(data.inscripciones || [])
           setCertificacionesReales(data.certificaciones || [])
         })
-        .catch(console.error)
+        .catch(() => {})
         .finally(() => setLoadingFormacion(false))
     }
     if (activeTab === 'dietas') {
@@ -263,10 +263,7 @@ export default function MiAreaPage() {
       const res = await fetch('/api/mi-area');
       if (res.ok) {
         const data = await res.json();
-        console.log('DATA COMPLETO:', data);
-        console.log('data.vestuario existe?', !!data.vestuario);
-        console.log('data.usuario.asignacionesVestuario:', data.usuario?.asignacionesVestuario);
-        if (data.usuario) {
+                                if (data.usuario) {
           setDatosPersonales({
             nombre: data.usuario.nombre || '',
             apellidos: data.usuario.apellidos || '',
@@ -298,13 +295,13 @@ export default function MiAreaPage() {
         const resG = await fetch('/api/mi-area/guardias');
         const dataG = await resG.json();
         if (dataG.guardias) setMisGuardias(dataG.guardias);
-      } catch(e) { console.error('Error cargando guardias:', e); }
+      } catch(e) { /* error silenciado */; }
       if (resDisp.ok) {
         const dataDisp = await resDisp.json();
         setDisponibilidades(dataDisp.disponibilidades || []);
       }
     } catch (error) {
-      console.error('Error cargando datos:', error);
+      /* error silenciado */;
     } finally {
       setLoading(false);
     }
@@ -445,7 +442,7 @@ export default function MiAreaPage() {
         alert('❌ Error: ' + (data.error || 'No se pudo cambiar la contraseña'));
       }
     } catch (error) {
-      console.error('Error:', error);
+      /* error silenciado */;
       alert('❌ Error al cambiar contraseña');
     }
   };
@@ -461,7 +458,7 @@ export default function MiAreaPage() {
         setMesSeleccionado(data.mesSeleccionado || '');
       }
     } catch (error) {
-      console.error('Error cargando dietas:', error);
+      /* error silenciado */;
     }
   };
 

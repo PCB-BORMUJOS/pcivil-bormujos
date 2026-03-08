@@ -122,7 +122,7 @@ export default function ConfiguracionPage() {
         { id: '1', nombre: 'Protección Civil Bormujos', codigo: 'PCB' },
       ]);
     } catch (error) {
-      console.error('Error al cargar datos:', error);
+      /* error silenciado */;
     } finally {
       setLoadingUsuarios(false);
     }
@@ -202,7 +202,7 @@ export default function ConfiguracionPage() {
         fetchData();
       }
     } catch (error) {
-      console.error('Error al actualizar usuario:', error);
+      /* error silenciado */;
     }
   };
 
@@ -276,7 +276,7 @@ export default function ConfiguracionPage() {
         alert(data.error || 'Error al eliminar usuario');
       }
     } catch (error) {
-      console.error('Error al eliminar usuario:', error);
+      /* error silenciado */;
     }
   };
 
@@ -671,7 +671,7 @@ export default function ConfiguracionPage() {
                                 });
                                 fetchData();
                               } catch (error) {
-                                console.error('Error updating:', error);
+                                /* error silenciado */;
                               }
                             }}
                             className="w-5 h-5 text-orange-600 rounded focus:ring-2 focus:ring-orange-500"
@@ -691,7 +691,7 @@ export default function ConfiguracionPage() {
                                 });
                                 fetchData();
                               } catch (error) {
-                                console.error('Error updating:', error);
+                                /* error silenciado */;
                               }
                             }}
                             className="w-5 h-5 text-orange-600 rounded focus:ring-2 focus:ring-orange-500"
@@ -711,7 +711,7 @@ export default function ConfiguracionPage() {
                                 });
                                 fetchData();
                               } catch (error) {
-                                console.error('Error updating:', error);
+                                /* error silenciado */;
                               }
                             }}
                             className="w-5 h-5 text-orange-600 rounded focus:ring-2 focus:ring-orange-500"
@@ -731,7 +731,7 @@ export default function ConfiguracionPage() {
                                 });
                                 fetchData();
                               } catch (error) {
-                                console.error('Error updating:', error);
+                                /* error silenciado */;
                               }
                             }}
                             className="w-5 h-5 text-orange-600 rounded focus:ring-2 focus:ring-orange-500"
@@ -750,7 +750,7 @@ export default function ConfiguracionPage() {
                                 });
                                 fetchData();
                               } catch (error) {
-                                console.error('Error updating:', error);
+                                /* error silenciado */;
                               }
                             }}
                             className="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-orange-500"
@@ -773,7 +773,7 @@ export default function ConfiguracionPage() {
                                 });
                                 fetchData();
                               } catch (error) {
-                                console.error('Error updating:', error);
+                                /* error silenciado */;
                               }
                             }}
                             className="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-orange-500"

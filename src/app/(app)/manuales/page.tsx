@@ -83,7 +83,7 @@ export default function ManualesPage() {
       setManuales(data.manuales || [])
       setStats(data.stats || null)
     } catch (error) {
-      console.error('Error cargando manuales:', error)
+      /* error silenciado */
     } finally {
       setLoading(false)
     }
@@ -111,7 +111,7 @@ export default function ManualesPage() {
         alert(error.error || 'Error al subir manual')
       }
     } catch (error) {
-      console.error('Error:', error)
+      /* error silenciado */
       alert('Error al subir manual')
     } finally {
       setUploading(false)
@@ -150,7 +150,7 @@ export default function ManualesPage() {
         alert('Error al actualizar manual')
       }
     } catch (error) {
-      console.error('Error:', error)
+      /* error silenciado */
       alert('Error al actualizar manual')
     }
   }
@@ -170,7 +170,7 @@ export default function ManualesPage() {
         alert('Error al eliminar manual')
       }
     } catch (error) {
-      console.error('Error:', error)
+      /* error silenciado */
       alert('Error al eliminar manual')
     }
   }

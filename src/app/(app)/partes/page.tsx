@@ -44,7 +44,7 @@ export default function PartesPage() {
         setTotalPages(data.totalPages)
       }
     } catch (error) {
-      console.error('Error cargando partes:', error)
+      /* error silenciado */
     } finally {
       setLoading(false)
     }
@@ -82,7 +82,7 @@ export default function PartesPage() {
         alert('Error al guardar el parte')
       }
     } catch (e) {
-      console.error(e)
+      /* error silenciado */
       alert('Error de conexión')
     }
   }
@@ -101,7 +101,7 @@ export default function PartesPage() {
         alert('No se pudo eliminar (Posiblemente requiere permisos de Superadmin)')
       }
     } catch (error) {
-      console.error('Error eliminando parte:', error)
+      /* error silenciado */
     }
   }
 

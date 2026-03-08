@@ -200,7 +200,7 @@ export default function CuadrantesPage() {
       setSugerencias(sugMap)
       setPendiente(false)
     } catch (e) {
-      console.error('Error cargando cuadrante:', e)
+      /* error silenciado */
     } finally {
       setLoading(false)
     }
@@ -273,7 +273,7 @@ export default function CuadrantesPage() {
       if (cuerpos.length > 0) alert('Cuadrante publicado correctamente')
       await cargarDatos()
     } catch (e) {
-      console.error(e)
+      /* error silenciado */
       alert('Error al publicar el cuadrante')
     } finally {
       setGuardando(false)

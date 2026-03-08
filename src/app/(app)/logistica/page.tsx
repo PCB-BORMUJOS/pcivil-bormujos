@@ -310,7 +310,7 @@ export default function LogisticaPage() {
       setStats(data.stats || { totalArticulos: 0, stockBajo: 0, porCaducar: 0, caducados: 0 });
       setStatsPorArea(data.statsPorArea || []);
     } catch (error) {
-      console.error('Error cargando datos:', error);
+      /* error silenciado */;
     } finally {
       setLoading(false);
     }
@@ -326,7 +326,7 @@ export default function LogisticaPage() {
       setPeticiones(data.peticiones || []);
       setPeticionStats(data.stats || { total: 0, pendientes: 0, aprobadas: 0, enCompra: 0, recibidas: 0, rechazadas: 0 });
     } catch (error) {
-      console.error('Error cargando peticiones:', error);
+      /* error silenciado */;
     }
   };
 
@@ -336,7 +336,7 @@ export default function LogisticaPage() {
       const data = await res.json();
       setMovimientos(data.movimientos || []);
     } catch (error) {
-      console.error('Error cargando movimientos:', error);
+      /* error silenciado */;
     }
   };
   
@@ -346,7 +346,7 @@ export default function LogisticaPage() {
       const data = await res.json();
       setAsignaciones(data.asignaciones || []);
     } catch (error) {
-      console.error('Error cargando asignaciones:', error);
+      /* error silenciado */;
     }
   };
 
@@ -356,7 +356,7 @@ export default function LogisticaPage() {
     const data = await res.json();
     setUsuarios(data.voluntarios || []);
   } catch (error) {
-    console.error('Error cargando usuarios:', error);
+    /* error silenciado */;
   }
 };
 
@@ -531,7 +531,7 @@ export default function LogisticaPage() {
         alert('❌ Error: ' + (data.error || 'No se pudo asignar el vestuario'));
       }
     } catch (error) {
-      console.error('Error asignando vestuario:', error);
+      /* error silenciado */;
       alert('❌ Error al asignar vestuario');
     }
   };

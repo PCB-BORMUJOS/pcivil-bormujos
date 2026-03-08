@@ -393,7 +393,7 @@ export default function AdministracionPage() {
       });
 
     } catch (error) {
-      console.error("Error actualizando area", error);
+      /* error silenciado */;
       alert("Error al guardar el cambio de área. Se revertirá.");
       setVoluntarios(prevVoluntarios);
     }
@@ -526,7 +526,7 @@ export default function AdministracionPage() {
       setRoles(data.roles || []);
       setServicios(data.servicios || []);
     } catch (error) {
-      console.error('Error cargando voluntarios:', error);
+      /* error silenciado */;
     }
   };
 
@@ -536,7 +536,7 @@ export default function AdministracionPage() {
       const data = await res.json();
       setDisponibilidades(data.disponibilidades || []);
     } catch (error) {
-      console.error('Error cargando disponibilidades:', error);
+      /* error silenciado */;
     }
   };
 
@@ -546,7 +546,7 @@ export default function AdministracionPage() {
       const data = await res.json();
       setResumenDietas(data.resumen || []);
     } catch (error) {
-      console.error('Error cargando dietas:', error);
+      /* error silenciado */;
     }
   };
 
@@ -557,7 +557,7 @@ export default function AdministracionPage() {
       setMovimientosCaja(data.movimientos || []);
       setSaldoActual(data.saldoActual || 0);
     } catch (error) {
-      console.error('Error cargando caja:', error);
+      /* error silenciado */;
     }
   };
 
@@ -567,7 +567,7 @@ export default function AdministracionPage() {
       const data = await res.json();
       setTicketsCombustible(data.tickets || []);
     } catch (error) {
-      console.error('Error cargando combustible:', error);
+      /* error silenciado */;
     }
   };
 
@@ -577,7 +577,7 @@ export default function AdministracionPage() {
       const data = await res.json();
       setPolizas(data.polizas || []);
     } catch (error) {
-      console.error('Error cargando pólizas:', error);
+      /* error silenciado */;
     }
   };
 
@@ -630,7 +630,7 @@ export default function AdministracionPage() {
         );
       }
     } catch (error) {
-      console.error('Error al actualizar estado:', error);
+      /* error silenciado */;
     }
   };
 
@@ -929,7 +929,7 @@ export default function AdministracionPage() {
       const data = await res.json();
       if (data.aspirantes) setAspirantes(data.aspirantes);
     } catch (error) {
-      console.error('Error al cargar aspirantes:', error);
+      /* error silenciado */;
     }
   };
 
@@ -998,7 +998,7 @@ export default function AdministracionPage() {
         );
       }
     } catch (error) {
-      console.error('Error al actualizar disponibilidad:', error);
+      /* error silenciado */;
     }
   };
 

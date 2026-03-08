@@ -422,7 +422,7 @@ export default function FormacionPage() {
           }
         }
       } catch (e) {
-        console.error('Error fetching user:', e);
+        /* error silenciado */;
       }
     };
     if (session) {
@@ -467,7 +467,7 @@ export default function FormacionPage() {
         const data = await res.json();
         setInscripcionesGrading(data.inscripciones || []);
       }
-    } catch (e) { console.error(e); }
+    } catch (e) { /* error silenciado */; }
     setLoadingGrading(false);
   };
 
@@ -492,7 +492,7 @@ export default function FormacionPage() {
         body: JSON.stringify({ tipo: 'inscripcion', id, [field]: value })
       });
     } catch (e) {
-      console.error(e);
+      /* error silenciado */;
       // Revertir si falla (opcional, por simplicidad no lo implemento ahora)
     }
   };
@@ -512,7 +512,7 @@ export default function FormacionPage() {
       // Close modal if it was opened for signing
       setShowFirmaModal(false);
     } catch (e) {
-      console.error('Error guardando firma:', e);
+      /* error silenciado */;
       alert('Error guardando firma');
     }
   };
@@ -542,7 +542,7 @@ export default function FormacionPage() {
         alert('Error al cerrar acta: ' + (data.error || 'Desconocido'));
       }
     } catch (e) {
-      console.error(e);
+      /* error silenciado */;
       alert('Error de conexión');
     }
   };
@@ -578,7 +578,7 @@ export default function FormacionPage() {
         alert('Error: ' + (data.error || 'No se pudo completar la inscripción'));
       }
     } catch (e) {
-      console.error(e);
+      /* error silenciado */;
       alert('Error de conexión');
     }
   };
@@ -621,7 +621,7 @@ export default function FormacionPage() {
         alert('Error: ' + (data.error || 'No se pudo completar la inscripción'));
       }
     } catch (e) {
-      console.error(e);
+      /* error silenciado */;
       alert('Error de conexión');
     } finally {
       setInscripcionLoading(false);
@@ -654,7 +654,7 @@ export default function FormacionPage() {
       else if (mainTab === 'necesidades') await cargarNecesidades();
 
     } catch (error) {
-      console.error('Error cargando datos:', error);
+      /* error silenciado */;
     } finally {
       setLoading(false);
     }
@@ -666,7 +666,7 @@ export default function FormacionPage() {
       const data = await res.json();
       setArticulos(data.articulos || []);
       setFamilias(data.familias || []);
-    } catch (error) { console.error("Error al cargar inventario", error); }
+    } catch (error) { /* error silenciado */; }
   };
 
   const cargarPeticiones = async () => {
@@ -674,7 +674,7 @@ export default function FormacionPage() {
       const res = await fetch('/api/logistica/peticiones?area=formacion');
       const data = await res.json();
       setPeticiones(data.peticiones || []);
-    } catch (error) { console.error('Error loading peticiones:', error); }
+    } catch (error) { /* error silenciado */; }
   };
 
   const cargarMovimientos = async () => {
@@ -682,7 +682,7 @@ export default function FormacionPage() {
       const res = await fetch('/api/logistica/movimiento?inventario=formacion&limit=100');
       const data = await res.json();
       setMovimientos(data.movimientos || []);
-    } catch (error) { console.error('Error loading movimientos:', error); }
+    } catch (error) { /* error silenciado */; }
   };
 
   const cargarCursos = async () => {
@@ -768,7 +768,7 @@ export default function FormacionPage() {
         setJornadaSeleccionada('');
         setRegistrosFirma([]);
       }
-    } catch (e) { console.error(e); }
+    } catch (e) { /* error silenciado */; }
     finally { setLoadingAsistencia(false); }
   };
 
@@ -779,7 +779,7 @@ export default function FormacionPage() {
       const res = await fetch(`/api/formacion?tipo=registros&jornadaId=${jornadaId}`);
       const data = await res.json();
       setRegistrosFirma(data.registros || []);
-    } catch (e) { console.error(e); }
+    } catch (e) { /* error silenciado */; }
     finally { setLoadingAsistencia(false); }
   };
 
@@ -802,7 +802,7 @@ export default function FormacionPage() {
         const err = await res.json();
         alert('Error: ' + (err.error || 'No se pudo crear la jornada'));
       }
-    } catch (e) { console.error(e); alert('Error de conexión'); }
+    } catch (e) { /* error silenciado */; alert('Error de conexión'); }
   };
 
   const handleToggleAsistencia = async (registroId: string, asistio: boolean) => {
@@ -813,7 +813,7 @@ export default function FormacionPage() {
         body: JSON.stringify({ tipo: 'registro-firma', id: registroId, asistio })
       });
       if (res.ok) await cargarRegistrosFirma(jornadaSeleccionada);
-    } catch (e) { console.error(e); }
+    } catch (e) { /* error silenciado */; }
   };
 
   const handleCrearParticipanteExterno = async () => {
@@ -834,7 +834,7 @@ export default function FormacionPage() {
       } else {
         alert('Error al registrar participante');
       }
-    } catch (e) { console.error(e); alert('Error de conexión'); }
+    } catch (e) { /* error silenciado */; alert('Error de conexión'); }
   };
 
     const cargarNecesidades = async () => {
@@ -879,7 +879,7 @@ export default function FormacionPage() {
         alert('Error al crear artículo');
       }
     } catch (error) {
-      console.error(error);
+      /* error silenciado */;
       alert('Error de conexión');
     }
   };
@@ -995,7 +995,7 @@ export default function FormacionPage() {
         }
       }
     } catch (error) {
-      console.error(error);
+      /* error silenciado */;
       alert('Error de conexión');
     }
   };
@@ -1057,7 +1057,7 @@ export default function FormacionPage() {
           alert('Error al crear convocatoria');
         }
       }
-    } catch (e) { console.error(e); alert('Error'); }
+    } catch (e) { /* error silenciado */; alert('Error'); }
   };
 
   const handleGuardarNecesidad = async () => {
@@ -1084,7 +1084,7 @@ export default function FormacionPage() {
         cargarNecesidades();
         alert('✅ Necesidad registrada');
       } else { alert('Error al registrar necesidad'); }
-    } catch (e) { console.error(e); alert('Error'); }
+    } catch (e) { /* error silenciado */; alert('Error'); }
   };
 
   const handleEstadoInscripcion = async (id: string, nuevoEstado: string) => {
@@ -1099,7 +1099,7 @@ export default function FormacionPage() {
         cargarInscripciones();
         cargarConvocatorias();
       } else { alert('Error al actualizar estado'); }
-    } catch (e) { console.error(e); alert('Error'); }
+    } catch (e) { /* error silenciado */; alert('Error'); }
   };
 
 
