@@ -1,806 +1,502 @@
-'use client';
+'use client'
 
-import React, { useState, useEffect } from 'react';
-import { Calendar, ChevronLeft, ChevronRight, Plus, AlertCircle, CheckCircle2, User, X, Trash2, Sparkles, Download } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react'
+import {
+  Calendar, ChevronLeft, ChevronRight, RefreshCw, Save,
+  Shield, Car, Minus, Plus, Clock, AlertTriangle, CheckCircle2, Info
+} from 'lucide-react'
 
-// Tipos
-enum ShiftType { MORNING = 'Mañana', AFTERNOON = 'Tarde', EXTRA = 'Extra' }
-
-interface Shift {
-  id?: string;
-  date: string;
-  type: ShiftType;
-  turno: 'mañana' | 'tarde';
-  startTime: string;
-  endTime: string;
-  assignment?: { volunteerId: string; nombre: string; numeroVoluntario: string };
-  isComplete: boolean;
+interface UsuarioDisponible {
+  id: string
+  nombre: string
+  apellidos: string
+  numeroVoluntario: string | null
+  responsableTurno: boolean
+  carnetConducir: boolean
+  experiencia: string
+  nivelCompromiso: string
+  esOperativo: boolean
+  turnosDeseados: number
+  puedeDobleturno: boolean
 }
 
-interface Voluntario {
-  id: string;
-  nombre: string;
-  apellidos: string;
-  numeroVoluntario: string;
-  responsableTurno?: boolean;
-  carnetConducir?: boolean;
-}
-
-interface Sugerencia {
-  fecha: string;
-  turno: string;
-  usuarioId: string;
+interface GuardiaExistente {
+  id: string
+  fecha: string
+  turno: string
+  usuarioId: string
+  rol: string | null
   usuario: {
-    nombre: string;
-    apellidos: string;
-    numeroVoluntario: string;
-  };
+    id: string
+    nombre: string
+    apellidos: string
+    numeroVoluntario: string | null
+    responsableTurno: boolean
+    carnetConducir: boolean
+    esOperativo: boolean
+  }
 }
 
-// Helpers
-const getNextMonday = (date: Date) => {
-  const d = new Date(date);
-  d.setDate(d.getDate() + ((1 + 7 - d.getDay()) % 7 || 7));
-  return d;
-};
+const getNextMonday = (date: Date): Date => {
+  const d = new Date(date)
+  d.setHours(0, 0, 0, 0)
+  d.setDate(d.getDate() + ((1 + 7 - d.getDay()) % 7 || 7))
+  return d
+}
 
-const getWeekDays = (startDate: Date) => {
-  const days = [];
-  for (let i = 0; i < 7; i++) {
-    const d = new Date(startDate);
-    d.setDate(d.getDate() + i);
-    days.push(d);
-  }
-  return days;
-};
+const getWeekDays = (start: Date): Date[] =>
+  Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(start)
+    d.setDate(d.getDate() + i)
+    return d
+  })
 
-const formatDateRange = (start: Date) => {
-  const end = new Date(start);
-  end.setDate(start.getDate() + 6);
-  return `Del ${start.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })} al ${end.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })}`;
-};
+const toDateStr = (d: Date): string => {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+const slotKey = (fecha: string, turno: string) => `${fecha}__${turno}`
+
+const parseSlotKey = (sk: string): { fecha: string; turno: string } => {
+  const [fecha, turno] = sk.split('__')
+  return { fecha, turno }
+}
+
+const formatRange = (start: Date): string => {
+  const end = new Date(start)
+  end.setDate(start.getDate() + 6)
+  const fmt = (d: Date) =>
+    d.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })
+  return `${fmt(start)} — ${fmt(end)}`
+}
+
+const DIAS = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo']
+const DIA_LABELS = ['LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB', 'DOM']
+
+const TURNOS = [
+  { key: 'mañana' as const, label: 'Mañana', horas: '09:00 – 14:30' },
+  { key: 'tarde' as const, label: 'Tarde', horas: '17:00 – 22:00' },
+]
 
 export default function CuadrantesPage() {
-  const [currentWeekStart, setCurrentWeekStart] = useState<Date>(getNextMonday(new Date()));
-  const [shifts, setShifts] = useState<Shift[]>([]);
-  const [selectedShift, setSelectedShift] = useState<Shift | null>(null);
-  const [showExtraModal, setShowExtraModal] = useState(false);
-  const [voluntarios, setVoluntarios] = useState<Voluntario[]>([]);
-  const [voluntariosDisponibles, setVoluntariosDisponibles] = useState<Voluntario[]>([]);
-  const [turnosAsignados, setTurnosAsignados] = useState<Record<string, number>>({});
-  const [loadingDisponibles, setLoadingDisponibles] = useState(false);
-  const [loadingGuardias, setLoadingGuardias] = useState(false);
-  const [showSugerencias, setShowSugerencias] = useState(false);
-  const [sugerencias, setSugerencias] = useState<Sugerencia[]>([]);
-  const [loadingSugerencias, setLoadingSugerencias] = useState(false);
+  const [semanaStart, setSemanaStart] = useState<Date>(() => getNextMonday(new Date()))
+  const [disponibilidades, setDisponibilidades] = useState<Record<string, UsuarioDisponible[]>>({})
+  const [asignaciones, setAsignaciones] = useState<Record<string, string[]>>({})
+  const [capacidad, setCapacidad] = useState<Record<string, number>>({})
+  const [guardiasGuardadas, setGuardiasGuardadas] = useState<GuardiaExistente[]>([])
+  const [sugerencias, setSugerencias] = useState<Record<string, string[]>>({})
+  const [loading, setLoading] = useState(true)
+  const [guardando, setGuardando] = useState(false)
+  const [pendiente, setPendiente] = useState(false)
 
-  // Estados para cuadrante manual
-  const [showCuadranteManual, setShowCuadranteManual] = useState(false);
-  const [asignacionesManual, setAsignacionesManual] = useState<Array<{ volunteerId: string, rol: string }>>([]);
-  const [diasSeleccionados, setDiasSeleccionados] = useState<string[]>(['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo']);
-  const [turnosSeleccionados, setTurnosSeleccionados] = useState<string[]>(['mañana', 'tarde']);
-
-  // Cargar voluntarios
-  useEffect(() => {
-    fetch('/api/voluntarios')
-      .then(res => res.json())
-      .then(data => setVoluntarios(data.voluntarios || []))
-      .catch(err => console.error('Error cargando voluntarios:', err));
-  }, []);
-
-  // Cargar guardias de la semana
-  useEffect(() => {
-    cargarGuardias();
-  }, [currentWeekStart]);
-
-  const cargarGuardias = async () => {
-    setLoadingGuardias(true);
-    try {
-      const semanaStr = currentWeekStart.toISOString().split('T')[0];
-      const res = await fetch(`/api/cuadrantes?semana=${semanaStr}`);
-      const data = await res.json();
-
-      // Generar estructura de turnos vacía para toda la semana
-      const weekDays = getWeekDays(currentWeekStart);
-      const newShifts: Shift[] = [];
-
-      weekDays.forEach(day => {
-        const dateStr = day.toISOString().split('T')[0];
-
-        // Buscar guardias existentes para este día
-        const guardiasMañana = data.guardias?.filter((g: any) =>
-          new Date(g.fecha).toISOString().split('T')[0] === dateStr && g.turno === 'mañana'
-        ) || [];
-
-        const guardiasTarde = data.guardias?.filter((g: any) =>
-          new Date(g.fecha).toISOString().split('T')[0] === dateStr && g.turno === 'tarde'
-        ) || [];
-
-        // Turno mañana
-        newShifts.push({
-          id: guardiasMañana[0]?.id,
-          date: dateStr,
-          type: ShiftType.MORNING,
-          turno: 'mañana',
-          startTime: '09:00',
-          endTime: '14:00',
-          assignment: guardiasMañana[0] ? {
-            volunteerId: guardiasMañana[0].usuario.id,
-            nombre: `${guardiasMañana[0].usuario.nombre} ${guardiasMañana[0].usuario.apellidos}`,
-            numeroVoluntario: guardiasMañana[0].usuario.numeroVoluntario
-          } : undefined,
-          isComplete: guardiasMañana.length > 0
-        });
-
-        // Turno tarde
-        newShifts.push({
-          id: guardiasTarde[0]?.id,
-          date: dateStr,
-          type: ShiftType.AFTERNOON,
-          turno: 'tarde',
-          startTime: '17:00',
-          endTime: '22:00',
-          assignment: guardiasTarde[0] ? {
-            volunteerId: guardiasTarde[0].usuario.id,
-            nombre: `${guardiasTarde[0].usuario.nombre} ${guardiasTarde[0].usuario.apellidos}`,
-            numeroVoluntario: guardiasTarde[0].usuario.numeroVoluntario
-          } : undefined,
-          isComplete: guardiasTarde.length > 0
-        });
-      });
-
-      setShifts(newShifts);
-    } catch (error) {
-      console.error('Error cargando guardias:', error);
-    } finally {
-      setLoadingGuardias(false);
-    }
-  };
-
-  const changeWeek = (dir: 'prev' | 'next') => {
-    const newDate = new Date(currentWeekStart);
-    newDate.setDate(newDate.getDate() + (dir === 'next' ? 7 : -7));
-    setCurrentWeekStart(newDate);
-  };
-
-  // Cargar voluntarios disponibles para un turno específico
-  const cargarDisponiblesPorTurno = async (fecha: string, turno: 'mañana' | 'tarde') => {
-    setLoadingDisponibles(true);
-    try {
-      // Llamar a la API de disponibilidad por turno
-      const res = await fetch(`/api/disponibilidad/por-turno?fecha=${fecha}&turno=${turno}`);
-      const data = await res.json();
-
-      if (data.voluntarios) {
-        setVoluntariosDisponibles(data.voluntarios);
-      } else {
-        setVoluntariosDisponibles([]);
+  const calcularSugerencias = (
+    dispMap: Record<string, UsuarioDisponible[]>,
+    asigMap: Record<string, string[]>
+  ): Record<string, string[]> => {
+    const conteo: Record<string, number> = {}
+    Object.values(asigMap).flat().forEach(uid => {
+      conteo[uid] = (conteo[uid] || 0) + 1
+    })
+    const expScore = (e: string) => e === 'ALTA' ? 3 : e === 'MEDIA' ? 2 : 1
+    const sugMap: Record<string, string[]> = {}
+    Object.entries(dispMap).forEach(([sk, disponibles]) => {
+      const elegibles = disponibles.filter(u =>
+        u.esOperativo && (conteo[u.id] || 0) < u.turnosDeseados
+      )
+      const sorted = [...elegibles].sort((a, b) => {
+        if (a.responsableTurno && !b.responsableTurno) return -1
+        if (!a.responsableTurno && b.responsableTurno) return 1
+        if (a.carnetConducir && !b.carnetConducir) return -1
+        if (!a.carnetConducir && b.carnetConducir) return 1
+        return expScore(b.experiencia) - expScore(a.experiencia)
+      })
+      const sugeridos: string[] = []
+      let hasResp = false
+      let conductores = 0
+      let apoyo = 0
+      for (const u of sorted) {
+        if (sugeridos.includes(u.id)) continue
+        if (!hasResp && u.responsableTurno) { sugeridos.push(u.id); hasResp = true; continue }
+        if (conductores < 2 && u.carnetConducir) { sugeridos.push(u.id); conductores++; continue }
+        if (apoyo < 2) { sugeridos.push(u.id); apoyo++; continue }
+        if (sugeridos.length >= 5) break
       }
+      sugMap[sk] = sugeridos
+    })
+    return sugMap
+  }
 
-      // Calcular turnos asignados en la semana para cada voluntario
-      const conteo: Record<string, number> = {};
-      shifts.forEach(shift => {
-        if (shift.assignment) {
-          const volId = shift.assignment.volunteerId;
-          conteo[volId] = (conteo[volId] || 0) + 1;
-        }
-      });
-      setTurnosAsignados(conteo);
-    } catch (error) {
-      console.error('Error cargando disponibles:', error);
-      setVoluntariosDisponibles([]);
-    } finally {
-      setLoadingDisponibles(false);
-    }
-  };
-
-  const handleAsignarVoluntario = async (shift: Shift, volunteerId: string) => {
+  const cargarDatos = useCallback(async () => {
+    setLoading(true)
     try {
-      // Si ya existe una guardia, eliminarla primero
-      if (shift.id) {
-        await fetch(`/api/cuadrantes?id=${shift.id}`, { method: 'DELETE' });
-      }
-
-      // Crear nueva guardia
-      const res = await fetch('/api/cuadrantes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fecha: shift.date,
-          turno: shift.turno,
-          usuarioId: volunteerId,
-          tipo: 'programada'
-        })
-      });
-
-      if (res.ok) {
-        await cargarGuardias();
-        // NO cerrar modal para permitir múltiples asignaciones
-        // setSelectedShift(null);
-      } else {
-        alert('Error al asignar voluntario');
-      }
-    } catch (error) {
-      console.error('Error:', error);
-      alert('Error al asignar voluntario');
-    }
-  };
-
-  const handleEliminarAsignacion = async (shiftId: string) => {
-    if (!confirm('¿Eliminar esta asignación?')) return;
-
-    try {
-      const res = await fetch(`/api/cuadrantes?id=${shiftId}`, { method: 'DELETE' });
-      if (res.ok) {
-        await cargarGuardias();
-        // Recargar disponibles si hay un shift seleccionado
-        if (selectedShift) {
-          await cargarDisponiblesPorTurno(selectedShift.date, selectedShift.turno);
-        }
-        // NO cerrar modal para seguir gestionando el turno
-        // setSelectedShift(null);
-      } else {
-        alert('Error al eliminar asignación');
-      }
-    } catch (error) {
-      console.error('Error:', error);
-      alert('Error al eliminar asignación');
-    }
-  };
-
-  const handleGuardarCuadranteManual = async () => {
-    if (asignacionesManual.length === 0) {
-      alert('Selecciona al menos un voluntario');
-      return;
-    }
-
-    if (diasSeleccionados.length === 0) {
-      alert('Selecciona al menos un día');
-      return;
-    }
-
-    if (turnosSeleccionados.length === 0) {
-      alert('Selecciona al menos un turno');
-      return;
-    }
-
-    const totalAsignaciones = asignacionesManual.length * diasSeleccionados.length * turnosSeleccionados.length;
-    if (!confirm(`¿Crear ${totalAsignaciones} asignaciones?\n${asignacionesManual.length} voluntarios × ${diasSeleccionados.length} días × ${turnosSeleccionados.length} turnos`)) {
-      return;
-    }
-
-    try {
-      const promises = [];
-      const nombresDias = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'];
-
-      // Filtrar shifts según días y turnos seleccionados
-      for (const shift of shifts) {
-        const fechaObj = new Date(shift.date + 'T12:00:00');
-        const diaSemana = fechaObj.getDay(); // 0=domingo, 1=lunes, ..., 6=sábado
-        const nombreDia = diaSemana === 0 ? 'domingo' : nombresDias[diaSemana - 1];
-
-        // Verificar si este día está seleccionado
-        if (!diasSeleccionados.includes(nombreDia)) continue;
-
-        // Verificar si este turno está seleccionado
-        if (!turnosSeleccionados.includes(shift.turno)) continue;
-
-        // Crear asignación para cada voluntario seleccionado
-        for (const asignacion of asignacionesManual) {
-          const payload = {
-            fecha: shift.date,
-            turno: shift.turno,
-            usuarioId: asignacion.volunteerId,
-            rol: asignacion.rol,
-          };
-
-          promises.push(
-            fetch('/api/cuadrantes', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(payload),
-            })
-          );
-        }
-      }
-
-      // Ejecutar todas las peticiones
-      const results = await Promise.all(promises);
-      const exitosas = results.filter(r => r.ok).length;
-      const fallidas = results.length - exitosas;
-
-      if (fallidas > 0) {
-        alert(`⚠️ Asignaciones: ${exitosas} exitosas, ${fallidas} fallidas`);
-      } else {
-        alert(`✅ ${exitosas} asignaciones creadas correctamente`);
-      }
-
-      // Limpiar y cerrar
-      setAsignacionesManual([]);
-      setShowCuadranteManual(false);
-      await cargarGuardias();
-    } catch (error) {
-      console.error('Error guardando cuadrante:', error);
-      alert('Error al guardar cuadrante manual');
-    }
-  };
-
-  const handleGenerarAutomatico = async () => {
-    setLoadingSugerencias(true);
-    try {
-      const semanaStr = currentWeekStart.toISOString().split('T')[0];
-      const res = await fetch('/api/cuadrantes/generar', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ semanaInicio: semanaStr })
-      });
-
-      const data = await res.json();
-
-      if (data.sugerencias && data.sugerencias.length > 0) {
-        setSugerencias(data.sugerencias);
-        setShowSugerencias(true);
-      } else {
-        alert('No hay disponibilidades registradas para esta semana. Pide a los voluntarios que registren su disponibilidad en el Dashboard.');
-      }
-    } catch (error) {
-      console.error('Error:', error);
-      alert('Error al generar cuadrante automático');
-    } finally {
-      setLoadingSugerencias(false);
-    }
-  };
-
-  const handleAplicarSugerencias = async () => {
-    try {
-      // Crear todas las guardias sugeridas
-      for (const sug of sugerencias) {
-        await fetch('/api/cuadrantes', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            fecha: sug.fecha,
-            turno: sug.turno,
-            usuarioId: sug.usuarioId,
-            tipo: 'programada'
+      const semanaStr = toDateStr(semanaStart)
+      const res = await fetch(`/api/cuadrantes?semana=${semanaStr}&incluirDisponibilidades=true`)
+      const data = await res.json()
+      const guardias: GuardiaExistente[] = data.guardias || []
+      setGuardiasGuardadas(guardias)
+      const weekDays = getWeekDays(semanaStart)
+      const dispMap: Record<string, UsuarioDisponible[]> = {}
+      ;(data.disponibilidades || []).forEach((disp: any) => {
+        const detalles: Record<string, string[]> =
+          typeof disp.detalles === 'string' ? JSON.parse(disp.detalles) : (disp.detalles || {})
+        weekDays.forEach((day, idx) => {
+          const dateStr = toDateStr(day)
+          const diaNombre = DIAS[idx]
+          const turnosDia: string[] = detalles[diaNombre] || []
+          TURNOS.forEach(({ key }) => {
+            const variantes = key === 'mañana' ? ['mañana', 'Mañana'] : ['tarde', 'Tarde']
+            if (turnosDia.some(t => variantes.includes(t))) {
+              const sk = slotKey(dateStr, key)
+              if (!dispMap[sk]) dispMap[sk] = []
+              if (!dispMap[sk].find(u => u.id === disp.usuario.id)) {
+                dispMap[sk].push({
+                  id: disp.usuario.id,
+                  nombre: disp.usuario.nombre,
+                  apellidos: disp.usuario.apellidos,
+                  numeroVoluntario: disp.usuario.numeroVoluntario,
+                  responsableTurno: disp.usuario.responsableTurno,
+                  carnetConducir: disp.usuario.carnetConducir,
+                  experiencia: disp.usuario.experiencia,
+                  nivelCompromiso: disp.usuario.nivelCompromiso,
+                  esOperativo: disp.usuario.esOperativo,
+                  turnosDeseados: disp.turnosDeseados,
+                  puedeDobleturno: disp.puedeDobleturno,
+                })
+              }
+            }
           })
-        });
-      }
-
-      alert('✅ Cuadrante generado correctamente');
-      setShowSugerencias(false);
-      await cargarGuardias();
-    } catch (error) {
-      console.error('Error:', error);
-      alert('Error al aplicar sugerencias');
+        })
+      })
+      setDisponibilidades(dispMap)
+      const asigMap: Record<string, string[]> = {}
+      guardias.forEach(g => {
+        const fechaStr = g.fecha.split('T')[0]
+        const sk = slotKey(fechaStr, g.turno)
+        if (!asigMap[sk]) asigMap[sk] = []
+        if (!asigMap[sk].includes(g.usuarioId)) asigMap[sk].push(g.usuarioId)
+      })
+      setAsignaciones(asigMap)
+      const capMap: Record<string, number> = {}
+      weekDays.forEach(day => {
+        const dateStr = toDateStr(day)
+        TURNOS.forEach(({ key }) => { capMap[slotKey(dateStr, key)] = 4 })
+      })
+      setCapacidad(capMap)
+      const sugMap = calcularSugerencias(dispMap, asigMap)
+      setSugerencias(sugMap)
+      setPendiente(false)
+    } catch (e) {
+      console.error('Error cargando cuadrante:', e)
+    } finally {
+      setLoading(false)
     }
-  };
+  }, [semanaStart])
 
-  const weekDays = getWeekDays(currentWeekStart);
-  const dayNames = ['LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB', 'DOM'];
+  useEffect(() => { cargarDatos() }, [cargarDatos])
+
+  const toggleAsignacion = (sk: string, userId: string) => {
+    setAsignaciones(prev => {
+      const actual = prev[sk] || []
+      const nuevo = actual.includes(userId)
+        ? actual.filter(id => id !== userId)
+        : [...actual, userId]
+      return { ...prev, [sk]: nuevo }
+    })
+    setPendiente(true)
+  }
+
+  const turnosAsignadosUsuario = (userId: string): number =>
+    Object.values(asignaciones).flat().filter(id => id === userId).length
+
+  const handlePublicar = async () => {
+    const totalAsig = Object.values(asignaciones).flat().length
+    if (!confirm(`¿Publicar el cuadrante?\nSe guardarán ${totalAsig} asignaciones y se reemplazarán las anteriores.`)) return
+    setGuardando(true)
+    try {
+      await Promise.all(
+        guardiasGuardadas.map(g =>
+          fetch(`/api/cuadrantes?id=${g.id}`, { method: 'DELETE' })
+        )
+      )
+      const cuerpos: any[] = []
+      Object.entries(asignaciones).forEach(([sk, userIds]) => {
+        const { fecha, turno } = parseSlotKey(sk)
+        userIds.forEach(uid => {
+          const u =
+            disponibilidades[sk]?.find(d => d.id === uid) ||
+            guardiasGuardadas.find(g => g.usuarioId === uid)?.usuario
+          const rol = (u as any)?.responsableTurno
+            ? 'Responsable'
+            : (u as any)?.carnetConducir
+            ? 'Conductor'
+            : 'Interviniente'
+          cuerpos.push({ fecha, turno, usuarioId: uid, tipo: 'programada', rol })
+        })
+      })
+      const resultados = await Promise.all(
+        cuerpos.map(body =>
+          fetch('/api/cuadrantes', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+          })
+        )
+      )
+      const fallidas = resultados.filter(r => !r.ok).length
+      if (fallidas > 0) {
+        alert(`⚠ Cuadrante publicado con ${fallidas} error(es). Recarga para verificar.`)
+      } else {
+        alert('✅ Cuadrante publicado correctamente')
+      }
+      await cargarDatos()
+    } catch (e) {
+      console.error(e)
+      alert('Error al publicar el cuadrante')
+    } finally {
+      setGuardando(false)
+    }
+  }
+
+  const weekDays = getWeekDays(semanaStart)
+  const slotsCubiertos = Object.entries(asignaciones).filter(([sk, uids]) => {
+    const cap = capacidad[sk] || 4
+    const operativos = uids.filter(uid => {
+      const u = disponibilidades[sk]?.find(d => d.id === uid) ||
+        guardiasGuardadas.find(g => g.usuarioId === uid)?.usuario
+      return (u as any)?.esOperativo !== false
+    })
+    return operativos.length >= cap
+  }).length
+  const totalSlots = Object.keys(capacidad).length
+  const personasUnicas = new Set(Object.values(asignaciones).flat()).size
+  const totalAsignaciones = Object.values(asignaciones).flat().length
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <div className="space-y-4">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
         <div>
           <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-            <Calendar className="text-orange-600" /> Planificador de Turnos
+            <Calendar className="text-orange-600" size={26} />
+            Planificador de Turnos
           </h1>
-          <p className="text-slate-500 text-sm">Gestión operativa de servicios.</p>
+          <p className="text-slate-500 text-sm">Asignación manual semanal · haz clic en una persona para asignarla o quitarla</p>
         </div>
-        <div className="flex items-center gap-4">
-          <button
-            onClick={handleGenerarAutomatico}
-            disabled={loadingSugerencias}
-            className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:from-purple-700 hover:to-indigo-700 flex items-center gap-2 disabled:opacity-50"
-          >
-            <Sparkles size={16} /> {loadingSugerencias ? 'Generando...' : 'Generar desde Disponibilidad'}
-          </button>
-          <button
-            onClick={() => setShowCuadranteManual(true)}
-            className="bg-gradient-to-r from-orange-600 to-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:from-orange-700 hover:to-red-700 flex items-center gap-2"
-          >
-            <User size={16} /> Cuadrante Manual
-          </button>
-          <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg p-1">
-            <button onClick={() => changeWeek('prev')} className="p-2 hover:bg-slate-100 rounded">
-              <ChevronLeft size={18} />
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-lg shadow-sm">
+            <button
+              onClick={() => { const d = new Date(semanaStart); d.setDate(d.getDate() - 7); setSemanaStart(d) }}
+              className="p-2 hover:bg-slate-100 rounded-l-lg"
+            >
+              <ChevronLeft size={17} />
             </button>
-            <span className="text-sm font-medium px-2 min-w-[200px] text-center">
-              {formatDateRange(currentWeekStart)}
+            <span className="text-sm font-medium px-3 whitespace-nowrap text-slate-700 min-w-[195px] text-center">
+              {formatRange(semanaStart)}
             </span>
-            <button onClick={() => changeWeek('next')} className="p-2 hover:bg-slate-100 rounded">
-              <ChevronRight size={18} />
+            <button
+              onClick={() => { const d = new Date(semanaStart); d.setDate(d.getDate() + 7); setSemanaStart(d) }}
+              className="p-2 hover:bg-slate-100 rounded-r-lg"
+            >
+              <ChevronRight size={17} />
             </button>
           </div>
+          <button
+            onClick={handlePublicar}
+            disabled={guardando || !pendiente}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold shadow-sm transition-all ${
+              pendiente
+                ? 'bg-green-600 text-white hover:bg-green-700'
+                : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+            } disabled:opacity-60`}
+          >
+            <Save size={15} />
+            {guardando ? 'Guardando…' : 'Publicar Cuadrante'}
+          </button>
+          <button
+            onClick={cargarDatos}
+            disabled={loading}
+            className="p-2 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 shadow-sm"
+          >
+            <RefreshCw size={15} className={loading ? 'animate-spin text-orange-500' : 'text-slate-500'} />
+          </button>
         </div>
       </div>
 
-      {/* Week Grid */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-        {/* Header */}
-        <div className="grid grid-cols-7 bg-slate-50 border-b border-slate-200">
-          {weekDays.map((day, idx) => (
-            <div key={idx} className="p-4 text-center border-r border-slate-200 last:border-r-0">
-              <div className="text-xs font-bold text-slate-500 uppercase">{dayNames[idx]}</div>
-              <div className="text-2xl font-bold text-slate-800">{day.getDate()}</div>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500 px-1">
+        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-green-500 inline-block" /> Asignado</span>
+        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-indigo-300 inline-block" /> Sugerido</span>
+        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-slate-200 inline-block" /> Disponible</span>
+        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-red-100 inline-block" /> Sin turnos restantes</span>
+        <span className="text-slate-300">|</span>
+        <span className="flex items-center gap-1"><Shield size={10} className="text-indigo-500" /> Responsable</span>
+        <span className="flex items-center gap-1"><Car size={10} className="text-blue-500" /> Conductor</span>
+        <span className="flex items-center gap-1"><span className="font-mono text-[10px] text-slate-400">[N↓]</span> Turnos restantes</span>
+        <span className="flex items-center gap-1"><span className="text-[9px] bg-slate-200 text-slate-500 px-1 rounded font-bold">ADM</span> Solo admin</span>
+      </div>
+
+      {loading ? (
+        <div className="bg-white rounded-xl border border-slate-200 p-16 text-center">
+          <RefreshCw className="animate-spin mx-auto mb-3 text-orange-500" size={30} />
+          <p className="text-slate-500">Cargando disponibilidades…</p>
+        </div>
+      ) : (
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-x-auto">
+          <div className="grid grid-cols-7 border-b border-slate-200 bg-slate-50 min-w-[900px]">
+            {weekDays.map((day, idx) => (
+              <div key={idx} className={`p-3 text-center border-r border-slate-200 last:border-r-0 ${idx >= 5 ? 'bg-slate-100' : ''}`}>
+                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{DIA_LABELS[idx]}</div>
+                <div className="text-xl font-bold text-slate-800 leading-tight">{day.getDate()}</div>
+                <div className="text-[10px] text-slate-400 capitalize">{day.toLocaleDateString('es-ES', { month: 'short' })}</div>
+              </div>
+            ))}
+          </div>
+          {TURNOS.map((turno, turnoIdx) => (
+            <div key={turno.key} className={`grid grid-cols-7 min-w-[900px] ${turnoIdx === 0 ? 'border-b-2 border-slate-200' : ''}`}>
+              {weekDays.map((day, dayIdx) => {
+                const dateStr = toDateStr(day)
+                const sk = slotKey(dateStr, turno.key)
+                const disponibles = disponibilidades[sk] || []
+                const asignados = asignaciones[sk] || []
+                const sugeridosSk = sugerencias[sk] || []
+                const cap = capacidad[sk] || 4
+                const asignadosOp = asignados.filter(uid => {
+                  const u = disponibles.find(d => d.id === uid) ||
+                    guardiasGuardadas.find(g => g.usuarioId === uid)?.usuario
+                  return (u as any)?.esOperativo !== false
+                })
+                const slotOk = asignadosOp.length >= cap
+                const slotParcial = asignadosOp.length > 0 && asignadosOp.length < cap
+                const asignadosExternos = asignados.filter(uid => !disponibles.find(d => d.id === uid))
+                return (
+                  <div key={dayIdx} className={`border-r border-slate-100 last:border-r-0 p-2 ${dayIdx >= 5 ? 'bg-slate-50/60' : ''} ${turno.key === 'tarde' ? 'bg-slate-50/30' : ''}`}>
+                    <div className={`flex items-center justify-between mb-1.5 pb-1 border-b ${turno.key === 'mañana' ? 'border-amber-100' : 'border-indigo-100'}`}>
+                      <div className="flex items-center gap-1">
+                        <Clock size={9} className={turno.key === 'mañana' ? 'text-amber-500' : 'text-indigo-500'} />
+                        <span className={`text-[9px] font-bold uppercase tracking-wide ${turno.key === 'mañana' ? 'text-amber-600' : 'text-indigo-600'}`}>{turno.label}</span>
+                      </div>
+                      <div className="flex items-center gap-0.5">
+                        <span className={`text-[9px] font-bold px-1 py-0.5 rounded ${slotOk ? 'bg-green-100 text-green-700' : slotParcial ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-400'}`}>
+                          {asignadosOp.length}/{cap}
+                        </span>
+                        <button onClick={() => setCapacidad(p => ({ ...p, [sk]: Math.max(1, (p[sk] || 4) - 1) }))} className="w-4 h-4 flex items-center justify-center hover:bg-slate-200 rounded text-slate-400"><Minus size={7} /></button>
+                        <button onClick={() => setCapacidad(p => ({ ...p, [sk]: (p[sk] || 4) + 1 }))} className="w-4 h-4 flex items-center justify-center hover:bg-slate-200 rounded text-slate-400"><Plus size={7} /></button>
+                      </div>
+                    </div>
+                    <div className="space-y-0.5 max-h-56 overflow-y-auto">
+                      {disponibles.length === 0 && asignadosExternos.length === 0 ? (
+                        <div className="text-[9px] text-slate-300 text-center py-3">Sin disponibilidad</div>
+                      ) : (
+                        <>
+                          {disponibles.map(u => {
+                            const isAsig = asignados.includes(u.id)
+                            const isSug = sugeridosSk.includes(u.id) && !isAsig
+                            const asigCount = turnosAsignadosUsuario(u.id)
+                            const restantes = Math.max(0, u.turnosDeseados - asigCount)
+                            const agotado = restantes === 0 && !isAsig
+                            return (
+                              <div
+                                key={u.id}
+                                onClick={() => !agotado && toggleAsignacion(sk, u.id)}
+                                title={`${u.nombre} ${u.apellidos} · Quiere ${u.turnosDeseados} turnos · ${restantes} restantes`}
+                                className={`flex items-center gap-1 px-1.5 py-1 rounded text-[10px] transition-all select-none ${
+                                  isAsig
+                                    ? 'bg-green-100 border border-green-300 text-green-900 cursor-pointer'
+                                    : isSug
+                                    ? 'bg-indigo-50 border border-indigo-200 text-indigo-900 cursor-pointer hover:bg-indigo-100'
+                                    : agotado
+                                    ? 'bg-red-50 border border-red-100 text-red-300 cursor-not-allowed opacity-50'
+                                    : 'bg-white border border-slate-200 text-slate-700 cursor-pointer hover:bg-slate-50'
+                                }`}
+                              >
+                                <span className={`w-3 h-3 rounded border flex items-center justify-center flex-shrink-0 ${isAsig ? 'bg-green-500 border-green-500 text-white' : 'border-slate-300'}`} style={{ fontSize: '7px' }}>
+                                  {isAsig && '✓'}
+                                </span>
+                                <span className="font-bold truncate flex-1">{u.numeroVoluntario || `${u.nombre.slice(0, 3)}.`}</span>
+                                <span className="flex items-center gap-0.5 flex-shrink-0">
+                                  {u.responsableTurno && <Shield size={8} className={isAsig ? 'text-green-700' : 'text-indigo-500'} />}
+                                  {u.carnetConducir && <Car size={8} className={isAsig ? 'text-green-700' : 'text-blue-500'} />}
+                                  {!u.esOperativo && <span className="text-[7px] font-bold text-slate-400 bg-slate-100 px-0.5 rounded">ADM</span>}
+                                </span>
+                                <span className={`text-[8px] font-mono flex-shrink-0 ${isAsig ? 'text-green-600' : restantes === 0 ? 'text-red-400' : 'text-slate-400'}`}>
+                                  [{restantes}↓]
+                                </span>
+                              </div>
+                            )
+                          })}
+                          {asignadosExternos.map(uid => {
+                            const g = guardiasGuardadas.find(gr => gr.usuarioId === uid)
+                            if (!g) return null
+                            return (
+                              <div key={uid} onClick={() => toggleAsignacion(sk, uid)} className="flex items-center gap-1 px-1.5 py-1 rounded text-[10px] bg-green-100 border border-green-300 text-green-900 cursor-pointer">
+                                <span className="w-3 h-3 rounded border bg-green-500 border-green-500 text-white flex items-center justify-center flex-shrink-0" style={{ fontSize: '7px' }}>✓</span>
+                                <span className="font-bold truncate flex-1">{g.usuario.numeroVoluntario || g.usuario.nombre}</span>
+                                {g.usuario.responsableTurno && <Shield size={8} className="text-green-700" />}
+                                {g.usuario.carnetConducir && <Car size={8} className="text-green-700" />}
+                                {!g.usuario.esOperativo && <span className="text-[7px] font-bold text-slate-400">ADM</span>}
+                              </div>
+                            )
+                          })}
+                        </>
+                      )}
+                    </div>
+                    {slotParcial && (
+                      <div className="mt-1 flex items-center gap-0.5 text-[8px] text-amber-600">
+                        <AlertTriangle size={8} /><span>Faltan {cap - asignadosOp.length}</span>
+                      </div>
+                    )}
+                    {slotOk && asignados.length > 0 && (
+                      <div className="mt-1 flex items-center gap-0.5 text-[8px] text-green-600">
+                        <CheckCircle2 size={8} /><span>Cubierto</span>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
             </div>
           ))}
         </div>
+      )}
 
-        {/* Shifts */}
-        {loadingGuardias ? (
-          <div className="text-center py-12 text-slate-500">Cargando guardias...</div>
-        ) : (
-          <div className="grid grid-cols-7">
-            {weekDays.map((day, dayIdx) => {
-              const dateStr = day.toISOString().split('T')[0];
-              const dayShifts = shifts.filter(s => s.date === dateStr);
-
-              return (
-                <div key={dayIdx} className="border-r border-slate-100 last:border-r-0 min-h-[200px] p-2">
-                  {dayShifts.map(shift => (
-                    <div
-                      key={`${shift.date}-${shift.turno}`}
-                      onClick={() => {
-                        cargarDisponiblesPorTurno(shift.date, shift.turno);
-                        setSelectedShift(shift);
-                      }}
-                      className={`p-2 rounded-lg border text-xs cursor-pointer mb-2 transition-all hover:shadow-md ${shift.isComplete ? 'bg-green-50 border-green-200' : 'bg-white border-slate-200 border-l-4 border-l-orange-400'
-                        }`}
-                    >
-                      <div className="flex justify-between items-center mb-1">
-                        <span className="font-bold text-slate-700">{shift.startTime} - {shift.endTime}</span>
-                        {shift.isComplete ? <CheckCircle2 size={12} className="text-green-600" /> : <AlertCircle size={12} className="text-orange-400" />}
-                      </div>
-                      {shift.assignment ? (
-                        <div className="text-slate-700 font-medium">{shift.assignment.numeroVoluntario}</div>
-                      ) : (
-                        <div className="text-slate-400">Sin asignar</div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              );
-            })}
+      {!loading && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="bg-white rounded-lg border border-slate-200 p-3 shadow-sm">
+            <div className="text-xs text-slate-400 mb-1">Slots cubiertos</div>
+            <div className="text-2xl font-bold text-green-600">{slotsCubiertos}<span className="text-base font-normal text-slate-400">/{totalSlots}</span></div>
           </div>
-        )}
-      </div>
-
-      {/* Modal de asignación */}
-      {selectedShift && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setSelectedShift(null)}>
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden" onClick={e => e.stopPropagation()}>
-            <div className="bg-slate-900 p-4 text-white flex justify-between items-center">
-              <div>
-                <h3 className="text-lg font-bold">
-                  {selectedShift.type} - {new Date(selectedShift.date).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
-                </h3>
-                <p className="text-slate-400 text-sm">{selectedShift.startTime} - {selectedShift.endTime}</p>
-              </div>
-              <button onClick={() => setSelectedShift(null)} className="text-slate-400 hover:text-white"><X size={24} /></button>
+          <div className="bg-white rounded-lg border border-slate-200 p-3 shadow-sm">
+            <div className="text-xs text-slate-400 mb-1">Personas con turno</div>
+            <div className="text-2xl font-bold text-slate-700">{personasUnicas}</div>
+          </div>
+          <div className="bg-white rounded-lg border border-slate-200 p-3 shadow-sm">
+            <div className="text-xs text-slate-400 mb-1">Total asignaciones</div>
+            <div className="text-2xl font-bold text-orange-600">{totalAsignaciones}</div>
+          </div>
+          <div className={`rounded-lg border p-3 shadow-sm ${pendiente ? 'bg-amber-50 border-amber-200' : 'bg-white border-slate-200'}`}>
+            <div className="text-xs text-slate-400 mb-1">Estado</div>
+            <div className={`text-sm font-bold ${pendiente ? 'text-amber-600' : 'text-green-600'}`}>
+              {pendiente ? '⚠ Cambios sin publicar' : '✓ Publicado'}
             </div>
-
-            <div className="p-6">
-              {selectedShift.assignment ? (
-                <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <div className="text-sm text-green-600 font-bold">ASIGNADO</div>
-                      <div className="text-lg font-bold text-slate-800">{selectedShift.assignment.numeroVoluntario} - {selectedShift.assignment.nombre}</div>
-                    </div>
-                    <button
-                      onClick={() => selectedShift.assignment && selectedShift.id && handleEliminarAsignacion(selectedShift.id)}
-                      className="p-2 text-red-600 hover:bg-red-100 rounded-lg"
-                      title="Eliminar asignación"
-                    >
-                      <Trash2 size={20} />
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div className="mb-6 p-4 bg-orange-50 border border-orange-200 rounded-lg text-center">
-                  <p className="text-orange-700 font-medium">Este turno no tiene asignación. Selecciona un voluntario.</p>
-                </div>
-              )}
-
-              <h4 className="font-bold text-slate-700 mb-3 text-sm uppercase flex items-center gap-2">
-                Voluntarios Disponibles
-                {loadingDisponibles && <span className="text-xs text-orange-600">(Cargando...)</span>}
-                {!loadingDisponibles && <span className="text-xs text-green-600">({voluntariosDisponibles.length} disponibles)</span>}
-              </h4>
-              <div className="space-y-2 max-h-[400px] overflow-y-auto">
-                {voluntariosDisponibles.length === 0 && !loadingDisponibles ? (
-                  <div className="p-6 text-center text-slate-400">
-                    <p className="text-sm">No hay voluntarios disponibles para este turno</p>
-                    <p className="text-xs mt-2">Los voluntarios deben registrar su disponibilidad primero</p>
-                  </div>
-                ) : (
-                  voluntariosDisponibles.map(vol => {
-                    const turnosYaAsignados = turnosAsignados[vol.id] || 0;
-                    return (
-                      <div key={vol.id} className="bg-green-50 p-3 rounded-lg border border-green-200 hover:bg-green-100 transition-colors">
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2">
-                              <div className="font-bold text-sm text-slate-800">{vol.numeroVoluntario}</div>
-                              {vol.responsableTurno && (
-                                <span className="px-2 py-0.5 bg-indigo-100 text-indigo-700 text-xs rounded font-bold">🎯 Responsable</span>
-                              )}
-                              {vol.carnetConducir && (
-                                <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded font-bold">🚗</span>
-                              )}
-                            </div>
-                            <div className="text-xs text-slate-500">{vol.nombre} {vol.apellidos}</div>
-                            {turnosYaAsignados > 0 && (
-                              <div className="text-xs text-orange-600 mt-1">
-                                Ya tiene {turnosYaAsignados} turno{turnosYaAsignados !== 1 ? 's' : ''} esta semana
-                              </div>
-                            )}
-                          </div>
-                          <button
-                            onClick={() => handleAsignarVoluntario(selectedShift, vol.id)}
-                            className="px-4 py-2 bg-orange-500 text-white rounded-lg text-sm font-bold hover:bg-orange-600"
-                          >
-                            Asignar
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            </div>
+            {pendiente && (
+              <button onClick={handlePublicar} disabled={guardando} className="mt-2 w-full bg-green-600 text-white py-1 rounded text-xs font-bold hover:bg-green-700 disabled:opacity-50">
+                {guardando ? 'Guardando…' : 'Publicar ahora'}
+              </button>
+            )}
           </div>
         </div>
       )}
 
-      {/* Modal de sugerencias */}
-      {showSugerencias && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
-            <div className="bg-gradient-to-r from-purple-600 to-indigo-600 p-4 text-white flex justify-between items-center">
-              <div>
-                <h3 className="text-lg font-bold flex items-center gap-2">
-                  <Sparkles size={20} /> Cuadrante Generado Automáticamente
-                </h3>
-                <p className="text-purple-200 text-sm">Revisa las asignaciones antes de aplicar</p>
-              </div>
-              <button onClick={() => setShowSugerencias(false)} className="text-purple-200 hover:text-white"><X size={24} /></button>
-            </div>
-
-            <div className="p-6 max-h-[600px] overflow-y-auto">
-              <div className="grid grid-cols-7 gap-2 mb-4">
-                {dayNames.map((dia, idx) => (
-                  <div key={idx} className="text-center text-xs font-bold text-slate-500">{dia}</div>
-                ))}
-              </div>
-
-              {weekDays.map((day, dayIdx) => {
-                const dateStr = day.toISOString().split('T')[0];
-                const sugsDia = sugerencias.filter(s => s.fecha === dateStr);
-
-                return (
-                  <div key={dayIdx} className="grid grid-cols-7 gap-2 mb-2">
-                    {dayIdx === 0 && <div className="col-span-7 text-sm font-bold text-slate-700 mt-2">Turnos Propuestos</div>}
-                    <div className="col-span-7 grid grid-cols-7 gap-2">
-                      {weekDays.map((d, i) => {
-                        const ds = d.toISOString().split('T')[0];
-                        const s = sugerencias.filter(sg => sg.fecha === ds);
-                        return (
-                          <div key={i} className="space-y-1">
-                            {s.map((sug, idx) => (
-                              <div key={idx} className="bg-purple-50 border border-purple-200 rounded p-2 text-xs">
-                                <div className="font-bold text-purple-700">{sug.turno === 'mañana' ? '🌅 M' : '🌆 T'}</div>
-                                <div className="text-slate-700 font-medium">{sug.usuario.numeroVoluntario}</div>
-                              </div>
-                            ))}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })}
-
-              <div className="mt-6 flex gap-3">
-                <button
-                  onClick={() => setShowSugerencias(false)}
-                  className="flex-1 py-3 bg-slate-100 rounded-lg text-slate-600 font-bold hover:bg-slate-200"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={handleAplicarSugerencias}
-                  className="flex-1 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-lg text-white font-bold hover:from-purple-700 hover:to-indigo-700"
-                >
-                  ✅ Aplicar Cuadrante
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal de Cuadrante Manual */}
-      {showCuadranteManual && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
-            {/* Header */}
-            <div className="bg-gradient-to-r from-orange-600 to-red-600 p-6 text-white">
-              <div className="flex justify-between items-center">
-                <div>
-                  <h2 className="text-2xl font-bold flex items-center gap-2">
-                    <User size={28} /> Cuadrante Manual
-                  </h2>
-                  <p className="text-orange-100 text-sm">Selecciona voluntarios y asigna roles</p>
-                </div>
-                <button onClick={() => setShowCuadranteManual(false)} className="text-white hover:bg-white/20 p-2 rounded">
-                  <X size={24} />
-                </button>
-              </div>
-            </div>
-
-            {/* Body */}
-            <div className="flex-1 overflow-y-auto p-6">
-              {/* Info */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                <p className="text-sm text-blue-800">
-                  <strong>Instrucciones:</strong> 1) Selecciona días y turnos. 2) Selecciona voluntarios y asigna roles. 3) Guardar cuadrante.
-                </p>
-              </div>
-
-              {/* Selector de Días y Turnos */}
-              <div className="grid grid-cols-2 gap-4 mb-6">
-                {/* Días */}
-                <div className="bg-slate-50 rounded-lg p-4">
-                  <h3 className="font-bold text-slate-700 mb-3">📅 Días de la Semana</h3>
-                  <div className="grid grid-cols-2 gap-2">
-                    {['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'].map(dia => (
-                      <label key={dia} className="flex items-center gap-2 cursor-pointer hover:bg-white p-2 rounded">
-                        <input
-                          type="checkbox"
-                          checked={diasSeleccionados.includes(dia)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setDiasSeleccionados([...diasSeleccionados, dia]);
-                            } else {
-                              setDiasSeleccionados(diasSeleccionados.filter(d => d !== dia));
-                            }
-                          }}
-                          className="w-4 h-4 text-orange-600 rounded"
-                        />
-                        <span className="text-sm capitalize">{dia}</span>
-                      </label>
-                    ))}
-                  </div>
-                  <button
-                    onClick={() => setDiasSeleccionados(['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'])}
-                    className="mt-2 text-xs text-blue-600 hover:underline"
-                  >
-                    Seleccionar todos
-                  </button>
-                </div>
-
-                {/* Turnos */}
-                <div className="bg-slate-50 rounded-lg p-4">
-                  <h3 className="font-bold text-slate-700 mb-3">⏰ Turnos</h3>
-                  <div className="space-y-2">
-                    {['mañana', 'tarde'].map(turno => (
-                      <label key={turno} className="flex items-center gap-2 cursor-pointer hover:bg-white p-2 rounded">
-                        <input
-                          type="checkbox"
-                          checked={turnosSeleccionados.includes(turno)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setTurnosSeleccionados([...turnosSeleccionados, turno]);
-                            } else {
-                              setTurnosSeleccionados(turnosSeleccionados.filter(t => t !== turno));
-                            }
-                          }}
-                          className="w-4 h-4 text-orange-600 rounded"
-                        />
-                        <span className="text-sm capitalize">{turno}</span>
-                      </label>
-                    ))}
-                  </div>
-                  <button
-                    onClick={() => setTurnosSeleccionados(['mañana', 'tarde'])}
-                    className="mt-2 text-xs text-blue-600 hover:underline"
-                  >
-                    Seleccionar ambos
-                  </button>
-                </div>
-              </div>
-
-              <hr className="my-6" />
-
-              {/* Lista de voluntarios */}
-              <div className="space-y-2">
-                {voluntarios.map(vol => {
-                  const asignacion = asignacionesManual.find(a => a.volunteerId === vol.id);
-                  const isSelected = !!asignacion;
-
-                  return (
-                    <div key={vol.id} className={`p-4 rounded-lg border-2 transition ${isSelected ? 'bg-orange-50 border-orange-400' : 'bg-white border-slate-200'}`}>
-                      <div className="flex items-center gap-4">
-                        {/* Checkbox */}
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setAsignacionesManual([...asignacionesManual, { volunteerId: vol.id, rol: 'Interviniente' }]);
-                            } else {
-                              setAsignacionesManual(asignacionesManual.filter(a => a.volunteerId !== vol.id));
-                            }
-                          }}
-                          className="w-5 h-5 text-orange-600 rounded"
-                        />
-
-                        {/* Info voluntario */}
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-slate-800">{vol.numeroVoluntario}</span>
-                            <span className="text-slate-600">{vol.nombre} {vol.apellidos}</span>
-                            {vol.responsableTurno && <span className="px-2 py-0.5 bg-indigo-100 text-indigo-700 text-xs rounded font-bold">🎯 Responsable</span>}
-                            {vol.carnetConducir && <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded font-bold">🚗</span>}
-                          </div>
-                        </div>
-
-                        {/* Selector de rol */}
-                        {isSelected && (
-                          <select
-                            value={asignacion.rol}
-                            onChange={(e) => {
-                              setAsignacionesManual(asignacionesManual.map(a =>
-                                a.volunteerId === vol.id ? { ...a, rol: e.target.value } : a
-                              ));
-                            }}
-                            className="border-2 border-orange-300 rounded-lg px-4 py-2 text-sm font-bold focus:ring-2 focus:ring-orange-500"
-                          >
-                            <option value="Conductor">Conductor</option>
-                            <option value="Responsable">Responsable</option>
-                            <option value="Interviniente">Interviniente</option>
-                            <option value="Apoyo/Cecopal">Apoyo/Cecopal</option>
-                            <option value="Cecopal">Cecopal</option>
-                          </select>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="border-t bg-slate-50 p-6 flex justify-between items-center">
-              <div className="text-sm text-slate-600">
-                <strong>{asignacionesManual.length}</strong> voluntarios seleccionados
-              </div>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => {
-                    setAsignacionesManual([]);
-                    setShowCuadranteManual(false);
-                  }}
-                  className="px-6 py-2 bg-slate-200 text-slate-700 rounded-lg font-bold hover:bg-slate-300"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={handleGuardarCuadranteManual}
-                  disabled={asignacionesManual.length === 0}
-                  className="px-6 py-2 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-lg font-bold hover:from-orange-700 hover:to-red-700 disabled:opacity-50"
-                >
-                  Guardar Cuadrante
-                </button>
-              </div>
-            </div>
-          </div>
+      {!loading && (
+        <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 flex gap-2 text-xs text-blue-700">
+          <Info size={14} className="flex-shrink-0 mt-0.5 text-blue-500" />
+          <span>
+            <strong>Composición mínima por turno:</strong> 1 Responsable · 2 Conductores · 1 Apoyo (mínimo 4 operativos).
+            Ideal 5 para cubrir CECOPAL. Las personas marcadas como <strong>ADM</strong> no computan en el recuento operativo.
+            El sistema sugiere en <span className="text-indigo-700 font-bold">azul</span> la combinación óptima respetando turnos deseados.
+          </span>
         </div>
       )}
     </div>
-  );
+  )
 }
