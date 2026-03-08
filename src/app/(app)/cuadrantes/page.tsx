@@ -88,6 +88,7 @@ export default function CuadrantesPage() {
   const [capacidad, setCapacidad] = useState<Record<string, number>>({})
   const [guardiasGuardadas, setGuardiasGuardadas] = useState<GuardiaExistente[]>([])
   const [sugerencias, setSugerencias] = useState<Record<string, string[]>>({})
+  const [rolEspecial, setRolEspecial] = useState<Record<string, { responsable?: string; cecopal?: string }>>({})
   const [loading, setLoading] = useState(true)
   const [guardando, setGuardando] = useState(false)
   const [pendiente, setPendiente] = useState(false)
@@ -179,6 +180,16 @@ export default function CuadrantesPage() {
         if (!asigMap[sk].includes(g.usuarioId)) asigMap[sk].push(g.usuarioId)
       })
       setAsignaciones(asigMap)
+      // Reconstruir roles especiales desde guardias guardadas
+      const rolesMap: Record<string, { responsable?: string; cecopal?: string }> = {}
+      guardias.forEach(g => {
+        const fechaStr = g.fecha.split('T')[0]
+        const sk = slotKey(fechaStr, g.turno)
+        if (!rolesMap[sk]) rolesMap[sk] = {}
+        if (g.rol === 'Responsable') rolesMap[sk].responsable = g.usuarioId
+        if (g.rol === 'Cecopal') rolesMap[sk].cecopal = g.usuarioId
+      })
+      setRolEspecial(rolesMap)
       const capMap: Record<string, number> = {}
       weekDays.forEach(day => {
         const dateStr = toDateStr(day)
@@ -228,12 +239,15 @@ export default function CuadrantesPage() {
           const u =
             disponibilidades[sk]?.find(d => d.id === uid) ||
             guardiasGuardadas.find(g => g.usuarioId === uid)?.usuario
-          const rol = (u as any)?.responsableTurno
+          const resSk = rolEspecial[sk] || {}
+          const rolFinal = resSk.responsable === uid
             ? 'Responsable'
+            : resSk.cecopal === uid
+            ? 'Cecopal'
             : (u as any)?.carnetConducir
             ? 'Conductor'
             : 'Interviniente'
-          cuerpos.push({ fecha, turno, usuarioId: uid, tipo: 'programada', rol })
+          cuerpos.push({ fecha, turno, usuarioId: uid, tipo: 'programada', rol: rolFinal })
         })
       })
       const resultados = await Promise.all(
