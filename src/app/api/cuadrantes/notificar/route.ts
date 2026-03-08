@@ -46,6 +46,14 @@ export async function POST(request: NextRequest) {
       }
     })
 
+    const usuariosAfectados = Object.keys(porUsuario)
+    await prisma.notificacion.deleteMany({
+      where: {
+        tipo: 'cuadrante',
+        usuarioId: { in: usuariosAfectados },
+        titulo: { contains: semanaLabel }
+      }
+    })
     await prisma.notificacion.createMany({ data: notificaciones })
 
     return NextResponse.json({ success: true, creadas: notificaciones.length })
