@@ -196,6 +196,7 @@ export default function MiAreaPage() {
   const [loadingFormacion, setLoadingFormacion] = useState(false);
   const [formacionSubTab, setFormacionSubTab] = useState<'inscripciones' | 'certificaciones' | 'manual'>('inscripciones');
   const [actividades, setActividades] = useState<Actividad[]>([]);
+  const [misGuardias, setMisGuardias] = useState<any[]>([]);
   const [disponibilidades, setDisponibilidades] = useState<any[]>([]); // Nueva línea
   const [documentos, setDocumentos] = useState<Documento[]>([]);
   const [asignacionesVestuario, setAsignacionesVestuario] = useState<AsignacionVestuario[]>([]);
@@ -285,6 +286,15 @@ export default function MiAreaPage() {
 
       // Cargar disponibilidades
       const resDisp = await fetch('/api/mi-area/disponibilidades');
+      // Cargar guardias asignadas
+      try {
+        const hoy = new Date();
+        const hace8semanas = new Date(hoy); hace8semanas.setDate(hoy.getDate() - 56);
+        const en4semanas = new Date(hoy); en4semanas.setDate(hoy.getDate() + 28);
+        const resG = await fetch('/api/mi-area/guardias');
+        const dataG = await resG.json();
+        if (dataG.guardias) setMisGuardias(dataG.guardias);
+      } catch(e) { console.error('Error cargando guardias:', e); }
       if (resDisp.ok) {
         const dataDisp = await resDisp.json();
         setDisponibilidades(dataDisp.disponibilidades || []);
@@ -1159,6 +1169,7 @@ export default function MiAreaPage() {
                       <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-blue-500"></span> Servicios</span>
                       <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-purple-500"></span> Formación</span>
                       <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-orange-500"></span> Eventos</span>
+                      <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-green-500"></span> Turnos</span>
                     </div>
                   </div>
 
@@ -1171,6 +1182,13 @@ export default function MiAreaPage() {
                         fecha: d.semanaInicio,
                         titulo: 'Disponibilidad Registrada',
                         data: d
+                      })),
+                      ...misGuardias.map(g => ({
+                        id: g.id,
+                        tipo: 'guardia',
+                        fecha: g.fecha,
+                        titulo: g.turno === 'mañana' ? 'Turno Mañana (09:00-14:30)' : 'Turno Tarde (17:00-22:00)',
+                        data: g
                       })),
                       ...actividades.map(a => ({
                         id: a.id,
@@ -1193,6 +1211,33 @@ export default function MiAreaPage() {
                     return (
                       <div className="space-y-3">
                         {todasActividades.map(item => {
+                          if (item.tipo === 'guardia') {
+                            const g = item.data;
+                            const fechaObj = new Date(g.fecha);
+                            const diaSemana = fechaObj.toLocaleDateString('es-ES', { weekday: 'long' });
+                            const diaNum = fechaObj.toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });
+                            const hoy = new Date(); hoy.setHours(0,0,0,0);
+                            const esFuturo = fechaObj >= hoy;
+                            return (
+                              <div key={item.id} className="flex items-center gap-4 p-4 bg-white border border-slate-200 rounded-xl hover:shadow-sm transition-shadow">
+                                <div className="w-1 h-12 rounded-full bg-green-500"></div>
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2">
+                                    <h4 className="font-medium text-slate-800">{item.titulo}</h4>
+                                    {esFuturo ? (
+                                      <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded font-bold">Próximo</span>
+                                    ) : (
+                                      <span className="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded">Realizado</span>
+                                    )}
+                                  </div>
+                                  <p className="text-sm text-slate-500 capitalize">{diaSemana} {diaNum}</p>
+                                  {g.rol && (
+                                    <span className="inline-block mt-1 text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">{g.rol}</span>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          }
                           if (item.tipo === 'disponibilidad') {
                             const d = item.data;
                             const detalles = d.detalles || {};
