@@ -1,8 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 
 export async function GET(request: NextRequest) {
+  const session = await getServerSession(authOptions)
+  if (!session) {
+    return new Response(JSON.stringify({ error: 'No autorizado' }), { status: 401 })
+  }
+  const rol = (session.user as any)?.rol?.toLowerCase() || ''
+  if (!['superadministrador', 'superadmin', 'admin', 'coordinador'].includes(rol)) {
+    return new Response(JSON.stringify({ error: 'Sin permisos suficientes' }), { status: 403 })
+  }
+
   try {
     const session = await getServerSession()
     if (!session?.user?.email) {
@@ -66,6 +76,15 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const session = await getServerSession(authOptions)
+  if (!session) {
+    return new Response(JSON.stringify({ error: 'No autorizado' }), { status: 401 })
+  }
+  const rol = (session.user as any)?.rol?.toLowerCase() || ''
+  if (!['superadministrador', 'superadmin', 'admin', 'coordinador'].includes(rol)) {
+    return new Response(JSON.stringify({ error: 'Sin permisos suficientes' }), { status: 403 })
+  }
+
   try {
     const session = await getServerSession()
     if (!session?.user?.email) {

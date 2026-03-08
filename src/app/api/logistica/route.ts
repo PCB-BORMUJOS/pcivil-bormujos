@@ -1,6 +1,7 @@
 import { put, del } from '@vercel/blob'
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 import { registrarAudit, getUsuarioAudit } from '@/lib/audit'
 // CORRECCIÓN 1: Usamos la ruta correcta de tu DB y quitamos authOptions para evitar errores
 import { prisma } from '@/lib/db'
@@ -9,6 +10,11 @@ import { prisma } from '@/lib/db'
 const isValid = (val: any) => val !== undefined && val !== null && val !== '';
 
 export async function GET(request: NextRequest) {
+  const session = await getServerSession(authOptions)
+  if (!session) {
+    return new Response(JSON.stringify({ error: 'No autorizado' }), { status: 401 })
+  }
+
   try {
     // CORRECCIÓN 2: getServerSession vacío para evitar error de importación
     const session = await getServerSession()
@@ -398,6 +404,11 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const session = await getServerSession(authOptions)
+  if (!session) {
+    return new Response(JSON.stringify({ error: 'No autorizado' }), { status: 401 })
+  }
+
   try {
     const session = await getServerSession()
     if (!session?.user?.email) {
@@ -983,6 +994,11 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PUT(request: NextRequest) {
+  const session = await getServerSession(authOptions)
+  if (!session) {
+    return new Response(JSON.stringify({ error: 'No autorizado' }), { status: 401 })
+  }
+
   try {
     const session = await getServerSession()
     if (!session?.user?.email) {
@@ -1224,6 +1240,11 @@ export async function PUT(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
+  const session = await getServerSession(authOptions)
+  if (!session) {
+    return new Response(JSON.stringify({ error: 'No autorizado' }), { status: 401 })
+  }
+
   try {
     const session = await getServerSession()
     if (!session?.user?.email) {

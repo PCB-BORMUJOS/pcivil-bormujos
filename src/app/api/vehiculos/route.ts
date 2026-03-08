@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
-import { registrarAudit, getUsuarioAudit } from '@/lib/audit'
 import { authOptions } from '@/lib/auth'
+import { registrarAudit, getUsuarioAudit } from '@/lib/audit'
 import { PrismaClient } from '@prisma/client'
 import { put, del } from '@vercel/blob'
 
@@ -9,6 +9,11 @@ const prisma = new PrismaClient()
 
 // GET - Obtener vehículos, documentos o mantenimientos
 export async function GET(request: NextRequest) {
+  const session = await getServerSession(authOptions)
+  if (!session) {
+    return new Response(JSON.stringify({ error: 'No autorizado' }), { status: 401 })
+  }
+
   try {
     const { searchParams } = new URL(request.url)
     const tipo = searchParams.get('tipo')
@@ -83,6 +88,11 @@ export async function GET(request: NextRequest) {
 
 // POST - Crear documento o mantenimiento
 export async function POST(request: NextRequest) {
+  const session = await getServerSession(authOptions)
+  if (!session) {
+    return new Response(JSON.stringify({ error: 'No autorizado' }), { status: 401 })
+  }
+
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) {
@@ -208,6 +218,11 @@ export async function POST(request: NextRequest) {
 
 // PUT - Actualizar vehículo o mantenimiento
 export async function PUT(request: NextRequest) {
+  const session = await getServerSession(authOptions)
+  if (!session) {
+    return new Response(JSON.stringify({ error: 'No autorizado' }), { status: 401 })
+  }
+
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) {
@@ -321,6 +336,11 @@ export async function PUT(request: NextRequest) {
 
 // DELETE - Eliminar documento o mantenimiento
 export async function DELETE(request: NextRequest) {
+  const session = await getServerSession(authOptions)
+  if (!session) {
+    return new Response(JSON.stringify({ error: 'No autorizado' }), { status: 401 })
+  }
+
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) {

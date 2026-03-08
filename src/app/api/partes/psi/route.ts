@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { generarNumeroParte } from '@/lib/partesPSI'
 import { validarPartePSI, validarBorradorPSI } from '@/lib/psi-validation'
 import { put } from '@vercel/blob'
-import { authOptions } from '@/lib/auth'
 import { registrarAudit, getUsuarioAudit } from '@/lib/audit'
 
 /**
