@@ -542,6 +542,7 @@ export default function DashboardPage() {
   const [userRole, setUserRole] = useState<string>('');
   const [userId, setUserId] = useState<string>('');
   const [voluntarios, setVoluntarios] = useState<any[]>([]);
+  const [todosVoluntarios, setTodosVoluntarios] = useState<any[]>([]);  // lista completa, nunca sobreescrita
   const [enTurno, setEnTurno] = useState<any[]>([]);
   const [stats, setStats] = useState({ total: 0, responsablesTurno: 0, conCarnet: 0, experienciaAlta: 0 });
   const [vehiculos, setVehiculos] = useState<any[]>([]);
@@ -606,6 +607,7 @@ export default function DashboardPage() {
     ])
       .then(([volData, vehData, climaData, eventosData, guardiasData]: any[]) => {
         setVoluntarios(volData.voluntarios || []);
+        setTodosVoluntarios(volData.voluntarios || []);  // guardar copia completa para el selector
         setEnTurno(volData.enTurno || []);
         setStats(volData.stats || { total: 0, responsablesTurno: 0, conCarnet: 0, experienciaAlta: 0 });
         setVehiculos(vehData.vehiculos || []);
@@ -1306,7 +1308,7 @@ export default function DashboardPage() {
                             onChange={e => setEditarVoluntarioId(e.target.value)}
                           >
                             <option value="">— Seleccionar voluntario —</option>
-                            {voluntarios.map((v: any) => (
+                            {todosVoluntarios.map((v: any) => (
                               <option key={v.id} value={v.id}>
                                 {v.numeroVoluntario} — {v.nombre} {v.apellidos}
                               </option>
