@@ -1,4 +1,5 @@
 import { Sidebar, Header } from '@/components/layout'
+import InactivityGuard from '@/components/InactivityGuard'
 import Script from 'next/script'
 
 export default function AppLayout({
@@ -14,6 +15,7 @@ export default function AppLayout({
           <Header />
           <main className="p-6">
             {children}
+            <InactivityGuard />
           </main>
         </div>
       </div>
