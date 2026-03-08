@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { prisma } from '@/lib/db'
+import { registrarAudit, getUsuarioAudit } from '@/lib/audit'
 
 export async function GET(request: NextRequest) {
     try {
@@ -274,6 +275,18 @@ export async function POST(request: NextRequest) {
                 delete cursoData.tipo_curso
 
                 const curso = await (prisma as any).curso.create({ data: cursoData })
+                
+                const { usuarioId: adminIdC, usuarioNombre: adminNombreC } = getUsuarioAudit(session)
+                await registrarAudit({
+                    accion: 'CREATE',
+                    entidad: 'Curso',
+                    entidadId: curso.id,
+                    descripcion: `Nuevo curso creado: ${curso.nombre}`,
+                    usuarioId: adminIdC,
+                    usuarioNombre: adminNombreC,
+                    modulo: 'Formación'
+                })
+
                 return NextResponse.json({ success: true, curso })
 
             case 'convocatoria':
@@ -318,6 +331,17 @@ export async function POST(request: NextRequest) {
                         }
                     })
                 }
+
+                const { usuarioId: adminIdConv, usuarioNombre: adminNombreConv } = getUsuarioAudit(session)
+                await registrarAudit({
+                    accion: 'CREATE',
+                    entidad: 'Convocatoria',
+                    entidadId: convocatoria.id,
+                    descripcion: `Nueva convocatoria planificada: ${cursoRelacionado?.nombre || 'Curso'} (${convocatoria.codigo})`,
+                    usuarioId: adminIdConv,
+                    usuarioNombre: adminNombreConv,
+                    modulo: 'Formación'
+                })
 
                 return NextResponse.json({ success: true, convocatoria })
 
@@ -370,6 +394,18 @@ export async function POST(request: NextRequest) {
                         data: { estado: 'rechazada' }
                     })
 
+                    const inscripOriginal = await (prisma as any).inscripcion.findUnique({ where: { id: inscripcionId }, include: { convocatoria: true } })
+                    const { usuarioId: rechId, usuarioNombre: rechNombre } = getUsuarioAudit(session)
+                    await registrarAudit({
+                        accion: 'REJECT',
+                        entidad: 'Inscripción',
+                        entidadId: inscripcionId,
+                        descripcion: `Inscripción rechazada (Usuario ID: ${inscripcionRechazada.usuarioId}) para Convocatoria: ${inscripOriginal?.convocatoria.codigo || '-'}`,
+                        usuarioId: rechId,
+                        usuarioNombre: rechNombre,
+                        modulo: 'Formación'
+                    })
+
                     return NextResponse.json({ success: true, inscripcion: inscripcionRechazada, mensaje: 'Inscripción rechazada' })
                 }
 
@@ -417,13 +453,46 @@ export async function POST(request: NextRequest) {
                         where: { id: data.convocatoriaId },
                         data: { plazasOcupadas: { increment: 1 } }
                     })
+                    
+                    const { usuarioId: aproId2, usuarioNombre: aproNombre2 } = getUsuarioAudit(session)
+                    await registrarAudit({
+                        accion: 'ASSIGN',
+                        entidad: 'Inscripción',
+                        entidadId: inscripcion.id,
+                        descripcion: `Usuario ${inscripcion.usuarioId} inscrito en ${convCheck.codigo}`,
+                        usuarioId: aproId2,
+                        usuarioNombre: aproNombre2,
+                        modulo: 'Formación'
+                    })
+
                     return NextResponse.json({ success: true, inscripcion, mensaje: '¡Inscripción confirmada!' })
                 }
+                
+                const { usuarioId: solId, usuarioNombre: solNombre } = getUsuarioAudit(session)
+                await registrarAudit({
+                    accion: 'CREATE',
+                    entidad: 'Solicitud Inscripción',
+                    entidadId: inscripcion.id,
+                    descripcion: `Usuario ${inscripcion.usuarioId} solicitó plaza para ${convCheck.codigo}`,
+                    usuarioId: solId,
+                    usuarioNombre: solNombre,
+                    modulo: 'Formación'
+                })
 
                 return NextResponse.json({ success: true, inscripcion, mensaje: 'Solicitud de inscripción enviada' })
 
             case 'certificacion':
                 const certificacion = await (prisma as any).certificacion.create({ data })
+                const { usuarioId: certId, usuarioNombre: certNombre } = getUsuarioAudit(session)
+                await registrarAudit({
+                    accion: 'CREATE',
+                    entidad: 'Certificación',
+                    entidadId: certificacion.id,
+                    descripcion: `Certificado emitido a usuario ${certificacion.usuarioId} para el curso ${certificacion.cursoId}`,
+                    usuarioId: certId,
+                    usuarioNombre: certNombre,
+                    modulo: 'Formación'
+                })
                 return NextResponse.json({ success: true, certificacion })
 
             case 'necesidad':
@@ -485,6 +554,17 @@ export async function POST(request: NextRequest) {
                 await (prisma as any).convocatoria.update({
                     where: { id: convocatoriaId },
                     data: { estado: 'finalizada' }
+                })
+
+                const { usuarioId: actaId, usuarioNombre: actaNombre } = getUsuarioAudit(session)
+                await registrarAudit({
+                    accion: 'UPDATE', // o ACTIVATE/FINISH
+                    entidad: 'Acta Formación',
+                    entidadId: convocatoriaId,
+                    descripcion: `Acta cerrada para convocatoria ${convActa.codigo}. ${certificadosGenerados} certificados generados.`,
+                    usuarioId: actaId,
+                    usuarioNombre: actaNombre,
+                    modulo: 'Formación'
                 })
 
                 return NextResponse.json({ success: true, certificadosGenerados })
@@ -571,11 +651,37 @@ export async function PUT(request: NextRequest) {
 
         switch (tipo) {
             case 'curso':
+                const cursoAnterior = await (prisma as any).curso.findUnique({ where: { id } })
                 const curso = await (prisma as any).curso.update({ where: { id }, data })
+                const { usuarioId: modIdC, usuarioNombre: modNomC } = getUsuarioAudit(session)
+                await registrarAudit({
+                    accion: 'UPDATE',
+                    entidad: 'Curso',
+                    entidadId: id,
+                    descripcion: `Curso modificado: ${curso.nombre}`,
+                    usuarioId: modIdC,
+                    usuarioNombre: modNomC,
+                    modulo: 'Formación',
+                    datosAnteriores: cursoAnterior,
+                    datosNuevos: curso
+                })
                 return NextResponse.json({ success: true, curso })
 
             case 'convocatoria':
+                const convAnterior = await (prisma as any).convocatoria.findUnique({ where: { id } })
                 const convocatoria = await (prisma as any).convocatoria.update({ where: { id }, data })
+                const { usuarioId: modIdConv, usuarioNombre: modNomConv } = getUsuarioAudit(session)
+                await registrarAudit({
+                    accion: 'UPDATE',
+                    entidad: 'Convocatoria',
+                    entidadId: id,
+                    descripcion: `Convocatoria modificada: ${convocatoria.codigo}`,
+                    usuarioId: modIdConv,
+                    usuarioNombre: modNomConv,
+                    modulo: 'Formación',
+                    datosNuevos: convocatoria,
+                    datosAnteriores: convAnterior
+                })
                 return NextResponse.json({ success: true, convocatoria })
 
             case 'inscripcion':
@@ -617,6 +723,17 @@ export async function PUT(request: NextRequest) {
                         })
                     ])
 
+                    const { usuarioId: aproId3, usuarioNombre: aproNombre3 } = getUsuarioAudit(session)
+                    await registrarAudit({
+                        accion: 'APPROVE',
+                        entidad: 'Inscripción',
+                        entidadId: id,
+                        descripcion: `Inscripción aprobada (Usuario ID: ${inscripcionActual.usuarioId}) para Convocatoria: ${conv.codigo}`,
+                        usuarioId: aproId3,
+                        usuarioNombre: aproNombre3,
+                        modulo: 'Formación'
+                    })
+
                     return NextResponse.json({ success: true, inscripcion: inscripcionAprobada, mensaje: 'Inscripción aprobada' })
                 }
 
@@ -625,6 +742,18 @@ export async function PUT(request: NextRequest) {
                     const inscripcionRechazada = await (prisma as any).inscripcion.update({
                         where: { id },
                         data: { estado: 'rechazada' }
+                    })
+
+                    const orginsc2 = await (prisma as any).inscripcion.findUnique({ where: { id }, include: { convocatoria: true } })
+                    const { usuarioId: rechId2, usuarioNombre: rechNombre2 } = getUsuarioAudit(session)
+                    await registrarAudit({
+                        accion: 'REJECT',
+                        entidad: 'Inscripción',
+                        entidadId: id,
+                        descripcion: `Inscripción rechazada (Usuario ID: ${inscripcionRechazada.usuarioId}) para Convocatoria: ${orginsc2?.convocatoria.codigo}`,
+                        usuarioId: rechId2,
+                        usuarioNombre: rechNombre2,
+                        modulo: 'Formación'
                     })
 
                     return NextResponse.json({ success: true, inscripcion: inscripcionRechazada, mensaje: 'Inscripción rechazada' })
@@ -687,11 +816,33 @@ export async function DELETE(request: NextRequest) {
 
         switch (tipo) {
             case 'curso':
+                const cursoDel = await (prisma as any).curso.findUnique({ where: { id } })
                 await (prisma as any).curso.delete({ where: { id } })
+                const { usuarioId: delIdC, usuarioNombre: delNomC } = getUsuarioAudit(session)
+                await registrarAudit({
+                    accion: 'DELETE',
+                    entidad: 'Curso',
+                    entidadId: id,
+                    descripcion: `Curso eliminado: ${cursoDel?.nombre}`,
+                    usuarioId: delIdC,
+                    usuarioNombre: delNomC,
+                    modulo: 'Formación'
+                })
                 return NextResponse.json({ success: true })
 
             case 'convocatoria':
+                const convDel = await (prisma as any).convocatoria.findUnique({ where: { id } })
                 await (prisma as any).convocatoria.delete({ where: { id } })
+                const { usuarioId: delIdConv, usuarioNombre: delNomConv } = getUsuarioAudit(session)
+                await registrarAudit({
+                    accion: 'DELETE',
+                    entidad: 'Convocatoria',
+                    entidadId: id,
+                    descripcion: `Convocatoria eliminada: ${convDel?.codigo}`,
+                    usuarioId: delIdConv,
+                    usuarioNombre: delNomConv,
+                    modulo: 'Formación'
+                })
                 return NextResponse.json({ success: true })
 
             case 'inscripcion':
@@ -704,6 +855,16 @@ export async function DELETE(request: NextRequest) {
                             data: { plazasOcupadas: { decrement: 1 } }
                         })
                     ])
+                    const { usuarioId: delIdI, usuarioNombre: delNomI } = getUsuarioAudit(session)
+                    await registrarAudit({
+                        accion: 'UNASSIGN',
+                        entidad: 'Inscripción',
+                        entidadId: id,
+                        descripcion: `Inscripción eliminada (Desasignación) del voluntario ${insc.usuarioId} de la convocatoria ${insc.convocatoriaId}`,
+                        usuarioId: delIdI,
+                        usuarioNombre: delNomI,
+                        modulo: 'Formación'
+                    })
                 }
                 return NextResponse.json({ success: true })
 

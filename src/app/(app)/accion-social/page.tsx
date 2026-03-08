@@ -277,22 +277,32 @@ export default function AccionSocialPage() {
     <div className="space-y-6">
 
       {/* ── HEADER ─────────────────────────────────────────────────────────── */}
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-violet-100 flex items-center justify-center">
-            <Users className="w-6 h-6 text-violet-600" />
+      <div>
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-violet-100 flex items-center justify-center flex-shrink-0">
+              <Users className="w-6 h-6 text-violet-600" />
+            </div>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-violet-600">ACCIÓN SOCIAL</p>
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Gestión Social y VIOGEN</h1>
+              <p className="text-sm text-gray-500 hidden sm:block">Espacios de acogida, directorio de emergencias y coordinación VIOGEN</p>
+            </div>
           </div>
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-violet-600">ACCIÓN SOCIAL</p>
-            <h1 className="text-2xl font-bold text-gray-900">Gestión Social y VIOGEN</h1>
-            <p className="text-sm text-gray-500">Espacios de acogida, directorio de emergencias y coordinación VIOGEN</p>
+          {/* Botones desktop */}
+          <div className="hidden sm:flex items-center gap-2">
+            <button onClick={cargarDatos} className="flex items-center justify-center p-2.5 text-slate-600 hover:bg-slate-100 rounded-lg border border-slate-200 flex-shrink-0" title="Recargar"><RefreshCw size={18} /></button>
+            <button onClick={() => setShowNuevaPeticion(true)} className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm" title="Nueva Petición"><ShoppingCart size={18} />Petición</button>
+            <button onClick={() => setShowNuevoArticulo(true)} className="flex items-center gap-2 px-4 py-2.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-400 font-medium text-sm" title="Nuevo Artículo"><Package size={18} />Artículo</button>
+            <button onClick={() => setShowNuevoCaso(true)} className="flex items-center gap-2 px-4 py-2.5 bg-violet-600 text-white rounded-lg hover:bg-violet-700 font-medium text-sm" title="Nuevo Caso VIOGEN"><Shield size={18} />VIOGEN</button>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <button onClick={cargarDatos} className="flex items-center justify-center p-2.5 text-slate-600 hover:bg-slate-100 rounded-lg border border-slate-200 flex-shrink-0" title="Recargar"><RefreshCw className="w-4 h-4" /></button>
-          <button onClick={() => setShowNuevaPeticion(true)} className="flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm flex-shrink-0 min-w-[44px]" title="Nueva Petición"><ShoppingCart className="w-4 h-4" /><span className="hidden sm:inline whitespace-nowrap">Petición</span></button>
-          <button onClick={() => setShowNuevoArticulo(true)} className="flex items-center justify-center gap-2 px-4 py-2.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-400 font-medium text-sm flex-shrink-0 min-w-[44px]" title="Nuevo Artículo"><Plus className="w-4 h-4" /><span className="hidden sm:inline whitespace-nowrap">Artículo</span></button>
-          <button onClick={() => setShowNuevoCaso(true)} className="flex items-center justify-center gap-2 px-4 py-2.5 bg-violet-600 text-white rounded-lg hover:bg-violet-700 font-medium text-sm flex-shrink-0 min-w-[44px]" title="Nuevo Caso VIOGEN"><Shield className="w-4 h-4" /><span className="hidden sm:inline whitespace-nowrap">Caso VIOGEN</span></button>
+        {/* Botones móvil: fila completa */}
+        <div className="flex sm:hidden gap-2 mt-3">
+          <button onClick={cargarDatos} className="flex-1 flex items-center justify-center p-2.5 text-slate-600 hover:bg-slate-100 rounded-lg border border-slate-200" title="Recargar"><RefreshCw size={18} /></button>
+          <button onClick={() => setShowNuevaPeticion(true)} className="flex-1 flex items-center justify-center gap-1.5 px-2 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm"><ShoppingCart size={18} /><span className="sr-only">Petición</span></button>
+          <button onClick={() => setShowNuevoArticulo(true)} className="flex-1 flex items-center justify-center gap-1.5 px-2 py-2.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-400 font-medium text-sm"><Package size={18} /><span className="sr-only">Artículo</span></button>
+          <button onClick={() => setShowNuevoCaso(true)} className="flex-1 flex items-center justify-center gap-1.5 px-2 py-2.5 bg-violet-600 text-white rounded-lg hover:bg-violet-700 font-medium text-sm"><Shield size={18} /><span className="sr-only">VIOGEN</span></button>
         </div>
       </div>
 

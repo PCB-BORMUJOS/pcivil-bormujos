@@ -1,13 +1,14 @@
 'use client';
 import { useSearchParams } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 
 import React, { useState, useEffect } from 'react';
 import {
   Package, Search, AlertTriangle, Plus, TrendingUp, TrendingDown, 
   BarChart3, Calendar, MapPin, Trash2, Eye, X, RefreshCw, ArrowUpDown, Pencil, Archive,
-  AlertCircle, CheckCircle, Clock, Box, ChevronDown, ChevronRight,
+  AlertCircle, CheckCircle, Clock, Box, ChevronDown, ChevronRight, ChevronUp, ExternalLink,
   Flame, Heart, Truck, Radio, GraduationCap, Shirt, Shield, Layers,
-  ClipboardList, ShoppingCart, Check, FileText, Send, Ban,
+  ClipboardList, ShoppingCart, Check, FileText, FileCheck, Send, Ban,
   History, User, Building, Receipt, Filter, Users, Tag
 } from 'lucide-react';
 
@@ -91,8 +92,10 @@ interface Peticion {
   notasCompra: string | null;
   notasRecepcion: string | null;
   motivoRechazo: string | null;
+  urlRc: string | null;
+  urlAlbaran: string | null;
   solicitante: { nombre: string; apellidos: string; numeroVoluntario: string };
-  articulo: { nombre: string; codigo: string } | null;
+  articulo: { id: string; nombre: string; codigo: string } | null;
   aprobadoPor: { nombre: string; apellidos: string } | null;
   recibidoPor: { nombre: string; apellidos: string } | null;
   historial: HistorialPeticion[];
@@ -206,6 +209,8 @@ function Modal({ title, children, onClose, size = 'md' }: {
 // ============================================
 export default function LogisticaPage() {
   // Estados principales
+  const { data: session } = useSession();
+  const isAdmin = session?.user?.rol === 'admin' || session?.user?.rol === 'superadmin' || session?.user?.rol === 'jefe_agrupacion';
   const searchParams = useSearchParams();
   const tabInicial = searchParams.get('tab') as 'stock' | 'peticiones' | 'movimientos' || 'stock';
   const [activeTab, setActiveTab] = useState<'stock' | 'peticiones' | 'movimientos' | 'asignaciones'>(tabInicial);
@@ -245,6 +250,7 @@ export default function LogisticaPage() {
   const [showNuevoArticulo, setShowNuevoArticulo] = useState(false);
   const [showMovimiento, setShowMovimiento] = useState(false);
   const [showNuevaPeticion, setShowNuevaPeticion] = useState(false);
+  const [peticionEditando, setPeticionEditando] = useState<Peticion | null>(null);
   const [showDetallePeticion, setShowDetallePeticion] = useState<Peticion | null>(null);
   const [showAccionPeticion, setShowAccionPeticion] = useState<{ peticion: Peticion; accion: string } | null>(null);
   const [paginaPeticiones, setPaginaPeticiones] = useState(1);
@@ -265,7 +271,8 @@ export default function LogisticaPage() {
     articuloId: '', nombreArticulo: '', cantidad: 1, unidad: 'unidad',
     motivo: 'reposicion', prioridad: 'normal', descripcion: '', areaOrigen: ''
   });
-  const [accionForm, setAccionForm] = useState({ comentario: '', proveedor: '', costeEstimado: '', costeFinal: '', numeroFactura: '' });
+  const [accionForm, setAccionForm] = useState({ comentario: '', proveedor: '', costeEstimado: '', costeFinal: '', numeroFactura: '', urlRc: '', urlAlbaran: '' });
+  const [peticionesExpandidas, setPeticionesExpandidas] = useState<Set<string>>(new Set());
 
   // ============================================
   // EFECTOS
@@ -470,16 +477,27 @@ export default function LogisticaPage() {
       return;
     }
     try {
-      const res = await fetch('/api/logistica/peticiones', {
-        method: 'POST',
+      const url = peticionEditando ? `/api/logistica/peticiones/${peticionEditando.id}` : '/api/logistica/peticiones';
+      const method = peticionEditando ? 'PUT' : 'POST';
+      const body = peticionEditando ? { accion: 'editar', ...nuevaPeticion } : nuevaPeticion;
+
+      const res = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(nuevaPeticion)
+        body: JSON.stringify(body)
       });
       if (res.ok) {
         setShowNuevaPeticion(false);
-        setNuevaPeticion({ articuloId: '', nombreArticulo: '', cantidad: 1, unidad: 'unidad', motivo: 'reposicion', prioridad: 'normal', descripcion: '', areaOrigen: '' });
+        setPeticionEditando(null);
+        setNuevaPeticion({
+          articuloId: '', nombreArticulo: '', cantidad: 1, unidad: 'unidad',
+          motivo: 'reposicion', prioridad: 'normal', descripcion: '', areaOrigen: ''
+        });
         cargarPeticiones();
-        alert('✅ Petición creada correctamente');
+        alert(peticionEditando ? '✅ Petición actualizada' : '✅ Petición creada');
+      } else {
+        const data = await res.json();
+        alert('Error: ' + (data.error || 'No se pudo guardar la petición'));
       }
     } catch (error) {
       alert('Error al crear petición');
@@ -528,7 +546,7 @@ export default function LogisticaPage() {
       });
       if (res.ok) {
         setShowAccionPeticion(null);
-        setAccionForm({ comentario: '', proveedor: '', costeEstimado: '', costeFinal: '', numeroFactura: '' });
+        setAccionForm({ comentario: '', proveedor: '', costeEstimado: '', costeFinal: '', numeroFactura: '', urlRc: '', urlAlbaran: '' });
         cargarPeticiones();
         alert('✅ Petición actualizada');
       } else {
@@ -548,6 +566,42 @@ export default function LogisticaPage() {
     } catch (error) {
       alert('Error al eliminar');
     }
+  };
+
+  const handleActualizarDoc = async (peticionId: string, tipo: 'rc' | 'albaran') => {
+    const inputEl = document.getElementById(`${tipo}-${peticionId}`) as HTMLInputElement;
+    if (!inputEl || !inputEl.value) return;
+    try {
+      const body = { accion: 'actualizar_docs', [tipo === 'rc' ? 'urlRc' : 'urlAlbaran']: inputEl.value };
+      const res = await fetch(`/api/logistica/peticiones/${peticionId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      if (res.ok) {
+        alert('✅ Documento adjuntado');
+        cargarPeticiones();
+      } else {
+        alert('Error al adjuntar documento');
+      }
+    } catch {
+      alert('Error de conexión');
+    }
+  };
+
+  const abrirEditarPeticion = (peticion: Peticion) => {
+    setPeticionEditando(peticion);
+    setNuevaPeticion({
+      articuloId: peticion.articulo?.id || '', 
+      nombreArticulo: peticion.nombreArticulo, 
+      cantidad: peticion.cantidad, 
+      unidad: peticion.unidad,
+      motivo: peticion.motivo, 
+      prioridad: peticion.prioridad, 
+      descripcion: peticion.descripcion || '', 
+      areaOrigen: peticion.areaOrigen
+    });
+    setShowNuevaPeticion(true);
   };
 
   // ============================================
@@ -590,88 +644,93 @@ export default function LogisticaPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
           {/* Selector de Inventario */}
-          <div className="relative">
-            <button
-              onClick={() => setShowSelectorInventario(!showSelectorInventario)}
-              className="flex items-center gap-3 px-4 py-3 bg-white border border-slate-200 rounded-xl shadow-sm hover:shadow-md transition-all"
-              style={{ borderLeftColor: getColorInventario(), borderLeftWidth: '4px' }}
-            >
-              <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white" style={{ backgroundColor: getColorInventario() }}>
-                {React.createElement(getIconoArea(inventarioActual === 'all' ? 'logistica' : inventarioActual), { size: 20 })}
-              </div>
-              <div className="text-left">
-                <p className="text-xs text-slate-500 uppercase font-bold">Inventario</p>
-                <p className="font-bold text-slate-800">{getNombreInventario()}</p>
-              </div>
-              <ChevronDown size={20} className="text-slate-400 ml-2" />
-            </button>
-
-            {showSelectorInventario && (
-              <div className="absolute top-full left-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-slate-200 z-50 overflow-hidden">
-                <div className="p-2 bg-slate-50 border-b border-slate-200">
-                  <p className="text-xs font-bold text-slate-500 uppercase px-2">Seleccionar Inventario</p>
+          <div className="flex items-center gap-4">
+            <div className="relative">
+              <button
+                onClick={() => setShowSelectorInventario(!showSelectorInventario)}
+                className="flex items-center gap-3 px-4 py-3 bg-white border border-slate-200 rounded-xl shadow-sm hover:shadow-md transition-all"
+                style={{ borderLeftColor: getColorInventario(), borderLeftWidth: '4px' }}
+              >
+                <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white" style={{ backgroundColor: getColorInventario() }}>
+                  {React.createElement(getIconoArea(inventarioActual === 'all' ? 'logistica' : inventarioActual), { size: 20 })}
                 </div>
-                <div className="max-h-96 overflow-y-auto">
-                  <button
-                    onClick={() => handleCambiarInventario('all')}
-                    className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-purple-50 transition-colors ${inventarioActual === 'all' ? 'bg-purple-50' : ''}`}
-                  >
-                    <div className="w-10 h-10 rounded-lg bg-purple-500 flex items-center justify-center text-white"><Layers size={20} /></div>
-                    <div className="text-left flex-1">
-                      <p className="font-medium text-slate-800">Inventario General</p>
-                      <p className="text-xs text-slate-500">Todos los artículos</p>
-                    </div>
-                  </button>
-                  <div className="border-t border-slate-100"></div>
-                  {statsPorArea.map(area => {
-                    const IconoArea = getIconoArea(area.slug);
-                    return (
-                      <div key={area.id}>
-                        <button
-                          onClick={() => handleCambiarInventario(area.slug)}
-                          className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors ${inventarioActual === area.slug ? 'bg-slate-100' : ''}`}
-                        >
-                          <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white" style={{ backgroundColor: area.color }}><IconoArea size={20} /></div>
-                          <div className="text-left flex-1">
-                            <p className="font-medium text-slate-800">{area.nombre}</p>
-                            <p className="text-xs text-slate-500">{area.totalArticulos} artículos</p>
-                          </div>
-                          {area.stockBajo > 0 && (
-                            <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full font-bold flex items-center gap-1"><AlertTriangle size={12} />{area.stockBajo}</span>
-                          )}
-                        </button>
-                        {area.subInventarios.map(sub => (
-                          <button
-                            key={sub.id}
-                            onClick={() => handleCambiarInventario(sub.slug)}
-                            className={`w-full flex items-center gap-3 px-4 py-2 pl-12 hover:bg-slate-50 ${inventarioActual === sub.slug ? 'bg-slate-100' : ''}`}
-                          >
-                            <div className="w-6 h-6 rounded bg-slate-200 flex items-center justify-center"><Box size={14} className="text-slate-500" /></div>
-                            <span className="text-sm text-slate-600">{sub.nombre}</span>
-                          </button>
-                        ))}
+                <div className="text-left">
+                  <p className="text-xs text-slate-500 uppercase font-bold">Inventario</p>
+                  <p className="font-bold text-slate-800">{getNombreInventario()}</p>
+                </div>
+                <ChevronDown size={20} className="text-slate-400 ml-2" />
+              </button>
+              {showSelectorInventario && (
+                <div className="absolute top-full left-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-slate-200 z-50 overflow-hidden">
+                  <div className="p-2 bg-slate-50 border-b border-slate-200">
+                    <p className="text-xs font-bold text-slate-500 uppercase px-2">Seleccionar Inventario</p>
+                  </div>
+                  <div className="max-h-96 overflow-y-auto">
+                    <button
+                      onClick={() => handleCambiarInventario('all')}
+                      className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-purple-50 transition-colors ${inventarioActual === 'all' ? 'bg-purple-50' : ''}`}
+                    >
+                      <div className="w-10 h-10 rounded-lg bg-purple-500 flex items-center justify-center text-white"><Layers size={20} /></div>
+                      <div className="text-left flex-1">
+                        <p className="font-medium text-slate-800">Inventario General</p>
+                        <p className="text-xs text-slate-500">Todos los artículos</p>
                       </div>
-                    );
-                  })}
+                    </button>
+                    <div className="border-t border-slate-100"></div>
+                    {statsPorArea.map(area => {
+                      const IconoArea = getIconoArea(area.slug);
+                      return (
+                        <div key={area.id}>
+                          <button
+                            onClick={() => handleCambiarInventario(area.slug)}
+                            className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors ${inventarioActual === area.slug ? 'bg-slate-100' : ''}`}
+                          >
+                            <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white" style={{ backgroundColor: area.color }}><IconoArea size={20} /></div>
+                            <div className="text-left flex-1">
+                              <p className="font-medium text-slate-800">{area.nombre}</p>
+                              <p className="text-xs text-slate-500">{area.totalArticulos} artículos</p>
+                            </div>
+                            {area.stockBajo > 0 && (
+                              <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full font-bold flex items-center gap-1"><AlertTriangle size={12} />{area.stockBajo}</span>
+                            )}
+                          </button>
+                          {area.subInventarios.map(sub => (
+                            <button
+                              key={sub.id}
+                              onClick={() => handleCambiarInventario(sub.slug)}
+                              className={`w-full flex items-center gap-3 px-4 py-2 pl-12 hover:bg-slate-50 ${inventarioActual === sub.slug ? 'bg-slate-100' : ''}`}
+                            >
+                              <div className="w-6 h-6 rounded bg-slate-200 flex items-center justify-center"><Box size={14} className="text-slate-500" /></div>
+                              <span className="text-sm text-slate-600">{sub.nombre}</span>
+                            </button>
+                          ))}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold text-slate-800">{getNombreInventario()}</h1>
+              <p className="text-slate-500 text-sm">{inventarioActual === 'all' ? 'Gestión centralizada de todos los inventarios' : 'Gestión de artículos del área'}</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-slate-800">{getNombreInventario()}</h1>
-            <p className="text-slate-500 text-sm">{inventarioActual === 'all' ? 'Gestión centralizada de todos los inventarios' : 'Gestión de artículos del área'}</p>
+          {/* Desktop: botones a la derecha */}
+          <div className="hidden sm:flex items-center gap-2">
+            <button onClick={() => { cargarDatos(); cargarPeticiones(); }} className="flex items-center justify-center p-2.5 text-slate-600 hover:bg-slate-100 rounded-lg border border-slate-200" title="Recargar"><RefreshCw size={18} /></button>
+            <button onClick={() => setShowNuevaPeticion(true)} className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm"><ShoppingCart size={18} />Petición</button>
+            <button onClick={() => setShowNuevoArticulo(true)} className="flex items-center gap-2 px-4 py-2.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-400 font-medium text-sm"><Package size={18} />Artículo</button>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <button onClick={() => setShowNuevaPeticion(true)} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-            <Send size={18} /> Nueva Petición
-          </button>
-          <button onClick={() => setShowNuevoArticulo(true)} className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
-            <Plus size={18} /> Nuevo Artículo
-          </button>
+        {/* Móvil: fila completa */}
+        <div className="flex sm:hidden gap-2 w-full">
+          <button onClick={() => { cargarDatos(); cargarPeticiones(); }} className="flex-1 flex items-center justify-center p-2.5 text-slate-600 hover:bg-slate-100 rounded-lg border border-slate-200"><RefreshCw size={18} /></button>
+          <button onClick={() => setShowNuevaPeticion(true)} className="flex-1 flex items-center justify-center px-2 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700"><ShoppingCart size={18} /></button>
+          <button onClick={() => setShowNuevoArticulo(true)} className="flex-1 flex items-center justify-center px-2 py-2.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-400"><Package size={18} /></button>
         </div>
       </div>
 
@@ -949,82 +1008,197 @@ export default function LogisticaPage() {
                     const AreaIcon = getIconoArea(peticion.areaOrigen);
                     
                     return (
-                      <div key={peticion.id} className="bg-white border border-slate-200 rounded-xl p-4 hover:shadow-md transition-shadow">
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex items-start gap-4 flex-1">
-                            <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center">
-                              <AreaIcon size={24} className="text-slate-600" />
+                      <div key={peticion.id} className="bg-white border border-slate-200 rounded-xl hover:shadow-md transition-all overflow-visible relative">
+                        {/* CABECERA ULTRA-COMPACTA */}
+                        <div className="px-4 pt-3 pb-2">
+
+                          {/* Fila 1: Ícono + Número + Estado + Prioridad + Metadatos + Acciones CRUD */}
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {/* Ícono pequeño */}
+                            <div className="w-7 h-7 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0 cursor-pointer"
+                              onClick={() => { const s = new Set(peticionesExpandidas); s.has(peticion.id) ? s.delete(peticion.id) : s.add(peticion.id); setPeticionesExpandidas(s); }}>
+                              <AreaIcon size={16} className="text-slate-500" />
                             </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <span className="font-bold text-slate-800">{peticion.numero}</span>
-                                <span className={`px-2 py-0.5 rounded-full text-xs font-bold border ${estadoInfo.color}`}>
-                                  <EstadoIcon size={12} className="inline mr-1" />{estadoInfo.label}
-                                </span>
-                                <span className={`px-2 py-0.5 rounded text-xs font-medium ${prioridadInfo.color}`}>{prioridadInfo.label}</span>
-                              </div>
-                              <p className="font-medium text-slate-700 mt-1">{peticion.nombreArticulo} <span className="text-slate-400">× {peticion.cantidad} {peticion.unidad}</span></p>
-                              <div className="flex items-center gap-4 mt-2 text-xs text-slate-500">
-                                <span className="flex items-center gap-1"><User size={12} /> {peticion.solicitante.nombre} {peticion.solicitante.apellidos}</span>
-                                <span className="flex items-center gap-1"><Building size={12} /> {AREAS_NOMBRE[peticion.areaOrigen] || peticion.areaOrigen}</span>
-                                <span className="flex items-center gap-1"><Calendar size={12} /> {formatearFecha(peticion.fechaSolicitud)}</span>
-                              </div>
-                              {peticion.descripcion && <p className="text-sm text-slate-500 mt-2 line-clamp-1">{peticion.descripcion}</p>}
+                            <span className="font-bold text-slate-700 text-sm">{peticion.numero}</span>
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${estadoInfo.color} flex items-center gap-1`}>
+                              <EstadoIcon size={10} /> {estadoInfo.label}
+                            </span>
+                            <span className={`px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase tracking-wider ${prioridadInfo.color}`}>{prioridadInfo.label}</span>
+                            {/* Metadatos inline */}
+                            <span className="text-[11px] text-slate-400 flex items-center gap-1"><User size={10} /> {peticion.solicitante.nombre} {peticion.solicitante.apellidos}</span>
+                            <span className="text-[11px] text-slate-400 hidden sm:flex items-center gap-1"><Building size={10} /> {AREAS_NOMBRE[peticion.areaOrigen] || peticion.areaOrigen}</span>
+                            <span className="text-[11px] text-slate-400 hidden sm:flex items-center gap-1"><Calendar size={10} /> {formatearFecha(peticion.fechaSolicitud)}</span>
+
+                            {/* Botones CRUD a la derecha */}
+                            <div className="ml-auto flex items-center gap-0.5 bg-slate-50 rounded-lg p-0.5 border border-slate-100 flex-shrink-0">
+                              <button onClick={() => setShowDetallePeticion(peticion)} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-white rounded" title="Ver"><Eye size={14} /></button>
+                              {(peticion.estado === 'pendiente' || peticion.estado === 'aprobada' || isAdmin) && (
+                                <button onClick={() => abrirEditarPeticion(peticion)} className="p-1.5 text-slate-400 hover:text-orange-500 hover:bg-white rounded" title="Editar"><Pencil size={14} /></button>
+                              )}
+                              <button onClick={() => { if(confirm('¿Archivar esta petición?')) fetch(`/api/logistica/peticiones/${peticion.id}`, {method:'DELETE'}).then(() => cargarPeticiones()) }} className="p-1.5 text-slate-400 hover:text-purple-600 hover:bg-white rounded" title="Archivar"><Archive size={14} /></button>
+                              <button onClick={() => { if(confirm('¿Eliminar de forma permanente?')) fetch(`/api/logistica/peticiones/${peticion.id}?force=true`, {method:'DELETE'}).then(() => cargarPeticiones()) }} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-white rounded" title="Eliminar"><Trash2 size={14} /></button>
                             </div>
                           </div>
-                          <div className="flex flex-col items-end gap-2">
-                            <div className="flex items-center gap-1">
-                              <button onClick={() => setShowDetallePeticion(peticion)} className="p-2 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg" title="Ver detalle"><Eye size={18} /></button>
-                              {(peticion.estado === 'pendiente' || peticion.estado === 'aprobada') && (
-                                <button onClick={() => setShowAccionPeticion({ peticion, accion: 'editar' })} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg" title="Editar"><Pencil size={18} /></button>
-                              )}
-                              {(peticion.estado === 'recibida' || peticion.estado === 'rechazada') ? (
-                                <button onClick={() => { if(confirm('¿Archivar esta petición? Se eliminará del listado activo.')) { fetch(`/api/logistica/peticiones/${peticion.id}`, {method:'DELETE'}).then(() => cargarPeticiones()) } }} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg" title="Archivar"><Archive size={18} /></button>
-                              ) : (
-                                <button onClick={() => { if(confirm('¿Eliminar esta petición? Esta acción no se puede deshacer.')) { fetch(`/api/logistica/peticiones/${peticion.id}`, {method:'DELETE'}).then(() => cargarPeticiones()) } }} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg" title="Eliminar"><Trash2 size={18} /></button>
-                              )}
+
+                          {/* Fila 2: Artículo + Botones de acción */}
+                          <div className="flex items-center gap-2 mt-1.5">
+                            <div className="flex-1 flex items-center gap-1.5 cursor-pointer group min-w-0"
+                              onClick={() => { const s = new Set(peticionesExpandidas); s.has(peticion.id) ? s.delete(peticion.id) : s.add(peticion.id); setPeticionesExpandidas(s); }}>
+                              <span className="font-medium text-slate-800 text-sm truncate">{peticion.nombreArticulo}</span>
+                              <span className="text-slate-400 text-xs whitespace-nowrap">× {peticion.cantidad} {peticion.unidad}</span>
+                              {peticionesExpandidas.has(peticion.id) ? <ChevronUp size={14} className="text-slate-400 group-hover:text-blue-500 flex-shrink-0" /> : <ChevronDown size={14} className="text-slate-400 group-hover:text-blue-500 flex-shrink-0" />}
                             </div>
-                            
-                            {/* Acciones según estado */}
-                            <div className="flex items-center gap-1">
-                              {peticion.estado === 'pendiente' && (
-                                <>
-                                  <button onClick={() => setShowAccionPeticion({ peticion, accion: 'aprobar' })} className="px-3 py-1.5 bg-green-500 text-white rounded-lg text-xs font-medium hover:bg-green-600 flex items-center gap-1"><Check size={14} /> Aprobar</button>
-                                  <button onClick={() => setShowAccionPeticion({ peticion, accion: 'rechazar' })} className="px-3 py-1.5 bg-red-100 text-red-600 rounded-lg text-xs font-medium hover:bg-red-200 flex items-center gap-1"><X size={14} /> Rechazar</button>
-                                </>
-                              )}
+                            {/* Botones acción estado */}
+                            <div className="flex items-center gap-1.5 flex-shrink-0">
+                              {peticion.estado === 'pendiente' && (<>
+                                <button onClick={() => setShowAccionPeticion({ peticion, accion: 'rechazar' })} className="px-2.5 py-1 text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg text-[11px] font-semibold">Rechazar</button>
+                                <button onClick={() => setShowAccionPeticion({ peticion, accion: 'aprobar' })} className="px-2.5 py-1 text-white bg-blue-600 hover:bg-blue-700 rounded-lg text-[11px] font-semibold flex items-center gap-1"><Check size={12} /> Aprobar</button>
+                              </>)}
                               {peticion.estado === 'aprobada' && (
-                                <button onClick={() => setShowAccionPeticion({ peticion, accion: 'en_compra' })} className="px-3 py-1.5 bg-purple-500 text-white rounded-lg text-xs font-medium hover:bg-purple-600 flex items-center gap-1"><ShoppingCart size={14} /> Pasar a Compra</button>
+                                <button onClick={() => setShowAccionPeticion({ peticion, accion: 'en_compra' })} className="px-2.5 py-1 text-white bg-purple-600 hover:bg-purple-700 rounded-lg text-[11px] font-semibold flex items-center gap-1"><ShoppingCart size={12} /> Compra</button>
                               )}
                               {(peticion.estado === 'aprobada' || peticion.estado === 'en_compra') && (
-                                <button onClick={() => setShowAccionPeticion({ peticion, accion: 'recibir' })} className="px-3 py-1.5 bg-green-500 text-white rounded-lg text-xs font-medium hover:bg-green-600 flex items-center gap-1"><CheckCircle size={14} /> Recepcionar</button>
+                                <button onClick={() => setShowAccionPeticion({ peticion, accion: 'recibir' })} className="px-2.5 py-1 text-white bg-green-600 hover:bg-green-700 rounded-lg text-[11px] font-semibold flex items-center gap-1"><CheckCircle size={12} /> Recibir</button>
                               )}
+                            </div>
+                          </div>
+
+                          {/* TIMELINE COMPACTO con botones de adjuntar en nodos */}
+                          <div className="flex items-start mt-3 px-2">
+                            {/* Solicitada */}
+                            <div className="flex flex-col items-center flex-1">
+                              <div className="w-3 h-3 rounded-full bg-green-500 border-2 border-white shadow-sm ring-1 ring-green-300"></div>
+                              <span className="text-[9px] font-bold text-slate-500 uppercase mt-0.5">Solicitada</span>
+                              <span className="text-[9px] text-slate-400">{formatearFecha(peticion.fechaSolicitud)}</span>
+                            </div>
+
+                            <div className={`flex-1 h-px mt-1.5 ${peticion.fechaAprobacion ? 'bg-green-400' : 'bg-slate-200'}`}></div>
+
+                            {/* Aprobada + botón RC */}
+                            <div className="flex flex-col items-center flex-1 relative">
+                              <div className="flex items-center gap-1">
+                                <div className={`w-3 h-3 rounded-full border-2 border-white shadow-sm ring-1 ${peticion.fechaAprobacion ? 'bg-green-500 ring-green-300' : 'bg-slate-200 ring-slate-200'}`}></div>
+                                {/* Botón RC — solo si aprobada o en_compra/recibida y no tiene RC aún */}
+                                {(!peticion.urlRc && (peticion.estado === 'aprobada' || peticion.estado === 'en_compra' || peticion.estado === 'recibida' || isAdmin)) && (
+                                  <div className="relative">
+                                    <button
+                                      onClick={() => { const s = new Set(peticionesExpandidas); const key = `rc-popup-${peticion.id}`; s.has(key) ? s.delete(key) : s.add(key); setPeticionesExpandidas(s); }}
+                                      className="flex items-center gap-0.5 px-1.5 py-0.5 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded text-[9px] font-bold border border-blue-200 whitespace-nowrap"
+                                      title="Adjuntar RC"
+                                    ><FileText size={9} /> RC</button>
+                                    {peticionesExpandidas.has(`rc-popup-${peticion.id}`) && (
+                                      <div className="absolute top-6 left-1/2 -translate-x-1/2 z-50 bg-white border border-blue-200 rounded-xl shadow-xl p-3 w-72">
+                                        <p className="text-xs font-bold text-blue-700 mb-2 flex items-center gap-1"><FileText size={13}/> Adjuntar Resolución / RC</p>
+                                        <input type="url" placeholder="https://..." id={`rc-${peticion.id}`} className="w-full text-xs p-2 border border-slate-200 rounded-lg mb-2 focus:ring-2 focus:ring-blue-400 outline-none" />
+                                        <div className="flex gap-2">
+                                          <button onClick={() => { const s = new Set(peticionesExpandidas); s.delete(`rc-popup-${peticion.id}`); setPeticionesExpandidas(s); }} className="flex-1 text-xs py-1.5 border border-slate-200 rounded-lg text-slate-500">Cancelar</button>
+                                          <button onClick={() => { handleActualizarDoc(peticion.id, 'rc'); const s = new Set(peticionesExpandidas); s.delete(`rc-popup-${peticion.id}`); setPeticionesExpandidas(s); }} className="flex-1 text-xs py-1.5 bg-blue-600 text-white rounded-lg font-semibold">Guardar</button>
+                                        </div>
+                                      </div>
+                                    )}
+                                    {peticion.urlRc && (
+                                      <a href={peticion.urlRc} target="_blank" rel="noopener noreferrer" className="flex items-center gap-0.5 px-1.5 py-0.5 bg-blue-600 text-white rounded text-[9px] font-bold border border-blue-600 whitespace-nowrap">
+                                        <FileText size={9} /> RC <ExternalLink size={8}/>
+                                      </a>
+                                    )}
+                                  </div>
+                                )}
+                                {peticion.urlRc && (
+                                  <a href={peticion.urlRc} target="_blank" rel="noopener noreferrer" className="flex items-center gap-0.5 px-1.5 py-0.5 bg-blue-600 text-white rounded text-[9px] font-bold border border-blue-600 whitespace-nowrap" title="Ver RC">
+                                    <FileText size={9} /> RC <ExternalLink size={8}/>
+                                  </a>
+                                )}
+                              </div>
+                              <span className={`text-[9px] font-bold uppercase mt-0.5 ${peticion.fechaAprobacion ? 'text-slate-500' : 'text-slate-300'}`}>Aprobada</span>
+                              {peticion.fechaAprobacion && <span className="text-[9px] text-slate-400">{formatearFecha(peticion.fechaAprobacion)}</span>}
+                            </div>
+
+                            <div className={`flex-1 h-px mt-1.5 ${peticion.fechaCompra ? 'bg-purple-400' : 'bg-slate-200'}`}></div>
+
+                            {/* En Compra */}
+                            <div className="flex flex-col items-center flex-1">
+                              <div className={`w-3 h-3 rounded-full border-2 border-white shadow-sm ring-1 ${peticion.fechaCompra ? 'bg-purple-500 ring-purple-300' : 'bg-slate-200 ring-slate-200'}`}></div>
+                              <span className={`text-[9px] font-bold uppercase mt-0.5 ${peticion.fechaCompra ? 'text-slate-500' : 'text-slate-300'}`}>En Compra</span>
+                              {peticion.fechaCompra && <span className="text-[9px] text-slate-400">{formatearFecha(peticion.fechaCompra)}</span>}
+                            </div>
+
+                            <div className={`flex-1 h-px mt-1.5 ${peticion.fechaRecepcion ? 'bg-green-400' : 'bg-slate-200'}`}></div>
+
+                            {/* Recibida + botón Albarán */}
+                            <div className="flex flex-col items-center flex-1 relative">
+                              <div className="flex items-center gap-1">
+                                <div className={`w-3 h-3 rounded-full border-2 border-white shadow-sm ring-1 ${peticion.fechaRecepcion ? 'bg-green-500 ring-green-300' : 'bg-slate-200 ring-slate-200'}`}></div>
+                                {/* Botón Albarán — solo si recibida y no tiene albarán aún */}
+                                {(!peticion.urlAlbaran && (peticion.estado === 'recibida' || isAdmin)) && (
+                                  <div className="relative">
+                                    <button
+                                      onClick={() => { const s = new Set(peticionesExpandidas); const key = `albaran-popup-${peticion.id}`; s.has(key) ? s.delete(key) : s.add(key); setPeticionesExpandidas(s); }}
+                                      className="flex items-center gap-0.5 px-1.5 py-0.5 bg-green-100 hover:bg-green-200 text-green-700 rounded text-[9px] font-bold border border-green-200 whitespace-nowrap"
+                                      title="Adjuntar Albarán"
+                                    ><FileCheck size={9} /> Albarán</button>
+                                    {peticionesExpandidas.has(`albaran-popup-${peticion.id}`) && (
+                                      <div className="absolute top-6 right-0 z-50 bg-white border border-green-200 rounded-xl shadow-xl p-3 w-72">
+                                        <p className="text-xs font-bold text-green-700 mb-2 flex items-center gap-1"><FileCheck size={13}/> Adjuntar Albarán de Recepción</p>
+                                        <input type="url" placeholder="https://..." id={`albaran-${peticion.id}`} className="w-full text-xs p-2 border border-slate-200 rounded-lg mb-2 focus:ring-2 focus:ring-green-400 outline-none" />
+                                        <div className="flex gap-2">
+                                          <button onClick={() => { const s = new Set(peticionesExpandidas); s.delete(`albaran-popup-${peticion.id}`); setPeticionesExpandidas(s); }} className="flex-1 text-xs py-1.5 border border-slate-200 rounded-lg text-slate-500">Cancelar</button>
+                                          <button onClick={() => { handleActualizarDoc(peticion.id, 'albaran'); const s = new Set(peticionesExpandidas); s.delete(`albaran-popup-${peticion.id}`); setPeticionesExpandidas(s); }} className="flex-1 text-xs py-1.5 bg-green-600 text-white rounded-lg font-semibold">Guardar</button>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                                {peticion.urlAlbaran && (
+                                  <a href={peticion.urlAlbaran} target="_blank" rel="noopener noreferrer" className="flex items-center gap-0.5 px-1.5 py-0.5 bg-green-600 text-white rounded text-[9px] font-bold border border-green-600 whitespace-nowrap" title="Ver Albarán">
+                                    <FileCheck size={9} /> Albarán <ExternalLink size={8}/>
+                                  </a>
+                                )}
+                              </div>
+                              <span className={`text-[9px] font-bold uppercase mt-0.5 ${peticion.fechaRecepcion ? 'text-slate-500' : 'text-slate-300'}`}>Recibida</span>
+                              {peticion.fechaRecepcion && <span className="text-[9px] text-slate-400">{formatearFecha(peticion.fechaRecepcion)}</span>}
                             </div>
                           </div>
                         </div>
 
-                        {/* Timeline mini */}
-                        <div className="flex items-center gap-2 mt-4 pt-4 border-t border-slate-100">
-                          <div className={`flex items-center gap-1 text-xs ${peticion.fechaSolicitud ? 'text-green-600' : 'text-slate-300'}`}>
-                            <div className={`w-2 h-2 rounded-full ${peticion.fechaSolicitud ? 'bg-green-500' : 'bg-slate-200'}`}></div>
-                            Solicitada
+                        {/* Contenido Expandido */}
+                        {peticionesExpandidas.has(peticion.id) && (
+                          <div className="px-4 py-4 bg-slate-50 border-t border-slate-200 grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
+                            <div className="space-y-3">
+                              {peticion.descripcion && (
+                                <div>
+                                  <h4 className="text-xs font-bold text-slate-500 uppercase mb-1">Descripción</h4>
+                                  <p className="text-slate-700 bg-white p-2.5 rounded border border-slate-200">{peticion.descripcion}</p>
+                                </div>
+                              )}
+                              {peticion.notasAprobacion && (
+                                <div>
+                                  <h4 className="text-xs font-bold text-slate-500 uppercase mb-1 text-blue-600">Consideraciones Aprobación</h4>
+                                  <p className="text-slate-700 bg-blue-50 p-2.5 rounded border border-blue-100">{peticion.notasAprobacion}</p>
+                                </div>
+                              )}
+                              {peticion.notasCompra && (
+                                <div>
+                                  <h4 className="text-xs font-bold text-slate-500 uppercase mb-1 text-purple-600">Notas de Compra</h4>
+                                  <p className="text-slate-700 bg-purple-50 p-2.5 rounded border border-purple-100">{peticion.notasCompra}</p>
+                                </div>
+                              )}
+                            </div>
+                            
+                            <div className="space-y-3">
+                              {(peticion.proveedor || peticion.costeEstimado || peticion.costeFinal) && (
+                                <div className="bg-white p-3 rounded-lg border border-slate-200 max-w-sm">
+                                  <h4 className="text-xs font-bold text-slate-500 uppercase mb-2 border-b border-slate-100 pb-1">Datos Económicos</h4>
+                                  <div className="space-y-1">
+                                    {peticion.proveedor && <div className="flex justify-between"><span className="text-slate-500">Proveedor:</span> <span className="font-medium text-slate-800">{peticion.proveedor}</span></div>}
+                                    {peticion.costeEstimado !== null && <div className="flex justify-between"><span className="text-slate-500">Estimado:</span> <span className="font-medium text-slate-800">{Number(peticion.costeEstimado).toFixed(2)} €</span></div>}
+                                    {peticion.costeFinal !== null && <div className="flex justify-between"><span className="text-slate-500">Coste final:</span> <span className="font-bold text-green-700">{Number(peticion.costeFinal).toFixed(2)} €</span></div>}
+                                  </div>
+                                </div>
+                              )}
+
+                            </div>
                           </div>
-                          <div className="flex-1 h-px bg-slate-200"></div>
-                          <div className={`flex items-center gap-1 text-xs ${peticion.fechaAprobacion ? 'text-green-600' : 'text-slate-300'}`}>
-                            <div className={`w-2 h-2 rounded-full ${peticion.fechaAprobacion ? 'bg-green-500' : 'bg-slate-200'}`}></div>
-                            Aprobada
-                          </div>
-                          <div className="flex-1 h-px bg-slate-200"></div>
-                          <div className={`flex items-center gap-1 text-xs ${peticion.fechaCompra ? 'text-green-600' : 'text-slate-300'}`}>
-                            <div className={`w-2 h-2 rounded-full ${peticion.fechaCompra ? 'bg-green-500' : 'bg-slate-200'}`}></div>
-                            En Compra
-                          </div>
-                          <div className="flex-1 h-px bg-slate-200"></div>
-                          <div className={`flex items-center gap-1 text-xs ${peticion.fechaRecepcion ? 'text-green-600' : 'text-slate-300'}`}>
-                            <div className={`w-2 h-2 rounded-full ${peticion.fechaRecepcion ? 'bg-green-500' : 'bg-slate-200'}`}></div>
-                            Recibida
-                          </div>
-                        </div>
+                        )}
                       </div>
                     );
                   })}
@@ -1353,7 +1527,9 @@ export default function LogisticaPage() {
 
       {/* Modal: Nueva Petición */}
       {showNuevaPeticion && (
-        <Modal title="Nueva Petición de Material" onClose={() => setShowNuevaPeticion(false)} size="lg">
+        <Modal
+          title={peticionEditando ? "Editar Petición" : "Nueva Petición de Material"}
+          onClose={() => { setShowNuevaPeticion(false); setPeticionEditando(null); }} size="lg">
           <div className="space-y-4">
             <div>
               <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Área Solicitante *</label>
@@ -1399,9 +1575,11 @@ export default function LogisticaPage() {
               <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Descripción</label>
               <textarea value={nuevaPeticion.descripcion} onChange={e => setNuevaPeticion({ ...nuevaPeticion, descripcion: e.target.value })} rows={3} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm" placeholder="Detalles adicionales..." />
             </div>
-            <div className="flex gap-3 pt-2">
-              <button onClick={() => setShowNuevaPeticion(false)} className="flex-1 py-2.5 border border-slate-300 text-slate-700 rounded-lg font-medium">Cancelar</button>
-              <button onClick={handleGuardarPeticion} className="flex-1 py-2.5 bg-blue-600 text-white rounded-lg font-medium">Crear Petición</button>
+            <div className="flex gap-3 pt-4 border-t">
+              <button onClick={() => { setShowNuevaPeticion(false); setPeticionEditando(null); }} className="flex-1 py-2 text-slate-600 hover:bg-slate-50 rounded-lg border border-slate-200">Cancelar</button>
+              <button onClick={handleGuardarPeticion} className="flex-1 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex justify-center items-center gap-2 font-medium">
+                {peticionEditando ? <Pencil size={18} /> : <Send size={18} />} {peticionEditando ? 'Guardar Cambios' : 'Enviar Petición'}
+              </button>
             </div>
           </div>
         </Modal>
@@ -1489,6 +1667,16 @@ export default function LogisticaPage() {
               <p className="text-sm text-slate-500">{showAccionPeticion.peticion.cantidad} {showAccionPeticion.peticion.unidad} - {AREAS_NOMBRE[showAccionPeticion.peticion.areaOrigen]}</p>
             </div>
 
+            {showAccionPeticion.accion === 'aprobar' && (
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Enlace / URL del documento RC (Opcional)</label>
+                <div className="flex rounded-lg overflow-hidden border border-slate-200 focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent">
+                  <span className="bg-slate-50 flex items-center px-3 border-r border-slate-200 text-slate-400"><FileText size={18} /></span>
+                  <input type="url" placeholder="https://..." value={accionForm.urlRc} onChange={e => setAccionForm({ ...accionForm, urlRc: e.target.value })} className="w-full p-2.5 text-sm bg-white border-0 focus:ring-0 outline-none" />
+                </div>
+              </div>
+            )}
+
             {showAccionPeticion.accion === 'en_compra' && (
               <>
                 <div>
@@ -1504,17 +1692,26 @@ export default function LogisticaPage() {
 
             {showAccionPeticion.accion === 'recibir' && (
               <>
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Coste Final (€)</label>
-                  <input type="number" step="0.01" value={accionForm.costeFinal} onChange={e => setAccionForm({ ...accionForm, costeFinal: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm" />
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Coste Final (€)</label>
+                    <input type="number" step="0.01" value={accionForm.costeFinal} onChange={e => setAccionForm({ ...accionForm, costeFinal: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Nº Factura</label>
+                    <input type="text" value={accionForm.numeroFactura} onChange={e => setAccionForm({ ...accionForm, numeroFactura: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm" />
+                  </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Nº Factura</label>
-                  <input type="text" value={accionForm.numeroFactura} onChange={e => setAccionForm({ ...accionForm, numeroFactura: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm" />
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Enlace / URL del Albarán de recepción (Opcional)</label>
+                  <div className="flex rounded-lg overflow-hidden border border-slate-200 focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent">
+                    <span className="bg-slate-50 flex items-center px-3 border-r border-slate-200 text-slate-400"><FileCheck size={18} /></span>
+                    <input type="url" placeholder="https://..." value={accionForm.urlAlbaran} onChange={e => setAccionForm({ ...accionForm, urlAlbaran: e.target.value })} className="w-full p-2.5 text-sm bg-white border-0 focus:ring-0 outline-none" />
+                  </div>
                 </div>
                 {showAccionPeticion.peticion.articulo && (
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-sm text-green-700">
-                    ✓ Al recepcionar, se añadirán {showAccionPeticion.peticion.cantidad} {showAccionPeticion.peticion.unidad} al stock del artículo
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-sm text-green-700 font-medium">
+                    ✓ Al recepcionar, se añadirán {showAccionPeticion.peticion.cantidad} {showAccionPeticion.peticion.unidad} al stock actual de este artículo
                   </div>
                 )}
               </>

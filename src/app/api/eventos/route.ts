@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
+import { registrarAudit, getUsuarioAudit } from '@/lib/audit'
 
 export async function GET(request: NextRequest) {
   try {
@@ -151,6 +152,18 @@ export async function POST(request: NextRequest) {
       }
     })
 
+    const { usuarioId: adminId, usuarioNombre: adminNombre } = getUsuarioAudit(session)
+    await registrarAudit({
+      accion: 'CREATE',
+      entidad: tipo === 'formacion' ? 'Formación' : 'Evento',
+      entidadId: evento.id,
+      descripcion: `${tipo === 'formacion' ? 'Sesión de formación creada' : 'Evento creado'}: ${titulo} (${new Date(fecha).toLocaleDateString()})`,
+      usuarioId: adminId,
+      usuarioNombre: adminNombre,
+      modulo: tipo === 'formacion' ? 'Formación' : 'Operativa',
+      datosNuevos: { titulo, fecha, tipo, privado: esEventoPrivado }
+    })
+
     return NextResponse.json({ success: true, evento })
   } catch (error) {
     console.error('Error al crear evento:', error)
@@ -215,6 +228,19 @@ export async function PATCH(request: NextRequest) {
       if (body.numAsistentesExternos !== undefined) updateData.numAsistentesExternos = body.numAsistentesExternos
     }
     const evento = await prisma.evento.update({ where: { id }, data: updateData })
+    
+    const { usuarioId: adminId, usuarioNombre: adminNombre } = getUsuarioAudit(session)
+    await registrarAudit({
+      accion: 'UPDATE',
+      entidad: eventoExistente.tipo === 'formacion' ? 'Formación' : 'Evento',
+      entidadId: evento.id,
+      descripcion: `${eventoExistente.tipo === 'formacion' ? 'Sesión de formación modificada' : 'Evento modificado'}: ${evento.titulo}`,
+      usuarioId: adminId,
+      usuarioNombre: adminNombre,
+      modulo: eventoExistente.tipo === 'formacion' ? 'Formación' : 'Operativa',
+      datosNuevos: updateData
+    })
+
     return NextResponse.json({ success: true, evento })
   } catch (error) {
     console.error('Error al actualizar evento:', error)
@@ -237,6 +263,19 @@ export async function DELETE(request: NextRequest) {
     const esPropietario = evento.creadorId === usuario.id
     if (!esAdmin && !esPropietario) return NextResponse.json({ error: 'Sin permisos' }, { status: 403 })
     await prisma.evento.delete({ where: { id } })
+    
+    const { usuarioId: adminId, usuarioNombre: adminNombre } = getUsuarioAudit(session)
+    await registrarAudit({
+      accion: 'DELETE',
+      entidad: evento.tipo === 'formacion' ? 'Formación' : 'Evento',
+      entidadId: id,
+      descripcion: `${evento.tipo === 'formacion' ? 'Sesión de formación eliminada' : 'Evento eliminado'}: ${evento.titulo}`,
+      usuarioId: adminId,
+      usuarioNombre: adminNombre,
+      modulo: evento.tipo === 'formacion' ? 'Formación' : 'Operativa',
+      datosAnteriores: { fecha: evento.fecha, titulo: evento.titulo, tipo: evento.tipo }
+    })
+
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('Error al eliminar evento:', error)

@@ -60,7 +60,7 @@ export default function ConfiguracionPage() {
   const [editingUser, setEditingUser] = useState<Usuario | null>(null);
 
   // Estados para ordenación
-  const [sortBy, setSortBy] = useState<'nombre' | 'email' | 'voluntario' | 'rol' | 'estado'>('nombre');
+  const [sortBy, setSortBy] = useState<'nombre' | 'email' | 'voluntario' | 'rol' | 'estado'>('voluntario');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
   // Form states
@@ -291,11 +291,15 @@ export default function ConfiguracionPage() {
         case 'email':
           comparison = a.email.localeCompare(b.email);
           break;
-        case 'voluntario':
-          const aVol = a.numeroVoluntario || '';
-          const bVol = b.numeroVoluntario || '';
-          comparison = aVol.localeCompare(bVol);
+        case 'voluntario': {
+          // Orden: J-XX primero, luego S-XX, luego B-XX, resto al final
+          const ord = (v: string) => v?.startsWith('J') ? 0 : v?.startsWith('S') ? 1 : v?.startsWith('B') ? 2 : 3;
+          const aO = ord(a.numeroVoluntario || '');
+          const bO = ord(b.numeroVoluntario || '');
+          if (aO !== bO) comparison = aO - bO;
+          else comparison = (a.numeroVoluntario || '').localeCompare(b.numeroVoluntario || '');
           break;
+        }
         case 'rol':
           comparison = a.rol.nombre.localeCompare(b.rol.nombre);
           break;
@@ -329,34 +333,79 @@ export default function ConfiguracionPage() {
 
   return (
     <div className="space-y-8">
-      <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
-        <div className="flex items-center gap-6">
-          <div className="bg-slate-900 p-4 rounded-2xl text-white shadow-xl"><Shield size={32} /></div>
+      <div className="bg-white p-5 sm:p-8 rounded-3xl border border-slate-200 shadow-sm">
+        <div className="flex items-center gap-4 sm:gap-6">
+          <div className="bg-slate-900 p-3 sm:p-4 rounded-2xl text-white shadow-xl flex-shrink-0"><Shield size={28} className="sm:hidden" /><Shield size={32} className="hidden sm:block" /></div>
           <div>
-            <h2 className="text-3xl font-black text-slate-800 uppercase tracking-tighter">Panel de Gestión Administrativa</h2>
-            <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-2">Configuración de dietas, kilometraje y auditoría</p>
+            <h2 className="text-lg sm:text-3xl font-black text-slate-800 uppercase tracking-tighter leading-tight">Panel de Gestión Administrativa</h2>
+            <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1 sm:mt-2">Configuración de dietas, kilometraje y auditoría</p>
           </div>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-6 border-b border-slate-200 pb-px">
-        <button onClick={() => setActiveTab('liquidaciones')} className={`pb-4 px-2 text-xs font-bold uppercase tracking-widest flex items-center gap-2 ${activeTab === 'liquidaciones' ? 'text-orange-600 border-b-4 border-orange-600' : 'text-slate-400'}`}>
-          <CreditCard size={16} /> Liquidaciones
+      {/* Tabs — ancho completo dividido en 4 */}
+      <div
+        role="tablist"
+        aria-label="Secciones de configuración"
+        className="flex border-b border-slate-200"
+      >
+        <button
+          role="tab"
+          id="tab-liquidaciones"
+          aria-selected={activeTab === 'liquidaciones'}
+          aria-controls="panel-liquidaciones"
+          tabIndex={activeTab === 'liquidaciones' ? 0 : -1}
+          onClick={() => setActiveTab('liquidaciones')}
+          className={`flex-1 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 py-3 sm:py-4 px-1 text-xs font-bold uppercase tracking-wide transition-colors border-b-4 ${
+            activeTab === 'liquidaciones' ? 'text-orange-600 border-orange-600 bg-orange-50/50' : 'text-slate-400 border-transparent hover:text-slate-600 hover:bg-slate-50'
+          }`}
+        >
+          <CreditCard size={18} /><span className="leading-none">Liquidaciones</span>
         </button>
-        <button onClick={() => setActiveTab('roles')} className={`pb-4 px-2 text-xs font-bold uppercase tracking-widest flex items-center gap-2 ${activeTab === 'roles' ? 'text-orange-600 border-b-4 border-orange-600' : 'text-slate-400'}`}>
-          <Users size={16} /> Roles y Permisos
+        <button
+          role="tab"
+          id="tab-roles"
+          aria-selected={activeTab === 'roles'}
+          aria-controls="panel-roles"
+          tabIndex={activeTab === 'roles' ? 0 : -1}
+          onClick={() => setActiveTab('roles')}
+          className={`flex-1 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 py-3 sm:py-4 px-1 text-xs font-bold uppercase tracking-wide transition-colors border-b-4 ${
+            activeTab === 'roles' ? 'text-orange-600 border-orange-600 bg-orange-50/50' : 'text-slate-400 border-transparent hover:text-slate-600 hover:bg-slate-50'
+          }`}
+        >
+          <Users size={18} /><span className="leading-none">Usuarios</span>
         </button>
-        <button onClick={() => setActiveTab('criterios')} className={`pb-4 px-2 text-xs font-bold uppercase tracking-widest flex items-center gap-2 ${activeTab === 'criterios' ? 'text-orange-600 border-b-4 border-orange-600' : 'text-slate-400'}`}>
-          <TrendingUp size={16} /> Criterios de Personal
+        <button
+          role="tab"
+          id="tab-criterios"
+          aria-selected={activeTab === 'criterios'}
+          aria-controls="panel-criterios"
+          tabIndex={activeTab === 'criterios' ? 0 : -1}
+          onClick={() => setActiveTab('criterios')}
+          className={`flex-1 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 py-3 sm:py-4 px-1 text-xs font-bold uppercase tracking-wide transition-colors border-b-4 ${
+            activeTab === 'criterios' ? 'text-orange-600 border-orange-600 bg-orange-50/50' : 'text-slate-400 border-transparent hover:text-slate-600 hover:bg-slate-50'
+          }`}
+        >
+          <TrendingUp size={18} /><span className="leading-none">Criterios</span>
         </button>
-        <button onClick={() => setActiveTab('audit')} className={`pb-4 px-2 text-xs font-bold uppercase tracking-widest flex items-center gap-2 ${activeTab === 'audit' ? 'text-orange-600 border-b-4 border-orange-600' : 'text-slate-400'}`}>
-          <History size={16} /> Trazabilidad
+        <button
+          role="tab"
+          id="tab-audit"
+          aria-selected={activeTab === 'audit'}
+          aria-controls="panel-audit"
+          tabIndex={activeTab === 'audit' ? 0 : -1}
+          onClick={() => setActiveTab('audit')}
+          className={`flex-1 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 py-3 sm:py-4 px-1 text-xs font-bold uppercase tracking-wide transition-colors border-b-4 ${
+            activeTab === 'audit' ? 'text-orange-600 border-orange-600 bg-orange-50/50' : 'text-slate-400 border-transparent hover:text-slate-600 hover:bg-slate-50'
+          }`}
+        >
+          <History size={18} /><span className="leading-none">Trazabilidad</span>
         </button>
       </div>
 
       {/* Liquidaciones */}
       {activeTab === 'liquidaciones' && (
+        <div role="tabpanel" id="panel-liquidaciones" aria-labelledby="tab-liquidaciones">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="space-y-6">
             <div className="bg-white p-6 rounded-xl border shadow-sm">
@@ -433,13 +482,14 @@ export default function ConfiguracionPage() {
             )}
           </div>
         </div>
+        </div>
       )}
 
       {/* Roles */}
       {activeTab === 'roles' && (
-        <div className="space-y-6">
+        <div role="tabpanel" id="panel-roles" aria-labelledby="tab-roles" className="space-y-6">
           {/* Header con botón de crear */}
-          <div className="flex justify-between items-center">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
             <div>
               <h3 className="text-xl font-bold text-slate-800">Gestión de Usuarios y Permisos</h3>
               <p className="text-sm text-slate-500">Administra los usuarios del sistema y sus niveles de acceso</p>
@@ -451,9 +501,32 @@ export default function ConfiguracionPage() {
 
           {/* Tabla de usuarios */}
           <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
-            <div className="p-4 border-b bg-slate-50 flex justify-between items-center">
-              <h3 className="font-bold text-slate-800">Usuarios del Sistema</h3>
-              <span className="text-xs text-slate-500">{usuarios.length} usuarios</span>
+            <div className="p-4 border-b bg-slate-50 flex flex-wrap justify-between items-center gap-2">
+              <div className="flex items-center gap-2">
+                <h3 className="font-bold text-slate-800">Usuarios del Sistema</h3>
+                <span className="text-xs text-slate-500 bg-slate-200 px-2 py-0.5 rounded-full">{usuarios.length}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-400 font-medium">Ordenar por</span>
+                <select
+                  value={sortBy}
+                  onChange={e => { setSortBy(e.target.value as typeof sortBy); }}
+                  className="text-xs border border-slate-200 rounded-lg px-2 py-1.5 text-slate-600 focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                >
+                  <option value="voluntario">Indicativo (J→S→B)</option>
+                  <option value="nombre">Nombre</option>
+                  <option value="email">Email</option>
+                  <option value="rol">Rol</option>
+                  <option value="estado">Estado</option>
+                </select>
+                <button
+                  onClick={() => setSortOrder(o => o === 'asc' ? 'desc' : 'asc')}
+                  className="p-1.5 border border-slate-200 rounded-lg text-slate-500 hover:bg-slate-100 transition-colors"
+                  title={sortOrder === 'asc' ? 'Ascendente' : 'Descendente'}
+                >
+                  {sortOrder === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />}
+                </button>
+              </div>
             </div>
 
             {loadingUsuarios ? (
@@ -462,39 +535,15 @@ export default function ConfiguracionPage() {
                 <p className="text-sm text-slate-500 mt-4">Cargando usuarios...</p>
               </div>
             ) : (
-              <table className="w-full text-left">
+              <div className="overflow-x-auto">
+              <table className="w-full text-left min-w-[640px]">
                 <thead className="bg-slate-50 border-b">
                   <tr>
-                    <th
-                      className="p-4 text-xs font-bold text-slate-400 uppercase cursor-pointer hover:text-slate-600 transition-colors flex items-center"
-                      onClick={() => handleSort('nombre')}
-                    >
-                      Usuario {renderSortIcon('nombre')}
-                    </th>
-                    <th
-                      className="p-4 text-xs font-bold text-slate-400 uppercase cursor-pointer hover:text-slate-600 transition-colors"
-                      onClick={() => handleSort('email')}
-                    >
-                      Email {renderSortIcon('email')}
-                    </th>
-                    <th
-                      className="p-4 text-xs font-bold text-slate-400 uppercase cursor-pointer hover:text-slate-600 transition-colors"
-                      onClick={() => handleSort('voluntario')}
-                    >
-                      Voluntario {renderSortIcon('voluntario')}
-                    </th>
-                    <th
-                      className="p-4 text-xs font-bold text-slate-400 uppercase cursor-pointer hover:text-slate-600 transition-colors"
-                      onClick={() => handleSort('rol')}
-                    >
-                      Rol {renderSortIcon('rol')}
-                    </th>
-                    <th
-                      className="p-4 text-xs font-bold text-slate-400 uppercase cursor-pointer hover:text-slate-600 transition-colors"
-                      onClick={() => handleSort('estado')}
-                    >
-                      Estado {renderSortIcon('estado')}
-                    </th>
+                    <th className="p-4 text-xs font-bold text-slate-400 uppercase">Usuario</th>
+                    <th className="p-4 text-xs font-bold text-slate-400 uppercase">Email</th>
+                    <th className="p-4 text-xs font-bold text-slate-400 uppercase">Voluntario</th>
+                    <th className="p-4 text-xs font-bold text-slate-400 uppercase">Rol</th>
+                    <th className="p-4 text-xs font-bold text-slate-400 uppercase">Estado</th>
                     <th className="p-4 text-xs font-bold text-slate-400 uppercase text-right">Acciones</th>
                   </tr>
                 </thead>
@@ -555,6 +604,7 @@ export default function ConfiguracionPage() {
                   )}
                 </tbody>
               </table>
+              </div>
             )}
           </div>
         </div>
@@ -562,7 +612,7 @@ export default function ConfiguracionPage() {
 
       {/* Criterios de Personal */}
       {activeTab === 'criterios' && (
-        <div className="space-y-6">
+        <div role="tabpanel" id="panel-criterios" aria-labelledby="tab-criterios" className="space-y-6">
           <div>
             <h3 className="text-xl font-bold text-slate-800">Criterios de Generación Automática</h3>
             <p className="text-sm text-slate-500">Configura los criterios que el algoritmo usará para generar los cuadrantes automáticamente</p>
@@ -792,7 +842,9 @@ export default function ConfiguracionPage() {
 
       {/* Audit */}
       {activeTab === 'audit' && (
-        <TrazabilidadPanel />
+        <div role="tabpanel" id="panel-audit" aria-labelledby="tab-audit">
+          <TrazabilidadPanel />
+        </div>
       )}
 
       {/* Modal de creación de usuario */}

@@ -398,8 +398,10 @@ function CalendarView({ eventos, guardias, resumenDisponibilidad, onEventClick, 
         </h2>
         <div className="flex items-center gap-4">
           <div className="hidden md:flex items-center gap-3 text-[10px]">
-            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500"></span> Mañana</span>
-            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-500"></span> Tarde</span>
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500"></span> M ≥4</span>
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-500"></span> 3 ind.</span>
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500"></span> ≤2 ind.</span>
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-500"></span> T ≥4</span>
             <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-pink-500"></span> Evento</span>
             <span className="flex items-center gap-1"><Lock size={10} className="text-slate-400" /> Privado</span>
           </div>
@@ -441,24 +443,37 @@ function CalendarView({ eventos, guardias, resumenDisponibilidad, onEventClick, 
                   const resumenDia = resumenDisponibilidad[day.date] || {};
                   const resMañana = resumenDia['mañana'];
                   const resTarde = resumenDia['tarde'];
-                  const colorClass = (color: string) => {
-                    if (color === 'rojo') return 'bg-red-100 text-red-700 border-red-500';
-                    if (color === 'naranja') return 'bg-orange-100 text-orange-700 border-orange-500';
-                    if (color === 'verde') return 'bg-green-100 text-green-700 border-green-500';
-                    return 'bg-blue-100 text-blue-700 border-blue-500';
+
+                  // Reglas de color por número de indicativos asignados
+                  const colorPorCount = (turno: 'mañana' | 'tarde', count: number) => {
+                    if (count >= 4) return turno === 'mañana'
+                      ? 'bg-green-100 text-green-700 border-green-500 hover:bg-green-200'
+                      : 'bg-blue-100 text-blue-700 border-blue-500 hover:bg-blue-200';
+                    if (count === 3) return 'bg-amber-100 text-amber-700 border-amber-500 hover:bg-amber-200';
+                    return 'bg-red-100 text-red-700 border-red-500 hover:bg-red-200';
                   };
+
+                  // Color para disponibilidad estimada (sin guardias asignadas, usa total del resumen)
+                  const colorDisponibilidad = (turno: 'mañana' | 'tarde', total: number) => {
+                    if (total >= 4) return turno === 'mañana'
+                      ? 'bg-green-100 text-green-700 border-green-500'
+                      : 'bg-blue-100 text-blue-700 border-blue-500';
+                    if (total === 3) return 'bg-amber-100 text-amber-700 border-amber-500';
+                    return 'bg-red-100 text-red-700 border-red-500';
+                  };
+
                   return (
                     <>
                       {guardiasMañana.length > 0 ? (
                         <div
-                          className="text-[9px] px-1.5 py-1 rounded bg-green-100 text-green-700 border-l-2 border-green-500 cursor-pointer hover:bg-green-200"
+                          className={`text-[9px] px-1.5 py-1 rounded border-l-2 cursor-pointer ${colorPorCount('mañana', guardiasMañana.length)}`}
                           onClick={(e) => { e.stopPropagation(); onGuardiaClick(day.date, 'mañana', guardiasMañana); }}
                         >
                           <span className="font-bold">T. Mañana</span> ({guardiasMañana.length})
                         </div>
                       ) : resMañana ? (
                         <div
-                          className={`text-[9px] px-1.5 py-1 rounded border-l-2 cursor-pointer ${colorClass(resMañana.color)}`}
+                          className={`text-[9px] px-1.5 py-1 rounded border-l-2 cursor-pointer ${colorDisponibilidad('mañana', resMañana.total)}`}
                           onClick={(e) => { e.stopPropagation(); e.preventDefault(); onGuardiaClick(day.date, 'mañana', []); }}
                           title={`Mañana: ${resMañana.total} disponibles | Resp: ${resMañana.responsables} | Carnet: ${resMañana.conCarnet}`}
                         >
@@ -467,14 +482,14 @@ function CalendarView({ eventos, guardias, resumenDisponibilidad, onEventClick, 
                       ) : null}
                       {guardiasTarde.length > 0 ? (
                         <div
-                          className="text-[9px] px-1.5 py-1 rounded bg-blue-100 text-blue-700 border-l-2 border-blue-500 cursor-pointer hover:bg-blue-200"
+                          className={`text-[9px] px-1.5 py-1 rounded border-l-2 cursor-pointer ${colorPorCount('tarde', guardiasTarde.length)}`}
                           onClick={(e) => { e.stopPropagation(); onGuardiaClick(day.date, 'tarde', guardiasTarde); }}
                         >
                           <span className="font-bold">T. Tarde</span> ({guardiasTarde.length})
                         </div>
                       ) : resTarde ? (
                         <div
-                          className={`text-[9px] px-1.5 py-1 rounded border-l-2 cursor-pointer ${colorClass(resTarde.color)}`}
+                          className={`text-[9px] px-1.5 py-1 rounded border-l-2 cursor-pointer ${colorDisponibilidad('tarde', resTarde.total)}`}
                           onClick={(e) => { e.stopPropagation(); e.preventDefault(); onGuardiaClick(day.date, 'tarde', []); }}
                           title={`Tarde: ${resTarde.total} disponibles | Resp: ${resTarde.responsables} | Carnet: ${resTarde.conCarnet}`}
                         >
@@ -527,6 +542,7 @@ export default function DashboardPage() {
   const [userRole, setUserRole] = useState<string>('');
   const [userId, setUserId] = useState<string>('');
   const [voluntarios, setVoluntarios] = useState<any[]>([]);
+  const [todosVoluntarios, setTodosVoluntarios] = useState<any[]>([]);  // lista completa, nunca sobreescrita
   const [enTurno, setEnTurno] = useState<any[]>([]);
   const [stats, setStats] = useState({ total: 0, responsablesTurno: 0, conCarnet: 0, experienciaAlta: 0 });
   const [vehiculos, setVehiculos] = useState<any[]>([]);
@@ -543,6 +559,11 @@ export default function DashboardPage() {
   const [loadingDisponibilidad, setLoadingDisponibilidad] = useState(false);
 
   const [editEventId, setEditEventId] = useState<string | null>(null);
+  // — Estados para edición inline de turno en modal de guardia —
+  const [editarGuardiaId, setEditarGuardiaId] = useState<string | null>(null);
+  const [editarVoluntarioId, setEditarVoluntarioId] = useState<string>('');
+  const [savingGuardia, setSavingGuardia] = useState(false);
+  // ————————————————————————————————————————————————
   const [newEvent, setNewEvent] = useState({
     titulo: '', descripcion: '', tipo: 'preventivo', horaInicio: '09:00', horaFin: '14:00',
     ubicacion: '', color: '#EC4899', voluntariosMin: 0, voluntariosMax: 0, visible: true, privado: false,
@@ -586,6 +607,7 @@ export default function DashboardPage() {
     ])
       .then(([volData, vehData, climaData, eventosData, guardiasData]: any[]) => {
         setVoluntarios(volData.voluntarios || []);
+        setTodosVoluntarios(volData.voluntarios || []);  // guardar copia completa para el selector
         setEnTurno(volData.enTurno || []);
         setStats(volData.stats || { total: 0, responsablesTurno: 0, conCarnet: 0, experienciaAlta: 0 });
         setVehiculos(vehData.vehiculos || []);
@@ -727,7 +749,7 @@ export default function DashboardPage() {
         setEnTurno(data.enTurno || []);
         setStats(data.stats || { total: 0, responsablesTurno: 0, conCarnet: 0, experienciaAlta: 0 });
         setTurnoSeleccionado({ fecha, turno, diaSemanaNombre: data.diaSemanaNombre });
-        setShowPersonnel(true); // Abrir modal automáticamente
+        // NO abrimos showPersonnel — ya queda integrado en showGuardiaDetail
       } else {
         console.error('Error al cargar disponibilidad:', data.error);
         // En caso de error, cargar todos los voluntarios como fallback
@@ -752,6 +774,64 @@ export default function DashboardPage() {
         setStats(data.stats || { total: 0, responsablesTurno: 0, conCarnet: 0, experienciaAlta: 0 });
       })
       .catch(() => { });
+  };
+
+  // Reasignar guardia a otro voluntario (solo admin): DELETE + POST
+  const handleReasignarGuardia = async (guardiaId: string, nuevoVoluntarioId: string, fecha: string, turno: string) => {
+    if (!nuevoVoluntarioId) return;
+    setSavingGuardia(true);
+    try {
+      // Eliminar guardia actual
+      const delRes = await fetch(`/api/cuadrantes?id=${guardiaId}`, { method: 'DELETE' });
+      if (!delRes.ok) throw new Error('Error al eliminar guardia');
+      // Crear nueva con el voluntario seleccionado
+      const postRes = await fetch('/api/cuadrantes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fecha, turno, usuarioId: nuevoVoluntarioId, tipo: 'programada' })
+      });
+      if (!postRes.ok) throw new Error('Error al crear guardia');
+      // Recargar guardias del calendario
+      const guardiasRes = await fetch('/api/guardias');
+      const guardiasData = await guardiasRes.json();
+      setGuardias(guardiasData.guardias || []);
+      // Actualizar el modal con las guardias nuevas del mismo turno
+      const nuevasGuardias = (guardiasData.guardias || []).filter((g: any) =>
+        new Date(g.fecha).toISOString().split('T')[0] === fecha && g.turno === turno
+      );
+      setShowGuardiaDetail(prev => prev ? { ...prev, guardias: nuevasGuardias } : null);
+      setEditarGuardiaId(null);
+      setEditarVoluntarioId('');
+    } catch (e) {
+      alert('Error al reasignar el turno. Inténtalo de nuevo.');
+    } finally {
+      setSavingGuardia(false);
+    }
+  };
+
+  // Eliminar guardia directamente desde el modal (solo admin)
+  const handleEliminarGuardia = async (guardiaId: string, fecha: string, turno: string) => {
+    if (!confirm('¿Eliminar esta asignación de turno? Esta acción no se puede deshacer.')) return;
+    setSavingGuardia(true);
+    try {
+      const res = await fetch(`/api/cuadrantes?id=${guardiaId}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Error al eliminar');
+      // Recargar guardias del calendario
+      const guardiasRes = await fetch('/api/guardias');
+      const guardiasData = await guardiasRes.json();
+      setGuardias(guardiasData.guardias || []);
+      // Actualizar modal con guardias restantes del mismo turno
+      const restantes = (guardiasData.guardias || []).filter((g: any) =>
+        new Date(g.fecha).toISOString().split('T')[0] === fecha && g.turno === turno
+      );
+      setShowGuardiaDetail(prev => prev ? { ...prev, guardias: restantes } : null);
+      setEditarGuardiaId(null);
+      setEditarVoluntarioId('');
+    } catch (e) {
+      alert('Error al eliminar la guardia. Inténtalo de nuevo.');
+    } finally {
+      setSavingGuardia(false);
+    }
   };
 
   const esAdmin = ['superadmin', 'admin', 'coordinador'].includes(userRole);
@@ -1181,40 +1261,173 @@ export default function DashboardPage() {
         </Modal>
       )}
 
-      {/* Modal Guardia Detail */}
+      {/* Modal Guardia Detail — unificado con disponibilidad */}
       {showGuardiaDetail && (
-        <Modal title={`Turno ${showGuardiaDetail.turno === 'mañana' ? 'Mañana' : 'Tarde'} - ${new Date(showGuardiaDetail.date + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}`} onClose={() => setShowGuardiaDetail(null)}>
-          <div className="space-y-3">
-            <div className={`p-3 rounded-lg ${showGuardiaDetail.turno === 'mañana' ? 'bg-green-50 border border-green-200' : 'bg-blue-50 border border-blue-200'}`}>
-              <div className="flex items-center gap-2">
-                <div className={`w-3 h-3 rounded-full ${showGuardiaDetail.turno === 'mañana' ? 'bg-green-500' : 'bg-blue-500'}`}></div>
-                <span className="font-bold text-slate-700">
-                  {showGuardiaDetail.turno === 'mañana' ? '08:00 - 15:00' : '15:00 - 22:00'}
-                </span>
-              </div>
+        <Modal
+          title={`Turno ${showGuardiaDetail.turno === 'mañana' ? 'Mañana' : 'Tarde'} — ${new Date(showGuardiaDetail.date + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}`}
+          onClose={() => { setShowGuardiaDetail(null); setTurnoSeleccionado(null); }}
+        >
+          <div className="space-y-5 max-h-[70vh] overflow-y-auto pr-1">
+
+            {/* Franja horaria */}
+            <div className={`p-3 rounded-lg flex items-center gap-3 ${showGuardiaDetail.turno === 'mañana' ? 'bg-green-50 border border-green-200' : 'bg-blue-50 border border-blue-200'}`}>
+              <div className={`w-3 h-3 rounded-full flex-shrink-0 ${showGuardiaDetail.turno === 'mañana' ? 'bg-green-500' : 'bg-blue-500'}`} />
+              <span className="font-bold text-slate-700">
+                {showGuardiaDetail.turno === 'mañana' ? '08:00 – 15:00' : '15:00 – 22:00'}
+              </span>
             </div>
 
-            <h4 className="text-sm font-bold text-slate-500 uppercase">Personal Asignado ({showGuardiaDetail.guardias.length})</h4>
-
-            <div className="space-y-2">
-              {showGuardiaDetail.guardias.map((g, i) => (
-                <div key={i} className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-slate-100">
-                  <div className="w-10 h-10 rounded-full bg-orange-500 text-white flex items-center justify-center font-bold text-sm">
-                    {g.usuario?.nombre?.charAt(0)}{g.usuario?.apellidos?.charAt(0)}
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-slate-800">{g.usuario?.numeroVoluntario}</span>
-                      {i === 0 && <span className="text-[10px] px-2 py-0.5 rounded bg-orange-100 text-orange-700 font-bold">RESPONSABLE</span>}
+            {/* Personal asignado a la guardia */}
+            <div>
+              <h4 className="text-xs font-bold text-slate-500 uppercase mb-2 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-orange-500 inline-block" />
+                Personal Asignado ({showGuardiaDetail.guardias.length})
+              </h4>
+              {showGuardiaDetail.guardias.length === 0 ? (
+                <p className="text-xs text-slate-400 italic pl-4">Sin personal asignado a esta guardia</p>
+              ) : (
+                <div className="space-y-2">
+                  {showGuardiaDetail.guardias.map((g, i) => (
+                    <div key={i} className="rounded-lg border border-orange-100 overflow-hidden">
+                      {/* Fila principal de la guardia */}
+                      <div className="flex items-center gap-3 p-2.5 bg-orange-50">
+                        <div className="w-9 h-9 rounded-full bg-orange-500 text-white flex items-center justify-center font-bold text-sm flex-shrink-0">
+                          {g.usuario?.nombre?.charAt(0)}{g.usuario?.apellidos?.charAt(0)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-slate-800 text-sm">{g.usuario?.numeroVoluntario}</span>
+                            {i === 0 && <span className="text-[10px] px-1.5 py-0.5 rounded bg-orange-100 text-orange-700 font-bold">RESPONSABLE</span>}
+                          </div>
+                          <p className="text-xs text-slate-600 truncate">{g.usuario?.nombre} {g.usuario?.apellidos}</p>
+                        </div>
+                        <div className={`px-2 py-1 rounded text-[10px] font-bold flex-shrink-0 ${g.estado === 'programada' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}`}>
+                          {g.estado?.toUpperCase() || 'PROGRAMADA'}
+                        </div>
+                        {/* Botón editar — solo admin */}
+                        {esAdmin && g.id && (
+                          <button
+                            onClick={() => {
+                              if (editarGuardiaId === g.id) {
+                                setEditarGuardiaId(null);
+                                setEditarVoluntarioId('');
+                              } else {
+                                setEditarGuardiaId(g.id);
+                                setEditarVoluntarioId(g.usuario?.id || '');
+                              }
+                            }}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-orange-600 hover:bg-orange-100 transition-colors flex-shrink-0"
+                            title="Editar asignación de turno"
+                          >
+                            <Edit size={14} />
+                          </button>
+                        )}
+                      </div>
+                      {/* Panel inline de edición */}
+                      {esAdmin && editarGuardiaId === g.id && (
+                        <div className="bg-slate-50 border-t border-orange-100 p-3 space-y-2">
+                          <p className="text-[10px] font-bold text-slate-500 uppercase">Reasignar indicativo</p>
+                          <select
+                            className="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-orange-400 outline-none bg-white"
+                            value={editarVoluntarioId}
+                            onChange={e => setEditarVoluntarioId(e.target.value)}
+                          >
+                            <option value="">— Seleccionar voluntario —</option>
+                            {todosVoluntarios.map((v: any) => (
+                              <option key={v.id} value={v.id}>
+                                {v.numeroVoluntario} — {v.nombre} {v.apellidos}
+                              </option>
+                            ))}
+                          </select>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleReasignarGuardia(g.id, editarVoluntarioId, showGuardiaDetail.date, showGuardiaDetail.turno)}
+                              disabled={savingGuardia || !editarVoluntarioId}
+                              className="flex-1 py-1.5 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 transition-colors"
+                            >
+                              {savingGuardia ? (
+                                <><div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Guardando...</>
+                              ) : (
+                                <><Save size={12} /> Guardar</>
+                              )}
+                            </button>
+                            <button
+                              onClick={() => handleEliminarGuardia(g.id, showGuardiaDetail.date, showGuardiaDetail.turno)}
+                              disabled={savingGuardia}
+                              className="py-1.5 px-3 bg-red-100 hover:bg-red-200 disabled:opacity-50 text-red-700 text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 transition-colors"
+                              title="Eliminar esta asignación"
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                            <button
+                              onClick={() => { setEditarGuardiaId(null); setEditarVoluntarioId(''); }}
+                              className="py-1.5 px-3 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold rounded-lg transition-colors"
+                            >
+                              Cancelar
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                    <p className="text-sm text-slate-600">{g.usuario?.nombre} {g.usuario?.apellidos}</p>
-                  </div>
-                  <div className={`px-2 py-1 rounded text-[10px] font-bold ${g.estado === 'programada' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}`}>
-                    {g.estado?.toUpperCase() || 'PROGRAMADA'}
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Separador */}
+            <div className="border-t border-slate-100" />
+
+            {/* Disponibilidad del turno */}
+            {loadingDisponibilidad ? (
+              <p className="text-xs text-slate-400 text-center py-2">Cargando disponibilidad...</p>
+            ) : (
+              <>
+                {/* Voluntarios disponibles para este turno */}
+                <div>
+                  <h4 className="text-xs font-bold text-slate-500 uppercase mb-2 flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-green-500 inline-block" />
+                    Disponibles este turno ({enTurno.length})
+                  </h4>
+                  {enTurno.length === 0 ? (
+                    <p className="text-xs text-slate-400 italic pl-4">Sin disponibilidad confirmada</p>
+                  ) : (
+                    <div className="space-y-1.5">
+                      {enTurno.map((v: any) => (
+                        <div key={v.id} className="flex items-center gap-3 p-2 bg-green-50 rounded-lg border border-green-100">
+                          <div className="w-8 h-8 rounded-full bg-green-600 text-white flex items-center justify-center font-bold text-xs flex-shrink-0">{v.nombre?.charAt(0)}{v.apellidos?.charAt(0)}</div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-bold text-slate-800 text-xs">{v.numeroVoluntario}</span>
+                              {v.turno && <span className="text-[9px] px-1 py-0.5 rounded bg-green-100 text-green-700 font-bold">{v.turno}</span>}
+                            </div>
+                            <p className="text-xs text-slate-600 truncate">{v.nombre} {v.apellidos}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Personal activo total */}
+                <div>
+                  <h4 className="text-xs font-bold text-slate-500 uppercase mb-2 flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-slate-400 inline-block" />
+                    Personal Activo ({stats.total})
+                  </h4>
+                  <div className="space-y-1.5">
+                    {voluntarios.map((v: any) => (
+                      <div key={v.id} className="flex items-center gap-3 p-2 bg-slate-50 rounded-lg border border-slate-100">
+                        <div className="w-8 h-8 rounded-full bg-slate-400 text-white flex items-center justify-center font-bold text-xs flex-shrink-0">{v.nombre?.charAt(0)}{v.apellidos?.charAt(0)}</div>
+                        <div className="flex-1 min-w-0">
+                          <span className="font-bold text-slate-800 text-xs">{v.numeroVoluntario}</span>
+                          <p className="text-xs text-slate-600 truncate">{v.nombre} {v.apellidos}</p>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
-              ))}
-            </div>
+              </>
+            )}
           </div>
         </Modal>
       )}

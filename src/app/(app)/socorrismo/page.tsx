@@ -306,27 +306,30 @@ export default function SocorrismoPage() {
     <div className="space-y-6">
 
       {/* Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <div className="bg-pink-100 p-3 rounded-xl">
-            <Heart className="text-pink-500" size={28} />
+      <div>
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="bg-pink-100 p-3 rounded-xl flex-shrink-0"><Heart className="text-pink-500" size={28} /></div>
+            <div>
+              <p className="text-xs font-bold text-pink-500 uppercase tracking-wider">SOCORRISMO</p>
+              <h1 className="text-xl sm:text-2xl font-bold text-slate-800">Área de Socorrismo</h1>
+              <p className="text-slate-500 text-sm hidden sm:block">Material sanitario, DEAs y recursos de socorrismo</p>
+            </div>
           </div>
-          <div>
-            <p className="text-xs font-bold text-pink-500 uppercase tracking-wider">SOCORRISMO</p>
-            <h1 className="text-xl sm:text-2xl font-bold text-slate-800">Área de Socorrismo</h1>
-            <p className="text-slate-500 text-sm hidden sm:block">Material sanitario, DEAs y recursos de socorrismo</p>
+          {/* Desktop */}
+          <div className="hidden sm:flex items-center gap-2">
+            <button onClick={cargarDatos} className="flex items-center justify-center p-2.5 text-slate-600 hover:bg-slate-100 rounded-lg border border-slate-200"><RefreshCw size={18} className={loading ? 'animate-spin' : ''} /></button>
+            <button onClick={() => setShowNuevaPeticion(true)} className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm"><ShoppingCart size={18} />Petición</button>
+            <button onClick={() => setShowNuevoArticulo(true)} className="flex items-center gap-2 px-4 py-2.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-400 font-medium text-sm"><Package size={18} />Artículo</button>
+            <button onClick={() => setShowNuevoDEA(true)} className="flex items-center gap-2 px-4 py-2.5 bg-pink-500 text-white rounded-lg hover:bg-pink-600 font-medium text-sm"><HeartPulse size={18} />Nuevo DEA</button>
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={cargarDatos}
-            className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg"
-          >
-            <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
-          </button>
-          <button onClick={() => setShowNuevaPeticion(true)} className="flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm flex-shrink-0 min-w-[44px]" title="Nueva Petición"><ShoppingCart size={18} /><span className="hidden sm:inline whitespace-nowrap">Petición</span></button>
-          <button onClick={() => setShowNuevoArticulo(true)} className="flex items-center justify-center gap-2 px-4 py-2.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-400 font-medium text-sm flex-shrink-0 min-w-[44px]" title="Nuevo Artículo"><Plus size={18} /><span className="hidden sm:inline whitespace-nowrap">Artículo</span></button>
-          <button onClick={() => setShowNuevoDEA(true)} className="flex items-center justify-center gap-2 px-4 py-2.5 bg-pink-500 text-white rounded-lg hover:bg-pink-600 font-medium text-sm flex-shrink-0 min-w-[44px]" title="Nuevo DEA"><HeartPulse size={18} /><span className="hidden sm:inline whitespace-nowrap">Nuevo DEA</span></button>
+        {/* Móvil */}
+        <div className="flex sm:hidden gap-2 mt-3">
+          <button onClick={cargarDatos} className="flex-1 flex items-center justify-center p-2.5 text-slate-600 hover:bg-slate-100 rounded-lg border border-slate-200"><RefreshCw size={18} className={loading ? 'animate-spin' : ''} /></button>
+          <button onClick={() => setShowNuevaPeticion(true)} className="flex-1 flex items-center justify-center px-2 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700"><ShoppingCart size={18} /></button>
+          <button onClick={() => setShowNuevoArticulo(true)} className="flex-1 flex items-center justify-center px-2 py-2.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-400"><Package size={18} /></button>
+          <button onClick={() => setShowNuevoDEA(true)} className="flex-1 flex items-center justify-center px-2 py-2.5 bg-pink-500 text-white rounded-lg hover:bg-pink-600"><HeartPulse size={18} /></button>
         </div>
       </div>
 

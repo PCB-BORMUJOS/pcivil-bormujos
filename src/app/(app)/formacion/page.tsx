@@ -1135,36 +1135,20 @@ export default function FormacionPage() {
           </div>
         </div>
 
-        {/* Actions Bar */}
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Botón Refrescar (Izquierda) */}
-          <button
-            onClick={() => cargarDatos()}
-            className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors mr-2"
-            title="Recargar datos"
-          >
-            <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
-          </button>
-
-          <div className="w-px h-8 bg-slate-200 mx-1 hidden sm:block"></div>
-
-          {/* Botones de Acción */}
-          <button onClick={() => setShowNuevaPeticion(true)} className="flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm flex-shrink-0 min-w-[44px]" title="Nueva Petición">
-            <Send size={18} /> <span className="hidden sm:inline">Nueva Petición</span>
-          </button>
-
-          <button onClick={() => setShowNuevoArticulo(true)} className="flex items-center justify-center gap-2 px-4 py-2.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-400 font-medium text-sm flex-shrink-0 min-w-[44px]" title="Nuevo Artículo">
-            <Package size={18} /> <span className="hidden sm:inline">Nuevo Artículo</span>
-          </button>
-
-          <button
-            onClick={() => setShowNuevoCurso(true)}
-            className="flex items-center justify-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium text-sm flex-shrink-0 min-w-[44px]"
-          >
-            <Plus size={18} />
-            <span>Nuevo Curso</span>
-          </button>
+        {/* Botones desktop */}
+        <div className="hidden sm:flex items-center gap-2">
+          <button onClick={() => cargarDatos()} className="flex items-center justify-center p-2.5 text-slate-600 hover:bg-slate-100 rounded-lg border border-slate-200 flex-shrink-0" title="Recargar datos"><RefreshCw size={18} className={loading ? 'animate-spin' : ''} /></button>
+          <button onClick={() => setShowNuevaPeticion(true)} className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm"><ShoppingCart size={18} />Petición</button>
+          <button onClick={() => setShowNuevoArticulo(true)} className="flex items-center gap-2 px-4 py-2.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-400 font-medium text-sm"><Package size={18} />Artículo</button>
+          <button onClick={() => setShowNuevoCurso(true)} className="flex items-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium text-sm"><BookOpen size={18} />Nuevo Curso</button>
         </div>
+      </div>
+      {/* Botones móvil: fila completa */}
+      <div className="flex sm:hidden gap-2">
+        <button onClick={() => cargarDatos()} className="flex-1 flex items-center justify-center p-2.5 text-slate-600 hover:bg-slate-100 rounded-lg border border-slate-200"><RefreshCw size={18} className={loading ? 'animate-spin' : ''} /></button>
+        <button onClick={() => setShowNuevaPeticion(true)} className="flex-1 flex items-center justify-center gap-1 px-2 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm"><ShoppingCart size={18} /></button>
+        <button onClick={() => setShowNuevoArticulo(true)} className="flex-1 flex items-center justify-center gap-1 px-2 py-2.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-400 font-medium text-sm"><Package size={18} /></button>
+        <button onClick={() => setShowNuevoCurso(true)} className="flex-1 flex items-center justify-center gap-1 px-2 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium text-sm"><BookOpen size={18} /></button>
       </div>
 
       {/* STATS */}

@@ -377,58 +377,67 @@ export default function Header({
 
               {/* Dropdown Mensajes */}
               {showMensajes && (
-                <div className="absolute right-0 mt-2 w-96 bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden z-50">
-                  <div className="px-4 py-3 bg-gradient-to-r from-orange-50 to-orange-100 border-b border-slate-200">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-bold text-slate-800">Mensajes</h3>
-                      <button
-                        onClick={() => { setShowMensajes(false); setShowNuevoMensaje(true); cargarDestinatarios(); }}
-                        className="flex items-center gap-1 text-xs bg-orange-500 text-white px-3 py-1.5 rounded-lg hover:bg-orange-600"
+                <>
+                  {/* Overlay para cerrar al hacer clic fuera en móvil */}
+                  <div className="fixed inset-0 z-40 sm:hidden" onClick={() => setShowMensajes(false)} />
+                  <div className="fixed inset-x-2 top-16 z-50 sm:absolute sm:inset-auto sm:right-0 sm:top-auto sm:mt-2 sm:w-96 bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
+                    <div className="px-4 py-3 bg-gradient-to-r from-orange-50 to-orange-100 border-b border-slate-200">
+                      <div className="flex items-center justify-between">
+                        <h3 className="font-bold text-slate-800">Mensajes</h3>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => { setShowMensajes(false); setShowNuevoMensaje(true); cargarDestinatarios(); }}
+                            className="flex items-center gap-1 text-xs bg-orange-500 text-white px-3 py-1.5 rounded-lg hover:bg-orange-600"
+                          >
+                            <Send size={12} /> Nuevo
+                          </button>
+                          <button onClick={() => setShowMensajes(false)} className="p-1 text-slate-400 hover:text-slate-600 sm:hidden">
+                            <X size={18} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="max-h-[60vh] sm:max-h-80 overflow-y-auto">
+                      {mensajes.length === 0 ? (
+                        <div className="px-4 py-8 text-center text-slate-500">
+                          <Mail className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                          <p className="text-sm">No hay mensajes</p>
+                        </div>
+                      ) : (
+                        mensajes.slice(0, 5).map(msg => (
+                          <div 
+                            key={msg.id} 
+                            onClick={() => { marcarMensajeLeido(msg.id); router.push('/mi-area?tab=notificaciones'); setShowMensajes(false); }}
+                            className={`px-4 py-3 border-b border-slate-100 hover:bg-slate-50 cursor-pointer ${!msg.leido ? 'bg-orange-50/50' : ''}`}
+                          >
+                            <div className="flex gap-3">
+                              <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 font-bold text-sm flex-shrink-0">
+                                {getInitials(`${msg.remitente.nombre} ${msg.remitente.apellidos}`)}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className={`text-sm ${!msg.leido ? 'font-semibold text-slate-800' : 'text-slate-700'}`}>
+                                  {msg.asunto}
+                                </p>
+                                <p className="text-xs text-slate-500">{msg.remitente.nombre} {msg.remitente.apellidos}</p>
+                                <p className="text-[10px] text-slate-400 mt-1">{formatearTiempo(msg.createdAt)}</p>
+                              </div>
+                              {!msg.leido && <div className="w-2 h-2 bg-orange-500 rounded-full mt-2 flex-shrink-0"></div>}
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                    <div className="px-4 py-3 bg-slate-50 border-t border-slate-200">
+                      <Link 
+                        href="/mi-area?tab=notificaciones"
+                        onClick={() => setShowMensajes(false)}
+                        className="w-full block text-center text-sm text-orange-600 hover:text-orange-700 font-medium"
                       >
-                        <Send size={12} /> Nuevo
-                      </button>
+                        Ver todos los mensajes
+                      </Link>
                     </div>
                   </div>
-                  <div className="max-h-80 overflow-y-auto">
-                    {mensajes.length === 0 ? (
-                      <div className="px-4 py-8 text-center text-slate-500">
-                        <Mail className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                        <p className="text-sm">No hay mensajes</p>
-                      </div>
-                    ) : (
-                      mensajes.slice(0, 5).map(msg => (
-                        <div 
-                          key={msg.id} 
-                          onClick={() => { marcarMensajeLeido(msg.id); router.push('/mi-area?tab=notificaciones'); setShowMensajes(false); }}
-                          className={`px-4 py-3 border-b border-slate-100 hover:bg-slate-50 cursor-pointer ${!msg.leido ? 'bg-orange-50/50' : ''}`}
-                        >
-                          <div className="flex gap-3">
-                            <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 font-bold text-sm">
-                              {getInitials(`${msg.remitente.nombre} ${msg.remitente.apellidos}`)}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className={`text-sm ${!msg.leido ? 'font-semibold text-slate-800' : 'text-slate-700'}`}>
-                                {msg.asunto}
-                              </p>
-                              <p className="text-xs text-slate-500">{msg.remitente.nombre} {msg.remitente.apellidos}</p>
-                              <p className="text-[10px] text-slate-400 mt-1">{formatearTiempo(msg.createdAt)}</p>
-                            </div>
-                            {!msg.leido && <div className="w-2 h-2 bg-orange-500 rounded-full mt-2"></div>}
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                  <div className="px-4 py-3 bg-slate-50 border-t border-slate-200">
-                    <Link 
-                      href="/mi-area?tab=notificaciones"
-                      onClick={() => setShowMensajes(false)}
-                      className="w-full block text-center text-sm text-orange-600 hover:text-orange-700 font-medium"
-                    >
-                      Ver todos los mensajes
-                    </Link>
-                  </div>
-                </div>
+                </>
               )}
             </div>
 
@@ -452,47 +461,56 @@ export default function Header({
               </button>
 
               {showNotifications && (
-                <div className="absolute right-0 mt-2 w-96 bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden z-50">
-                  <div className="px-4 py-3 bg-gradient-to-r from-slate-50 to-slate-100 border-b border-slate-200">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-bold text-slate-800">Notificaciones</h3>
-                      <span className="text-xs text-slate-500">{notificacionesNoLeidas} sin leer</span>
+                <>
+                  {/* Overlay para cerrar al hacer clic fuera en móvil */}
+                  <div className="fixed inset-0 z-40 sm:hidden" onClick={() => setShowNotifications(false)} />
+                  <div className="fixed inset-x-2 top-16 z-50 sm:absolute sm:inset-auto sm:right-0 sm:top-auto sm:mt-2 sm:w-96 bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
+                    <div className="px-4 py-3 bg-gradient-to-r from-slate-50 to-slate-100 border-b border-slate-200">
+                      <div className="flex items-center justify-between">
+                        <h3 className="font-bold text-slate-800">Notificaciones</h3>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-slate-500">{notificacionesNoLeidas} sin leer</span>
+                          <button onClick={() => setShowNotifications(false)} className="p-1 text-slate-400 hover:text-slate-600 sm:hidden">
+                            <X size={18} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="max-h-[60vh] sm:max-h-80 overflow-y-auto">
+                      {notificaciones.length === 0 ? (
+                        <div className="px-4 py-8 text-center text-slate-500">
+                          <Bell className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                          <p className="text-sm">No hay notificaciones</p>
+                        </div>
+                      ) : (
+                        notificaciones.map(notif => (
+                          <div 
+                            key={notif.id} 
+                            onClick={() => marcarNotificacionLeida(notif.id, notif.enlace)}
+                            className={`px-4 py-3 border-b border-slate-100 hover:bg-slate-50 cursor-pointer ${!notif.leida ? 'bg-orange-50/50' : ''}`}
+                          >
+                            <div className="flex gap-3">
+                              <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${getColorNotificacion(notif.tipo)}`}>
+                                {getIconoNotificacion(notif.tipo)}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className={`text-sm ${!notif.leida ? 'font-semibold text-slate-800' : 'text-slate-700'}`}>{notif.titulo}</p>
+                                <p className="text-xs text-slate-500 line-clamp-2">{notif.mensaje}</p>
+                                <p className="text-[10px] text-slate-400 mt-1">{formatearTiempo(notif.createdAt)}</p>
+                              </div>
+                              {!notif.leida && <div className="w-2 h-2 bg-orange-500 rounded-full mt-2 flex-shrink-0"></div>}
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                    <div className="px-4 py-3 bg-slate-50 border-t border-slate-200">
+                      <Link href="/mi-area?tab=notificaciones" onClick={() => setShowNotifications(false)} className="w-full block text-center text-sm text-orange-600 hover:text-orange-700 font-medium">
+                        Ver todas las notificaciones
+                      </Link>
                     </div>
                   </div>
-                  <div className="max-h-80 overflow-y-auto">
-                    {notificaciones.length === 0 ? (
-                      <div className="px-4 py-8 text-center text-slate-500">
-                        <Bell className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                        <p className="text-sm">No hay notificaciones</p>
-                      </div>
-                    ) : (
-                      notificaciones.map(notif => (
-                        <div 
-                          key={notif.id} 
-                          onClick={() => marcarNotificacionLeida(notif.id, notif.enlace)}
-                          className={`px-4 py-3 border-b border-slate-100 hover:bg-slate-50 cursor-pointer ${!notif.leida ? 'bg-orange-50/50' : ''}`}
-                        >
-                          <div className="flex gap-3">
-                            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getColorNotificacion(notif.tipo)}`}>
-                              {getIconoNotificacion(notif.tipo)}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className={`text-sm ${!notif.leida ? 'font-semibold text-slate-800' : 'text-slate-700'}`}>{notif.titulo}</p>
-                              <p className="text-xs text-slate-500 line-clamp-2">{notif.mensaje}</p>
-                              <p className="text-[10px] text-slate-400 mt-1">{formatearTiempo(notif.createdAt)}</p>
-                            </div>
-                            {!notif.leida && <div className="w-2 h-2 bg-orange-500 rounded-full mt-2"></div>}
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                  <div className="px-4 py-3 bg-slate-50 border-t border-slate-200">
-                    <Link href="/mi-area?tab=notificaciones" onClick={() => setShowNotifications(false)} className="w-full block text-center text-sm text-orange-600 hover:text-orange-700 font-medium">
-                      Ver todas las notificaciones
-                    </Link>
-                  </div>
-                </div>
+                </>
               )}
             </div>
 

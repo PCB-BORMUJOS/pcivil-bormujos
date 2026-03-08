@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { prisma } from '@/lib/db'
+import { registrarAudit, getUsuarioAudit } from '@/lib/audit'
 
 export async function GET(request: NextRequest) {
   try {
@@ -77,6 +78,18 @@ export async function POST(request: NextRequest) {
       }
     })
     
+    const { usuarioId: adminId, usuarioNombre: adminNombre } = getUsuarioAudit(session)
+    await registrarAudit({
+      accion: 'CREATE',
+      entidad: 'Guardia',
+      entidadId: guardia.id,
+      descripcion: `Guardia (tipo ${tipo || 'ordinaria'}) asignada a ${guardia.usuario?.nombre} para el ${new Date(fecha).toLocaleDateString()} (${turno})`,
+      usuarioId: adminId,
+      usuarioNombre: adminNombre,
+      modulo: 'Administración',
+      datosNuevos: { fecha, turno, tipo, usuarioAsignado: usuarioId }
+    })
+
     return NextResponse.json({ success: true, guardia })
   } catch (error) {
     console.error('Error al crear guardia:', error)

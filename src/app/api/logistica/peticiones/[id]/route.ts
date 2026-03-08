@@ -63,7 +63,7 @@ export async function PUT(
     }
 
     const body = await request.json()
-    const { accion, comentario, proveedor, costeEstimado, costeFinal, numeroFactura } = body
+    const { accion, comentario, proveedor, costeEstimado, costeFinal, numeroFactura, urlRc, urlAlbaran, nombreArticulo, cantidad, unidad, motivo, prioridad, descripcion, areaOrigen } = body
 
     const peticionActual = await prisma.peticionMaterial.findUnique({
       where: { id: params.id },
@@ -91,7 +91,8 @@ export async function PUT(
           estado: nuevoEstado,
           fechaAprobacion: new Date(),
           aprobadoPorId: usuario.id,
-          notasAprobacion: comentario
+          notasAprobacion: comentario,
+          ...(urlRc ? { urlRc } : {})
         }
         break
 
@@ -133,7 +134,8 @@ export async function PUT(
           recibidoPorId: usuario.id,
           costeFinal: costeFinal ? parseFloat(costeFinal) : null,
           numeroFactura,
-          notasRecepcion: comentario
+          notasRecepcion: comentario,
+          ...(urlAlbaran ? { urlAlbaran } : {})
         }
         
         // Actualizar stock del artículo
@@ -167,6 +169,27 @@ export async function PUT(
           estado: nuevoEstado,
           motivoRechazo: comentario
         }
+        break
+
+      case 'editar':
+        // Solo administradores o en estados tempranos (validado por el cliente, pero idealmente aquí verificamos rol)
+        if (nombreArticulo) datosActualizar.nombreArticulo = nombreArticulo;
+        if (cantidad) datosActualizar.cantidad = parseInt(cantidad.toString(), 10) || peticionActual.cantidad;
+        if (unidad) datosActualizar.unidad = unidad;
+        if (motivo) datosActualizar.motivo = motivo;
+        if (prioridad) datosActualizar.prioridad = prioridad;
+        if (descripcion !== undefined) datosActualizar.descripcion = descripcion;
+        if (areaOrigen) datosActualizar.areaOrigen = areaOrigen;
+        // Permite editar coste/proveedor/urgencia si se envían
+        if (proveedor !== undefined) datosActualizar.proveedor = proveedor;
+        if (costeEstimado !== undefined) datosActualizar.costeEstimado = costeEstimado ? parseFloat(costeEstimado.toString()) : null;
+        if (costeFinal !== undefined) datosActualizar.costeFinal = costeFinal ? parseFloat(costeFinal.toString()) : null;
+        if (numeroFactura !== undefined) datosActualizar.numeroFactura = numeroFactura;
+        break
+
+      case 'actualizar_docs':
+        if (urlRc !== undefined) datosActualizar.urlRc = urlRc;
+        if (urlAlbaran !== undefined) datosActualizar.urlAlbaran = urlAlbaran;
         break
 
       default:

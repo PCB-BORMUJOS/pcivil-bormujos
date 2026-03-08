@@ -113,6 +113,7 @@ export default function TrazabilidadPanel() {
             APPROVE: 'bg-emerald-100 text-emerald-700 border-emerald-200',
             REJECT: 'bg-rose-100 text-rose-700 border-rose-200',
             ASSIGN: 'bg-indigo-100 text-indigo-700 border-indigo-200',
+            UNASSIGN: 'bg-orange-100 text-orange-700 border-orange-200',
             ACTIVATE: 'bg-green-100 text-green-700 border-green-200',
             DEACTIVATE: 'bg-yellow-100 text-yellow-700 border-yellow-200',
             UPLOAD: 'bg-teal-100 text-teal-700 border-teal-200',

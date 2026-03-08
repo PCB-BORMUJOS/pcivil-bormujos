@@ -516,6 +516,8 @@ model PeticionMaterial {
   numeroFactura   String?             @map("numero_factura")
   costeEstimado   Decimal?            @map("coste_estimado") @db.Decimal(10, 2)
   costeFinal      Decimal?            @map("coste_final") @db.Decimal(10, 2)
+  urlRc           String?             @map("url_rc")
+  urlAlbaran      String?             @map("url_albaran")
   createdAt       DateTime            @default(now()) @map("created_at")
   updatedAt       DateTime            @updatedAt @map("updated_at")
   historial       HistorialPeticion[]

@@ -110,6 +110,18 @@ export async function PUT(
             }
         })
 
+        const { registrarAudit, getUsuarioAudit } = await import('@/lib/audit')
+        const { usuarioId, usuarioNombre } = getUsuarioAudit(session)
+        await registrarAudit({
+            accion: estado === 'completo' ? 'APPROVE' : 'UPDATE',
+            entidad: 'PartePSI',
+            entidadId: parte.id,
+            descripcion: estado === 'completo' ? `Parte PSI validado por Jefe: ${parte.numeroParte}` : `Parte PSI actualizado: ${parte.numeroParte}`,
+            usuarioId,
+            usuarioNombre,
+            modulo: 'Partes'
+        })
+
         return NextResponse.json({ success: true, parte, message: 'Parte actualizado correctamente' })
     } catch (error) {
         console.error('Error actualizando parte PSI:', error)
@@ -128,10 +140,25 @@ export async function DELETE(
         }
 
         // Opcional: Validar permisos extras para borrar
+        const parteExist = await prisma.partePSI.findUnique({ where: { id: params.id } })
 
         await prisma.partePSI.delete({
             where: { id: params.id }
         })
+
+        if (parteExist) {
+            const { registrarAudit, getUsuarioAudit } = await import('@/lib/audit')
+            const { usuarioId, usuarioNombre } = getUsuarioAudit(session)
+            await registrarAudit({
+                accion: 'DELETE',
+                entidad: 'PartePSI',
+                entidadId: params.id,
+                descripcion: `Parte PSI eliminado: ${parteExist.numeroParte}`,
+                usuarioId,
+                usuarioNombre,
+                modulo: 'Partes'
+            })
+        }
 
         return NextResponse.json({ success: true })
     } catch (error) {

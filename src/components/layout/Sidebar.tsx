@@ -40,7 +40,7 @@ interface NavItem {
 
 const navigation: NavItem[] = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Cuadrantes', href: '/cuadrantes', icon: Calendar },
+  { name: 'Cuadrantes', href: '/cuadrantes', icon: Calendar, adminOnly: true },
   { name: 'Administración', href: '/administracion', icon: ShieldCheck, adminOnly: true },
   { name: 'Mi Área', href: '/mi-area', icon: User },
   { name: 'Logística', href: '/logistica', icon: Package },

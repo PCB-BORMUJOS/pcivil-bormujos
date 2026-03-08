@@ -252,20 +252,30 @@ export default function TransmisionesPage() {
   return (
     <div className="space-y-6">
       {/* HEADER */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-start gap-4">
-          <div className="p-3 bg-purple-100 rounded-xl"><Radio className="w-7 h-7 text-purple-600" /></div>
-          <div>
-            <p className="text-sm font-bold text-purple-600 uppercase tracking-wide">TRANSMISIONES</p>
-            <h1 className="text-2xl font-bold text-slate-800">Equipos de Comunicación</h1>
-            <p className="text-sm text-slate-500">Radios, emisoras, repetidores y gestión de baterías</p>
+      <div>
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-start gap-4">
+            <div className="p-3 bg-purple-100 rounded-xl flex-shrink-0"><Radio className="w-7 h-7 text-purple-600" /></div>
+            <div>
+              <p className="text-sm font-bold text-purple-600 uppercase tracking-wide">TRANSMISIONES</p>
+              <h1 className="text-xl sm:text-2xl font-bold text-slate-800">Equipos de Comunicación</h1>
+              <p className="text-sm text-slate-500 hidden sm:block">Radios, emisoras, repetidores y gestión de baterías</p>
+            </div>
+          </div>
+          {/* Desktop */}
+          <div className="hidden sm:flex items-center gap-2">
+            <button onClick={cargarDatos} className="flex items-center justify-center p-2.5 text-slate-600 hover:bg-slate-100 rounded-lg border border-slate-200" title="Recargar"><RefreshCw size={18} /></button>
+            <button onClick={() => setShowNuevaPeticion(true)} className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm"><ShoppingCart size={18} />Petición</button>
+            <button onClick={() => setShowNuevoArticulo(true)} className="flex items-center gap-2 px-4 py-2.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-400 font-medium text-sm"><Package size={18} />Artículo</button>
+            <button onClick={() => setShowNuevoEquipo(true)} className="flex items-center gap-2 px-4 py-2.5 bg-slate-500 text-white rounded-lg hover:bg-slate-600 font-medium text-sm"><Radio size={18} />Equipo</button>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <button onClick={cargarDatos} className="p-2.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors" title="Recargar"><RefreshCw className="w-5 h-5" /></button>
-          <button onClick={() => setShowNuevaPeticion(true)} className="flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm flex-shrink-0 min-w-[44px]" title="Nueva Petición"><ShoppingCart className="w-4 h-4" /><span className="hidden sm:inline whitespace-nowrap">Petición</span></button>
-          <button onClick={() => setShowNuevoArticulo(true)} className="flex items-center justify-center gap-2 px-4 py-2.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-400 font-medium text-sm flex-shrink-0 min-w-[44px]" title="Nuevo Artículo"><Plus className="w-4 h-4" /><span className="hidden sm:inline whitespace-nowrap">Artículo</span></button>
-          <button onClick={() => setShowNuevoEquipo(true)} className="flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-500 text-white rounded-lg hover:bg-slate-600 font-medium text-sm flex-shrink-0 min-w-[44px]" title="Nuevo Equipo"><Radio className="w-4 h-4" /><span className="hidden sm:inline whitespace-nowrap">Equipo</span></button>
+        {/* Móvil */}
+        <div className="flex sm:hidden gap-2 mt-3">
+          <button onClick={cargarDatos} className="flex-1 flex items-center justify-center p-2.5 text-slate-600 hover:bg-slate-100 rounded-lg border border-slate-200"><RefreshCw size={18} /></button>
+          <button onClick={() => setShowNuevaPeticion(true)} className="flex-1 flex items-center justify-center px-2 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700"><ShoppingCart size={18} /></button>
+          <button onClick={() => setShowNuevoArticulo(true)} className="flex-1 flex items-center justify-center px-2 py-2.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-400"><Package size={18} /></button>
+          <button onClick={() => setShowNuevoEquipo(true)} className="flex-1 flex items-center justify-center px-2 py-2.5 bg-slate-500 text-white rounded-lg hover:bg-slate-600"><Radio size={18} /></button>
         </div>
       </div>
 
