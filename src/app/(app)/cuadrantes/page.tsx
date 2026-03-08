@@ -441,6 +441,26 @@ export default function CuadrantesPage() {
                                 </span>
                                 <span className={`text-[8px] font-mono flex-shrink-0 ${isAsig ? 'text-green-600' : restantes === 0 ? 'text-red-400' : 'text-slate-400'}`}>
                                   [{restantes}↓]
+                                {isAsig && (
+                                  <span className="flex gap-0.5 ml-0.5" onClick={e => e.stopPropagation()}>
+                                    <button
+                                      onClick={() => setRolEspecial(prev => {
+                                        const actual = prev[sk] || {}
+                                        return { ...prev, [sk]: { ...actual, responsable: actual.responsable === u.id ? undefined : u.id } }
+                                      })}
+                                      title="Responsable de turno"
+                                      className={`text-[7px] font-bold px-0.5 rounded ${(rolEspecial[sk]?.responsable === u.id) ? 'bg-indigo-500 text-white' : 'bg-slate-100 text-slate-400 hover:bg-indigo-100'}`}
+                                    >R</button>
+                                    <button
+                                      onClick={() => setRolEspecial(prev => {
+                                        const actual = prev[sk] || {}
+                                        return { ...prev, [sk]: { ...actual, cecopal: actual.cecopal === u.id ? undefined : u.id } }
+                                      })}
+                                      title="Responsable CECOPAL"
+                                      className={`text-[7px] font-bold px-0.5 rounded ${(rolEspecial[sk]?.cecopal === u.id) ? 'bg-orange-500 text-white' : 'bg-slate-100 text-slate-400 hover:bg-orange-100'}`}
+                                    >C</button>
+                                  </span>
+                                )}
                                 </span>
                               </div>
                             )
