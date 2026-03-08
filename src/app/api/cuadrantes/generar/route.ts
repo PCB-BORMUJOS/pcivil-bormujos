@@ -95,68 +95,70 @@ export async function POST(request: NextRequest) {
                     return
                 }
 
-                // Sistema de puntuación mejorado
-                const candidatosConPuntuacion = disponiblesParaTurno.map(d => {
-                    let puntos = 0
+                // 1. Filtrar voluntarios administrativos puros (Lydia - B-12) y que no hayan superado su cupo
+                const candidatosValidos = disponiblesParaTurno.filter(d => {
+                    const esAdmin = 
+                        d.usuario.numeroVoluntario === 'B-12' || 
+                        d.usuario.nombre.toLowerCase().includes('lydia');
+                    if (esAdmin) return false;
 
-                    // 1. Responsable de turno (+10 puntos)
-                    if (d.usuario.responsableTurno) {
-                        puntos += 10
+                    const asignacionesActuales = conteoAsignaciones[d.usuarioId] || 0;
+                    return asignacionesActuales < d.turnosDeseados; // Estricto: no asignar más de lo que quiere
+                });
+
+                if (candidatosValidos.length === 0) return; // Nadie quiere más turnos u ofertó para hoy
+
+                // Calcular la "necesidad" de cada voluntario (0 a 1). Más cercano a 0 = menos turnos asignados respecto a deseados = MÁS PRIORIDAD
+                const clasificados = candidatosValidos.map(d => {
+                    const asignaciones = conteoAsignaciones[d.usuarioId] || 0;
+                    const proporcion = asignaciones / d.turnosDeseados;
+                    return { ...d, proporcion };
+                });
+
+                // Ordenar: 1º Menor proporción. 2º Mayor experiencia o mando (para priorizar la jerarquía base dentro de los necesitados)
+                clasificados.sort((a, b) => {
+                    if (a.proporcion !== b.proporcion) return a.proporcion - b.proporcion;
+                    // En caso de misma proporción, desempatar levemente
+                    let ptsA = (a.usuario.responsableTurno ? 2 : 0) + (a.usuario.carnetConducir ? 1 : 0);
+                    let ptsB = (b.usuario.responsableTurno ? 2 : 0) + (b.usuario.carnetConducir ? 1 : 0);
+                    return ptsB - ptsA;
+                });
+
+                const seleccionados: any[] = [];
+                let responsablesAsignados = 0;
+                let conductoresAsignados = 0;
+                let apoyosAsignados = 0;
+
+                // Pass 1: Buscar 1 Responsable
+                for (let i = 0; i < clasificados.length && responsablesAsignados < 1; i++) {
+                    const c = clasificados[i];
+                    if (c.usuario.responsableTurno && !seleccionados.some(s => s.usuarioId === c.usuarioId)) {
+                        seleccionados.push(c);
+                        responsablesAsignados++;
                     }
-
-                    // 2. Experiencia (ALTA: +5, MEDIA: +2, BAJA: 0)
-                    if (d.usuario.experiencia === 'ALTA') {
-                        puntos += 5
-                    } else if (d.usuario.experiencia === 'MEDIA') {
-                        puntos += 2
-                    }
-
-                    // 3. Nivel de compromiso (ALTO: +5, MEDIO: +2, BAJO: 0)
-                    if (d.usuario.nivelCompromiso === 'ALTO') {
-                        puntos += 5
-                    } else if (d.usuario.nivelCompromiso === 'MEDIO') {
-                        puntos += 2
-                    }
-
-                    // 4. Conductor (+3 puntos)
-                    if (d.usuario.carnetConducir) {
-                        puntos += 3
-                    }
-
-                    // 5. Equidad (-2 por cada turno ya asignado)
-                    const asignacionesActuales = conteoAsignaciones[d.usuarioId] || 0
-                    puntos -= asignacionesActuales * 2
-
-                    // 6. Turnos deseados (si solicita más turnos, +1 punto)
-                    if (d.turnosDeseados > asignacionesActuales) {
-                        puntos += 1
-                    }
-
-                    return {
-                        ...d,
-                        puntuacion: puntos
-                    }
-                })
-
-                // Ordenar por puntuación descendente
-                candidatosConPuntuacion.sort((a, b) => b.puntuacion - a.puntuacion)
-
-                // Asignar los mejores candidatos (hasta 2-3 por turno)
-                const numAsignaciones = Math.min(2, candidatosConPuntuacion.length)
-
-                // Asegurar que al menos haya 1 responsable si es posible
-                const responsables = candidatosConPuntuacion.filter(c => c.usuario.responsableTurno)
-                const seleccionados: any[] = []
-
-                if (responsables.length > 0) {
-                    seleccionados.push(responsables[0])
                 }
 
-                // Completar hasta el número deseado con los mejor puntuados
-                candidatosConPuntuacion
-                    .filter(c => !seleccionados.includes(c))
-                    .slice(0, numAsignaciones - seleccionados.length)
-                    .forEach(c => seleccionados.push(c))
+                // Pass 2: Buscar hasta 2 Conductores (si un responsable ya es conductor, cuenta)
+                // Primero chequeamos cuántos conductores de los seleccionados ya lo son
+                conductoresAsignados += seleccionados.filter(s => s.usuario.carnetConducir).length;
+                
+                for (let i = 0; i < clasificados.length && conductoresAsignados < 2; i++) {
+                    const c = clasificados[i];
+                    if (c.usuario.carnetConducir && !seleccionados.some(s => s.usuarioId === c.usuarioId)) {
+                        seleccionados.push(c);
+                        conductoresAsignados++;
+                    }
+                }
+
+                // Pass 3: Buscar hasta 1 Apoyo (o llenar vacíos hasta llegar a 4 efectivos)
+                const objetivoPlazas = 4;
+                for (let i = 0; i < clasificados.length && seleccionados.length < objetivoPlazas; i++) {
+                    const c = clasificados[i];
+                    if (!seleccionados.some(s => s.usuarioId === c.usuarioId)) {
+                        seleccionados.push(c);
+                        apoyosAsignados++;
+                    }
+                }
 
                 // Crear sugerencias para cada seleccionado
                 seleccionados.forEach(seleccionado => {
@@ -177,7 +179,7 @@ export async function POST(request: NextRequest) {
                         servicioId: seleccionado.usuario.servicioId,
                         tipo: 'programada',
                         estado: 'programada',
-                        puntuacion: seleccionado.puntuacion // Para debugging
+                        puntuacion: Math.round(seleccionado.proporcion * 100) // Para debugging, guardamos % de completitud en vez de puntos absurdos
                     })
 
                     usuariosAsignados.add(seleccionado.usuarioId)
