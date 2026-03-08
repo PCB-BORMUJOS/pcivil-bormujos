@@ -86,6 +86,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Hash de la contraseña
+    if (password.length < 8 || !/[A-Z]/.test(password) || !/[0-9]/.test(password)) {
+      return NextResponse.json({ error: 'Contraseña debe tener al menos 8 caracteres, una mayúscula y un número' }, { status: 400 })
+    }
     const hashedPassword = await hash(password, 12)
 
     // Crear usuario

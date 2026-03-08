@@ -188,7 +188,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Faltan campos requeridos' }, { status: 400 })
       }
 
-      if (passwordNuevo.length < 6) {
+      if (passwordNuevo.length < 8 || !/[A-Z]/.test(passwordNuevo) || !/[0-9]/.test(passwordNuevo)) {
         return NextResponse.json({ error: 'La contraseña debe tener al menos 6 caracteres' }, { status: 400 })
       }
 
