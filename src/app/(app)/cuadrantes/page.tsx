@@ -441,6 +441,7 @@ export default function CuadrantesPage() {
                                 </span>
                                 <span className={`text-[8px] font-mono flex-shrink-0 ${isAsig ? 'text-green-600' : restantes === 0 ? 'text-red-400' : 'text-slate-400'}`}>
                                   [{restantes}↓]
+                                </span>
                                 {isAsig && (
                                   <span className="flex gap-0.5 ml-0.5" onClick={e => e.stopPropagation()}>
                                     <button

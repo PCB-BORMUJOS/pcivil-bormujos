@@ -1,4 +1,5 @@
 'use client';
+import { useSearchParams } from 'next/navigation';
 
 import NotificacionesTab from '@/components/NotificacionesTab'
 import React, { useState, useEffect } from 'react';
@@ -174,7 +175,12 @@ function Modal({ title, children, onClose, size = 'md' }: {
 // ============================================
 export default function MiAreaPage() {
   const { data: session } = useSession();
-  const [activeTab, setActiveTab] = useState<'datos' | 'formacion' | 'actividad' | 'documentos' | 'vestuario' | 'dietas' | 'notificaciones' | 'configuracion'>('datos');
+  const searchParams = useSearchParams();
+  const [activeTab, setActiveTab] = useState<'datos' | 'formacion' | 'actividad' | 'documentos' | 'vestuario' | 'dietas' | 'notificaciones' | 'configuracion'>(() => {
+    const tab = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('tab') : null;
+    const validos = ['datos','formacion','actividad','documentos','vestuario','dietas','notificaciones','configuracion'];
+    return (validos.includes(tab || '') ? tab : 'datos') as any;
+  });
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [solicitandoPermiso, setSolicitandoPermiso] = useState(false);
