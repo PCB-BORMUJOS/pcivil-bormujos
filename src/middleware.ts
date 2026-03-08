@@ -19,6 +19,14 @@ export async function middleware(request: NextRequest) {
     '/transmisiones',
     '/pma',
     '/configuracion',
+    '/incendios',
+    '/socorrismo',
+    '/administracion',
+    '/partes',
+    '/manuales',
+    '/formacion',
+    '/accion-social',
+    '/buscar',
   ].some(route => request.nextUrl.pathname.startsWith(route))
 
   // Si no hay token y es ruta protegida, redirigir a login
@@ -47,6 +55,14 @@ export const config = {
     '/transmisiones/:path*',
     '/pma/:path*',
     '/configuracion/:path*',
+    '/incendios/:path*',
+    '/socorrismo/:path*',
+    '/administracion/:path*',
+    '/partes/:path*',
+    '/manuales/:path*',
+    '/formacion/:path*',
+    '/accion-social/:path*',
+    '/buscar/:path*',
     '/login',
   ],
 }
