@@ -1009,144 +1009,156 @@ export default function LogisticaPage() {
                     
                     return (
                       <div key={peticion.id} className="bg-white border border-slate-200 rounded-xl hover:shadow-md transition-all overflow-hidden">
-                        {/* Cabecera Compacta */}
-                        <div className="p-4">
-                          <div className="flex items-start justify-between gap-4">
-                            <div className="flex items-start gap-4 flex-1">
-                              <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center flex-shrink-0 cursor-pointer" onClick={() => {
-                                const newExpanded = new Set(peticionesExpandidas);
-                                if (newExpanded.has(peticion.id)) newExpanded.delete(peticion.id);
-                                else newExpanded.add(peticion.id);
-                                setPeticionesExpandidas(newExpanded);
-                              }}>
-                                <AreaIcon size={24} className="text-slate-600" />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 flex-wrap mb-1">
-                                  <span className="font-bold text-slate-800">{peticion.numero}</span>
-                                  <span className={`px-2 py-0.5 rounded-full text-xs font-bold border ${estadoInfo.color} flex items-center gap-1`}>
-                                    <EstadoIcon size={12} /> {estadoInfo.label}
-                                  </span>
-                                  <span className={`px-2 py-0.5 rounded text-[10px] font-medium uppercase tracking-wider ${prioridadInfo.color}`}>{prioridadInfo.label}</span>
-                                </div>
-                                <div 
-                                  className="font-medium text-slate-800 flex items-center gap-2 cursor-pointer group w-fit"
-                                  onClick={() => {
-                                    const newExpanded = new Set(peticionesExpandidas);
-                                    if (newExpanded.has(peticion.id)) newExpanded.delete(peticion.id);
-                                    else newExpanded.add(peticion.id);
-                                    setPeticionesExpandidas(newExpanded);
-                                  }}
-                                >
-                                  {peticion.nombreArticulo} <span className="text-slate-400 font-normal">× {peticion.cantidad} {peticion.unidad}</span>
-                                  {peticionesExpandidas.has(peticion.id) ? 
-                                    <ChevronUp size={16} className="text-slate-400 group-hover:text-blue-500" /> : 
-                                    <ChevronDown size={16} className="text-slate-400 group-hover:text-blue-500" />
-                                  }
-                                </div>
-                                <div className="flex items-center gap-4 mt-1 text-xs text-slate-500 flex-wrap">
-                                  <span className="flex items-center gap-1"><User size={12} /> {peticion.solicitante.nombre} {peticion.solicitante.apellidos}</span>
-                                  <span className="flex items-center gap-1"><Building size={12} /> {AREAS_NOMBRE[peticion.areaOrigen] || peticion.areaOrigen}</span>
-                                  <span className="flex items-center gap-1"><Calendar size={12} /> {formatearFecha(peticion.fechaSolicitud)}</span>
-                                </div>
-                              </div>
+                        {/* CABECERA ULTRA-COMPACTA */}
+                        <div className="px-4 pt-3 pb-2">
+
+                          {/* Fila 1: Ícono + Número + Estado + Prioridad + Metadatos + Acciones CRUD */}
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {/* Ícono pequeño */}
+                            <div className="w-7 h-7 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0 cursor-pointer"
+                              onClick={() => { const s = new Set(peticionesExpandidas); s.has(peticion.id) ? s.delete(peticion.id) : s.add(peticion.id); setPeticionesExpandidas(s); }}>
+                              <AreaIcon size={16} className="text-slate-500" />
                             </div>
-                            
-                            {/* Panel Botones Derecho */}
-                            <div className="flex flex-col items-end justify-between h-full gap-3 flex-shrink-0">
-                              <div className="flex items-center gap-1 bg-slate-50 rounded-lg p-1 border border-slate-100">
-                                <button onClick={() => setShowDetallePeticion(peticion)} className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-white rounded" title="Ver detalle"><Eye size={16} /></button>
-                                {(peticion.estado === 'pendiente' || peticion.estado === 'aprobada' || isAdmin) && (
-                                  <button onClick={() => abrirEditarPeticion(peticion)} className="p-1.5 text-slate-500 hover:text-orange-600 hover:bg-white rounded" title="Editar"><Pencil size={16} /></button>
-                                )}
-                                <button onClick={() => { if(confirm('¿Archivar esta petición?')) { fetch(`/api/logistica/peticiones/${peticion.id}`, {method:'DELETE'}).then(() => cargarPeticiones()) } }} className="p-1.5 text-slate-500 hover:text-purple-600 hover:bg-white rounded" title="Archivar"><Archive size={16} /></button>
-                                <button onClick={() => { if(confirm('¿Eliminar esta petición de forma permanente?')) { fetch(`/api/logistica/peticiones/${peticion.id}?force=true`, {method:'DELETE'}).then(() => cargarPeticiones()) } }} className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-white rounded" title="Eliminar"><Trash2 size={16} /></button>
-                              </div>
-                              
-                              {/* Botones de Acción Rápida */}
-                              <div className="flex items-center gap-2">
-                                {peticion.estado === 'pendiente' && (
-                                  <>
-                                    <button onClick={() => setShowAccionPeticion({ peticion, accion: 'rechazar' })} className="px-3 py-1.5 text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg text-xs font-semibold">Rechazar</button>
-                                    <button onClick={() => setShowAccionPeticion({ peticion, accion: 'aprobar' })} className="px-3 py-1.5 text-white bg-blue-600 hover:bg-blue-700 rounded-lg text-xs font-semibold flex items-center gap-1"><Check size={14} /> Aprobar</button>
-                                  </>
-                                )}
-                                {peticion.estado === 'aprobada' && (
-                                  <button onClick={() => setShowAccionPeticion({ peticion, accion: 'en_compra' })} className="px-3 py-1.5 text-white bg-purple-600 hover:bg-purple-700 rounded-lg text-xs font-semibold flex items-center gap-1"><ShoppingCart size={14} /> Compra</button>
-                                )}
-                                {(peticion.estado === 'aprobada' || peticion.estado === 'en_compra') && (
-                                  <button onClick={() => setShowAccionPeticion({ peticion, accion: 'recibir' })} className="px-3 py-1.5 text-white bg-green-600 hover:bg-green-700 rounded-lg text-xs font-semibold flex items-center gap-1"><CheckCircle size={14} /> Recibir</button>
-                                )}
-                              </div>
+                            <span className="font-bold text-slate-700 text-sm">{peticion.numero}</span>
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${estadoInfo.color} flex items-center gap-1`}>
+                              <EstadoIcon size={10} /> {estadoInfo.label}
+                            </span>
+                            <span className={`px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase tracking-wider ${prioridadInfo.color}`}>{prioridadInfo.label}</span>
+                            {/* Metadatos inline */}
+                            <span className="text-[11px] text-slate-400 flex items-center gap-1"><User size={10} /> {peticion.solicitante.nombre} {peticion.solicitante.apellidos}</span>
+                            <span className="text-[11px] text-slate-400 hidden sm:flex items-center gap-1"><Building size={10} /> {AREAS_NOMBRE[peticion.areaOrigen] || peticion.areaOrigen}</span>
+                            <span className="text-[11px] text-slate-400 hidden sm:flex items-center gap-1"><Calendar size={10} /> {formatearFecha(peticion.fechaSolicitud)}</span>
+
+                            {/* Botones CRUD a la derecha */}
+                            <div className="ml-auto flex items-center gap-0.5 bg-slate-50 rounded-lg p-0.5 border border-slate-100 flex-shrink-0">
+                              <button onClick={() => setShowDetallePeticion(peticion)} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-white rounded" title="Ver"><Eye size={14} /></button>
+                              {(peticion.estado === 'pendiente' || peticion.estado === 'aprobada' || isAdmin) && (
+                                <button onClick={() => abrirEditarPeticion(peticion)} className="p-1.5 text-slate-400 hover:text-orange-500 hover:bg-white rounded" title="Editar"><Pencil size={14} /></button>
+                              )}
+                              <button onClick={() => { if(confirm('¿Archivar esta petición?')) fetch(`/api/logistica/peticiones/${peticion.id}`, {method:'DELETE'}).then(() => cargarPeticiones()) }} className="p-1.5 text-slate-400 hover:text-purple-600 hover:bg-white rounded" title="Archivar"><Archive size={14} /></button>
+                              <button onClick={() => { if(confirm('¿Eliminar de forma permanente?')) fetch(`/api/logistica/peticiones/${peticion.id}?force=true`, {method:'DELETE'}).then(() => cargarPeticiones()) }} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-white rounded" title="Eliminar"><Trash2 size={14} /></button>
                             </div>
                           </div>
 
-                          {/* Timeline Mejorado */}
-                          <div className="flex items-center justify-between mt-5 px-6">
+                          {/* Fila 2: Artículo + Botones de acción */}
+                          <div className="flex items-center gap-2 mt-1.5">
+                            <div className="flex-1 flex items-center gap-1.5 cursor-pointer group min-w-0"
+                              onClick={() => { const s = new Set(peticionesExpandidas); s.has(peticion.id) ? s.delete(peticion.id) : s.add(peticion.id); setPeticionesExpandidas(s); }}>
+                              <span className="font-medium text-slate-800 text-sm truncate">{peticion.nombreArticulo}</span>
+                              <span className="text-slate-400 text-xs whitespace-nowrap">× {peticion.cantidad} {peticion.unidad}</span>
+                              {peticionesExpandidas.has(peticion.id) ? <ChevronUp size={14} className="text-slate-400 group-hover:text-blue-500 flex-shrink-0" /> : <ChevronDown size={14} className="text-slate-400 group-hover:text-blue-500 flex-shrink-0" />}
+                            </div>
+                            {/* Botones acción estado */}
+                            <div className="flex items-center gap-1.5 flex-shrink-0">
+                              {peticion.estado === 'pendiente' && (<>
+                                <button onClick={() => setShowAccionPeticion({ peticion, accion: 'rechazar' })} className="px-2.5 py-1 text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg text-[11px] font-semibold">Rechazar</button>
+                                <button onClick={() => setShowAccionPeticion({ peticion, accion: 'aprobar' })} className="px-2.5 py-1 text-white bg-blue-600 hover:bg-blue-700 rounded-lg text-[11px] font-semibold flex items-center gap-1"><Check size={12} /> Aprobar</button>
+                              </>)}
+                              {peticion.estado === 'aprobada' && (
+                                <button onClick={() => setShowAccionPeticion({ peticion, accion: 'en_compra' })} className="px-2.5 py-1 text-white bg-purple-600 hover:bg-purple-700 rounded-lg text-[11px] font-semibold flex items-center gap-1"><ShoppingCart size={12} /> Compra</button>
+                              )}
+                              {(peticion.estado === 'aprobada' || peticion.estado === 'en_compra') && (
+                                <button onClick={() => setShowAccionPeticion({ peticion, accion: 'recibir' })} className="px-2.5 py-1 text-white bg-green-600 hover:bg-green-700 rounded-lg text-[11px] font-semibold flex items-center gap-1"><CheckCircle size={12} /> Recibir</button>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* TIMELINE COMPACTO con botones de adjuntar en nodos */}
+                          <div className="flex items-start mt-3 px-2">
                             {/* Solicitada */}
-                            <div className="flex flex-col items-center flex-1 relative">
-                              <div className="w-4 h-4 rounded-full bg-green-500 z-10 border-4 border-white shadow-sm ring-1 ring-slate-200 flex items-center justify-center"></div>
-                              <span className="text-[10px] font-bold text-slate-600 uppercase mt-1">Solicitada</span>
-                              <span className="text-[10px] text-slate-400">{formatearFecha(peticion.fechaSolicitud)}</span>
+                            <div className="flex flex-col items-center flex-1">
+                              <div className="w-3 h-3 rounded-full bg-green-500 border-2 border-white shadow-sm ring-1 ring-green-300"></div>
+                              <span className="text-[9px] font-bold text-slate-500 uppercase mt-0.5">Solicitada</span>
+                              <span className="text-[9px] text-slate-400">{formatearFecha(peticion.fechaSolicitud)}</span>
                             </div>
-                            
-                            <div className={`flex-1 h-0.5 -mx-4 ${peticion.fechaAprobacion ? 'bg-green-500' : 'bg-slate-200'} mb-5 block relative -z-0`}></div>
-                            
-                            {/* Aprobada */}
+
+                            <div className={`flex-1 h-px mt-1.5 ${peticion.fechaAprobacion ? 'bg-green-400' : 'bg-slate-200'}`}></div>
+
+                            {/* Aprobada + botón RC */}
                             <div className="flex flex-col items-center flex-1 relative">
-                              <div className={`w-4 h-4 rounded-full z-10 border-4 border-white shadow-sm ring-1 ${peticion.fechaAprobacion ? 'bg-green-500 ring-green-200' : 'bg-slate-200 ring-slate-200'}`}></div>
-                              <span className={`text-[10px] font-bold uppercase mt-1 ${peticion.fechaAprobacion ? 'text-slate-600' : 'text-slate-400'}`}>Aprobada</span>
-                              {peticion.fechaAprobacion && <span className="text-[10px] text-slate-400">{formatearFecha(peticion.fechaAprobacion)}</span>}
+                              <div className="flex items-center gap-1">
+                                <div className={`w-3 h-3 rounded-full border-2 border-white shadow-sm ring-1 ${peticion.fechaAprobacion ? 'bg-green-500 ring-green-300' : 'bg-slate-200 ring-slate-200'}`}></div>
+                                {/* Botón RC — solo si aprobada o en_compra/recibida y no tiene RC aún */}
+                                {(!peticion.urlRc && (peticion.estado === 'aprobada' || peticion.estado === 'en_compra' || peticion.estado === 'recibida' || isAdmin)) && (
+                                  <div className="relative">
+                                    <button
+                                      onClick={() => { const s = new Set(peticionesExpandidas); const key = `rc-popup-${peticion.id}`; s.has(key) ? s.delete(key) : s.add(key); setPeticionesExpandidas(s); }}
+                                      className="flex items-center gap-0.5 px-1.5 py-0.5 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded text-[9px] font-bold border border-blue-200 whitespace-nowrap"
+                                      title="Adjuntar RC"
+                                    ><FileText size={9} /> RC</button>
+                                    {peticionesExpandidas.has(`rc-popup-${peticion.id}`) && (
+                                      <div className="absolute top-6 left-1/2 -translate-x-1/2 z-50 bg-white border border-blue-200 rounded-xl shadow-xl p-3 w-72">
+                                        <p className="text-xs font-bold text-blue-700 mb-2 flex items-center gap-1"><FileText size={13}/> Adjuntar Resolución / RC</p>
+                                        <input type="url" placeholder="https://..." id={`rc-${peticion.id}`} className="w-full text-xs p-2 border border-slate-200 rounded-lg mb-2 focus:ring-2 focus:ring-blue-400 outline-none" />
+                                        <div className="flex gap-2">
+                                          <button onClick={() => { const s = new Set(peticionesExpandidas); s.delete(`rc-popup-${peticion.id}`); setPeticionesExpandidas(s); }} className="flex-1 text-xs py-1.5 border border-slate-200 rounded-lg text-slate-500">Cancelar</button>
+                                          <button onClick={() => { handleActualizarDoc(peticion.id, 'rc'); const s = new Set(peticionesExpandidas); s.delete(`rc-popup-${peticion.id}`); setPeticionesExpandidas(s); }} className="flex-1 text-xs py-1.5 bg-blue-600 text-white rounded-lg font-semibold">Guardar</button>
+                                        </div>
+                                      </div>
+                                    )}
+                                    {peticion.urlRc && (
+                                      <a href={peticion.urlRc} target="_blank" rel="noopener noreferrer" className="flex items-center gap-0.5 px-1.5 py-0.5 bg-blue-600 text-white rounded text-[9px] font-bold border border-blue-600 whitespace-nowrap">
+                                        <FileText size={9} /> RC <ExternalLink size={8}/>
+                                      </a>
+                                    )}
+                                  </div>
+                                )}
+                                {peticion.urlRc && (
+                                  <a href={peticion.urlRc} target="_blank" rel="noopener noreferrer" className="flex items-center gap-0.5 px-1.5 py-0.5 bg-blue-600 text-white rounded text-[9px] font-bold border border-blue-600 whitespace-nowrap" title="Ver RC">
+                                    <FileText size={9} /> RC <ExternalLink size={8}/>
+                                  </a>
+                                )}
+                              </div>
+                              <span className={`text-[9px] font-bold uppercase mt-0.5 ${peticion.fechaAprobacion ? 'text-slate-500' : 'text-slate-300'}`}>Aprobada</span>
+                              {peticion.fechaAprobacion && <span className="text-[9px] text-slate-400">{formatearFecha(peticion.fechaAprobacion)}</span>}
                             </div>
-                            
-                            <div className={`flex-1 h-0.5 -mx-4 ${peticion.fechaCompra ? 'bg-purple-500' : 'bg-slate-200'} mb-5 block relative -z-0`}></div>
-                            
-                            {/* Compra */}
-                            <div className="flex flex-col items-center flex-1 relative">
-                              <div className={`w-4 h-4 rounded-full z-10 border-4 border-white shadow-sm ring-1 ${peticion.fechaCompra ? 'bg-purple-500 ring-purple-200' : 'bg-slate-200 ring-slate-200'}`}></div>
-                              <span className={`text-[10px] font-bold uppercase mt-1 ${peticion.fechaCompra ? 'text-slate-600' : 'text-slate-400'}`}>En Compra</span>
-                              {peticion.fechaCompra && <span className="text-[10px] text-slate-400">{formatearFecha(peticion.fechaCompra)}</span>}
+
+                            <div className={`flex-1 h-px mt-1.5 ${peticion.fechaCompra ? 'bg-purple-400' : 'bg-slate-200'}`}></div>
+
+                            {/* En Compra */}
+                            <div className="flex flex-col items-center flex-1">
+                              <div className={`w-3 h-3 rounded-full border-2 border-white shadow-sm ring-1 ${peticion.fechaCompra ? 'bg-purple-500 ring-purple-300' : 'bg-slate-200 ring-slate-200'}`}></div>
+                              <span className={`text-[9px] font-bold uppercase mt-0.5 ${peticion.fechaCompra ? 'text-slate-500' : 'text-slate-300'}`}>En Compra</span>
+                              {peticion.fechaCompra && <span className="text-[9px] text-slate-400">{formatearFecha(peticion.fechaCompra)}</span>}
                             </div>
-                            
-                            <div className={`flex-1 h-0.5 -mx-4 ${peticion.fechaRecepcion ? 'bg-green-500' : 'bg-slate-200'} mb-5 block relative -z-0`}></div>
-                            
-                            {/* Recibida */}
+
+                            <div className={`flex-1 h-px mt-1.5 ${peticion.fechaRecepcion ? 'bg-green-400' : 'bg-slate-200'}`}></div>
+
+                            {/* Recibida + botón Albarán */}
                             <div className="flex flex-col items-center flex-1 relative">
-                              <div className={`w-4 h-4 rounded-full z-10 border-4 border-white shadow-sm ring-1 ${peticion.fechaRecepcion ? 'bg-green-500 ring-green-200' : 'bg-slate-200 ring-slate-200'}`}></div>
-                              <span className={`text-[10px] font-bold uppercase mt-1 ${peticion.fechaRecepcion ? 'text-slate-600' : 'text-slate-400'}`}>Recibida</span>
-                              {peticion.fechaRecepcion && <span className="text-[10px] text-slate-400">{formatearFecha(peticion.fechaRecepcion)}</span>}
+                              <div className="flex items-center gap-1">
+                                <div className={`w-3 h-3 rounded-full border-2 border-white shadow-sm ring-1 ${peticion.fechaRecepcion ? 'bg-green-500 ring-green-300' : 'bg-slate-200 ring-slate-200'}`}></div>
+                                {/* Botón Albarán — solo si recibida y no tiene albarán aún */}
+                                {(!peticion.urlAlbaran && (peticion.estado === 'recibida' || isAdmin)) && (
+                                  <div className="relative">
+                                    <button
+                                      onClick={() => { const s = new Set(peticionesExpandidas); const key = `albaran-popup-${peticion.id}`; s.has(key) ? s.delete(key) : s.add(key); setPeticionesExpandidas(s); }}
+                                      className="flex items-center gap-0.5 px-1.5 py-0.5 bg-green-100 hover:bg-green-200 text-green-700 rounded text-[9px] font-bold border border-green-200 whitespace-nowrap"
+                                      title="Adjuntar Albarán"
+                                    ><FileCheck size={9} /> Albarán</button>
+                                    {peticionesExpandidas.has(`albaran-popup-${peticion.id}`) && (
+                                      <div className="absolute top-6 right-0 z-50 bg-white border border-green-200 rounded-xl shadow-xl p-3 w-72">
+                                        <p className="text-xs font-bold text-green-700 mb-2 flex items-center gap-1"><FileCheck size={13}/> Adjuntar Albarán de Recepción</p>
+                                        <input type="url" placeholder="https://..." id={`albaran-${peticion.id}`} className="w-full text-xs p-2 border border-slate-200 rounded-lg mb-2 focus:ring-2 focus:ring-green-400 outline-none" />
+                                        <div className="flex gap-2">
+                                          <button onClick={() => { const s = new Set(peticionesExpandidas); s.delete(`albaran-popup-${peticion.id}`); setPeticionesExpandidas(s); }} className="flex-1 text-xs py-1.5 border border-slate-200 rounded-lg text-slate-500">Cancelar</button>
+                                          <button onClick={() => { handleActualizarDoc(peticion.id, 'albaran'); const s = new Set(peticionesExpandidas); s.delete(`albaran-popup-${peticion.id}`); setPeticionesExpandidas(s); }} className="flex-1 text-xs py-1.5 bg-green-600 text-white rounded-lg font-semibold">Guardar</button>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                                {peticion.urlAlbaran && (
+                                  <a href={peticion.urlAlbaran} target="_blank" rel="noopener noreferrer" className="flex items-center gap-0.5 px-1.5 py-0.5 bg-green-600 text-white rounded text-[9px] font-bold border border-green-600 whitespace-nowrap" title="Ver Albarán">
+                                    <FileCheck size={9} /> Albarán <ExternalLink size={8}/>
+                                  </a>
+                                )}
+                              </div>
+                              <span className={`text-[9px] font-bold uppercase mt-0.5 ${peticion.fechaRecepcion ? 'text-slate-500' : 'text-slate-300'}`}>Recibida</span>
+                              {peticion.fechaRecepcion && <span className="text-[9px] text-slate-400">{formatearFecha(peticion.fechaRecepcion)}</span>}
                             </div>
                           </div>
                         </div>
-
-                        {/* Adjuntar Documentos - Siempre Visible cuando corresponde */}
-                        {(!peticion.urlRc && (peticion.estado === 'aprobada' || peticion.estado === 'en_compra' || peticion.estado === 'recibida' || isAdmin)) && (
-                          <div className="px-4 pb-3 pt-1 border-t border-slate-100 flex items-center gap-3 flex-wrap bg-blue-50/50">
-                            <span className="flex items-center gap-1.5 text-xs font-semibold text-blue-700 whitespace-nowrap"><FileText size={14} /> RC / Resolución:</span>
-                            <div className="flex flex-1 gap-2 min-w-0">
-                              <input type="url" placeholder="Pega aquí la URL del documento RC..." id={`rc-${peticion.id}`} className="text-xs p-1.5 border border-blue-200 rounded flex-1 bg-white focus:ring-1 focus:ring-blue-500 outline-none min-w-0" />
-                              <button onClick={() => handleActualizarDoc(peticion.id, 'rc')} className="text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded transition-colors whitespace-nowrap">Guardar</button>
-                            </div>
-                          </div>
-                        )}
-                        {(peticion.urlRc && !peticion.urlAlbaran && (peticion.estado === 'recibida' || isAdmin)) && (
-                          <div className="px-4 pb-3 pt-1 border-t border-slate-100 flex items-center gap-3 flex-wrap bg-green-50/50">
-                            <span className="flex items-center gap-1.5 text-xs font-semibold text-green-700 whitespace-nowrap"><FileCheck size={14} /> Albarán:</span>
-                            <div className="flex flex-1 gap-2 min-w-0">
-                              <input type="url" placeholder="Pega aquí la URL del albarán de recepción..." id={`albaran-${peticion.id}`} className="text-xs p-1.5 border border-green-200 rounded flex-1 bg-white focus:ring-1 focus:ring-green-500 outline-none min-w-0" />
-                              <button onClick={() => handleActualizarDoc(peticion.id, 'albaran')} className="text-xs font-semibold bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded transition-colors whitespace-nowrap">Guardar</button>
-                            </div>
-                          </div>
-                        )}
-                        {(!peticion.urlRc && !peticion.urlAlbaran && (peticion.estado === 'recibida' || isAdmin)) && (
-                          <div className="px-4 pb-3 pt-1 border-t border-slate-100 flex items-center gap-3 flex-wrap bg-green-50/50">
-                            <span className="flex items-center gap-1.5 text-xs font-semibold text-green-700 whitespace-nowrap"><FileCheck size={14} /> Albarán:</span>
-                            <div className="flex flex-1 gap-2 min-w-0">
-                              <input type="url" placeholder="Pega aquí la URL del albarán de recepción..." id={`albaran-${peticion.id}`} className="text-xs p-1.5 border border-green-200 rounded flex-1 bg-white focus:ring-1 focus:ring-green-500 outline-none min-w-0" />
-                              <button onClick={() => handleActualizarDoc(peticion.id, 'albaran')} className="text-xs font-semibold bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded transition-colors whitespace-nowrap">Guardar</button>
-                            </div>
-                          </div>
-                        )}
 
                         {/* Contenido Expandido */}
                         {peticionesExpandidas.has(peticion.id) && (
