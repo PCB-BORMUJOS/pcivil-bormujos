@@ -1008,7 +1008,7 @@ export default function LogisticaPage() {
                     const AreaIcon = getIconoArea(peticion.areaOrigen);
                     
                     return (
-                      <div key={peticion.id} className="bg-white border border-slate-200 rounded-xl hover:shadow-md transition-all overflow-hidden">
+                      <div key={peticion.id} className="bg-white border border-slate-200 rounded-xl hover:shadow-md transition-all overflow-visible relative">
                         {/* CABECERA ULTRA-COMPACTA */}
                         <div className="px-4 pt-3 pb-2">
 
@@ -1196,39 +1196,6 @@ export default function LogisticaPage() {
                                 </div>
                               )}
 
-                              {/* Documentos */}
-                              <div className="bg-white p-3 rounded-lg border border-slate-200 max-w-sm">
-                                <h4 className="text-xs font-bold text-slate-500 uppercase mb-2 border-b border-slate-100 pb-1">Documentos y Referencias</h4>
-                                <div className="space-y-3">
-                                  {peticion.urlRc ? (
-                                    <a href={peticion.urlRc} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-blue-600 hover:text-blue-800 hover:underline">
-                                      <FileText size={16} /> <span>Documento de RC</span> <ExternalLink size={12} className="opacity-50" />
-                                    </a>
-                                  ) : (peticion.estado === 'aprobada' || peticion.estado === 'en_compra' || peticion.estado === 'recibida' || isAdmin) ? (
-                                    <div className="flex gap-2">
-                                      <input type="url" placeholder="Añadir URL del RC" id={`rc-${peticion.id}`} className="text-xs p-1.5 border border-slate-200 rounded flex-1 focus:ring-1 focus:ring-blue-500 outline-none"/>
-                                      <button onClick={() => handleActualizarDoc(peticion.id, 'rc')} className="text-xs font-medium bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1.5 rounded transition-colors whitespace-nowrap">Adjuntar RC</button>
-                                    </div>
-                                  ) : null}
-
-                                  {peticion.urlAlbaran ? (
-                                    <a href={peticion.urlAlbaran} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-green-600 hover:text-green-800 hover:underline">
-                                      <FileCheck size={16} /> <span>Albarán de Recepción</span> <ExternalLink size={12} className="opacity-50" />
-                                    </a>
-                                  ) : (peticion.estado === 'recibida' || isAdmin) ? (
-                                    <div className="flex gap-2">
-                                      <input type="url" placeholder="Añadir URL del Albarán" id={`albaran-${peticion.id}`} className="text-xs p-1.5 border border-slate-200 rounded flex-1 focus:ring-1 focus:ring-green-500 outline-none"/>
-                                      <button onClick={() => handleActualizarDoc(peticion.id, 'albaran')} className="text-xs font-medium bg-green-50 hover:bg-green-100 text-green-700 px-3 py-1.5 rounded transition-colors whitespace-nowrap">Adjuntar Albarán</button>
-                                    </div>
-                                  ) : null}
-
-                                  {peticion.numeroFactura && (
-                                    <div className="flex items-center gap-2 text-slate-600">
-                                      <Receipt size={16} className="text-slate-400" /> <span className="text-xs uppercase text-slate-500">Nº Factura:</span> <span className="font-mono font-medium">{peticion.numeroFactura}</span>
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
                             </div>
                           </div>
                         )}
