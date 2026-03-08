@@ -5,6 +5,7 @@ import { generarNumeroParte } from '@/lib/partesPSI'
 import { validarPartePSI, validarBorradorPSI } from '@/lib/psi-validation'
 import { put } from '@vercel/blob'
 import { authOptions } from '@/lib/auth'
+import { registrarAudit, getUsuarioAudit } from '@/lib/audit'
 
 /**
  * GET /api/partes/psi
@@ -233,8 +234,6 @@ export async function POST(request: NextRequest) {
                 }
             }
         })
-
-        // Registrar auditoría
         const { registrarAudit, getUsuarioAudit } = await import('@/lib/audit')
         const { usuarioId, usuarioNombre } = getUsuarioAudit(session)
         await registrarAudit({
@@ -293,9 +292,28 @@ export async function DELETE(request: NextRequest) {
             return NextResponse.json({ error: 'ID requerido' }, { status: 400 })
         }
 
+        const parteExistente = await prisma.partePSI.findUnique({
+            where: { id }
+        })
+
+        if (!parteExistente) {
+             return NextResponse.json({ error: 'Parte no encontrado' }, { status: 404 })
+        }
+
         // Eliminar parte
         await prisma.partePSI.delete({
             where: { id }
+        })
+
+        const { usuarioId: adminId, usuarioNombre: adminNombre } = getUsuarioAudit(session)
+        await registrarAudit({
+            accion: 'DELETE',
+            entidad: 'PartePSI',
+            entidadId: id,
+            descripcion: `Parte PSI eliminado: ${parteExistente.numeroParte}`,
+            usuarioId: adminId,
+            usuarioNombre: adminNombre,
+            modulo: 'Partes'
         })
 
         return NextResponse.json({

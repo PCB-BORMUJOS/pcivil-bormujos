@@ -506,11 +506,19 @@ export async function POST(request: NextRequest) {
       // Actualizar stock asignado del artículo
       await prisma.articulo.update({
         where: { id: articuloId },
-        data: {
-          stockAsignado: {
-            increment: cantidad || 1
-          }
-        }
+        data: { stockAsignado: { increment: cantidad || 1 } }
+      })
+
+      const _auditUserVEST = getUsuarioAudit(session)
+      await registrarAudit({
+        accion: 'ASSIGN',
+        entidad: 'Vestuario',
+        entidadId: asignacion.id,
+        descripcion: `Vestuario '${articulo.nombre}' asignado al Voluntario/a ${asignacion.usuarioId}`,
+        usuarioId: _auditUserVEST.usuarioId,
+        usuarioNombre: _auditUserVEST.usuarioNombre,
+        modulo: 'Logística',
+        datosNuevos: { cantidad, talla }
       })
 
       return NextResponse.json({ success: true, asignacion })
@@ -600,6 +608,17 @@ export async function POST(request: NextRequest) {
         }
       })
 
+      const _auditUserHIDR = getUsuarioAudit(session)
+      await registrarAudit({
+        accion: 'CREATE',
+        entidad: 'Hidrante',
+        entidadId: hidrante.id,
+        descripcion: `Hidrante registrado: ${hidrante.codigo} en ${hidrante.ubicacion}`,
+        usuarioId: _auditUserHIDR.usuarioId,
+        usuarioNombre: _auditUserHIDR.usuarioNombre,
+        modulo: 'Logística'
+      })
+
       return NextResponse.json({ success: true, hidrante })
     }
 
@@ -627,6 +646,17 @@ export async function POST(request: NextRequest) {
           caducidadParches: caducidadParches ? new Date(caducidadParches) : null,
           caducidadPilas: caducidadPilas ? new Date(caducidadPilas) : null
         }
+      })
+
+      const _auditUserDEA = getUsuarioAudit(session)
+      await registrarAudit({
+        accion: 'CREATE',
+        entidad: 'DEA',
+        entidadId: dea.id,
+        descripcion: `DEA registrado: ${dea.codigo} (${dea.marca || 'Sin marca'})`,
+        usuarioId: _auditUserDEA.usuarioId,
+        usuarioNombre: _auditUserDEA.usuarioNombre,
+        modulo: 'Logística'
       })
 
       return NextResponse.json({ success: true, dea })
@@ -837,6 +867,17 @@ export async function POST(request: NextRequest) {
         }
       })
 
+      const _auditUserPET = getUsuarioAudit(session)
+      await registrarAudit({
+        accion: 'CREATE',
+        entidad: 'Petición Material',
+        entidadId: peticion.id,
+        descripcion: `Petición generada: ${peticion.numero} por el usuario ${usuario.id}`,
+        usuarioId: _auditUserPET.usuarioId,
+        usuarioNombre: _auditUserPET.usuarioNombre,
+        modulo: 'Logística'
+      })
+
       return NextResponse.json({ success: true, peticion })
     }
 
@@ -987,6 +1028,18 @@ export async function PUT(request: NextRequest) {
           data: { stockAsignado: { decrement: asignacion.cantidad } }
         })
       }
+      
+      const _auditUserUNASS = getUsuarioAudit(session)
+      await registrarAudit({
+        accion: 'UNASSIGN',
+        entidad: 'Vestuario',
+        entidadId: asignacion.id,
+        descripcion: `Devolución de Vestuario '${asignacion.tipoPrenda}' por Voluntario/a ${asignacion.usuarioId}`,
+        usuarioId: _auditUserUNASS.usuarioId,
+        usuarioNombre: _auditUserUNASS.usuarioNombre,
+        modulo: 'Logística'
+      })
+
       return NextResponse.json({ success: true })
     }
 
@@ -1191,6 +1244,16 @@ export async function DELETE(request: NextRequest) {
         where: { id },
         data: { activo: false }
       })
+      const _auditUserDelA = getUsuarioAudit(session)
+      await registrarAudit({
+        accion: 'DELETE',
+        entidad: 'Inventario',
+        entidadId: id,
+        descripcion: `Artículo dado de baja lógicamente (inactivo)`,
+        usuarioId: _auditUserDelA.usuarioId,
+        usuarioNombre: _auditUserDelA.usuarioNombre,
+        modulo: 'Logística'
+      })
       return NextResponse.json({ success: true })
     }
 
@@ -1317,6 +1380,17 @@ export async function DELETE(request: NextRequest) {
 
       await prisma.manual.delete({
         where: { id }
+      })
+
+      const _auditUserDelM = getUsuarioAudit(session)
+      await registrarAudit({
+        accion: 'DELETE',
+        entidad: 'Manual',
+        entidadId: id,
+        descripcion: `Manual de Logística eliminado: ${manual.titulo || ''}`,
+        usuarioId: _auditUserDelM.usuarioId,
+        usuarioNombre: _auditUserDelM.usuarioNombre,
+        modulo: 'Logística'
       })
 
       return NextResponse.json({ success: true })

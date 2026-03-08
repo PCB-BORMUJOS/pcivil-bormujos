@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { prisma } from '@/lib/db'
+import { registrarAudit, getUsuarioAudit } from '@/lib/audit'
 
 // GET: Obtener guardias de una semana específica
 export async function GET(request: NextRequest) {
@@ -123,6 +124,18 @@ export async function POST(request: NextRequest) {
             }
         })
 
+        const { usuarioId: adminId, usuarioNombre: adminNombre } = getUsuarioAudit(session)
+        await registrarAudit({
+            accion: 'CREATE',
+            entidad: 'Guardia',
+            entidadId: guardia.id,
+            descripcion: `Guardia asignada a ${guardia.usuario?.nombre} ${guardia.usuario?.apellidos} para el ${new Date(fecha).toLocaleDateString()} (${turno})`,
+            usuarioId: adminId,
+            usuarioNombre: adminNombre,
+            modulo: 'Administración',
+            datosNuevos: { fecha, turno, tipo, usuarioAsignado: usuarioId }
+        })
+
         return NextResponse.json({ success: true, guardia })
     } catch (error) {
         console.error('Error al crear guardia:', error)
@@ -173,6 +186,18 @@ export async function PUT(request: NextRequest) {
             }
         })
 
+        const { usuarioId: adminId, usuarioNombre: adminNombre } = getUsuarioAudit(session)
+        await registrarAudit({
+            accion: 'UPDATE',
+            entidad: 'Guardia',
+            entidadId: id,
+            descripcion: `Guardia de ${guardia.usuario?.nombre} ${guardia.usuario?.apellidos} actualizada`,
+            usuarioId: adminId,
+            usuarioNombre: adminNombre,
+            modulo: 'Administración',
+            datosNuevos: { tipo, notas, estado }
+        })
+
         return NextResponse.json({ success: true, guardia })
     } catch (error) {
         console.error('Error al actualizar guardia:', error)
@@ -204,8 +229,29 @@ export async function DELETE(request: NextRequest) {
             return NextResponse.json({ error: 'ID requerido' }, { status: 400 })
         }
 
+        const guardiaExitente = await prisma.guardia.findUnique({
+            where: { id },
+            include: { usuario: true }
+        })
+
+        if (!guardiaExitente) {
+             return NextResponse.json({ error: 'Guardia no encontrada' }, { status: 404 })
+        }
+
         await prisma.guardia.delete({
             where: { id }
+        })
+
+        const { usuarioId: adminId, usuarioNombre: adminNombre } = getUsuarioAudit(session)
+        await registrarAudit({
+            accion: 'DELETE',
+            entidad: 'Guardia',
+            entidadId: id,
+            descripcion: `Guardia de ${guardiaExitente.usuario?.nombre} eliminada (${guardiaExitente.fecha.toLocaleDateString()} - ${guardiaExitente.turno})`,
+            usuarioId: adminId,
+            usuarioNombre: adminNombre,
+            modulo: 'Administración',
+            datosAnteriores: { fecha: guardiaExitente.fecha, turno: guardiaExitente.turno, usuarioAsignado: guardiaExitente.usuarioId }
         })
 
         return NextResponse.json({ success: true })

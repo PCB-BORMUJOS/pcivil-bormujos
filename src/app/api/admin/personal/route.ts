@@ -165,6 +165,18 @@ export async function PUT(request: NextRequest) {
         where: { id },
         data: { password: hashedPassword }
       })
+
+      const { usuarioId, usuarioNombre } = getUsuarioAudit(session)
+      await registrarAudit({
+        accion: 'UPDATE',
+        entidad: 'Usuario',
+        entidadId: id,
+        descripcion: `Contraseña de usuario actualizada`,
+        usuarioId,
+        usuarioNombre,
+        modulo: 'Administración',
+      })
+
       return NextResponse.json({ success: true, message: 'Contraseña actualizada' })
     }
 
@@ -175,24 +187,62 @@ export async function PUT(request: NextRequest) {
       }
       const usuario = await prisma.usuario.update({
         where: { id },
-        data: { rolId }
+        data: { rolId },
+        include: { rol: true }
       })
+
+      const { usuarioId, usuarioNombre } = getUsuarioAudit(session)
+      await registrarAudit({
+        accion: 'UPDATE',
+        entidad: 'Usuario',
+        entidadId: id,
+        descripcion: `Rol de usuario actualizado a: ${usuario.rol?.nombre}`,
+        usuarioId,
+        usuarioNombre,
+        modulo: 'Administración',
+        datosAnteriores: { rol: usuarioExistente.rolId },
+        datosNuevos: { rol: usuario.rol?.nombre }
+      })
+
       return NextResponse.json({ success: true, usuario })
     }
 
     // Acción: actualizar datos básicos
     if (accion === 'datos') {
+      const datosNuevos = {
+        nombre: nombre || usuarioExistente.nombre,
+        apellidos: apellidos || usuarioExistente.apellidos,
+        telefono: telefono !== undefined ? telefono : usuarioExistente.telefono,
+        dni: dni !== undefined ? dni : usuarioExistente.dni,
+        numeroVoluntario: numeroVoluntario !== undefined ? numeroVoluntario : usuarioExistente.numeroVoluntario,
+        email: email || usuarioExistente.email,
+      }
+
       const usuario = await prisma.usuario.update({
         where: { id },
-        data: {
-          nombre: nombre || usuarioExistente.nombre,
-          apellidos: apellidos || usuarioExistente.apellidos,
-          telefono: telefono !== undefined ? telefono : usuarioExistente.telefono,
-          dni: dni !== undefined ? dni : usuarioExistente.dni,
-          numeroVoluntario: numeroVoluntario !== undefined ? numeroVoluntario : usuarioExistente.numeroVoluntario,
-          email: email || usuarioExistente.email,
-        }
+        data: datosNuevos
       })
+
+      const { usuarioId, usuarioNombre } = getUsuarioAudit(session)
+      await registrarAudit({
+        accion: 'UPDATE',
+        entidad: 'Usuario',
+        entidadId: id,
+        descripcion: `Datos del usuario ${usuario.nombre} ${usuario.apellidos} actualizados`,
+        usuarioId,
+        usuarioNombre,
+        modulo: 'Administración',
+        datosAnteriores: {
+          nombre: usuarioExistente.nombre,
+          apellidos: usuarioExistente.apellidos,
+          telefono: usuarioExistente.telefono,
+          dni: usuarioExistente.dni,
+          numeroVoluntario: usuarioExistente.numeroVoluntario,
+          email: usuarioExistente.email,
+        },
+        datosNuevos
+      })
+
       return NextResponse.json({ success: true, usuario })
     }
 
@@ -202,6 +252,20 @@ export async function PUT(request: NextRequest) {
         where: { id },
         data: { activo }
       })
+
+      const { usuarioId, usuarioNombre } = getUsuarioAudit(session)
+      await registrarAudit({
+        accion: activo ? 'ACTIVATE' : 'DEACTIVATE',
+        entidad: 'Usuario',
+        entidadId: id,
+        descripcion: `Usuario ${usuarioExistente.nombre} ${usuarioExistente.apellidos} ${activo ? 'activado' : 'desactivado'}`,
+        usuarioId,
+        usuarioNombre,
+        modulo: 'Administración',
+        datosAnteriores: { activo: usuarioExistente.activo },
+        datosNuevos: { activo }
+      })
+
       return NextResponse.json({ success: true, usuario })
     }
 

@@ -132,6 +132,18 @@ export async function POST(request: NextRequest) {
         }
       })
 
+      const { usuarioId, usuarioNombre } = getUsuarioAudit(session)
+      await registrarAudit({
+        accion: 'UPLOAD',
+        entidad: 'Vehículo',
+        entidadId: vehiculoId,
+        descripcion: `Subido documento (${tipoDoc}): ${file.name}`,
+        usuarioId,
+        usuarioNombre,
+        modulo: 'Vehículos',
+        datosNuevos: { tipoDoc, nombreArchivo: file.name }
+      })
+
       return NextResponse.json({ documento })
     }
 
@@ -218,12 +230,27 @@ export async function PUT(request: NextRequest) {
         return NextResponse.json({ error: 'ID requerido' }, { status: 400 })
       }
 
+      const vehiculoAnterior = await prisma.vehiculo.findUnique({ where: { id } })
+
       const vehiculo = await prisma.vehiculo.update({
         where: { id },
         data: {
           estado: estado || undefined,
           kmActual: kilometraje ? parseInt(kilometraje) : undefined,
         }
+      })
+
+      const { usuarioId, usuarioNombre } = getUsuarioAudit(session)
+      await registrarAudit({
+        accion: 'UPDATE',
+        entidad: 'Vehículo',
+        entidadId: id,
+        descripcion: `Estado/KM actualizado: ${vehiculo.indicativo}`,
+        usuarioId,
+        usuarioNombre,
+        modulo: 'Vehículos',
+        datosAnteriores: { estado: vehiculoAnterior?.estado, kmActual: vehiculoAnterior?.kmActual },
+        datosNuevos: { estado: vehiculo.estado, kmActual: vehiculo.kmActual }
       })
 
       return NextResponse.json({ vehiculo })
@@ -248,6 +275,8 @@ export async function PUT(request: NextRequest) {
         return NextResponse.json({ error: 'ID requerido' }, { status: 400 })
       }
 
+      const mantenimientoAnterior = await prisma.mantenimientoVehiculo.findUnique({ where: { id } })
+
       const mantenimiento = await prisma.mantenimientoVehiculo.update({
         where: { id },
         data: {
@@ -265,6 +294,19 @@ export async function PUT(request: NextRequest) {
             select: { nombre: true, apellidos: true }
           }
         }
+      })
+
+      const { usuarioId, usuarioNombre } = getUsuarioAudit(session)
+      await registrarAudit({
+        accion: 'UPDATE',
+        entidad: 'Vehículo',
+        entidadId: mantenimiento.vehiculoId,
+        descripcion: `Mantenimiento actualizado: ${tipoMant} - ${descripcion}`,
+        usuarioId,
+        usuarioNombre,
+        modulo: 'Vehículos',
+        datosAnteriores: mantenimientoAnterior,
+        datosNuevos: mantenimiento
       })
 
       return NextResponse.json({ mantenimiento })
@@ -313,14 +355,40 @@ export async function DELETE(request: NextRequest) {
         where: { id }
       })
 
+      const { usuarioId, usuarioNombre } = getUsuarioAudit(session)
+      await registrarAudit({
+        accion: 'DELETE',
+        entidad: 'Vehículo',
+        entidadId: documento.vehiculoId,
+        descripcion: `Documento eliminado: ${documento.nombre}`,
+        usuarioId,
+        usuarioNombre,
+        modulo: 'Vehículos'
+      })
+
       return NextResponse.json({ success: true })
     }
 
     // DELETE Mantenimiento
     if (tipo === 'mantenimiento') {
+      const mantenimiento = await prisma.mantenimientoVehiculo.findUnique({ where: { id } })
+      
       await prisma.mantenimientoVehiculo.delete({
         where: { id }
       })
+
+      if (mantenimiento) {
+        const { usuarioId, usuarioNombre } = getUsuarioAudit(session)
+        await registrarAudit({
+          accion: 'DELETE',
+          entidad: 'Vehículo',
+          entidadId: mantenimiento.vehiculoId,
+          descripcion: `Mantenimiento eliminado: ${mantenimiento.tipo}`,
+          usuarioId,
+          usuarioNombre,
+          modulo: 'Vehículos'
+        })
+      }
 
       return NextResponse.json({ success: true })
     }

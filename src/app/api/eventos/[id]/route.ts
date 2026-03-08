@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { prisma } from '@/lib/db'
+import { registrarAudit, getUsuarioAudit } from '@/lib/audit'
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -43,10 +44,21 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         horaInicio: body.horaInicio, horaFin: body.horaFin, todoElDia: body.todoElDia,
         ubicacion: body.ubicacion, direccion: body.direccion, estado: body.estado,
         visible: body.visible, voluntariosMin: body.voluntariosMin,
-        voluntariosMax: body.voluntariosMax, color: body.color
       }
     })
     
+    const { usuarioId: adminId, usuarioNombre: adminNombre } = getUsuarioAudit(session)
+    await registrarAudit({
+      accion: 'UPDATE',
+      entidad: evento.tipo === 'formacion' ? 'Formación' : 'Evento',
+      entidadId: evento.id,
+      descripcion: `${evento.tipo === 'formacion' ? 'Sesión de formación modificada' : 'Evento modificado'}: ${evento.titulo}`,
+      usuarioId: adminId,
+      usuarioNombre: adminNombre,
+      modulo: evento.tipo === 'formacion' ? 'Formación' : 'Operativa',
+      datosNuevos: { titulo: body.titulo, estado: body.estado, fecha: body.fecha }
+    })
+
     return NextResponse.json({ success: true, evento })
   } catch (error) {
     return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 })
