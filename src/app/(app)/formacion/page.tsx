@@ -798,7 +798,7 @@ export default function FormacionPage() {
         const err = await res.json();
         alert('Error: ' + (err.error || 'No se pudo crear la jornada'));
       }
-    } catch (e) { console.error("Error en operación:", e) alert('Error de conexión'); }
+    } catch (e) { console.error("Error en operación:", e); alert('Error de conexión'); }
   };
 
   const handleToggleAsistencia = async (registroId: string, asistio: boolean) => {
@@ -830,7 +830,7 @@ export default function FormacionPage() {
       } else {
         alert('Error al registrar participante');
       }
-    } catch (e) { console.error("Error en operación:", e) alert('Error de conexión'); }
+    } catch (e) { console.error("Error en operación:", e); alert('Error de conexión'); }
   };
 
     const cargarNecesidades = async () => {
@@ -875,7 +875,7 @@ export default function FormacionPage() {
         alert('Error al crear artículo');
       }
     } catch (error) {
-      console.error("Error en operación:", e)
+      console.error("Error en operación:", error)
       alert('Error de conexión');
     }
   };
@@ -991,7 +991,7 @@ export default function FormacionPage() {
         }
       }
     } catch (error) {
-      console.error("Error en operación:", e)
+      console.error("Error en operación:", error)
       alert('Error de conexión');
     }
   };
@@ -1053,7 +1053,7 @@ export default function FormacionPage() {
           alert('Error al crear convocatoria');
         }
       }
-    } catch (e) { console.error("Error en operación:", e) alert('Error'); }
+    } catch (e) { console.error("Error en operación:", e); alert('Error'); }
   };
 
   const handleGuardarNecesidad = async () => {
@@ -1080,7 +1080,7 @@ export default function FormacionPage() {
         cargarNecesidades();
         alert('✅ Necesidad registrada');
       } else { alert('Error al registrar necesidad'); }
-    } catch (e) { console.error("Error en operación:", e) alert('Error'); }
+    } catch (e) { console.error("Error en operación:", e); alert('Error'); }
   };
 
   const handleEstadoInscripcion = async (id: string, nuevoEstado: string) => {
@@ -1095,7 +1095,7 @@ export default function FormacionPage() {
         cargarInscripciones();
         cargarConvocatorias();
       } else { alert('Error al actualizar estado'); }
-    } catch (e) { console.error("Error en operación:", e) alert('Error'); }
+    } catch (e) { console.error("Error en operación:", e); alert('Error'); }
   };
 
 
