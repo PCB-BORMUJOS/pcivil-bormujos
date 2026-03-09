@@ -49,6 +49,18 @@ export const authOptions: AuthOptions = {
       }
     })
   ],
+  cookies: {
+    sessionToken: {
+      name: 'next-auth.session-token',
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: process.env.NODE_ENV === 'production',
+        // Sin maxAge = session cookie, expira al cerrar navegador
+      }
+    }
+  },
   session: {
     strategy: 'jwt',
     maxAge: 8 * 60 * 60
