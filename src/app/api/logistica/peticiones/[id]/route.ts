@@ -236,7 +236,20 @@ export async function PUT(
     }
 
     const { usuarioId, usuarioNombre } = getUsuarioAudit(session)
-    await registrarAudit({ accion: 'UPDATE', entidad: 'PeticionMaterial', entidadId: peticionActualizada.id, descripcion: `Petición ${peticionActualizada.numero} → estado: ${peticionActualizada.estado}`, usuarioId, usuarioNombre, modulo: 'Logistica', datosNuevos: { estado: peticionActualizada.estado } })
+    const auditAccionMap: Record<string, string> = {
+      aprobar: 'APPROVE', rechazar: 'REJECT', en_compra: 'UPDATE',
+      recibir: 'UPDATE', cancelar: 'DELETE', editar: 'UPDATE', actualizar_docs: 'UPDATE'
+    }
+    const auditDescMap: Record<string, string> = {
+      aprobar: `Petición ${peticionActualizada.numero} aprobada`,
+      rechazar: `Petición ${peticionActualizada.numero} rechazada`,
+      en_compra: `Petición ${peticionActualizada.numero} → en compra`,
+      recibir: `Petición ${peticionActualizada.numero} recibida`,
+      cancelar: `Petición ${peticionActualizada.numero} cancelada`,
+      editar: `Petición ${peticionActualizada.numero} editada`,
+      actualizar_docs: `Petición ${peticionActualizada.numero} documentos actualizados`
+    }
+    await registrarAudit({ accion: auditAccionMap[accion] || 'UPDATE', entidad: 'PeticionMaterial', entidadId: peticionActualizada.id, descripcion: auditDescMap[accion] || `Petición ${peticionActualizada.numero} actualizada`, usuarioId, usuarioNombre, modulo: 'Logistica', datosNuevos: { estado: peticionActualizada.estado } })
     return NextResponse.json({ success: true, peticion: peticionActualizada })
   } catch (error) {
     console.error('Error en PUT /api/logistica/peticiones/[id]:', error)

@@ -469,7 +469,7 @@ export default function PMAPage() {
       setArticulos(dataInv.articulos || [])
       setFamilias(dataInv.familias || [])
       if (dataCat.categoria) setCategoriaPMA(dataCat.categoria.id)
-    } catch (err) { /* error silenciado */ }
+    } catch (err) { console.error("Error en operación:", err) }
     finally { setLoading(false) }
   }, [])
 
@@ -478,7 +478,7 @@ export default function PMAPage() {
       const res = await fetch('/api/logistica/peticiones?area=pma')
       const data = await res.json()
       setPeticiones(data.peticiones || [])
-    } catch (err) { /* error silenciado */ }
+    } catch (err) { console.error("Error en operación:", err) }
   }, [])
 
   useEffect(() => { cargarDatos() }, [cargarDatos])
@@ -487,22 +487,22 @@ export default function PMAPage() {
   // ---- HANDLERS INVENTARIO ----
   const handleCrearArticulo = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault(); const f = new FormData(e.currentTarget)
-    try { const r = await fetch('/api/logistica', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'articulo', codigo: f.get('codigo'), nombre: f.get('nombre'), descripcion: f.get('descripcion'), stockActual: parseInt(f.get('stockActual') as string) || 0, stockMinimo: parseInt(f.get('stockMinimo') as string) || 0, unidad: f.get('unidad') || 'unidad', familiaId: f.get('familiaId'), categoriaSlug: 'pma' }) }); if (r.ok) { setShowNuevoArticulo(false); cargarDatos() } } catch (err) { /* error silenciado */ }
+    try { const r = await fetch('/api/logistica', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'articulo', codigo: f.get('codigo'), nombre: f.get('nombre'), descripcion: f.get('descripcion'), stockActual: parseInt(f.get('stockActual') as string) || 0, stockMinimo: parseInt(f.get('stockMinimo') as string) || 0, unidad: f.get('unidad') || 'unidad', familiaId: f.get('familiaId'), categoriaSlug: 'pma' }) }); if (r.ok) { setShowNuevoArticulo(false); cargarDatos() } } catch (err) { console.error("Error en operación:", err) }
   }
   const handleEditarArticulo = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault(); if (!articuloSeleccionado) return; const f = new FormData(e.currentTarget)
-    try { const r = await fetch('/api/logistica', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'articulo', id: articuloSeleccionado.id, codigo: f.get('codigo'), nombre: f.get('nombre'), descripcion: f.get('descripcion'), stockActual: parseInt(f.get('stockActual') as string) || 0, stockMinimo: parseInt(f.get('stockMinimo') as string) || 0, unidad: f.get('unidad'), familiaId: f.get('familiaId') }) }); if (r.ok) { setShowEditArticulo(false); setArticuloSeleccionado(null); cargarDatos() } } catch (err) { /* error silenciado */ }
+    try { const r = await fetch('/api/logistica', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'articulo', id: articuloSeleccionado.id, codigo: f.get('codigo'), nombre: f.get('nombre'), descripcion: f.get('descripcion'), stockActual: parseInt(f.get('stockActual') as string) || 0, stockMinimo: parseInt(f.get('stockMinimo') as string) || 0, unidad: f.get('unidad'), familiaId: f.get('familiaId') }) }); if (r.ok) { setShowEditArticulo(false); setArticuloSeleccionado(null); cargarDatos() } } catch (err) { console.error("Error en operación:", err) }
   }
   const handleCrearPeticion = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault(); const f = new FormData(e.currentTarget)
-    try { const r = await fetch('/api/logistica', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'peticion', articuloId: f.get('articuloId') || null, nombreArticulo: f.get('nombreArticulo'), cantidad: parseInt(f.get('cantidad') as string) || 1, unidad: f.get('unidad') || 'unidad', prioridad: f.get('prioridad') || 'normal', descripcion: f.get('descripcion'), areaOrigen: 'pma' }) }); if (r.ok) { setShowNuevaPeticion(false); cargarPeticiones() } } catch (err) { /* error silenciado */ }
+    try { const r = await fetch('/api/logistica', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'peticion', articuloId: f.get('articuloId') || null, nombreArticulo: f.get('nombreArticulo'), cantidad: parseInt(f.get('cantidad') as string) || 1, unidad: f.get('unidad') || 'unidad', prioridad: f.get('prioridad') || 'normal', descripcion: f.get('descripcion'), areaOrigen: 'pma' }) }); if (r.ok) { setShowNuevaPeticion(false); cargarPeticiones() } } catch (err) { console.error("Error en operación:", err) }
   }
   const handleCrearFamilia = async (nombre: string) => {
     if (!categoriaPMA || !nombre.trim()) return
-    try { await fetch('/api/logistica', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'familia', nombre: nombre.trim(), categoriaId: categoriaPMA }) }); cargarDatos() } catch (err) { /* error silenciado */ }
+    try { await fetch('/api/logistica', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'familia', nombre: nombre.trim(), categoriaId: categoriaPMA }) }); cargarDatos() } catch (err) { console.error("Error en operación:", err) }
   }
   const handleEliminarFamilia = async (id: string) => {
-    try { await fetch(`/api/logistica?tipo=familia&id=${id}`, { method: 'DELETE' }); cargarDatos() } catch (err) { /* error silenciado */ }
+    try { await fetch(`/api/logistica?tipo=familia&id=${id}`, { method: 'DELETE' }); cargarDatos() } catch (err) { console.error("Error en operación:", err) }
   }
 
   // ---- HANDLERS REMOLQUE ----

@@ -421,9 +421,7 @@ export default function FormacionPage() {
             setIsFormacionMember(area.toLowerCase() === 'formación' || area.toLowerCase() === 'formacion');
           }
         }
-      } catch (e) {
-        /* error silenciado */;
-      }
+      } catch (e) { console.error("Error en operación:", e) }
     };
     if (session) {
       fetchCurrentUser();
@@ -467,7 +465,7 @@ export default function FormacionPage() {
         const data = await res.json();
         setInscripcionesGrading(data.inscripciones || []);
       }
-    } catch (e) { /* error silenciado */; }
+    } catch (e) { console.error("Error en operación:", e) }
     setLoadingGrading(false);
   };
 
@@ -492,7 +490,7 @@ export default function FormacionPage() {
         body: JSON.stringify({ tipo: 'inscripcion', id, [field]: value })
       });
     } catch (e) {
-      /* error silenciado */;
+      console.error("Error en operación:", e)
       // Revertir si falla (opcional, por simplicidad no lo implemento ahora)
     }
   };
@@ -512,7 +510,7 @@ export default function FormacionPage() {
       // Close modal if it was opened for signing
       setShowFirmaModal(false);
     } catch (e) {
-      /* error silenciado */;
+      console.error("Error en operación:", e)
       alert('Error guardando firma');
     }
   };
@@ -542,7 +540,7 @@ export default function FormacionPage() {
         alert('Error al cerrar acta: ' + (data.error || 'Desconocido'));
       }
     } catch (e) {
-      /* error silenciado */;
+      console.error("Error en operación:", e)
       alert('Error de conexión');
     }
   };
@@ -578,7 +576,7 @@ export default function FormacionPage() {
         alert('Error: ' + (data.error || 'No se pudo completar la inscripción'));
       }
     } catch (e) {
-      /* error silenciado */;
+      console.error("Error en operación:", e)
       alert('Error de conexión');
     }
   };
@@ -621,7 +619,7 @@ export default function FormacionPage() {
         alert('Error: ' + (data.error || 'No se pudo completar la inscripción'));
       }
     } catch (e) {
-      /* error silenciado */;
+      console.error("Error en operación:", e)
       alert('Error de conexión');
     } finally {
       setInscripcionLoading(false);
@@ -653,9 +651,7 @@ export default function FormacionPage() {
       else if (mainTab === 'certificaciones') await cargarCertificaciones();
       else if (mainTab === 'necesidades') await cargarNecesidades();
 
-    } catch (error) {
-      /* error silenciado */;
-    } finally {
+    } catch (error) { console.error("Error en operación:", error) } finally {
       setLoading(false);
     }
   };
@@ -666,7 +662,7 @@ export default function FormacionPage() {
       const data = await res.json();
       setArticulos(data.articulos || []);
       setFamilias(data.familias || []);
-    } catch (error) { /* error silenciado */; }
+    } catch (error) { console.error("Error en operación:", error) }
   };
 
   const cargarPeticiones = async () => {
@@ -674,7 +670,7 @@ export default function FormacionPage() {
       const res = await fetch('/api/logistica/peticiones?area=formacion');
       const data = await res.json();
       setPeticiones(data.peticiones || []);
-    } catch (error) { /* error silenciado */; }
+    } catch (error) { console.error("Error en operación:", error) }
   };
 
   const cargarMovimientos = async () => {
@@ -682,7 +678,7 @@ export default function FormacionPage() {
       const res = await fetch('/api/logistica/movimiento?inventario=formacion&limit=100');
       const data = await res.json();
       setMovimientos(data.movimientos || []);
-    } catch (error) { /* error silenciado */; }
+    } catch (error) { console.error("Error en operación:", error) }
   };
 
   const cargarCursos = async () => {
@@ -768,7 +764,7 @@ export default function FormacionPage() {
         setJornadaSeleccionada('');
         setRegistrosFirma([]);
       }
-    } catch (e) { /* error silenciado */; }
+    } catch (e) { console.error("Error en operación:", e) }
     finally { setLoadingAsistencia(false); }
   };
 
@@ -779,7 +775,7 @@ export default function FormacionPage() {
       const res = await fetch(`/api/formacion?tipo=registros&jornadaId=${jornadaId}`);
       const data = await res.json();
       setRegistrosFirma(data.registros || []);
-    } catch (e) { /* error silenciado */; }
+    } catch (e) { console.error("Error en operación:", e) }
     finally { setLoadingAsistencia(false); }
   };
 
@@ -802,7 +798,7 @@ export default function FormacionPage() {
         const err = await res.json();
         alert('Error: ' + (err.error || 'No se pudo crear la jornada'));
       }
-    } catch (e) { /* error silenciado */; alert('Error de conexión'); }
+    } catch (e) { console.error("Error en operación:", e) alert('Error de conexión'); }
   };
 
   const handleToggleAsistencia = async (registroId: string, asistio: boolean) => {
@@ -813,7 +809,7 @@ export default function FormacionPage() {
         body: JSON.stringify({ tipo: 'registro-firma', id: registroId, asistio })
       });
       if (res.ok) await cargarRegistrosFirma(jornadaSeleccionada);
-    } catch (e) { /* error silenciado */; }
+    } catch (e) { console.error("Error en operación:", e) }
   };
 
   const handleCrearParticipanteExterno = async () => {
@@ -834,7 +830,7 @@ export default function FormacionPage() {
       } else {
         alert('Error al registrar participante');
       }
-    } catch (e) { /* error silenciado */; alert('Error de conexión'); }
+    } catch (e) { console.error("Error en operación:", e) alert('Error de conexión'); }
   };
 
     const cargarNecesidades = async () => {
@@ -879,7 +875,7 @@ export default function FormacionPage() {
         alert('Error al crear artículo');
       }
     } catch (error) {
-      /* error silenciado */;
+      console.error("Error en operación:", e)
       alert('Error de conexión');
     }
   };
@@ -995,7 +991,7 @@ export default function FormacionPage() {
         }
       }
     } catch (error) {
-      /* error silenciado */;
+      console.error("Error en operación:", e)
       alert('Error de conexión');
     }
   };
@@ -1057,7 +1053,7 @@ export default function FormacionPage() {
           alert('Error al crear convocatoria');
         }
       }
-    } catch (e) { /* error silenciado */; alert('Error'); }
+    } catch (e) { console.error("Error en operación:", e) alert('Error'); }
   };
 
   const handleGuardarNecesidad = async () => {
@@ -1084,7 +1080,7 @@ export default function FormacionPage() {
         cargarNecesidades();
         alert('✅ Necesidad registrada');
       } else { alert('Error al registrar necesidad'); }
-    } catch (e) { /* error silenciado */; alert('Error'); }
+    } catch (e) { console.error("Error en operación:", e) alert('Error'); }
   };
 
   const handleEstadoInscripcion = async (id: string, nuevoEstado: string) => {
@@ -1099,7 +1095,7 @@ export default function FormacionPage() {
         cargarInscripciones();
         cargarConvocatorias();
       } else { alert('Error al actualizar estado'); }
-    } catch (e) { /* error silenciado */; alert('Error'); }
+    } catch (e) { console.error("Error en operación:", e) alert('Error'); }
   };
 
 
