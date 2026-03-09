@@ -915,7 +915,7 @@ export default function PresupuestoPage() {
             <form onSubmit={async e => {
               e.preventDefault(); const f = new FormData(e.currentTarget); setSaving(true)
               try {
-                await fetch('/api/presupuesto', { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ tipo: 'expediente-estado', id: expSel.id, estado: f.get('estado'), comentario: f.get('comentario'), importeAdjudicado: f.get('importeAdjudicado') || null, proveedorId: f.get('proveedorId') || null, fechaAdjudicacion: f.get('fechaAdjudicacion') || null }) })
+                await fetch('/api/presupuesto', { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ tipo: 'expediente-estado', id: expSel.id, estado: f.get('estado'), comentario: f.get('comentario'), importeAdjudicado: f.get('importeAdjudicado') || null, proveedorId: f.get('proveedorId') || null, fechaAdjudicacion: f.get('fechaAdjudicacion') || null, retencionCredito: f.get('retencionCredito') === 'on', fechaRC: f.get('fechaRC') || null, documentoRC: f.get('documentoRC') || null }) })
                 setShowCambioEstado(false); setExpSel(null); cargarTodo()
               } catch(e) { console.error(e) } finally { setSaving(false) }
             }} className="p-6 space-y-4">
@@ -932,6 +932,17 @@ export default function PresupuestoPage() {
                 </select>
               </div>
               <div><label className="block text-xs font-medium text-gray-700 mb-1.5">Fecha adjudicación</label><input name="fechaAdjudicacion" type="date" className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none" /></div>
+              <div className="border border-blue-200 bg-blue-50 rounded-xl p-4 space-y-3">
+                <p className="text-xs font-semibold text-blue-800 uppercase tracking-wide">Retención de Crédito (RC)</p>
+                <div className="flex items-center gap-3">
+                  <input type="checkbox" name="retencionCredito" id="rcCheck" defaultChecked={(expSel as any).retencionCredito} className="w-4 h-4 rounded border-gray-300 text-blue-600" />
+                  <label htmlFor="rcCheck" className="text-sm text-gray-700">RC emitida (autoriza notificar al proveedor)</label>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div><label className="block text-xs font-medium text-gray-700 mb-1">Fecha RC</label><input name="fechaRC" type="date" defaultValue={(expSel as any).fechaRC ? new Date((expSel as any).fechaRC).toISOString().split('T')[0] : ''} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none bg-white" /></div>
+                  <div><label className="block text-xs font-medium text-gray-700 mb-1">Nº documento RC</label><input name="documentoRC" defaultValue={(expSel as any).documentoRC || ''} placeholder="Ej: RC-2026-001" className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none bg-white" /></div>
+                </div>
+              </div>
               <div><label className="block text-xs font-medium text-gray-700 mb-1.5">Comentario</label><textarea name="comentario" rows={2} placeholder="Motivo del cambio..." className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none resize-none" /></div>
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => { setShowCambioEstado(false); setExpSel(null) }} className="flex-1 px-4 py-2.5 border border-gray-200 text-gray-700 rounded-xl text-sm font-medium hover:bg-gray-50">Cancelar</button>

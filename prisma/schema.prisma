@@ -523,6 +523,7 @@ model PeticionMaterial {
   createdAt       DateTime            @default(now()) @map("created_at")
   updatedAt       DateTime            @updatedAt @map("updated_at")
   historial       HistorialPeticion[]
+  expedienteCompra  ExpedienteCompra?  @relation("PeticionExpediente")
   notificaciones  Notificacion[]
   aprobadoPor     Usuario?            @relation("PeticionesAprobadas", fields: [aprobadoPorId], references: [id])
   articulo        Articulo?           @relation(fields: [articuloId], references: [id])
@@ -1487,6 +1488,7 @@ model PresupuestoAnual {
   id               String                  @id @default(cuid())
   ejercicio        Int
   denominacion     String
+  tipo             String   @default("ordinario") // ordinario | extraordinario | remanente
   totalAprobado    Decimal                 @db.Decimal(12, 2)
   totalModificado  Decimal?                @db.Decimal(12, 2)
   estado           String                  @default("borrador")
@@ -1556,6 +1558,15 @@ model ExpedienteCompra {
   documentoUrl      String?                @map("documento_url")
   notas             String?
   solicitadoPor     String?                @map("solicitado_por")
+  tipoCompra        String?                @map("tipo_compra") // directa_menor500 | menor3000 | mayor3000
+  retencionCredito  Boolean                @default(false) @map("retencion_credito")
+  fechaRC           DateTime?              @map("fecha_rc")
+  documentoRC       String?                @map("documento_rc")
+  informeTecnico    String?                @map("informe_tecnico")
+  documentoAlbaran  String?                @map("documento_albaran")
+  fechaAlbaran      DateTime?              @map("fecha_albaran")
+  peticionId        String?                @unique @map("peticion_id")
+  peticion          PeticionMaterial?      @relation("PeticionExpediente", fields: [peticionId], references: [id])
   lineas            LineaExpediente[]
   presupuestosProv  PresupuestoProveedor[]
   facturas          FacturaExpediente[]

@@ -162,7 +162,7 @@ export async function PUT(request: NextRequest) {
     if (tipo === 'expediente-estado') {
       const expediente = await prisma.expedienteCompra.findUnique({ where: { id } })
       if (!expediente) return NextResponse.json({ error: 'No encontrado' }, { status: 404 })
-      const result = await prisma.expedienteCompra.update({ where: { id }, data: { estado: data.estado, ...(data.importeAdjudicado ? { importeAdjudicado: parseFloat(data.importeAdjudicado) } : {}), ...(data.proveedorId ? { proveedorId: data.proveedorId } : {}), ...(data.fechaAdjudicacion ? { fechaAdjudicacion: new Date(data.fechaAdjudicacion) } : {}), notas: data.notas || expediente.notas } })
+      const result = await prisma.expedienteCompra.update({ where: { id }, data: { estado: data.estado, ...(data.importeAdjudicado ? { importeAdjudicado: parseFloat(data.importeAdjudicado) } : {}), ...(data.proveedorId ? { proveedorId: data.proveedorId } : {}), ...(data.fechaAdjudicacion ? { fechaAdjudicacion: new Date(data.fechaAdjudicacion) } : {}), notas: data.notas || expediente.notas, ...(data.retencionCredito !== undefined ? { retencionCredito: data.retencionCredito } : {}), ...(data.fechaRC ? { fechaRC: new Date(data.fechaRC) } : {}), ...(data.documentoRC ? { documentoRC: data.documentoRC } : {}) } })
       await prisma.historialExpediente.create({ data: { expedienteId: id, estadoAnterior: expediente.estado, estadoNuevo: data.estado, comentario: data.comentario || null, usuarioId, usuarioNombre } })
       await registrarAudit({ accion: 'UPDATE', entidad: 'ExpedienteCompra', entidadId: id, descripcion: `Expediente ${expediente.numero} -> ${data.estado}`, usuarioId, usuarioNombre, modulo: 'Presupuesto' })
       return NextResponse.json({ success: true, expediente: result })
