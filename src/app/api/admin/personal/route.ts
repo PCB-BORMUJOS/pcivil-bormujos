@@ -272,6 +272,25 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ success: true, usuario })
     }
 
+    // Acción: actualizar permisosExtra individuales
+    if (body.permisosExtra !== undefined && !accion) {
+      const usuario = await prisma.usuario.update({
+        where: { id },
+        data: { permisosExtra: body.permisosExtra }
+      })
+      const { usuarioId, usuarioNombre } = getUsuarioAudit(session)
+      await registrarAudit({
+        accion: 'UPDATE',
+        entidad: 'Usuario',
+        entidadId: id,
+        descripcion: `Permisos adicionales actualizados para ${usuarioExistente.nombre} ${usuarioExistente.apellidos}: [${body.permisosExtra.join(', ')}]`,
+        usuarioId,
+        usuarioNombre,
+        modulo: 'Administración',
+        datosNuevos: { permisosExtra: body.permisosExtra }
+      })
+      return NextResponse.json({ success: true })
+    }
     return NextResponse.json({ error: 'Acción no válida' }, { status: 400 })
   } catch (error: any) {
     console.error('Error al actualizar voluntario:', error)

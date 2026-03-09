@@ -44,10 +44,11 @@ export const authOptions: AuthOptions = {
           rol: usuario.rol.nombre,
           rolId: usuario.rolId,
           permisos: usuario.rol.permisos,
+          permisosExtraData: usuario.permisosExtra ?? [],
           servicioId: usuario.servicioId,
           numeroVoluntario: usuario.numeroVoluntario,
           ip
-        }
+        } as any
       }
     })
   ],
@@ -70,6 +71,7 @@ export const authOptions: AuthOptions = {
         token.apellidos = (user as any).apellidos
         token.rol = (user as any).rol
         token.rolId = (user as any).rolId
+        ;(token as any).permisosExtra = (user as any).permisosExtraData ?? []
         token.permisos = (user as any).permisos
         token.servicioId = (user as any).servicioId
         token.numeroVoluntario = (user as any).numeroVoluntario
@@ -84,6 +86,7 @@ export const authOptions: AuthOptions = {
         (session.user as any).apellidos = token.apellidos as string
         (session.user as any).rol = token.rol as string
         (session.user as any).rolId = token.rolId as string
+        (session.user as any).permisosExtra = (token as any).permisosExtra ?? [];
         (session.user as any).permisos = token.permisos as any
         (session.user as any).servicioId = token.servicioId as string
         (session.user as any).numeroVoluntario = token.numeroVoluntario as string

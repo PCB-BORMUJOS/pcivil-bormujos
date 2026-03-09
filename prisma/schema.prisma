@@ -24,6 +24,7 @@ model Usuario {
   experiencia            String                @default("MEDIA")
   nivelCompromiso        String                @default("MEDIO") @map("nivel_compromiso")
   activo                 Boolean               @default(true)
+  permisosExtra          Json                  @default("[]") @map("permisos_extra")
   rolId                  String                @map("rol_id")
   servicioId             String                @map("servicio_id")
   createdAt              DateTime              @default(now()) @map("created_at")

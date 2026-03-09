@@ -19,6 +19,7 @@ interface Usuario {
   esJefeServicio?: boolean;
   experiencia?: string;
   nivelCompromiso?: string;
+  permisosExtra?: string[];
   rol: {
     id: string;
     nombre: string;
@@ -56,6 +57,9 @@ export default function ConfiguracionPage() {
   // Modal states
   const [showModal, setShowModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showPermisosModal, setShowPermisosModal] = useState(false);
+  const [permisosUser, setPermisosUser] = useState<Usuario | null>(null);
+  const [savingPermisos, setSavingPermisos] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [editingUser, setEditingUser] = useState<Usuario | null>(null);
 
@@ -579,6 +583,13 @@ export default function ConfiguracionPage() {
                           <Edit size={18} />
                         </button>
                         <button
+                          onClick={() => { setPermisosUser(usuario); setShowPermisosModal(true); }}
+                          className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                          title="Gestionar permisos"
+                        >
+                          <Shield size={18} />
+                        </button>
+                        <button
                           onClick={() => toggleUsuarioActivo(usuario.id, usuario.activo)}
                           className={`text-xs px-3 py-1 rounded-lg font-bold ${usuario.activo ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'bg-green-100 text-green-700 hover:bg-green-200'}`}
                         >
@@ -1032,6 +1043,78 @@ export default function ConfiguracionPage() {
       )}
 
       {/* Modal de edición de contraseña */}
+
+      {/* MODAL PERMISOS ADICIONALES */}
+      {showPermisosModal && permisosUser && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full">
+            <div className="p-6 border-b flex justify-between items-center">
+              <div>
+                <h3 className="text-xl font-bold text-slate-800">Permisos adicionales</h3>
+                <p className="text-sm text-slate-500 mt-1">{permisosUser.nombre} {permisosUser.apellidos} — <span className="font-semibold">{permisosUser.rol.nombre}</span></p>
+              </div>
+              <button onClick={() => setShowPermisosModal(false)} className="text-slate-400 hover:text-slate-600"><X size={24} /></button>
+            </div>
+            <div className="p-6 space-y-4">
+              <p className="text-xs text-slate-500 bg-amber-50 border border-amber-200 rounded-lg p-3">Los permisos adicionales se suman a los del rol. Solo superadmin puede concederlos. Quedan registrados en trazabilidad.</p>
+              {[
+                { key: 'inventario.crear',    label: 'Crear artículos en inventario' },
+                { key: 'inventario.editar',   label: 'Editar artículos en inventario' },
+                { key: 'inventario.eliminar', label: 'Eliminar artículos' },
+                { key: 'peticion.aprobar',    label: 'Aprobar peticiones de material' },
+                { key: 'vehiculos.editar',    label: 'Editar vehículos y documentación' },
+                { key: 'partes.crear',        label: 'Crear partes de servicio' },
+                { key: 'partes.editar',       label: 'Editar partes de servicio' },
+              ].map(({ key, label }) => {
+                const activo = (permisosUser.permisosExtra ?? []).includes(key)
+                return (
+                  <label key={key} className="flex items-center gap-3 cursor-pointer group">
+                    <input
+                      type="checkbox"
+                      checked={activo}
+                      onChange={async () => {
+                        const actuales = permisosUser.permisosExtra ?? []
+                        const nuevos = activo ? actuales.filter(p => p !== key) : [...actuales, key]
+                        setPermisosUser({ ...permisosUser, permisosExtra: nuevos })
+                      }}
+                      className="w-4 h-4 rounded border-gray-300 text-indigo-600"
+                    />
+                    <span className="text-sm text-slate-700 group-hover:text-slate-900">{label}</span>
+                    {activo && <span className="text-xs text-indigo-600 font-semibold ml-auto">Activo</span>}
+                  </label>
+                )
+              })}
+            </div>
+            <div className="flex justify-end gap-3 p-6 border-t">
+              <button onClick={() => setShowPermisosModal(false)} className="px-5 py-2.5 border border-slate-200 rounded-lg text-sm font-bold text-slate-600 hover:bg-slate-50">Cancelar</button>
+              <button
+                disabled={savingPermisos}
+                onClick={async () => {
+                  setSavingPermisos(true)
+                  try {
+                    const res = await fetch('/api/admin/personal', {
+                      method: 'PUT',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ id: permisosUser.id, permisosExtra: permisosUser.permisosExtra ?? [] })
+                    })
+                    if (res.ok) {
+                      setShowPermisosModal(false)
+                      fetchData()
+                    } else {
+                      alert('Error al guardar permisos')
+                    }
+                  } finally {
+                    setSavingPermisos(false)
+                  }
+                }}
+                className="px-5 py-2.5 bg-indigo-600 text-white rounded-lg text-sm font-bold hover:bg-indigo-700 disabled:opacity-50 flex items-center gap-2"
+              >
+                <Save size={16} />{savingPermisos ? 'Guardando...' : 'Guardar permisos'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {showEditModal && editingUser && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-xl max-w-md w-full">
