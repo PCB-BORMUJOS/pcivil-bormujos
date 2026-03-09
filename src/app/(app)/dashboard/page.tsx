@@ -544,6 +544,8 @@ export default function DashboardPage() {
   const [voluntarios, setVoluntarios] = useState<any[]>([]);
   const [todosVoluntarios, setTodosVoluntarios] = useState<any[]>([]);  // lista completa, nunca sobreescrita
   const [enTurno, setEnTurno] = useState<any[]>([]);
+  const [todosHoy, setTodosHoy] = useState<any[]>([]);
+  const [turnoActivo, setTurnoActivo] = useState<string | null>(null);
   const [stats, setStats] = useState({ total: 0, responsablesTurno: 0, conCarnet: 0, experienciaAlta: 0 });
   const [vehiculos, setVehiculos] = useState<any[]>([]);
   const [statsVeh, setStatsVeh] = useState({ total: 0, disponibles: 0, enServicio: 0, mantenimiento: 0 });
@@ -609,6 +611,8 @@ export default function DashboardPage() {
         setVoluntarios(volData.voluntarios || []);
         setTodosVoluntarios(volData.voluntarios || []);  // guardar copia completa para el selector
         setEnTurno(volData.enTurno || []);
+        setTodosHoy(volData.todosHoy || []);
+        setTurnoActivo(volData.turnoActivo || null);
         setStats(volData.stats || { total: 0, responsablesTurno: 0, conCarnet: 0, experienciaAlta: 0 });
         setVehiculos(vehData.vehiculos || []);
         setStatsVeh(vehData.stats || { total: 0, disponibles: 0, enServicio: 0, mantenimiento: 0 });
@@ -747,6 +751,8 @@ export default function DashboardPage() {
       if (res.ok) {
         setVoluntarios(data.voluntarios || []);
         setEnTurno(data.enTurno || []);
+        setTodosHoy(data.todosHoy || []);
+        setTurnoActivo(data.turnoActivo || null);
         setStats(data.stats || { total: 0, responsablesTurno: 0, conCarnet: 0, experienciaAlta: 0 });
         setTurnoSeleccionado({ fecha, turno, diaSemanaNombre: data.diaSemanaNombre });
         // NO abrimos showPersonnel — ya queda integrado en showGuardiaDetail
@@ -1393,7 +1399,7 @@ export default function DashboardPage() {
                     <p className="text-xs text-slate-400 italic pl-4">Sin disponibilidad confirmada</p>
                   ) : (
                     <div className="space-y-1.5">
-                      {enTurno.map((v: any) => (
+                      {todosHoy.map((v: any) => (
                         <div key={v.id} className="flex items-center gap-3 p-2 bg-green-50 rounded-lg border border-green-100">
                           <div className="w-8 h-8 rounded-full bg-green-600 text-white flex items-center justify-center font-bold text-xs flex-shrink-0">{v.nombre?.charAt(0)}{v.apellidos?.charAt(0)}</div>
                           <div className="flex-1 min-w-0">
@@ -1444,7 +1450,7 @@ export default function DashboardPage() {
             <div>
               <h4 className="text-xs font-bold text-slate-500 uppercase mb-2 flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-green-500 inline-block"></span>
-                En Turno Hoy ({enTurno.length})
+                Personal Hoy
               </h4>
               {enTurno.length === 0 ? (
                 <p className="text-xs text-slate-400 italic pl-4">Sin guardias programadas hoy</p>

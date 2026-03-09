@@ -60,16 +60,34 @@ export async function GET() {
       orderBy: { turno: 'asc' }
     })
 
-    // Voluntarios en turno hoy (únicos, puede tener varios turnos)
+    // Determinar turno activo según hora actual (España UTC+1)
+    const ahora = new Date()
+    const horaActual = ahora.getUTCHours() + 1 // UTC+1 España
+    // Mañana: 09:00-14:30, Tarde: 17:00-22:00
+    const turnoActivo = horaActual >= 9 && horaActual < 15 ? 'mañana'
+      : horaActual >= 17 && horaActual < 22 ? 'tarde'
+      : null
+    // enTurno = solo personas en el turno activo ahora mismo
     const enTurnoMap = new Map()
     guardiasHoy.forEach(g => {
-      if (!enTurnoMap.has(g.usuarioId)) {
-        enTurnoMap.set(g.usuarioId, { ...g.usuario, turno: g.turno, rol: g.rol })
+      if (turnoActivo && g.turno === turnoActivo) {
+        if (!enTurnoMap.has(g.usuarioId)) {
+          enTurnoMap.set(g.usuarioId, { ...g.usuario, turno: g.turno, rol: g.rol })
+        }
       }
     })
+    // Si no hay turno activo, devolver array vacío
     const enTurno = Array.from(enTurnoMap.values())
+    // Todos los de hoy para el modal detallado
+    const todosHoyMap = new Map()
+    guardiasHoy.forEach(g => {
+      if (!todosHoyMap.has(g.usuarioId + g.turno)) {
+        todosHoyMap.set(g.usuarioId + g.turno, { ...g.usuario, turno: g.turno, rol: g.rol })
+      }
+    })
+    const todosHoy = Array.from(todosHoyMap.values())
 
-    return NextResponse.json({ voluntarios, stats, enTurno })
+    return NextResponse.json({ voluntarios, stats, enTurno, todosHoy, turnoActivo })
   } catch (error) {
     console.error('Error fetching voluntarios:', error)
     return NextResponse.json({ error: 'Error al obtener voluntarios' }, { status: 500 })
