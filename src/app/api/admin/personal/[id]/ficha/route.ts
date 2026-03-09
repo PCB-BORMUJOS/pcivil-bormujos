@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { authOptions } from '@/lib/auth'
 import { getServerSession } from 'next-auth'
+import { registrarAudit, getUsuarioAudit } from '@/lib/audit'
 import { prisma } from '@/lib/db'
 
 export async function GET(
@@ -114,6 +115,8 @@ export async function POST(
       })
     }
 
+    const { usuarioId, usuarioNombre } = getUsuarioAudit(session)
+    await registrarAudit({ accion: 'UPDATE', entidad: 'FichaVoluntario', entidadId: ficha.id, descripcion: 'Ficha de voluntario actualizada', usuarioId, usuarioNombre, modulo: 'Administracion' })
     return NextResponse.json({ success: true, ficha })
   } catch (error) {
     console.error('Error al guardar ficha:', error)

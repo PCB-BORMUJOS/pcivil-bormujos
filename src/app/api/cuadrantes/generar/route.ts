@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
+import { registrarAudit, getUsuarioAudit } from '@/lib/audit'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 
@@ -8,6 +9,8 @@ export async function POST(request: NextRequest) {
     try {
         const session = await getServerSession()
         if (!session?.user?.email) {
+            const { usuarioId, usuarioNombre } = getUsuarioAudit(session)
+            await registrarAudit({ accion: 'CREATE', entidad: 'Cuadrante', descripcion: 'Cuadrante generado automáticamente', usuarioId, usuarioNombre, modulo: 'Cuadrantes' })
             return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
         }
 

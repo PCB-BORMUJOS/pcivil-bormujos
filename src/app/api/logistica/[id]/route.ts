@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
+import { registrarAudit, getUsuarioAudit } from '@/lib/audit'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 
@@ -80,6 +81,8 @@ export async function PUT(
       }
     })
 
+    const { usuarioId, usuarioNombre } = getUsuarioAudit(session)
+    await registrarAudit({ accion: 'UPDATE', entidad: 'Articulo', entidadId: articulo.id, descripcion: `Artículo actualizado: ${articulo.nombre}`, usuarioId, usuarioNombre, modulo: 'Logistica' })
     return NextResponse.json({ success: true, articulo })
   } catch (error) {
     console.error('Error en PUT /api/logistica/[id]:', error)
@@ -108,6 +111,8 @@ export async function DELETE(
       data: { activo: false }
     })
 
+    const { usuarioId, usuarioNombre } = getUsuarioAudit(session)
+    await registrarAudit({ accion: 'DELETE', entidad: 'Articulo', descripcion: 'Artículo eliminado del inventario', usuarioId, usuarioNombre, modulo: 'Logistica' })
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('Error en DELETE /api/logistica/[id]:', error)

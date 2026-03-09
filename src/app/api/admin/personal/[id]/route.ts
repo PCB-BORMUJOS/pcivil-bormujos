@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
+import { registrarAudit, getUsuarioAudit } from '@/lib/audit'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 
@@ -73,6 +74,8 @@ export async function PUT(
         where: { id: params.id },
         data: dataToUpdate
       })
+      const { usuarioId, usuarioNombre } = getUsuarioAudit(session)
+      await registrarAudit({ accion: 'UPDATE', entidad: 'Usuario', entidadId: usuario.id, descripcion: `Usuario actualizado: ${usuario.nombre} ${usuario.apellidos}`, usuarioId, usuarioNombre, modulo: 'Administracion', datosNuevos: { nombre: usuario.nombre, email: usuario.email } })
       return NextResponse.json({ success: true, usuario })
     }
 

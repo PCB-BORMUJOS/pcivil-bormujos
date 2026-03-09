@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
+import { registrarAudit, getUsuarioAudit } from '@/lib/audit'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 
@@ -200,7 +201,9 @@ export async function DELETE(request: NextRequest) {
     if (!id) return NextResponse.json({ error: 'ID requerido' }, { status: 400 })
     if (tipo === 'espacio') {
       await prisma.espacioAcogida.delete({ where: { id } })
-      return NextResponse.json({ ok: true })
+      const { usuarioId, usuarioNombre } = getUsuarioAudit(session)
+    await registrarAudit({ accion: 'UPDATE', entidad: 'AccionSocial', descripcion: 'Registro acción social actualizado', usuarioId, usuarioNombre, modulo: 'AccionSocial' })
+    return NextResponse.json({ ok: true })
     }
     if (tipo === 'contacto') {
       await prisma.contactoDirectorio.update({ where: { id }, data: { activo: false } })

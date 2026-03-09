@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
+import { registrarAudit, getUsuarioAudit } from '@/lib/audit'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { notificarCambioPeticion } from '@/lib/notificaciones'
@@ -234,6 +235,8 @@ export async function PUT(
       console.error('Error enviando notificación:', notifError)
     }
 
+    const { usuarioId, usuarioNombre } = getUsuarioAudit(session)
+    await registrarAudit({ accion: 'UPDATE', entidad: 'PeticionMaterial', entidadId: peticionActualizada.id, descripcion: `Petición ${peticionActualizada.numero} → estado: ${peticionActualizada.estado}`, usuarioId, usuarioNombre, modulo: 'Logistica', datosNuevos: { estado: peticionActualizada.estado } })
     return NextResponse.json({ success: true, peticion: peticionActualizada })
   } catch (error) {
     console.error('Error en PUT /api/logistica/peticiones/[id]:', error)

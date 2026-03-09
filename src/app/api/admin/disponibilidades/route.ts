@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
+import { registrarAudit, getUsuarioAudit } from '@/lib/audit'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 
@@ -94,6 +95,8 @@ export async function PUT(request: NextRequest) {
       }
     })
 
+    const { usuarioId, usuarioNombre } = getUsuarioAudit(session)
+    await registrarAudit({ accion: 'UPDATE', entidad: 'Disponibilidad', entidadId: disponibilidad.id, descripcion: 'Disponibilidad actualizada por admin', usuarioId, usuarioNombre, modulo: 'Administracion' })
     return NextResponse.json({ success: true, disponibilidad })
   } catch (error) {
     console.error('Error al actualizar disponibilidad:', error)

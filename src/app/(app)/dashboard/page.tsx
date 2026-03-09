@@ -611,7 +611,7 @@ export default function DashboardPage() {
         setVoluntarios(volData.voluntarios || []);
         setTodosVoluntarios(volData.voluntarios || []);  // guardar copia completa para el selector
         setEnTurno(volData.enTurno || []);
-        setTodosHoy(volData.todosHoy || []);
+        setTodosHoy(Array.isArray(volData.todosHoy) ? volData.todosHoy : []);
         setTurnoActivo(volData.turnoActivo || null);
         setStats(volData.stats || { total: 0, responsablesTurno: 0, conCarnet: 0, experienciaAlta: 0 });
         setVehiculos(vehData.vehiculos || []);
@@ -751,7 +751,7 @@ export default function DashboardPage() {
       if (res.ok) {
         setVoluntarios(data.voluntarios || []);
         setEnTurno(data.enTurno || []);
-        setTodosHoy(data.todosHoy || []);
+        setTodosHoy(Array.isArray(data.todosHoy) ? data.todosHoy : []);
         setTurnoActivo(data.turnoActivo || null);
         setStats(data.stats || { total: 0, responsablesTurno: 0, conCarnet: 0, experienciaAlta: 0 });
         setTurnoSeleccionado({ fecha, turno, diaSemanaNombre: data.diaSemanaNombre });
@@ -1452,11 +1452,11 @@ export default function DashboardPage() {
                 <span className="w-2 h-2 rounded-full bg-green-500 inline-block"></span>
                 Personal Hoy
               </h4>
-              {enTurno.length === 0 ? (
+              {todosHoy.length === 0 ? (
                 <p className="text-xs text-slate-400 italic pl-4">Sin guardias programadas hoy</p>
               ) : (
                 <div className="space-y-1.5">
-                  {enTurno.map((v: any) => (
+                  {todosHoy.map((v: any) => (
                     <div key={v.id} className="flex items-center gap-3 p-2 bg-green-50 rounded-lg border border-green-100">
                       <div className="w-9 h-9 rounded-full bg-green-600 text-white flex items-center justify-center font-bold text-sm">{v.nombre?.charAt(0)}{v.apellidos?.charAt(0)}</div>
                       <div className="flex-1 min-w-0">
