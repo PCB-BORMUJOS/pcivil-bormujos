@@ -473,8 +473,9 @@ export default function CuadrantesPage() {
                               <div key={uid} onClick={() => toggleAsignacion(sk, uid)} className="flex items-center gap-1 px-1.5 py-1 rounded text-[10px] bg-green-100 border border-green-300 text-green-900 cursor-pointer">
                                 <span className="w-3 h-3 rounded border bg-green-500 border-green-500 text-white flex items-center justify-center flex-shrink-0" style={{ fontSize: '7px' }}>✓</span>
                                 <span className="font-bold truncate flex-1">{g.usuario.numeroVoluntario || g.usuario.nombre}</span>
-                                {g.usuario.responsableTurno && <Shield size={8} className="text-green-700" />}
-                                {g.usuario.carnetConducir && <Car size={8} className="text-green-700" />}
+                                {g.rol === 'Responsable' && <Shield size={8} className="text-indigo-600" />}
+                                {g.rol === 'Cecopal' && <span className="text-[7px] font-bold text-orange-600">CEP</span>}
+                                {g.usuario.carnetConducir && g.rol !== 'Responsable' && g.rol !== 'Cecopal' && <Car size={8} className="text-green-700" />}
                                 {!g.usuario.esOperativo && <span className="text-[7px] font-bold text-slate-400">ADM</span>}
                               </div>
                             )
