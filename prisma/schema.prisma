@@ -1482,3 +1482,152 @@ model RegistroFluidoVehiculo {
   vehiculo      Vehiculo @relation(fields: [vehiculoId], references: [id])
   @@map("registros_fluido_vehiculo")
 }
+
+model PresupuestoAnual {
+  id               String                  @id @default(cuid())
+  ejercicio        Int
+  denominacion     String
+  totalAprobado    Decimal                 @db.Decimal(12, 2)
+  totalModificado  Decimal?                @db.Decimal(12, 2)
+  estado           String                  @default("borrador")
+  notas            String?
+  partidas         PartidaPresupuestaria[]
+  createdAt        DateTime                @default(now()) @map("created_at")
+  updatedAt        DateTime                @updatedAt @map("updated_at")
+  @@map("presupuestos_anuales")
+}
+
+model PartidaPresupuestaria {
+  id                  String           @id @default(cuid())
+  presupuestoId       String           @map("presupuesto_id")
+  presupuesto         PresupuestoAnual @relation(fields: [presupuestoId], references: [id])
+  codigo              String
+  denominacion        String
+  capitulo            String
+  importeAsignado     Decimal          @db.Decimal(12, 2)
+  importeModificado   Decimal?         @db.Decimal(12, 2)
+  importeComprometido Decimal          @default(0) @db.Decimal(12, 2)
+  importeEjecutado    Decimal          @default(0) @db.Decimal(12, 2)
+  expedientes         ExpedienteCompra[]
+  createdAt           DateTime         @default(now()) @map("created_at")
+  updatedAt           DateTime         @updatedAt @map("updated_at")
+  @@map("partidas_presupuestarias")
+}
+
+model Proveedor {
+  id            String                 @id @default(cuid())
+  nombre        String
+  cif           String?
+  direccion     String?
+  telefono      String?
+  email         String?
+  web           String?
+  contacto      String?
+  activo        Boolean                @default(true)
+  notas         String?
+  expedientes   ExpedienteCompra[]
+  presupuestos  PresupuestoProveedor[]
+  createdAt     DateTime               @default(now()) @map("created_at")
+  updatedAt     DateTime               @updatedAt @map("updated_at")
+  @@map("proveedores")
+}
+
+model ExpedienteCompra {
+  id                String                 @id @default(cuid())
+  numero            String                 @unique
+  ejercicio         Int
+  titulo            String
+  descripcion       String?
+  tipo              String
+  estado            String                 @default("borrador")
+  partidaId         String?                @map("partida_id")
+  partida           PartidaPresupuestaria? @relation(fields: [partidaId], references: [id])
+  proveedorId       String?                @map("proveedor_id")
+  proveedor         Proveedor?             @relation(fields: [proveedorId], references: [id])
+  importeEstimado   Decimal?               @db.Decimal(12, 2)
+  importeAdjudicado Decimal?               @db.Decimal(12, 2)
+  importeFacturado  Decimal                @default(0) @db.Decimal(12, 2)
+  fechaSolicitud    DateTime?              @map("fecha_solicitud")
+  fechaAdjudicacion DateTime?              @map("fecha_adjudicacion")
+  fechaContrato     DateTime?              @map("fecha_contrato")
+  fechaCierre       DateTime?              @map("fecha_cierre")
+  objeto            String?
+  criterios         String?
+  documentoUrl      String?                @map("documento_url")
+  notas             String?
+  solicitadoPor     String?                @map("solicitado_por")
+  lineas            LineaExpediente[]
+  presupuestosProv  PresupuestoProveedor[]
+  facturas          FacturaExpediente[]
+  historial         HistorialExpediente[]
+  createdAt         DateTime               @default(now()) @map("created_at")
+  updatedAt         DateTime               @updatedAt @map("updated_at")
+  @@map("expedientes_compra")
+}
+
+model LineaExpediente {
+  id             String           @id @default(cuid())
+  expedienteId   String           @map("expediente_id")
+  expediente     ExpedienteCompra @relation(fields: [expedienteId], references: [id], onDelete: Cascade)
+  descripcion    String
+  cantidad       Decimal          @db.Decimal(10, 3)
+  unidad         String
+  precioUnitario Decimal?         @db.Decimal(10, 4)
+  importeTotal   Decimal?         @db.Decimal(12, 2)
+  iva            Decimal          @default(21) @db.Decimal(5, 2)
+  createdAt      DateTime         @default(now()) @map("created_at")
+  @@map("lineas_expediente")
+}
+
+model PresupuestoProveedor {
+  id            String           @id @default(cuid())
+  expedienteId  String           @map("expediente_id")
+  expediente    ExpedienteCompra @relation(fields: [expedienteId], references: [id], onDelete: Cascade)
+  proveedorId   String           @map("proveedor_id")
+  proveedor     Proveedor        @relation(fields: [proveedorId], references: [id])
+  importe       Decimal          @db.Decimal(12, 2)
+  iva           Decimal          @default(21) @db.Decimal(5, 2)
+  importeTotal  Decimal          @db.Decimal(12, 2)
+  estado        String           @default("pendiente")
+  fechaEmision  DateTime?        @map("fecha_emision")
+  fechaValidez  DateTime?        @map("fecha_validez")
+  documentoUrl  String?          @map("documento_url")
+  notas         String?
+  createdAt     DateTime         @default(now()) @map("created_at")
+  updatedAt     DateTime         @updatedAt @map("updated_at")
+  @@map("presupuestos_proveedor")
+}
+
+model FacturaExpediente {
+  id             String           @id @default(cuid())
+  expedienteId   String           @map("expediente_id")
+  expediente     ExpedienteCompra @relation(fields: [expedienteId], references: [id], onDelete: Cascade)
+  numeroFactura  String           @map("numero_factura")
+  proveedor      String
+  fechaFactura   DateTime         @db.Date @map("fecha_factura")
+  fechaRecepcion DateTime?        @map("fecha_recepcion")
+  importeBase    Decimal          @db.Decimal(12, 2)
+  iva            Decimal          @default(21) @db.Decimal(5, 2)
+  importeIva     Decimal          @db.Decimal(12, 2)
+  importeTotal   Decimal          @db.Decimal(12, 2)
+  estado         String           @default("pendiente")
+  fechaPago      DateTime?        @map("fecha_pago")
+  documentoUrl   String?          @map("documento_url")
+  notas          String?
+  createdAt      DateTime         @default(now()) @map("created_at")
+  updatedAt      DateTime         @updatedAt @map("updated_at")
+  @@map("facturas_expediente")
+}
+
+model HistorialExpediente {
+  id             String           @id @default(cuid())
+  expedienteId   String           @map("expediente_id")
+  expediente     ExpedienteCompra @relation(fields: [expedienteId], references: [id], onDelete: Cascade)
+  estadoAnterior String?          @map("estado_anterior")
+  estadoNuevo    String           @map("estado_nuevo")
+  comentario     String?
+  usuarioId      String?          @map("usuario_id")
+  usuarioNombre  String?          @map("usuario_nombre")
+  createdAt      DateTime         @default(now()) @map("created_at")
+  @@map("historial_expedientes")
+}
