@@ -16,6 +16,7 @@ export const authOptions: AuthOptions = {
         credentials: Record<"email" | "password", string> | undefined,
         _req: any
       ): Promise<User | null> {
+        const ip = _req?.headers?.["x-forwarded-for"]?.split(",")[0]?.trim() || _req?.headers?.["x-real-ip"] || null
         if (!credentials?.email || !credentials?.password) {
           throw new Error('Email y contraseña requeridos')
         }
@@ -44,7 +45,8 @@ export const authOptions: AuthOptions = {
           rolId: usuario.rolId,
           permisos: usuario.rol.permisos,
           servicioId: usuario.servicioId,
-          numeroVoluntario: usuario.numeroVoluntario
+          numeroVoluntario: usuario.numeroVoluntario,
+          ip
         }
       }
     })
@@ -61,6 +63,7 @@ export const authOptions: AuthOptions = {
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
+        if ((user as any).ip) token.ip = (user as any).ip
         token.id = user.id
         token.email = user.email
         token.nombre = (user as any).nombre
@@ -100,7 +103,7 @@ export const authOptions: AuthOptions = {
             usuarioId: user.id,
             usuarioNombre: user.name || user.email || 'Desconocido',
             modulo: 'Autenticación',
-            ip: null,
+            ip: (user as any).ip || null,
             userAgent: null,
           }
         })
@@ -120,7 +123,7 @@ export const authOptions: AuthOptions = {
               usuarioId: token.id,
               usuarioNombre: token.name || token.email || 'Desconocido',
               modulo: 'Autenticación',
-              ip: null,
+              ip: (token as any).ip || null,
               userAgent: null,
             }
           })
