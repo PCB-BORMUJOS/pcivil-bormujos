@@ -1273,7 +1273,7 @@ export default function DashboardPage() {
             <div className={`p-3 rounded-lg flex items-center gap-3 ${showGuardiaDetail.turno === 'mañana' ? 'bg-green-50 border border-green-200' : 'bg-blue-50 border border-blue-200'}`}>
               <div className={`w-3 h-3 rounded-full flex-shrink-0 ${showGuardiaDetail.turno === 'mañana' ? 'bg-green-500' : 'bg-blue-500'}`} />
               <span className="font-bold text-slate-700">
-                {showGuardiaDetail.turno === 'mañana' ? '08:00 – 15:00' : '15:00 – 22:00'}
+                {showGuardiaDetail.turno === 'mañana' ? '09:00 – 14:30' : '17:00 – 22:00'}
               </span>
             </div>
 
@@ -1297,7 +1297,8 @@ export default function DashboardPage() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
                             <span className="font-bold text-slate-800 text-sm">{g.usuario?.numeroVoluntario}</span>
-                            {i === 0 && <span className="text-[10px] px-1.5 py-0.5 rounded bg-orange-100 text-orange-700 font-bold">RESPONSABLE</span>}
+                            {g.rol === 'Responsable' && <span className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700 font-bold">RESPONSABLE</span>}
+                            {g.rol === 'Cecopal' && <span className="text-[10px] px-1.5 py-0.5 rounded bg-orange-100 text-orange-700 font-bold">CECOPAL</span>}
                           </div>
                           <p className="text-xs text-slate-600 truncate">{g.usuario?.nombre} {g.usuario?.apellidos}</p>
                         </div>
