@@ -178,6 +178,17 @@ export async function POST(request: NextRequest) {
       console.error('Error enviando notificación:', notifError)
     }
 
+    const { usuarioId, usuarioNombre } = getUsuarioAudit(session)
+    await registrarAudit({
+      accion: 'CREATE',
+      entidad: 'PeticionMaterial',
+      entidadId: peticion.id,
+      descripcion: `Petición ${numero}: ${cantidad} ${unidad} de "${nombreArticulo}" (${areaOrigen})`,
+      usuarioId,
+      usuarioNombre,
+      modulo: 'Logistica',
+      datosNuevos: { numero, nombreArticulo, cantidad, unidad, prioridad, areaOrigen }
+    })
     return NextResponse.json({ success: true, peticion })
   } catch (error) {
     console.error('Error en POST /api/logistica/peticiones:', error)
