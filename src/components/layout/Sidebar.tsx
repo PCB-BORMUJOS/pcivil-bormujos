@@ -52,7 +52,7 @@ const navigation: NavItem[] = [
   { name: 'PMA', href: '/pma', icon: AlertTriangle },
   { name: 'Formación', href: '/formacion', icon: GraduationCap },
   { name: 'Acción Social', href: '/accion-social', icon: Users },
-  { name: 'Presupuesto', href: '/presupuesto', icon: Wallet, adminOnly: true },
+  { name: 'Gestión Económica', href: '/presupuesto', icon: Wallet, adminOnly: true },
   { name: 'Configuración', href: '/configuracion', icon: Settings, adminOnly: true },
   {
     name: 'Partes',
