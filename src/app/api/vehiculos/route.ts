@@ -66,6 +66,24 @@ export async function GET(request: NextRequest) {
 
       return NextResponse.json({ mantenimientos })
     }
+    if (tipo === 'repostajes') {
+      const vehiculoId = searchParams.get('vehiculoId')
+      if (!vehiculoId) return NextResponse.json({ error: 'vehiculoId requerido' }, { status: 400 })
+      const repostajes = await prisma.repostajeVehiculo.findMany({
+        where: { vehiculoId },
+        orderBy: { fecha: 'desc' }
+      })
+      return NextResponse.json({ repostajes })
+    }
+    if (tipo === 'fluidos') {
+      const vehiculoId = searchParams.get('vehiculoId')
+      if (!vehiculoId) return NextResponse.json({ error: 'vehiculoId requerido' }, { status: 400 })
+      const registros = await prisma.registroFluidoVehiculo.findMany({
+        where: { vehiculoId },
+        orderBy: { fecha: 'desc' }
+      })
+      return NextResponse.json({ registros })
+    }
 
     // GET Lista de vehículos (default)
     const vehiculos = await prisma.vehiculo.findMany({
@@ -207,6 +225,47 @@ export async function POST(request: NextRequest) {
         modulo: 'Vehículos',
       })
       return NextResponse.json({ mantenimiento })
+    }
+    if (tipo === 'repostaje') {
+      const body = await request.clone().json()
+      const { vehiculoId, fecha, litros, precioLitro, costeTotal, kilometraje, tipoCarburante, gasolinera, observaciones } = body
+      if (!vehiculoId || !fecha || !litros) {
+        return NextResponse.json({ error: 'vehiculoId, fecha y litros requeridos' }, { status: 400 })
+      }
+      const repostaje = await prisma.repostajeVehiculo.create({
+        data: {
+          vehiculoId,
+          fecha: new Date(fecha),
+          litros: parseFloat(litros),
+          precioLitro: precioLitro ? parseFloat(precioLitro) : null,
+          costeTotal: costeTotal ? parseFloat(costeTotal) : null,
+          kilometraje: kilometraje ? parseInt(kilometraje) : null,
+          tipoCarburante: tipoCarburante || null,
+          gasolinera: gasolinera || null,
+          observaciones: observaciones || null,
+        }
+      })
+      return NextResponse.json({ repostaje })
+    }
+    if (tipo === 'fluido') {
+      const body = await request.clone().json()
+      const { vehiculoId, fecha, tipoFluido, accion, cantidad, unidad, kilometraje, observaciones } = body
+      if (!vehiculoId || !fecha || !tipoFluido || !accion) {
+        return NextResponse.json({ error: 'vehiculoId, fecha, tipoFluido y accion requeridos' }, { status: 400 })
+      }
+      const registro = await prisma.registroFluidoVehiculo.create({
+        data: {
+          vehiculoId,
+          fecha: new Date(fecha),
+          tipoFluido,
+          accion,
+          cantidad: cantidad ? parseFloat(cantidad) : null,
+          unidad: unidad || null,
+          kilometraje: kilometraje ? parseInt(kilometraje) : null,
+          observaciones: observaciones || null,
+        }
+      })
+      return NextResponse.json({ registro })
     }
 
     return NextResponse.json({ error: 'Tipo de operación no válido' }, { status: 400 })

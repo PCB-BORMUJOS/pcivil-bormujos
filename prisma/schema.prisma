@@ -282,6 +282,8 @@ model Vehiculo {
   asignaciones VehiculoAsignacion[]
   documentos      DocumentoVehiculo[]
   mantenimientos  MantenimientoVehiculo[]
+  repostajes      RepostajeVehiculo[]
+  fluidos         RegistroFluidoVehiculo[]
 
   @@map("vehiculos")
 }
@@ -1448,4 +1450,35 @@ model CasoViogen {
   registradoPorId    String?
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
+}
+
+model RepostajeVehiculo {
+  id            String   @id @default(cuid())
+  vehiculoId    String   @map("vehiculo_id")
+  fecha         DateTime @db.Date
+  litros        Decimal  @db.Decimal(8, 2)
+  precioLitro   Decimal? @map("precio_litro") @db.Decimal(6, 4)
+  costeTotal    Decimal? @map("coste_total") @db.Decimal(8, 2)
+  kilometraje   Int?
+  tipoCarburante String? @map("tipo_carburante")
+  gasolinera    String?
+  observaciones String?
+  createdAt     DateTime @default(now()) @map("created_at")
+  vehiculo      Vehiculo @relation(fields: [vehiculoId], references: [id])
+  @@map("repostajes_vehiculo")
+}
+
+model RegistroFluidoVehiculo {
+  id            String   @id @default(cuid())
+  vehiculoId    String   @map("vehiculo_id")
+  fecha         DateTime @db.Date
+  tipoFluido    String   @map("tipo_fluido")
+  accion        String
+  cantidad      Decimal? @db.Decimal(8, 2)
+  unidad        String?
+  kilometraje   Int?
+  observaciones String?
+  createdAt     DateTime @default(now()) @map("created_at")
+  vehiculo      Vehiculo @relation(fields: [vehiculoId], references: [id])
+  @@map("registros_fluido_vehiculo")
 }
