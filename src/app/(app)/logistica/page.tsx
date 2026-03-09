@@ -1,6 +1,7 @@
 'use client';
 import { useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
+import { usePermisos } from '@/lib/permisos';
 
 import React, { useState, useEffect } from 'react';
 import {
@@ -210,7 +211,8 @@ function Modal({ title, children, onClose, size = 'md' }: {
 export default function LogisticaPage() {
   // Estados principales
   const { data: session } = useSession();
-  const isAdmin = session?.user?.rol === 'admin' || session?.user?.rol === 'superadmin' || session?.user?.rol === 'jefe_agrupacion';
+  const { isAdmin, canCreate, canEdit, canDelete, canApprove } = usePermisos();
+  // isAdmin proviene de usePermisos()
   const searchParams = useSearchParams();
   const tabInicial = searchParams.get('tab') as 'stock' | 'peticiones' | 'movimientos' || 'stock';
   const [activeTab, setActiveTab] = useState<'stock' | 'peticiones' | 'movimientos' | 'asignaciones'>(tabInicial);
