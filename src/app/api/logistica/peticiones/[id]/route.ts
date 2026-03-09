@@ -192,6 +192,21 @@ export async function PUT(
       case 'actualizar_docs':
         if (urlRc !== undefined) datosActualizar.urlRc = urlRc;
         if (urlAlbaran !== undefined) datosActualizar.urlAlbaran = urlAlbaran;
+        // Sincronizar con expediente vinculado si existe
+        if (urlRc !== undefined || urlAlbaran !== undefined) {
+          const expVinculado = await prisma.expedienteCompra.findFirst({
+            where: { peticionId: params.id }
+          })
+          if (expVinculado) {
+            await prisma.expedienteCompra.update({
+              where: { id: expVinculado.id },
+              data: {
+                ...(urlRc !== undefined ? { retencionCredito: true, fechaRC: new Date(), documentoRC: urlRc } : {}),
+                ...(urlAlbaran !== undefined ? { documentoAlbaran: urlAlbaran, fechaAlbaran: new Date() } : {})
+              }
+            })
+          }
+        }
         break
 
       default:
