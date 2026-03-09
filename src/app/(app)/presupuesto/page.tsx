@@ -69,6 +69,8 @@ interface Stats {
   totalProveedores: number; totalExpedientes: number
 }
 
+const TIPOS_COMPRA_LABELS: Record<string, string> = { directa_menor500: "Compra directa <500€", menor3000: "Contrato menor 500€-3.000€", mayor3000: "Contrato ≥3.000€ (RC obligatoria)" }
+
 const ESTADOS_EXP: Record<string, { label: string; color: string; icon: any }> = {
   borrador: { label: 'Borrador', color: 'bg-gray-100 text-gray-700 border-gray-200', icon: Circle },
   solicitado: { label: 'Solicitado', color: 'bg-blue-100 text-blue-700 border-blue-200', icon: Clock },
@@ -223,8 +225,8 @@ export default function PresupuestoPage() {
               <Wallet className="w-7 h-7 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Gestión Presupuestaria</h1>
-              <p className="text-gray-500 text-sm">Control económico y contabilidad del servicio</p>
+              <h1 className="text-2xl font-bold text-gray-900">Gestión Económica</h1>
+              <p className="text-gray-500 text-sm">Control económico, expedientes y contratación del servicio</p>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-3">
@@ -743,7 +745,7 @@ export default function PresupuestoPage() {
             <form onSubmit={async e => {
               e.preventDefault(); const f = new FormData(e.currentTarget); setSaving(true)
               try {
-                await fetch('/api/presupuesto', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ tipo: 'expediente', ejercicio, titulo: f.get('titulo'), descripcion: f.get('descripcion'), tipoContrato: f.get('tipo'), partidaId: f.get('partidaId') || null, importeEstimado: f.get('importeEstimado') || null, fechaSolicitud: f.get('fechaSolicitud') || null, objeto: f.get('objeto'), criterios: f.get('criterios'), notas: f.get('notas') }) })
+                await fetch('/api/presupuesto', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ tipo: 'expediente', ejercicio, titulo: f.get('titulo'), descripcion: f.get('descripcion'), tipoContrato: f.get('tipo'), tipoCompra: f.get('tipoCompra'), partidaId: f.get('partidaId') || null, importeEstimado: f.get('importeEstimado') || null, fechaSolicitud: f.get('fechaSolicitud') || null, objeto: f.get('objeto'), criterios: f.get('criterios'), notas: f.get('notas') }) })
                 setShowNuevoExp(false); cargarTodo()
               } catch(e) { console.error(e) } finally { setSaving(false) }
             }} className="p-6 space-y-4">
@@ -762,6 +764,20 @@ export default function PresupuestoPage() {
                 </div>
                 <div><label className="block text-xs font-medium text-gray-700 mb-1.5">Importe estimado (€)</label><input name="importeEstimado" type="number" step="0.01" placeholder="0.00" className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none" /></div>
                 <div><label className="block text-xs font-medium text-gray-700 mb-1.5">Fecha solicitud</label><input name="fechaSolicitud" type="date" defaultValue={new Date().toISOString().split('T')[0]} className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none" /></div>
+              </div>
+              <div className="border border-amber-200 bg-amber-50 rounded-xl p-4 space-y-3">
+                <p className="text-xs font-semibold text-amber-800 uppercase tracking-wide">Tipo de compra (Regla de contratación)</p>
+                <div className="grid grid-cols-1 gap-3">
+                  <div><label className="block text-xs font-medium text-gray-700 mb-1.5">Procedimiento *</label>
+                    <select name="tipoCompra" required className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/20 bg-white">
+                      <option value="">-- Seleccionar --</option>
+                      <option value="directa_menor500">Compra directa menor 500€ (1 presupuesto)</option>
+                      <option value="menor3000">Contrato menor 500€-3.000€ (mín. 3 presupuestos + informe técnico)</option>
+                      <option value="mayor3000">Contrato ≥3.000€ (3 presupuestos + informe + RC obligatoria)</option>
+                    </select>
+                  </div>
+                  <p className="text-xs text-amber-700">La retención de crédito (RC) es obligatoria para compras ≥3.000€. Hasta tener RC no se notifica al proveedor.</p>
+                </div>
               </div>
               <div><label className="block text-xs font-medium text-gray-700 mb-1.5">Objeto del contrato</label><textarea name="objeto" rows={2} placeholder="Descripción del objeto..." className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none resize-none" /></div>
               <div><label className="block text-xs font-medium text-gray-700 mb-1.5">Notas</label><textarea name="notas" rows={2} className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none resize-none" /></div>
@@ -806,7 +822,7 @@ export default function PresupuestoPage() {
               {detalleTab === 'info' && (
                 <div className="grid grid-cols-2 gap-6">
                   <div className="space-y-4">
-                    <div><p className="text-xs font-medium text-gray-500 uppercase mb-1">Tipo</p><p className="text-sm">{TIPOS_EXP.find(t=>t.value===expDetalle.tipo)?.label||expDetalle.tipo}</p></div>
+                    <div><p className="text-xs font-medium text-gray-500 uppercase mb-1">Tipo contrato</p><p className="text-sm">{TIPOS_EXP.find(t=>t.value===expDetalle.tipo)?.label||expDetalle.tipo}</p></div>{(expDetalle as any).tipoCompra && <div><p className="text-xs font-medium text-gray-500 uppercase mb-1">Procedimiento compra</p><p className="text-sm font-medium text-amber-700">{TIPOS_COMPRA_LABELS[(expDetalle as any).tipoCompra] || (expDetalle as any).tipoCompra}</p></div>}<div className="border border-gray-200 rounded-xl p-3 space-y-2"><p className="text-xs font-semibold text-gray-500 uppercase">Retención de Crédito (RC)</p><div className="flex items-center gap-2">{(expDetalle as any).retencionCredito ? <span className="text-xs font-medium text-green-700 bg-green-100 px-2 py-0.5 rounded-full">RC emitida</span> : <span className="text-xs font-medium text-orange-700 bg-orange-100 px-2 py-0.5 rounded-full">Pendiente RC</span>}</div>{(expDetalle as any).fechaRC && <p className="text-xs text-gray-500">Fecha RC: {fmtDate((expDetalle as any).fechaRC)}</p>}{(expDetalle as any).documentoRC && <p className="text-xs text-gray-500">Doc: {(expDetalle as any).documentoRC}</p>}</div>
                     {expDetalle.partida && <div><p className="text-xs font-medium text-gray-500 uppercase mb-1">Partida</p><p className="text-sm">{expDetalle.partida.codigo} - {expDetalle.partida.denominacion}</p></div>}
                     {expDetalle.proveedor && <div><p className="text-xs font-medium text-gray-500 uppercase mb-1">Proveedor</p><p className="text-sm">{expDetalle.proveedor.nombre}</p></div>}
                     {expDetalle.notas && <div><p className="text-xs font-medium text-gray-500 uppercase mb-1">Notas</p><p className="text-sm text-gray-600">{expDetalle.notas}</p></div>}

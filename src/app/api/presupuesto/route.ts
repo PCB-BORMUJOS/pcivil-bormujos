@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
       const ejercicio = parseInt(data.ejercicio) || new Date().getFullYear()
       const count = await prisma.expedienteCompra.count({ where: { ejercicio } })
       const numero = `EXP-${ejercicio}-${String(count + 1).padStart(4, '0')}`
-      const result = await prisma.expedienteCompra.create({ data: { numero, ejercicio, titulo: data.titulo, descripcion: data.descripcion || null, tipo: data.tipo, estado: 'borrador', partidaId: data.partidaId || null, proveedorId: data.proveedorId || null, importeEstimado: data.importeEstimado ? parseFloat(data.importeEstimado) : null, fechaSolicitud: data.fechaSolicitud ? new Date(data.fechaSolicitud) : new Date(), objeto: data.objeto || null, criterios: data.criterios || null, notas: data.notas || null, solicitadoPor: usuarioNombre } })
+      const result = await prisma.expedienteCompra.create({ data: { numero, ejercicio, titulo: data.titulo, descripcion: data.descripcion || null, tipo: data.tipo, estado: 'borrador', partidaId: data.partidaId || null, proveedorId: data.proveedorId || null, importeEstimado: data.importeEstimado ? parseFloat(data.importeEstimado) : null, fechaSolicitud: data.fechaSolicitud ? new Date(data.fechaSolicitud) : new Date(), objeto: data.objeto || null, criterios: data.criterios || null, notas: data.notas || null, solicitadoPor: usuarioNombre, tipoCompra: data.tipoCompra || null, retencionCredito: data.retencionCredito === true } })
       if (data.partidaId && data.importeEstimado) {
         const partida = await prisma.partidaPresupuestaria.findUnique({ where: { id: data.partidaId } })
         if (partida) await prisma.partidaPresupuestaria.update({ where: { id: data.partidaId }, data: { importeComprometido: Number(partida.importeComprometido) + parseFloat(data.importeEstimado) } })
@@ -168,7 +168,7 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ success: true, expediente: result })
     }
     if (tipo === 'expediente') {
-      const result = await prisma.expedienteCompra.update({ where: { id }, data: { titulo: data.titulo, descripcion: data.descripcion || null, tipo: data.tipo, partidaId: data.partidaId || null, proveedorId: data.proveedorId || null, importeEstimado: data.importeEstimado ? parseFloat(data.importeEstimado) : null, objeto: data.objeto || null, criterios: data.criterios || null, notas: data.notas || null } })
+      const result = await prisma.expedienteCompra.update({ where: { id }, data: { titulo: data.titulo, descripcion: data.descripcion || null, tipo: data.tipo, partidaId: data.partidaId || null, proveedorId: data.proveedorId || null, importeEstimado: data.importeEstimado ? parseFloat(data.importeEstimado) : null, objeto: data.objeto || null, criterios: data.criterios || null, notas: data.notas || null, tipoCompra: data.tipoCompra || null, retencionCredito: data.retencionCredito !== undefined ? data.retencionCredito : undefined, fechaRC: data.fechaRC ? new Date(data.fechaRC) : undefined, documentoRC: data.documentoRC || undefined, informeTecnico: data.informeTecnico || undefined } })
       await registrarAudit({ accion: 'UPDATE', entidad: 'ExpedienteCompra', entidadId: id, descripcion: `Expediente ${result.numero} actualizado`, usuarioId, usuarioNombre, modulo: 'Presupuesto' })
       return NextResponse.json({ success: true, expediente: result })
     }
