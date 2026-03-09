@@ -27,6 +27,7 @@ declare module 'next-auth' {
     permisos: any
     servicioId: string | null
     numeroVoluntario: string | null
+    ip?: string | null
   }
 }
 
@@ -41,5 +42,6 @@ declare module 'next-auth/jwt' {
     permisos: any
     servicioId: string | null
     numeroVoluntario: string | null
+    ip?: string | null
   }
 }
