@@ -407,7 +407,7 @@ export default function Header({
                         mensajes.slice(0, 5).map(msg => (
                           <div 
                             key={msg.id} 
-                            onClick={() => { marcarMensajeLeido(msg.id); router.push('/mi-area?tab=notificaciones'); setShowMensajes(false); }}
+                            onClick={() => { marcarMensajeLeido(msg.id); router.push('/mi-area?tab=notificaciones&subtab=mensajes'); setShowMensajes(false); }}
                             className={`px-4 py-3 border-b border-slate-100 hover:bg-slate-50 cursor-pointer ${!msg.leido ? 'bg-orange-50/50' : ''}`}
                           >
                             <div className="flex gap-3">
