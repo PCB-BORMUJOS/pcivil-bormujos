@@ -344,19 +344,22 @@ function CalendarView({ eventos, guardias, resumenDisponibilidad, onEventClick, 
     setCurrentDate(newDate);
     onMesChange(newDate);
   };
-  const today = new Date();
-  const isToday = (d: typeof days[0]) => d.current && d.num === today.getDate() && month === today.getMonth() && year === today.getFullYear();
+  const _tn = new Date().toLocaleDateString('es-ES', { timeZone: 'Europe/Madrid' }).split('/');
+  const todayDay = parseInt(_tn[0]);
+  const todayMonth = parseInt(_tn[1]) - 1;
+  const todayYear = parseInt(_tn[2]);
+  const isToday = (d: typeof days[0]) => d.current && d.num === todayDay && month === todayMonth && year === todayYear;
 
   const getEventosDelDia = (date: string) => {
     return eventos.filter(e => {
-      const fechaEvento = new Date(e.fecha).toISOString().split('T')[0];
+      const fechaEvento = new Date(e.fecha).toLocaleDateString('es-ES', { timeZone: 'Europe/Madrid' }).split('/').reverse().join('-').replace(/-(\d)\/|(\d)$/g, '-$1$2').split('/').map((x,i)=> i>0 ? x.padStart(2,'0') : x).join('-'); // fix tz
       return fechaEvento === date;
     });
   };
 
   const getGuardiasDelDia = (date: string) => {
     return guardias.filter(g => {
-      const fechaGuardia = new Date(g.fecha).toISOString().split('T')[0];
+      const _fg = new Date(g.fecha); const fechaGuardia = `${_fg.getFullYear()}-${String(_fg.getMonth()+1).padStart(2,'0')}-${String(_fg.getDate()).padStart(2,'0')}`;
       return fechaGuardia === date;
     });
   };
