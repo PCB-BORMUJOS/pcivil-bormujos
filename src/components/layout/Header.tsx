@@ -106,7 +106,7 @@ export default function Header({
   // Cargar mensajes
   const cargarMensajes = useCallback(async () => {
     try {
-      const res = await fetch('/api/mensajes?tipo=recibidos')
+      const res = await fetch('/api/mensajes?tipo=recibidos&noLeidos=true')
       if (res.ok) {
         const data = await res.json()
         setMensajes(data.mensajes || [])
