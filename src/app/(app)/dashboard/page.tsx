@@ -540,6 +540,8 @@ export default function DashboardPage() {
   const [showClima, setShowClima] = useState(false);
   const [showEventDetail, setShowEventDetail] = useState<any>(null);
   const [showCreateEvent, setShowCreateEvent] = useState(false);
+  const [showParticipantesEvento, setShowParticipantesEvento] = useState<any>(null);
+  const [participantesEvento, setParticipantesEvento] = useState<any[]>([]);
   const [showGuardiaDetail, setShowGuardiaDetail] = useState<{ date: string, turno: string, guardias: any[] } | null>(null);
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [userRole, setUserRole] = useState<string>('');
@@ -734,6 +736,10 @@ export default function DashboardPage() {
         cargarEventos();
         setShowCreateEvent(false);
         setEditEventId(null);
+        if (!esEdicion && data.evento) {
+          setShowParticipantesEvento(data.evento);
+          setParticipantesEvento([]);
+        }
       } else {
         alert('Error: ' + (data.error || 'No se pudo guardar el evento'));
       }

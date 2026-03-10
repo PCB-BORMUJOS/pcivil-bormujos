@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
         prisma.configuracion.findUnique({ where: { clave: 'baremo_dietas' } }),
         prisma.configuracion.findUnique({ where: { clave: 'precio_km' } })
       ]);
-      const baremo: { horasMin: number; importe: number }[] = configBaremo?.valor
+      const baremo: any[] = configBaremo?.valor
         ? JSON.parse(configBaremo.valor as string)
         : [{ horasMin: 4, importe: 29 }, { horasMin: 8, importe: 45 }, { horasMin: 12, importe: 65 }];
       const precioKm: number = configKm?.valor
@@ -113,8 +113,8 @@ export async function POST(request: NextRequest) {
         : 0.19;
       const horasPorTurno: Record<string, number> = { 'mañana': 5.5, 'tarde': 5, 'noche': 9 };
       const horasTrabajadas = horasPorTurno[turno.toLowerCase()] ?? 5;
-      const tramo = [...baremo].reverse().find(t => horasTrabajadas >= t.horasMin);
-      const importeDia = tramo?.importe ?? 0;
+      const tramo = [...baremo].reverse().find(t => horasTrabajadas >= (t.horasMin ?? t.minHours ?? 0));
+      const importeDia = tramo?.importe ?? tramo?.amount ?? 0;
       const ficha = await prisma.fichaVoluntario.findUnique({ where: { usuarioId } });
       const kmIda = Number(ficha?.kmDesplazamiento ?? 0);
       const kilometros = kmIda * 2;
@@ -201,6 +201,7 @@ export async function DELETE(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
     if (!id) return NextResponse.json({ error: 'ID requerido' }, { status: 400 })
+    await prisma.dieta.deleteMany({ where: { guardiaId: id } })
     await prisma.guardia.delete({ where: { id } })
     return NextResponse.json({ success: true })
   } catch (error) {
