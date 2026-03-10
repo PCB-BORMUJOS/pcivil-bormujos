@@ -222,6 +222,57 @@ export default function CuadrantesPage() {
   const turnosAsignadosUsuario = (userId: string): number =>
     Object.values(asignaciones).flat().filter(id => id === userId).length
 
+  const handleGuardar = async () => {
+    const totalAsig = Object.values(asignaciones).flat().length
+    if (!confirm(`¿Guardar el cuadrante sin notificar?\nSe guardarán ${totalAsig} asignaciones.`)) return
+    setGuardando(true)
+    try {
+      await Promise.all(
+        guardiasGuardadas.map(g =>
+          fetch(`/api/cuadrantes?id=${g.id}`, { method: 'DELETE' })
+        )
+      )
+      const cuerpos: any[] = []
+      Object.entries(asignaciones).forEach(([sk, userIds]) => {
+        const { fecha, turno } = parseSlotKey(sk)
+        userIds.forEach(uid => {
+          const u =
+            disponibilidades[sk]?.find(d => d.id === uid) ||
+            guardiasGuardadas.find(g => g.usuarioId === uid)?.usuario
+          const resSk = rolEspecial[sk] || {}
+          const rolFinal = resSk.responsable === uid
+            ? 'Responsable'
+            : resSk.cecopal === uid
+            ? 'Cecopal'
+            : (u as any)?.carnetConducir
+            ? 'Conductor'
+            : 'Interviniente'
+          cuerpos.push({ fecha, turno, usuarioId: uid, tipo: 'programada', rol: rolFinal })
+        })
+      })
+      const resultados = await Promise.all(
+        cuerpos.map(body =>
+          fetch('/api/cuadrantes', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+          })
+        )
+      )
+      const fallidas = resultados.filter(r => !r.ok).length
+      if (fallidas > 0) {
+        alert(`⚠ Cuadrante guardado con ${fallidas} error(es). Recarga para verificar.`)
+      } else {
+        alert('Cuadrante guardado correctamente (sin notificaciones)')
+      }
+      await cargarDatos()
+    } catch (e) {
+      alert('Error al guardar el cuadrante')
+    } finally {
+      setGuardando(false)
+    }
+  }
+
   const handlePublicar = async () => {
     const totalAsig = Object.values(asignaciones).flat().length
     if (!confirm(`¿Publicar el cuadrante?\nSe guardarán ${totalAsig} asignaciones y se reemplazarán las anteriores.`)) return
@@ -322,6 +373,14 @@ export default function CuadrantesPage() {
               <ChevronRight size={17} />
             </button>
           </div>
+          <button
+            onClick={handleGuardar}
+            disabled={guardando}
+            className="px-3 py-2 bg-slate-600 text-white rounded-lg text-xs font-bold hover:bg-slate-700 disabled:opacity-50 flex items-center gap-1.5"
+            title="Guardar sin notificar"
+          >
+            💾 Guardar
+          </button>
           <button
             onClick={handlePublicar}
             disabled={guardando || !pendiente}
