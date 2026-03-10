@@ -105,11 +105,13 @@ export async function POST(request: NextRequest) {
         prisma.configuracion.findUnique({ where: { clave: 'baremo_dietas' } }),
         prisma.configuracion.findUnique({ where: { clave: 'precio_km' } })
       ]);
-      const baremo: any[] = configBaremo?.valor
-        ? JSON.parse(configBaremo.valor as string)
-        : [{ horasMin: 4, importe: 29 }, { horasMin: 8, importe: 45 }, { horasMin: 12, importe: 65 }];
-      const precioKm: number = configKm?.valor
-        ? JSON.parse(configKm.valor as string)?.precio ?? 0.19
+      const rawBaremo = configBaremo?.valor;
+      const baremo: any[] = rawBaremo
+        ? (typeof rawBaremo === 'string' ? JSON.parse(rawBaremo) : rawBaremo as any[])
+        : [{ minHours: 4, amount: 29.45 }, { minHours: 8, amount: 49.15 }, { minHours: 12, amount: 72.37 }];
+      const rawKm = configKm?.valor;
+      const precioKm: number = rawKm
+        ? ((typeof rawKm === 'string' ? JSON.parse(rawKm) : rawKm as any)?.precio ?? 0.19)
         : 0.19;
       const horasPorTurno: Record<string, number> = { 'mañana': 5.5, 'tarde': 5, 'noche': 9 };
       const horasTrabajadas = horasPorTurno[turno.toLowerCase()] ?? 5;
