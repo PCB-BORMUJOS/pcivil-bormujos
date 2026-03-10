@@ -18,7 +18,7 @@ interface PresupuestoAnual {
 }
 interface PartidaPresupuestaria {
   id: string; presupuestoId: string; codigo: string; denominacion: string
-  capitulo: string; importeAsignado: number; importeModificado?: number
+  capitulo: string; importeAsignado: number; importeModificado?: number; motivoModificacion?: string; fechaModificacion?: string
   importeComprometido: number; importeEjecutado: number
   _count?: { expedientes: number }
 }
@@ -604,7 +604,7 @@ export default function PresupuestoPage() {
             <form onSubmit={async e => {
               e.preventDefault(); const f = new FormData(e.currentTarget); setSaving(true)
               try {
-                await fetch('/api/presupuesto', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ tipo: 'presupuesto', ejercicio: f.get('ejercicio'), denominacion: f.get('denominacion'), totalAprobado: f.get('totalAprobado'), estado: f.get('estado'), notas: f.get('notas') }) })
+                await fetch('/api/presupuesto', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ tipo: 'presupuesto', ejercicio: f.get('ejercicio'), denominacion: f.get('denominacion'), totalAprobado: 0, estado: f.get('estado'), notas: f.get('notas') }) })
                 setShowNuevoPres(false); cargarTodo()
               } catch(e) { console.error(e) } finally { setSaving(false) }
             }} className="p-6 space-y-4">
@@ -617,7 +617,7 @@ export default function PresupuestoPage() {
                 </div>
               </div>
               <div><label className="block text-xs font-medium text-gray-700 mb-1.5">Denominación *</label><input name="denominacion" required placeholder="Ej: Presupuesto Municipal 2026" className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20" /></div>
-              <div><label className="block text-xs font-medium text-gray-700 mb-1.5">Total Aprobado (€) *</label><input name="totalAprobado" type="number" step="0.01" required placeholder="0.00" className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20" /></div>
+              <div className="p-3 bg-emerald-50 rounded-xl text-xs text-emerald-700 border border-emerald-200">El importe total se calculará automáticamente como suma de las partidas presupuestarias.</div>
               <div><label className="block text-xs font-medium text-gray-700 mb-1.5">Notas</label><textarea name="notas" rows={2} className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none resize-none" /></div>
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => setShowNuevoPres(false)} className="flex-1 px-4 py-2.5 border border-gray-200 text-gray-700 rounded-xl text-sm font-medium hover:bg-gray-50">Cancelar</button>
@@ -673,22 +673,39 @@ export default function PresupuestoPage() {
             <form onSubmit={async e => {
               e.preventDefault(); const f = new FormData(e.currentTarget); setSaving(true)
               try {
-                const body = { tipo: 'partida', codigo: f.get('codigo'), denominacion: f.get('denominacion'), capitulo: f.get('capitulo'), importeAsignado: f.get('importeAsignado'), presupuestoId: presIdParaPartida }
+                const codigoVal = (f.get('codigo') as string) || ''
+                const capituloAuto = codigoVal.startsWith('1') ? '1' : codigoVal.startsWith('2') ? '2' : codigoVal.startsWith('3') ? '3' : codigoVal.startsWith('4') ? '4' : codigoVal.startsWith('5') ? '5' : codigoVal.startsWith('6') ? '6' : codigoVal.startsWith('7') ? '7' : '2'
+                const tieneModificacion = f.get('importeModificado') && Number(f.get('importeModificado')) !== 0
+                const body: any = { tipo: 'partida', codigo: codigoVal, denominacion: f.get('denominacion'), capitulo: capituloAuto, importeAsignado: f.get('importeAsignado'), presupuestoId: presIdParaPartida }
+                if (tieneModificacion) { body.importeModificado = f.get('importeModificado'); body.motivoModificacion = f.get('motivoModificacion'); body.fechaModificacion = new Date().toISOString() }
                 if (partidaSel) await fetch('/api/presupuesto', { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ ...body, id: partidaSel.id }) })
                 else await fetch('/api/presupuesto', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) })
                 setShowNuevaPartida(false); setShowEditPartida(false); setPartidaSel(null); cargarTodo()
               } catch(e) { console.error(e) } finally { setSaving(false) }
             }} className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div><label className="block text-xs font-medium text-gray-700 mb-1.5">Código *</label><input name="codigo" defaultValue={partidaSel?.codigo} required placeholder="Ej: 130.00" className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20" /></div>
-                <div><label className="block text-xs font-medium text-gray-700 mb-1.5">Capítulo *</label>
-                  <select name="capitulo" defaultValue={partidaSel?.capitulo || '2'} required className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none">
-                    {CAPITULOS.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
-                  </select>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="col-span-2"><label className="block text-xs font-medium text-gray-700 mb-1.5">Código de partida *</label><input name="codigo" defaultValue={partidaSel?.codigo} required placeholder="Ej: 21200, 62310" className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 font-mono" /></div>
+                <div><label className="block text-xs font-medium text-gray-700 mb-1.5">Capítulo</label><div className="w-full border border-emerald-200 bg-emerald-50 rounded-xl px-3 py-2.5 text-sm text-emerald-700 font-medium">Auto-detectado</div></div>
+              </div>
+              <div className="p-2.5 bg-slate-50 rounded-lg text-xs text-slate-500 border border-slate-200">Cap. II (2xxxxx) = Gastos corrientes · Cap. VI (6xxxxx) = Inversiones reales · El capítulo se detecta automáticamente del código.</div>
+              <div><label className="block text-xs font-medium text-gray-700 mb-1.5">Denominación *</label><input name="denominacion" defaultValue={partidaSel?.denominacion} required placeholder="Ej: Edificios y otras construcciones" className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20" /></div>
+              <div><label className="block text-xs font-medium text-gray-700 mb-1.5">Importe Asignado (€) *</label><input name="importeAsignado" type="number" step="0.01" defaultValue={partidaSel?.importeAsignado} required placeholder="0.00" className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20" /></div>
+              <div className="border-t border-dashed border-gray-200 pt-4">
+                <p className="text-xs font-semibold text-gray-500 uppercase mb-3">Modificación presupuestaria (opcional)</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div><label className="block text-xs font-medium text-gray-700 mb-1.5">Importe modificado (€)</label><input name="importeModificado" type="number" step="0.01" defaultValue={partidaSel?.importeModificado ?? ''} placeholder="0.00" className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none" /></div>
+                  <div><label className="block text-xs font-medium text-gray-700 mb-1.5">Tipo de modificación</label>
+                    <select name="motivoModificacion" defaultValue={partidaSel?.motivoModificacion ?? ''} className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none">
+                      <option value="">Sin modificación</option>
+                      <option value="Ampliación por remanente de tesorería">Ampliación — Remanente tesorería</option>
+                      <option value="Transferencia de crédito">Transferencia de crédito</option>
+                      <option value="Crédito extraordinario">Crédito extraordinario</option>
+                      <option value="Suplemento de crédito">Suplemento de crédito</option>
+                      <option value="Baja por anulación">Baja por anulación</option>
+                    </select>
+                  </div>
                 </div>
               </div>
-              <div><label className="block text-xs font-medium text-gray-700 mb-1.5">Denominación *</label><input name="denominacion" defaultValue={partidaSel?.denominacion} required className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20" /></div>
-              <div><label className="block text-xs font-medium text-gray-700 mb-1.5">Importe Asignado (€) *</label><input name="importeAsignado" type="number" step="0.01" defaultValue={partidaSel?.importeAsignado} required placeholder="0.00" className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20" /></div>
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => { setShowNuevaPartida(false); setShowEditPartida(false); setPartidaSel(null) }} className="flex-1 px-4 py-2.5 border border-gray-200 text-gray-700 rounded-xl text-sm font-medium hover:bg-gray-50">Cancelar</button>
                 <button type="submit" disabled={saving} className="flex-1 px-4 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700 disabled:opacity-50">{saving ? 'Guardando...' : partidaSel ? 'Guardar' : 'Crear Partida'}</button>

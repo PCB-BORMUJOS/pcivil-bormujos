@@ -83,12 +83,15 @@ export async function POST(request: NextRequest) {
   try {
     const { usuarioId, usuarioNombre } = getUsuarioAudit(session)
     if (tipo === 'presupuesto') {
-      const result = await prisma.presupuestoAnual.create({ data: { ejercicio: parseInt(data.ejercicio), denominacion: data.denominacion, totalAprobado: parseFloat(data.totalAprobado), totalModificado: data.totalModificado ? parseFloat(data.totalModificado) : null, estado: data.estado || 'borrador', notas: data.notas || null } })
+      const result = await prisma.presupuestoAnual.create({ data: { ejercicio: parseInt(data.ejercicio), denominacion: data.denominacion, totalAprobado: 0, estado: data.estado || 'borrador', notas: data.notas || null } })
       await registrarAudit({ accion: 'CREATE', entidad: 'PresupuestoAnual', entidadId: result.id, descripcion: `Presupuesto ${result.ejercicio}: ${result.denominacion}`, usuarioId, usuarioNombre, modulo: 'Presupuesto' })
       return NextResponse.json({ success: true, presupuesto: result })
     }
     if (tipo === 'partida') {
-      const result = await prisma.partidaPresupuestaria.create({ data: { presupuestoId: data.presupuestoId, codigo: data.codigo, denominacion: data.denominacion, capitulo: data.capitulo, importeAsignado: parseFloat(data.importeAsignado), importeModificado: data.importeModificado ? parseFloat(data.importeModificado) : null } })
+      const result = await prisma.partidaPresupuestaria.create({ data: { presupuestoId: data.presupuestoId, codigo: data.codigo, denominacion: data.denominacion, capitulo: data.capitulo, importeAsignado: parseFloat(data.importeAsignado), importeModificado: data.importeModificado ? parseFloat(data.importeModificado) : null, motivoModificacion: data.motivoModificacion || null, fechaModificacion: data.fechaModificacion ? new Date(data.fechaModificacion) : null } })
+      const todasPartidas = await prisma.partidaPresupuestaria.findMany({ where: { presupuestoId: data.presupuestoId } })
+      const nuevoTotal = todasPartidas.reduce((s: number, p: any) => s + Number(p.importeAsignado), 0)
+      await prisma.presupuestoAnual.update({ where: { id: data.presupuestoId }, data: { totalAprobado: nuevoTotal } })
       await registrarAudit({ accion: 'CREATE', entidad: 'PartidaPresupuestaria', entidadId: result.id, descripcion: `Partida ${result.codigo}: ${result.denominacion}`, usuarioId, usuarioNombre, modulo: 'Presupuesto' })
       return NextResponse.json({ success: true, partida: result })
     }
@@ -145,12 +148,17 @@ export async function PUT(request: NextRequest) {
   try {
     const { usuarioId, usuarioNombre } = getUsuarioAudit(session)
     if (tipo === 'presupuesto') {
-      const result = await prisma.presupuestoAnual.update({ where: { id }, data: { denominacion: data.denominacion, totalAprobado: parseFloat(data.totalAprobado), totalModificado: data.totalModificado ? parseFloat(data.totalModificado) : null, estado: data.estado, notas: data.notas || null } })
+      const partidasActuales = await prisma.partidaPresupuestaria.findMany({ where: { presupuestoId: id } })
+      const totalCalculado = partidasActuales.reduce((s: number, p: any) => s + Number(p.importeAsignado), 0)
+      const result = await prisma.presupuestoAnual.update({ where: { id }, data: { denominacion: data.denominacion, totalAprobado: totalCalculado, estado: data.estado, notas: data.notas || null } })
       await registrarAudit({ accion: 'UPDATE', entidad: 'PresupuestoAnual', entidadId: id, descripcion: `Presupuesto ${result.ejercicio} actualizado`, usuarioId, usuarioNombre, modulo: 'Presupuesto' })
       return NextResponse.json({ success: true, presupuesto: result })
     }
     if (tipo === 'partida') {
-      const result = await prisma.partidaPresupuestaria.update({ where: { id }, data: { codigo: data.codigo, denominacion: data.denominacion, capitulo: data.capitulo, importeAsignado: parseFloat(data.importeAsignado), importeModificado: data.importeModificado ? parseFloat(data.importeModificado) : null } })
+      const result = await prisma.partidaPresupuestaria.update({ where: { id }, data: { codigo: data.codigo, denominacion: data.denominacion, capitulo: data.capitulo, importeAsignado: parseFloat(data.importeAsignado), importeModificado: data.importeModificado ? parseFloat(data.importeModificado) : null, motivoModificacion: data.motivoModificacion || null, fechaModificacion: data.fechaModificacion ? new Date(data.fechaModificacion) : null } })
+      const partidasUpdate = await prisma.partidaPresupuestaria.findMany({ where: { presupuestoId: result.presupuestoId } })
+      const totalUpdate = partidasUpdate.reduce((s: number, p: any) => s + Number(p.importeAsignado), 0)
+      await prisma.presupuestoAnual.update({ where: { id: result.presupuestoId }, data: { totalAprobado: totalUpdate } })
       await registrarAudit({ accion: 'UPDATE', entidad: 'PartidaPresupuestaria', entidadId: id, descripcion: `Partida ${result.codigo} actualizada`, usuarioId, usuarioNombre, modulo: 'Presupuesto' })
       return NextResponse.json({ success: true, partida: result })
     }

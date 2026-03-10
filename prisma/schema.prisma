@@ -1510,6 +1510,8 @@ model PartidaPresupuestaria {
   capitulo            String
   importeAsignado     Decimal          @db.Decimal(12, 2)
   importeModificado   Decimal?         @db.Decimal(12, 2)
+  motivoModificacion  String?          @map("motivo_modificacion")
+  fechaModificacion   DateTime?        @map("fecha_modificacion")
   importeComprometido Decimal          @default(0) @db.Decimal(12, 2)
   importeEjecutado    Decimal          @default(0) @db.Decimal(12, 2)
   expedientes         ExpedienteCompra[]
