@@ -180,7 +180,7 @@ export async function PUT(request: NextRequest) {
     if (accion === 'marcarLeido') {
       await prisma.mensaje.update({
         where: { id: mensajeId },
-        data: { leido: true }
+        data: { leido: true, leidoEn: new Date() }
       })
     } else if (accion === 'marcarTodosLeidos') {
       await prisma.mensaje.updateMany({

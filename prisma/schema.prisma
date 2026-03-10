@@ -572,6 +572,7 @@ model Mensaje {
   tipo              String    @default("mensaje")
   prioridad         String    @default("normal")
   leido             Boolean   @default(false)
+  leidoEn           DateTime? @map("leido_en")
   archivado         Boolean   @default(false)
   remitenteId       String    @map("remitente_id")
   destinatarioId    String?   @map("destinatario_id")
