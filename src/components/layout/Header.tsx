@@ -429,7 +429,7 @@ export default function Header({
                     </div>
                     <div className="px-4 py-3 bg-slate-50 border-t border-slate-200">
                       <Link 
-                        href="/mi-area?tab=notificaciones"
+                        href="/mi-area?tab=notificaciones&subtab=mensajes"
                         onClick={() => setShowMensajes(false)}
                         className="w-full block text-center text-sm text-orange-600 hover:text-orange-700 font-medium"
                       >
