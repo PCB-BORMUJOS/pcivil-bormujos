@@ -352,7 +352,7 @@ function CalendarView({ eventos, guardias, resumenDisponibilidad, onEventClick, 
 
   const getEventosDelDia = (date: string) => {
     return eventos.filter(e => {
-      const fechaEvento = new Date(e.fecha).toLocaleDateString('es-ES', { timeZone: 'Europe/Madrid' }).split('/').reverse().join('-').replace(/-(\d)\/|(\d)$/g, '-$1$2').split('/').map((x,i)=> i>0 ? x.padStart(2,'0') : x).join('-'); // fix tz
+      const _fe = new Date(e.fecha); const fechaEvento = `${_fe.getFullYear()}-${String(_fe.getMonth()+1).padStart(2,'0')}-${String(_fe.getDate()).padStart(2,'0')}`;
       return fechaEvento === date;
     });
   };
