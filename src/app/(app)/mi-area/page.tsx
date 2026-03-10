@@ -181,12 +181,12 @@ export default function MiAreaPage() {
     const validos = ['datos','formacion','actividad','documentos','vestuario','dietas','notificaciones','configuracion'];
     return (validos.includes(tab || '') ? tab : 'datos') as any;
   });
-  const searchParams = useSearchParams();
   useEffect(() => {
-    const tab = searchParams.get('tab');
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get('tab');
     const validos = ['datos','formacion','actividad','documentos','vestuario','dietas','notificaciones','configuracion'];
     if (tab && validos.includes(tab)) setActiveTab(tab as any);
-  }, [searchParams]);
+  }, []);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [solicitandoPermiso, setSolicitandoPermiso] = useState(false);
@@ -1600,7 +1600,7 @@ export default function MiAreaPage() {
               )}
 
               {activeTab === 'notificaciones' && (
-                <NotificacionesTab initialSubTab={(searchParams.get('subtab') as any) || 'mensajes'} />
+                <NotificacionesTab initialSubTab={(typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('subtab') : null) as any || 'mensajes'} />
               )}
 
               {activeTab === 'configuracion' && (
