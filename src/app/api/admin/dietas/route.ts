@@ -21,7 +21,19 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url)
+    const tipo = searchParams.get('tipo')
     const mes = searchParams.get('mes') // formato: 2025-01
+
+    // GET informes de dietas
+    if (tipo === 'informes') {
+      const anio = searchParams.get('anio') || new Date().getFullYear().toString()
+      const informes = await prisma.informeDietas.findMany({
+        where: { mes: { startsWith: anio } },
+        include: { partida: { select: { codigo: true, denominacion: true, importeAsignado: true, importeEjecutado: true } } },
+        orderBy: { mes: 'desc' }
+      })
+      return NextResponse.json({ informes })
+    }
 
     if (!mes) {
       return NextResponse.json({ error: 'Mes requerido' }, { status: 400 })
@@ -93,6 +105,48 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
+
+    // POST crear informe mensual
+    if (body.tipo === 'informe') {
+      const { mes, fechaPresentacion, totalDietas, subtotalDietas, subtotalKm, numVoluntarios, numDias, partidaId, notas, firmadoPor } = body
+      // Verificar que no existe ya un informe para este mes
+      const existente = await prisma.informeDietas.findFirst({ where: { mes } })
+      if (existente) {
+        return NextResponse.json({ error: 'Ya existe un informe para este mes' }, { status: 400 })
+      }
+      const informe = await prisma.informeDietas.create({
+        data: {
+          mes,
+          fechaPresentacion: new Date(fechaPresentacion),
+          totalDietas: parseFloat(totalDietas),
+          subtotalDietas: parseFloat(subtotalDietas),
+          subtotalKm: parseFloat(subtotalKm),
+          numVoluntarios: parseInt(numVoluntarios) || 0,
+          numDias: parseInt(numDias) || 0,
+          partidaId: partidaId || null,
+          notas: notas || null,
+          firmadoPor: firmadoPor || null,
+          estado: 'presentado'
+        }
+      })
+      // Actualizar importeEjecutado en la partida presupuestaria
+      if (partidaId) {
+        const partida = await prisma.partidaPresupuestaria.findUnique({ where: { id: partidaId } })
+        if (partida) {
+          await prisma.partidaPresupuestaria.update({
+            where: { id: partidaId },
+            data: { importeEjecutado: Number(partida.importeEjecutado) + parseFloat(totalDietas) }
+          })
+          // Recalcular totalAprobado del presupuesto padre
+          const todasPartidas = await prisma.partidaPresupuestaria.findMany({ where: { presupuestoId: partida.presupuestoId } })
+          const nuevoTotal = todasPartidas.reduce((s, p) => s + Number(p.importeAsignado), 0)
+          await prisma.presupuestoAnual.update({ where: { id: partida.presupuestoId }, data: { totalAprobado: nuevoTotal } })
+        }
+      }
+      const { usuarioId: uid, usuarioNombre: unom } = require('@/lib/audit').getUsuarioAudit ? { usuarioId: '', usuarioNombre: '' } : { usuarioId: '', usuarioNombre: '' }
+      return NextResponse.json({ success: true, informe })
+    }
+
     const { usuarioId, fecha, turno, horasTrabajadas, kilometros } = body
 
     const importeDia = 29.45

@@ -420,6 +420,9 @@ export default function AdministracionPage() {
   // Estados para Dietas
   const [mesDietas, setMesDietas] = useState('');
   const [resumenDietas, setResumenDietas] = useState<any[]>([]);
+  const [informesDietas, setInformesDietas] = useState<any[]>([]);
+  const [showNuevoInforme, setShowNuevoInforme] = useState(false);
+  const [partidasDietas, setPartidasDietas] = useState<any[]>([]);
 
   // Estados para Caja
   const [movimientosCaja, setMovimientosCaja] = useState<MovimientoCaja[]>([]);
@@ -545,6 +548,15 @@ export default function AdministracionPage() {
       const res = await fetch(`/api/admin/dietas?mes=${mesDietas}`);
       const data = await res.json();
       setResumenDietas(data.resumen || []);
+      // Cargar informes del año actual
+      const anio = mesDietas ? mesDietas.split('-')[0] : new Date().getFullYear().toString();
+      const resInformes = await fetch(`/api/admin/dietas?tipo=informes&anio=${anio}`);
+      const dataInformes = await resInformes.json();
+      setInformesDietas(dataInformes.informes || []);
+      // Cargar partidas presupuestarias para selector
+      const resPartidas = await fetch(`/api/presupuesto?tipo=partidas&ejercicio=${anio}`);
+      const dataPartidas = await resPartidas.json();
+      setPartidasDietas(dataPartidas.partidas || []);
     } catch (error) {
       /* error silenciado */;
     }
@@ -1356,8 +1368,11 @@ export default function AdministracionPage() {
                     />
                   </div>
                 </div>
-                <button className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors">
-                  <Printer size={18} /> <span className="hidden sm:inline">Imprimir Informe</span>
+                <button
+                  onClick={() => setShowNuevoInforme(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+                >
+                  <FileText size={18} /> <span className="hidden sm:inline">Presentar Informe</span>
                 </button>
               </div>
 
@@ -1425,9 +1440,94 @@ export default function AdministracionPage() {
                   </table>
                 </div>
               )}
+              {/* INFORMES PRESENTADOS */}
+              {informesDietas.length > 0 && (
+                <div className="mt-6">
+                  <h4 className="text-sm font-semibold text-slate-700 mb-3">Informes presentados este año</h4>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="bg-slate-50 border-b border-slate-200">
+                          <th className="text-left py-2 px-4 text-xs font-bold text-slate-500">MES</th>
+                          <th className="text-left py-2 px-4 text-xs font-bold text-slate-500">FECHA PRESENTACIÓN</th>
+                          <th className="text-left py-2 px-4 text-xs font-bold text-slate-500">FIRMADO POR</th>
+                          <th className="text-center py-2 px-4 text-xs font-bold text-slate-500">VOLUNTARIOS</th>
+                          <th className="text-right py-2 px-4 text-xs font-bold text-slate-500">TOTAL</th>
+                          <th className="text-left py-2 px-4 text-xs font-bold text-slate-500">PARTIDA</th>
+                          <th className="text-center py-2 px-4 text-xs font-bold text-slate-500">ESTADO</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {informesDietas.map((inf: any) => (
+                          <tr key={inf.id} className="border-b border-slate-100 hover:bg-slate-50">
+                            <td className="py-2 px-4 font-mono font-medium text-slate-800">{inf.mes}</td>
+                            <td className="py-2 px-4 text-slate-600">{new Date(inf.fechaPresentacion).toLocaleDateString('es-ES')}</td>
+                            <td className="py-2 px-4 text-slate-600">{inf.firmadoPor || '—'}</td>
+                            <td className="py-2 px-4 text-center">{inf.numVoluntarios}</td>
+                            <td className="py-2 px-4 text-right font-bold text-orange-700">{Number(inf.totalDietas).toFixed(2)} €</td>
+                            <td className="py-2 px-4 text-slate-500 text-xs">{inf.partida ? inf.partida.codigo + ' — ' + inf.partida.denominacion : '—'}</td>
+                            <td className="py-2 px-4 text-center">
+                              <span className={'px-2 py-0.5 rounded-full text-xs font-medium ' + (inf.estado === 'pagado' ? 'bg-green-100 text-green-700' : inf.estado === 'anulado' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700')}>{inf.estado}</span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
             </div>
           )}
-
+          {/* MODAL PRESENTAR INFORME DIETAS */}
+          {showNuevoInforme && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000] p-4">
+              <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
+                <div className="flex items-center justify-between p-6 border-b border-gray-100">
+                  <div>
+                    <h3 className="text-lg font-semibold">Presentar Informe de Dietas</h3>
+                    <p className="text-sm text-gray-500 mt-0.5">Mes: {mesDietas || 'Sin seleccionar'}</p>
+                  </div>
+                  <button onClick={() => setShowNuevoInforme(false)} className="p-2 hover:bg-gray-100 rounded-xl"><X size={20} /></button>
+                </div>
+                <form onSubmit={async e => {
+                  e.preventDefault();
+                  const f = new FormData(e.currentTarget);
+                  const totalDietas = resumenDietas.reduce((s, r) => s + (r.totalDietas || 0), 0);
+                  const subtotalDietas = resumenDietas.reduce((s, r) => s + (r.subtotalDietas || 0), 0);
+                  const subtotalKm = resumenDietas.reduce((s, r) => s + (r.subtotalKm || 0), 0);
+                  const numDias = resumenDietas.reduce((s, r) => s + (r.dias || 0), 0);
+                  try {
+                    const res = await fetch('/api/admin/dietas', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ tipo: 'informe', mes: mesDietas, fechaPresentacion: f.get('fechaPresentacion'), totalDietas, subtotalDietas, subtotalKm, numVoluntarios: resumenDietas.length, numDias, partidaId: f.get('partidaId') || null, notas: f.get('notas'), firmadoPor: f.get('firmadoPor') }) });
+                    const data = await res.json();
+                    if (data.error) { alert(data.error); return; }
+                    setShowNuevoInforme(false);
+                    cargarDietas();
+                  } catch(err) { console.error(err); }
+                }} className="p-6 space-y-4">
+                  <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 grid grid-cols-3 gap-3 text-center">
+                    <div><p className="text-xs text-orange-600 font-medium">Subtotal Dietas</p><p className="text-lg font-bold text-orange-800">{resumenDietas.reduce((s,r) => s+(r.subtotalDietas||0),0).toFixed(2)} €</p></div>
+                    <div><p className="text-xs text-orange-600 font-medium">Subtotal KM</p><p className="text-lg font-bold text-orange-800">{resumenDietas.reduce((s,r) => s+(r.subtotalKm||0),0).toFixed(2)} €</p></div>
+                    <div><p className="text-xs text-orange-600 font-medium">TOTAL A PAGAR</p><p className="text-xl font-bold text-orange-900">{resumenDietas.reduce((s,r) => s+(r.totalDietas||0),0).toFixed(2)} €</p></div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div><label className="block text-xs font-medium text-gray-700 mb-1.5">Fecha de presentación *</label><input name="fechaPresentacion" type="date" required defaultValue={new Date().toISOString().split('T')[0]} className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20" /></div>
+                    <div><label className="block text-xs font-medium text-gray-700 mb-1.5">Firmado por</label><input name="firmadoPor" type="text" placeholder="Coordinador/a" className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none" /></div>
+                  </div>
+                  <div><label className="block text-xs font-medium text-gray-700 mb-1.5">Partida presupuestaria</label>
+                    <select name="partidaId" className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none">
+                      <option value="">Sin vincular a partida</option>
+                      {partidasDietas.map((p: any) => <option key={p.id} value={p.id}>{p.codigo} — {p.denominacion}</option>)}
+                    </select>
+                  </div>
+                  <div><label className="block text-xs font-medium text-gray-700 mb-1.5">Notas</label><textarea name="notas" rows={2} placeholder="Observaciones para intervención..." className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none resize-none" /></div>
+                  <div className="flex gap-3 pt-2">
+                    <button type="button" onClick={() => setShowNuevoInforme(false)} className="flex-1 px-4 py-2.5 border border-gray-200 text-gray-700 rounded-xl text-sm font-medium hover:bg-gray-50">Cancelar</button>
+                    <button type="submit" className="flex-1 px-4 py-2.5 bg-orange-500 text-white rounded-xl text-sm font-medium hover:bg-orange-600">Registrar Informe</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
           {/* ============================================ */}
           {/* TAB: CAJA EFECTIVO */}
           {/* ============================================ */}

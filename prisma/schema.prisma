@@ -1515,6 +1515,7 @@ model PartidaPresupuestaria {
   importeComprometido Decimal          @default(0) @db.Decimal(12, 2)
   importeEjecutado    Decimal          @default(0) @db.Decimal(12, 2)
   expedientes         ExpedienteCompra[]
+  informesDietas      InformeDietas[]
   createdAt           DateTime         @default(now()) @map("created_at")
   updatedAt           DateTime         @updatedAt @map("updated_at")
   @@map("partidas_presupuestarias")
@@ -1645,4 +1646,23 @@ model HistorialExpediente {
   usuarioNombre  String?          @map("usuario_nombre")
   createdAt      DateTime         @default(now()) @map("created_at")
   @@map("historial_expedientes")
+}
+
+model InformeDietas {
+  id                String    @id @default(cuid())
+  mes               String    // formato: 2026-03
+  fechaPresentacion DateTime  @map("fecha_presentacion") @db.Date
+  totalDietas       Decimal   @map("total_dietas") @db.Decimal(10, 2)
+  subtotalDietas    Decimal   @map("subtotal_dietas") @db.Decimal(10, 2)
+  subtotalKm        Decimal   @map("subtotal_km") @db.Decimal(10, 2)
+  numVoluntarios    Int       @default(0) @map("num_voluntarios")
+  numDias           Int       @default(0) @map("num_dias")
+  partidaId         String?   @map("partida_id")
+  estado            String    @default("presentado") // presentado | pagado | anulado
+  notas             String?
+  firmadoPor        String?   @map("firmado_por")
+  fechaPago         DateTime? @map("fecha_pago") @db.Date
+  createdAt         DateTime  @default(now()) @map("created_at")
+  partida           PartidaPresupuestaria? @relation(fields: [partidaId], references: [id])
+  @@map("informes_dietas")
 }
