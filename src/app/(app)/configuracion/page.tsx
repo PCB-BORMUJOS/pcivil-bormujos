@@ -90,11 +90,13 @@ export default function ConfiguracionPage() {
   const [editFormError, setEditFormError] = useState('');
   const [editFormSuccess, setEditFormSuccess] = useState('');
 
-  const dietRules = [
+  const [dietRules, setDietRules] = useState([
     { id: 'd1', minHours: 4, amount: 29, label: 'Tramo > 4h' },
     { id: 'd2', minHours: 8, amount: 45, label: 'Tramo > 8h' },
     { id: 'd3', minHours: 12, amount: 65, label: 'Tramo > 12h' }
-  ];
+  ]);
+  const [savingBaremo, setSavingBaremo] = useState(false);
+  const [baremoSaved, setBaremoSaved] = useState(false);
 
   const generateReport = () => {
     setLoading(true);
@@ -135,6 +137,16 @@ export default function ConfiguracionPage() {
   useEffect(() => {
     if (activeTab === 'roles' || activeTab === 'criterios') {
       fetchData();
+    }
+    if (activeTab === 'liquidaciones') {
+      fetch('/api/configuracion?clave=baremo_dietas')
+        .then(r => r.json())
+        .then(data => {
+          if (data.config?.valor) {
+            setDietRules(data.config.valor as any);
+          }
+        })
+        .catch(() => {});
     }
   }, [activeTab]);
 
@@ -415,15 +427,29 @@ export default function ConfiguracionPage() {
             <div className="bg-white p-6 rounded-xl border shadow-sm">
               <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2"><TrendingUp size={18} className="text-orange-600" /> Baremo de Dietas</h3>
               <div className="space-y-4">
-                {dietRules.map(rule => (
+                {dietRules.map((rule, idx) => (
                   <div key={rule.id} className="p-4 bg-slate-50 rounded-lg border">
                     <label className="text-xs text-slate-400 font-bold block mb-2">{rule.label}</label>
                     <div className="flex gap-4">
-                      <div className="flex-1"><span className="text-xs text-slate-500">Min. Horas</span><input type="number" className="w-full border rounded p-2 text-sm" defaultValue={rule.minHours} /></div>
-                      <div className="flex-1"><span className="text-xs text-slate-500">Importe €</span><input type="number" className="w-full border rounded p-2 text-sm" defaultValue={rule.amount} /></div>
+                      <div className="flex-1"><span className="text-xs text-slate-500">Min. Horas</span><input type="number" className="w-full border rounded p-2 text-sm" value={rule.minHours} onChange={e => setDietRules(prev => prev.map((r,i) => i===idx ? {...r, minHours: parseInt(e.target.value)||0} : r))} /></div>
+                      <div className="flex-1"><span className="text-xs text-slate-500">Importe €</span><input type="number" step="0.01" className="w-full border rounded p-2 text-sm" value={rule.amount} onChange={e => setDietRules(prev => prev.map((r,i) => i===idx ? {...r, amount: parseFloat(e.target.value)||0} : r))} /></div>
                     </div>
                   </div>
                 ))}
+                <button
+                  onClick={async () => {
+                    setSavingBaremo(true);
+                    try {
+                      await fetch('/api/configuracion', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ clave: 'baremo_dietas', valor: dietRules, descripcion: 'Baremo de dietas por tramos horarios' }) });
+                      setBaremoSaved(true);
+                      setTimeout(() => setBaremoSaved(false), 3000);
+                    } catch(e) { console.error(e); } finally { setSavingBaremo(false); }
+                  }}
+                  disabled={savingBaremo}
+                  className="w-full mt-2 py-2 bg-orange-600 text-white rounded-lg text-sm font-bold hover:bg-orange-700 disabled:opacity-50"
+                >
+                  {savingBaremo ? 'Guardando...' : baremoSaved ? 'Guardado!' : 'Guardar Baremo'}
+                </button>
               </div>
             </div>
           </div>
