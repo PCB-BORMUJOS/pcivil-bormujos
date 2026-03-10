@@ -2,7 +2,8 @@
 
 import NotificacionesTab from '@/components/NotificacionesTab'
 import React, { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { useSession } from 'next-auth/react'
+import { useSearchParams } from 'next/navigation';
 import {
   User, GraduationCap, Clock, FileText, Bell, Save, Edit, Upload,
   Calendar, Award, CheckCircle, XCircle, AlertTriangle, Plus,
@@ -179,6 +180,12 @@ export default function MiAreaPage() {
     const validos = ['datos','formacion','actividad','documentos','vestuario','dietas','notificaciones','configuracion'];
     return (validos.includes(tab || '') ? tab : 'datos') as any;
   });
+  const searchParams = useSearchParams();
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    const validos = ['datos','formacion','actividad','documentos','vestuario','dietas','notificaciones','configuracion'];
+    if (tab && validos.includes(tab)) setActiveTab(tab as any);
+  }, [searchParams]);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [solicitandoPermiso, setSolicitandoPermiso] = useState(false);
@@ -1592,7 +1599,7 @@ export default function MiAreaPage() {
               )}
 
               {activeTab === 'notificaciones' && (
-                <NotificacionesTab initialSubTab={typeof window !== 'undefined' ? (new URLSearchParams(window.location.search).get('subtab') as any) || 'mensajes' : 'mensajes'} />
+                <NotificacionesTab initialSubTab={(searchParams.get('subtab') as any) || 'mensajes'} />
               )}
 
               {activeTab === 'configuracion' && (
