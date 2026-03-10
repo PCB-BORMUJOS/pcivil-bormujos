@@ -98,6 +98,52 @@ export async function POST(request: NextRequest) {
         usuario: { select: { id: true, nombre: true, apellidos: true, numeroVoluntario: true } }
       }
     })
+    
+    // Generar dieta automáticamente al crear guardia
+    try {
+      const [configBaremo, configKm] = await Promise.all([
+        prisma.configuracion.findUnique({ where: { clave: 'baremo_dietas' } }),
+        prisma.configuracion.findUnique({ where: { clave: 'precio_km' } })
+      ]);
+      const baremo: { horasMin: number; importe: number }[] = configBaremo?.valor
+        ? JSON.parse(configBaremo.valor as string)
+        : [{ horasMin: 4, importe: 29 }, { horasMin: 8, importe: 45 }, { horasMin: 12, importe: 65 }];
+      const precioKm: number = configKm?.valor
+        ? JSON.parse(configKm.valor as string)?.precio ?? 0.19
+        : 0.19;
+      const horasPorTurno: Record<string, number> = { 'mañana': 5.5, 'tarde': 5, 'noche': 9 };
+      const horasTrabajadas = horasPorTurno[turno.toLowerCase()] ?? 5;
+      const tramo = [...baremo].reverse().find(t => horasTrabajadas >= t.horasMin);
+      const importeDia = tramo?.importe ?? 0;
+      const ficha = await prisma.fichaVoluntario.findUnique({ where: { usuarioId } });
+      const kmIda = Number(ficha?.kmDesplazamiento ?? 0);
+      const kilometros = kmIda * 2;
+      const subtotalKm = parseFloat((kilometros * precioKm).toFixed(2));
+      const subtotalDietas = importeDia;
+      const totalDieta = parseFloat((subtotalDietas + subtotalKm).toFixed(2));
+      const fechaGuardia = new Date(fecha + 'T12:00:00.000Z');
+      const mesAnio = fechaGuardia.toISOString().slice(0, 7);
+      await prisma.dieta.create({
+        data: {
+          usuarioId,
+          guardiaId: guardia.id,
+          fecha: fechaGuardia,
+          turno,
+          horasTrabajadas,
+          importeDia,
+          subtotalDietas,
+          kilometros,
+          importeKm: precioKm,
+          subtotalKm,
+          totalDieta,
+          mesAnio,
+          estado: 'pendiente'
+        }
+      });
+    } catch (dietaError) {
+      console.error('Error generando dieta automática:', dietaError);
+      // No bloqueamos la respuesta aunque falle la dieta
+    }
     return NextResponse.json({ success: true, guardia })
   } catch (error) {
     console.error('Error al crear guardia:', error)
