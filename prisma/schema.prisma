@@ -375,6 +375,7 @@ model FichaVoluntario {
   letra                  String?
   codigoPostal           String?   @map("codigo_postal")
   localidad              String?
+  kmDesplazamiento       Decimal?  @default(0) @map("km_desplazamiento") @db.Decimal(6, 2)
   provincia              String?
   telefonoFijo           String?   @map("telefono_fijo")
   dniNie                 String?   @map("dni_nie")

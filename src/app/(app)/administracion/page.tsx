@@ -2438,6 +2438,11 @@ export default function AdministracionPage() {
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Teléfono</label>
                 <input type="text" value={fichaData.telefonoFijo || selectedVoluntario?.telefono || ''} onChange={e => setFichaData({ ...fichaData, telefonoFijo: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm" />
               </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Km Desplazamiento (ida)</label>
+                <input type="number" step="0.1" min="0" value={fichaData.kmDesplazamiento || 0} onChange={e => setFichaData({ ...fichaData, kmDesplazamiento: parseFloat(e.target.value)||0 })} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm" />
+                <p className="text-xs text-slate-400 mt-1">Km desde domicilio al parque (se multiplica ×2)</p>
+              </div>
             </div>
 
             {/* Acceso al sistema (solo nueva ficha en modo nuevo) */}

@@ -97,7 +97,8 @@ export async function POST(
       certificadoTitularidad: body.certificadoTitularidad || false,
       certificadoAdjunto: body.certificadoAdjunto,
       modelo145: body.modelo145 || false,
-      modelo145Adjunto: body.modelo145Adjunto
+      modelo145Adjunto: body.modelo145Adjunto,
+      kmDesplazamiento: body.kmDesplazamiento !== undefined ? parseFloat(body.kmDesplazamiento) || 0 : 0
     }
 
     let ficha

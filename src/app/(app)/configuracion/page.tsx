@@ -95,6 +95,7 @@ export default function ConfiguracionPage() {
     { id: 'd2', minHours: 8, amount: 45, label: 'Tramo > 8h' },
     { id: 'd3', minHours: 12, amount: 65, label: 'Tramo > 12h' }
   ]);
+  const [precioKm, setPrecioKm] = useState(0.19);
   const [savingBaremo, setSavingBaremo] = useState(false);
   const [baremoSaved, setBaremoSaved] = useState(false);
 
@@ -144,6 +145,14 @@ export default function ConfiguracionPage() {
         .then(data => {
           if (data.config?.valor) {
             setDietRules(data.config.valor as any);
+          }
+        })
+        .catch(() => {});
+      fetch('/api/configuracion?clave=precio_km')
+        .then(r => r.json())
+        .then(data => {
+          if (data.config?.valor?.precio) {
+            setPrecioKm(data.config.valor.precio);
           }
         })
         .catch(() => {});
@@ -436,11 +445,21 @@ export default function ConfiguracionPage() {
                     </div>
                   </div>
                 ))}
+                <div className="p-4 bg-slate-50 rounded-lg border mt-2">
+                  <label className="text-xs text-slate-400 font-bold block mb-2">Precio por Kilómetro</label>
+                  <div className="flex gap-4 items-center">
+                    <div className="flex-1"><span className="text-xs text-slate-500">€ / km</span><input type="number" step="0.01" className="w-full border rounded p-2 text-sm" value={precioKm} onChange={e => setPrecioKm(parseFloat(e.target.value)||0)} /></div>
+                    <p className="text-xs text-slate-400 flex-1">Se aplica sobre los km de desplazamiento × 2 (ida y vuelta) configurados en la ficha de cada voluntario.</p>
+                  </div>
+                </div>
                 <button
                   onClick={async () => {
                     setSavingBaremo(true);
                     try {
-                      await fetch('/api/configuracion', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ clave: 'baremo_dietas', valor: dietRules, descripcion: 'Baremo de dietas por tramos horarios' }) });
+                      await Promise.all([
+                        fetch('/api/configuracion', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ clave: 'baremo_dietas', valor: dietRules, descripcion: 'Baremo de dietas por tramos horarios' }) }),
+                        fetch('/api/configuracion', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ clave: 'precio_km', valor: { precio: precioKm }, descripcion: 'Precio por kilómetro de desplazamiento' }) })
+                      ]);
                       setBaremoSaved(true);
                       setTimeout(() => setBaremoSaved(false), 3000);
                     } catch(e) { console.error(e); } finally { setSavingBaremo(false); }
