@@ -66,11 +66,11 @@ export async function GET(request: NextRequest) {
       const totalesPorMes: Record<string, { totalDietas: number, totalKm: number, totalGeneral: number, numServicios: number }> = {}
       dietas.forEach(d => {
         const m = d.mesAnio || d.fecha.toISOString().slice(0, 7)
-        if (!totalesPorMes[m]) totalesPorMes[m] = { totalDietas: 0, totalKm: 0, totalGeneral: 0, numServicios: 0 }
+        if (!totalesPorMes[m]) totalesPorMes[m] = { totalDietas: 0, totalKm: 0, total: 0, registros: 0 }
         totalesPorMes[m].totalDietas += Number(d.subtotalDietas ?? 0)
         totalesPorMes[m].totalKm += Number(d.subtotalKm ?? 0)
-        totalesPorMes[m].totalGeneral += Number(d.totalDieta ?? 0)
-        totalesPorMes[m].numServicios += 1
+        totalesPorMes[m].total += Number(d.totalDieta ?? 0)
+        totalesPorMes[m].registros += 1
       })
 
       return NextResponse.json({ dietas, totalesPorMes })
