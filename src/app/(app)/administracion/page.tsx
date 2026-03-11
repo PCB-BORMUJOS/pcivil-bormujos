@@ -609,7 +609,10 @@ export default function AdministracionPage() {
         provincia: 'SEVILLA',
         areaAsignada: data.ficha?.areaAsignada || '',
         areaSecundaria: data.ficha?.areaSecundaria || '',
-        categoria: data.ficha?.categoria || 'VOLUNTARIO'
+        categoria: data.ficha?.categoria || 'VOLUNTARIO',
+        enPracticas: data.ficha?.enPracticas ?? false,
+        turnosPracticasRealizados: data.ficha?.turnosPracticasRealizados ?? 0,
+        fechaInicioPracticas: data.ficha?.fechaInicioPracticas ? data.ficha.fechaInicioPracticas.split('T')[0] : ''
       });
     } catch (error) {
       setFichaData({
@@ -2522,8 +2525,63 @@ export default function AdministracionPage() {
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Categoría</label>
-                <input type="text" value={fichaData.categoria || 'VOLUNTARIO'} onChange={e => setFichaData({ ...fichaData, categoria: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm" />
+                <select
+                  value={fichaData.enPracticas ? 'EN_PRACTICAS' : (fichaData.categoria || 'VOLUNTARIO')}
+                  onChange={e => {
+                    const val = e.target.value
+                    if (val === 'EN_PRACTICAS') {
+                      setFichaData({ ...fichaData, categoria: 'VOLUNTARIO EN PRÁCTICAS', enPracticas: true, fechaInicioPracticas: fichaData.fechaInicioPracticas || new Date().toISOString().split('T')[0] })
+                    } else {
+                      setFichaData({ ...fichaData, categoria: val, enPracticas: false })
+                    }
+                  }}
+                  className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
+                >
+                  <option value="VOLUNTARIO">Voluntario</option>
+                  <option value="EN_PRACTICAS">Voluntario en Prácticas</option>
+                  <option value="COORDINADOR">Coordinador</option>
+                  <option value="JEFE_SERVICIO">Jefe de Servicio</option>
+                </select>
               </div>
+              {fichaData.enPracticas && (
+                <div className="col-span-2 bg-amber-50 border border-amber-200 rounded-lg p-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="w-2 h-2 rounded-full bg-amber-500 inline-block" />
+                    <span className="text-xs font-bold text-amber-700 uppercase">Periodo de Prácticas</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Fecha inicio prácticas</label>
+                      <input
+                        type="date"
+                        value={fichaData.fechaInicioPracticas?.split('T')[0] || ''}
+                        onChange={e => setFichaData({ ...fichaData, fechaInicioPracticas: e.target.value })}
+                        className="w-full border border-amber-200 rounded-lg p-2.5 text-sm bg-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Turnos realizados</label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          min="0"
+                          max="15"
+                          value={fichaData.turnosPracticasRealizados ?? 0}
+                          onChange={e => setFichaData({ ...fichaData, turnosPracticasRealizados: parseInt(e.target.value) || 0 })}
+                          className="w-full border border-amber-200 rounded-lg p-2.5 text-sm bg-white"
+                        />
+                        <span className="text-xs text-amber-600 font-bold whitespace-nowrap">/ 15</span>
+                      </div>
+                      <div className="mt-1 h-1.5 bg-amber-100 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-amber-500 rounded-full transition-all"
+                          style={{ width: `${Math.min(100, ((fichaData.turnosPracticasRealizados ?? 0) / 15) * 100)}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Email</label>
                 <input

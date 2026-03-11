@@ -98,7 +98,10 @@ export async function POST(
       certificadoAdjunto: body.certificadoAdjunto,
       modelo145: body.modelo145 || false,
       modelo145Adjunto: body.modelo145Adjunto,
-      kmDesplazamiento: body.kmDesplazamiento !== undefined ? parseFloat(body.kmDesplazamiento) || 0 : 0
+      kmDesplazamiento: body.kmDesplazamiento !== undefined ? parseFloat(body.kmDesplazamiento) || 0 : 0,
+      enPracticas: body.enPracticas ?? undefined,
+      turnosPracticasRealizados: body.turnosPracticasRealizados !== undefined ? parseInt(body.turnosPracticasRealizados) || 0 : undefined,
+      fechaInicioPracticas: body.fechaInicioPracticas ? new Date(body.fechaInicioPracticas) : null
     }
 
     let ficha
