@@ -1720,6 +1720,170 @@ export default function IncendiosPage() {
           </div>
         </div>
       )}
+
+      {/* ── Modal Nuevo Edificio ──────────────────────────────────────────── */}
+      {showNuevoEdificio && (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/60" onClick={() => setShowNuevoEdificio(false)}>
+          <div className="bg-white rounded-xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="bg-red-600 p-5 text-white flex justify-between items-center">
+              <h2 className="text-xl font-bold">Nuevo Edificio</h2>
+              <button onClick={() => setShowNuevoEdificio(false)}><X size={24} /></button>
+            </div>
+            <form onSubmit={async (e) => {
+              e.preventDefault()
+              const fd = new FormData(e.currentTarget)
+              const res = await fetch('/api/logistica', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  tipo: 'edificio',
+                  nombre: fd.get('nombre'),
+                  direccion: fd.get('direccion'),
+                  responsable: fd.get('responsable'),
+                  telefono: fd.get('telefono'),
+                })
+              })
+              if (res.ok) {
+                setShowNuevoEdificio(false)
+                e.currentTarget.reset()
+                await cargarDatos()
+              } else {
+                const err = await res.json()
+                alert(err.error || 'Error al crear edificio')
+              }
+            }} className="p-6 overflow-y-auto space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Nombre *</label>
+                <input name="nombre" type="text" required className="w-full border border-slate-300 rounded-lg p-2.5" placeholder="Ej: Ayuntamiento" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Dirección</label>
+                <input name="direccion" type="text" className="w-full border border-slate-300 rounded-lg p-2.5" placeholder="Calle, número..." />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Responsable</label>
+                  <input name="responsable" type="text" className="w-full border border-slate-300 rounded-lg p-2.5" placeholder="Nombre del responsable" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Teléfono</label>
+                  <input name="telefono" type="tel" className="w-full border border-slate-300 rounded-lg p-2.5" placeholder="600 000 000" />
+                </div>
+              </div>
+              <div className="flex justify-end gap-3 pt-4 border-t">
+                <button type="button" onClick={() => setShowNuevoEdificio(false)} className="px-5 py-2.5 text-slate-600 hover:bg-slate-100 rounded-lg font-medium">Cancelar</button>
+                <button type="submit" className="px-5 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium">Crear Edificio</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal Editor de Equipos ECI ────────────────────────────────────── */}
+      {showEditorEquipos && (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/60" onClick={() => setShowEditorEquipos(false)}>
+          <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="bg-blue-600 p-5 text-white flex justify-between items-center">
+              <h2 className="text-xl font-bold">Nuevo Equipo ECI</h2>
+              <button onClick={() => setShowEditorEquipos(false)}><X size={24} /></button>
+            </div>
+            <form onSubmit={async (e) => {
+              e.preventDefault()
+              const fd = new FormData(e.currentTarget)
+              const res = await fetch('/api/logistica', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  tipo: 'equipo-eci',
+                  edificioId: fd.get('edificioId'),
+                  tipo_equipo: fd.get('tipo_equipo'),
+                  subtipo: fd.get('subtipo'),
+                  ubicacion: fd.get('ubicacion'),
+                  numeroSerie: fd.get('numeroSerie'),
+                  estado: fd.get('estado'),
+                  fechaInstalacion: fd.get('fechaInstalacion') || null,
+                  proximaRevision: fd.get('proximaRevision') || null,
+                  observaciones: fd.get('observaciones'),
+                })
+              })
+              if (res.ok) {
+                setShowEditorEquipos(false)
+                e.currentTarget.reset()
+                await cargarDatos()
+              } else {
+                const err = await res.json()
+                alert(err.error || 'Error al crear equipo')
+              }
+            }} className="p-6 overflow-y-auto space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Edificio *</label>
+                  <select name="edificioId" required className="w-full border border-slate-300 rounded-lg p-2.5">
+                    <option value="">Seleccionar edificio...</option>
+                    {edificios.map((ed: any) => (
+                      <option key={ed.id} value={ed.id}>{ed.nombre}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Tipo *</label>
+                  <select name="tipo_equipo" required className="w-full border border-slate-300 rounded-lg p-2.5">
+                    <option value="extintor">Extintor</option>
+                    <option value="bie">BIE</option>
+                    <option value="detector">Detector</option>
+                    <option value="pulsador">Pulsador</option>
+                    <option value="alarma">Alarma</option>
+                    <option value="señalizacion">Señalización</option>
+                    <option value="central">Central</option>
+                    <option value="otro">Otro</option>
+                  </select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Subtipo</label>
+                  <input name="subtipo" type="text" className="w-full border border-slate-300 rounded-lg p-2.5" placeholder="Ej: CO2, Polvo, Agua..." />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Nº Serie</label>
+                  <input name="numeroSerie" type="text" className="w-full border border-slate-300 rounded-lg p-2.5" placeholder="Número de serie" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Ubicación *</label>
+                <input name="ubicacion" type="text" required className="w-full border border-slate-300 rounded-lg p-2.5" placeholder="Ej: Planta baja, pasillo principal" />
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Estado</label>
+                  <select name="estado" className="w-full border border-slate-300 rounded-lg p-2.5">
+                    <option value="operativo">Operativo</option>
+                    <option value="revision_pendiente">Revisión pendiente</option>
+                    <option value="fuera_servicio">Fuera de servicio</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Fecha instalación</label>
+                  <input name="fechaInstalacion" type="date" className="w-full border border-slate-300 rounded-lg p-2.5" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Próxima revisión</label>
+                  <input name="proximaRevision" type="date" className="w-full border border-slate-300 rounded-lg p-2.5" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Observaciones</label>
+                <textarea name="observaciones" rows={2} className="w-full border border-slate-300 rounded-lg p-2.5" placeholder="Notas adicionales..."></textarea>
+              </div>
+              <div className="flex justify-end gap-3 pt-4 border-t">
+                <button type="button" onClick={() => setShowEditorEquipos(false)} className="px-5 py-2.5 text-slate-600 hover:bg-slate-100 rounded-lg font-medium">Cancelar</button>
+                <button type="submit" className="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">Crear Equipo</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
