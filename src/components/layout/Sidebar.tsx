@@ -28,6 +28,7 @@ import {
   FileText,
   BookOpen,
   FlaskConical,
+  BarChart2,
   Wallet,
 } from 'lucide-react'
 
@@ -73,6 +74,7 @@ const navigation: NavItem[] = [
   },
   { name: 'Manuales', href: '/manuales', icon: BookOpen },
   { name: 'Prácticas', href: '/practicas', icon: FlaskConical },
+  { name: 'Estadísticas', href: '/estadisticas', icon: BarChart2 },
 ]
 
 export default function Sidebar() {
