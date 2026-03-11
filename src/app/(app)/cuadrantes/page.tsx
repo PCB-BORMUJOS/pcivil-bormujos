@@ -44,6 +44,15 @@ const getNextMonday = (date: Date): Date => {
   return d
 }
 
+const getCurrentMonday = (date: Date): Date => {
+  const d = new Date(date)
+  d.setHours(0, 0, 0, 0)
+  const day = d.getDay()
+  const diff = day === 0 ? -6 : 1 - day
+  d.setDate(d.getDate() + diff)
+  return d
+}
+
 const getWeekDays = (start: Date): Date[] =>
   Array.from({ length: 7 }, (_, i) => {
     const d = new Date(start)
@@ -82,7 +91,7 @@ const TURNOS = [
 ]
 
 export default function CuadrantesPage() {
-  const [semanaStart, setSemanaStart] = useState<Date>(() => getNextMonday(new Date()))
+  const [semanaStart, setSemanaStart] = useState<Date>(() => getCurrentMonday(new Date()))
   const [disponibilidades, setDisponibilidades] = useState<Record<string, UsuarioDisponible[]>>({})
   const [asignaciones, setAsignaciones] = useState<Record<string, string[]>>({})
   const [capacidad, setCapacidad] = useState<Record<string, number>>({})
@@ -167,6 +176,32 @@ export default function CuadrantesPage() {
                   puedeDobleturno: disp.puedeDobleturno,
                 })
               }
+            }
+          })
+        })
+      })
+      // Fusionar todos los usuarios activos (para admin: asignar sin restricción de semana)
+      const todosUsuarios: any[] = data.todosUsuariosActivos || []
+      weekDays.forEach(day => {
+        const dateStr = toDateStr(day)
+        TURNOS.forEach(({ key }) => {
+          const sk = slotKey(dateStr, key)
+          if (!dispMap[sk]) dispMap[sk] = []
+          todosUsuarios.forEach(u => {
+            if (!dispMap[sk].find((d: any) => d.id === u.id)) {
+              dispMap[sk].push({
+                id: u.id,
+                nombre: u.nombre,
+                apellidos: u.apellidos,
+                numeroVoluntario: u.numeroVoluntario,
+                responsableTurno: u.responsableTurno,
+                carnetConducir: u.carnetConducir,
+                experiencia: u.experiencia || 'BAJA',
+                nivelCompromiso: u.nivelCompromiso || 'medio',
+                esOperativo: u.esOperativo,
+                turnosDeseados: 4,
+                puedeDobleturno: false,
+              })
             }
           })
         })

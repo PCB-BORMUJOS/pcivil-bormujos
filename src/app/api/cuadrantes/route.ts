@@ -52,7 +52,16 @@ export async function GET(request: NextRequest) {
         }
       }
     })
-    return NextResponse.json({ guardias, disponibilidades })
+    const todosUsuariosActivos = await prisma.usuario.findMany({
+      where: { activo: true },
+      select: {
+        id: true, nombre: true, apellidos: true, numeroVoluntario: true,
+        responsableTurno: true, carnetConducir: true, experiencia: true,
+        nivelCompromiso: true, esOperativo: true,
+      },
+      orderBy: [{ numeroVoluntario: 'asc' }]
+    })
+    return NextResponse.json({ guardias, disponibilidades, todosUsuariosActivos })
   } catch (error) {
     console.error('Error al obtener guardias:', error)
     return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 })
