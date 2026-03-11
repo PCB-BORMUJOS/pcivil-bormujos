@@ -687,6 +687,7 @@ export default function AdministracionPage() {
             email: selectedVoluntario.email,
             telefono: selectedVoluntario.telefono || '',
             rolId: fichaData.rolId || null,
+            servicioId: fichaData.servicioId || null,
             password: nuevoPassword,
             activo: true
           })
