@@ -65,7 +65,44 @@ export async function GET(request: NextRequest) {
       })
       return NextResponse.json({ miembros })
     }
-    if (tipo === 'stats') {
+    if (tipo === 'cuadrante-viogen') {
+      const semana = searchParams.get('semana')
+      if (!semana) return NextResponse.json({ cuadrante: {} })
+      const miembros = await prisma.usuario.findMany({
+        where: { activo: true, OR: [
+          { fichaVoluntario: { areaAsignada: { contains: 'Acción Social', mode: 'insensitive' } } },
+          { fichaVoluntario: { areaAsignada: { equals: 'accion_social' } } },
+          { fichaVoluntario: { areaAsignada: { contains: 'social', mode: 'insensitive' } } },
+        ]},
+        select: { id: true }
+      })
+      const semanaDate = new Date(semana + 'T12:00:00Z')
+      const disps = await prisma.disponibilidad.findMany({
+        where: { semanaInicio: semanaDate, usuarioId: { in: miembros.map((m: any) => m.id) } }
+      })
+      const cuadrante: Record<string, Record<string, {manana: boolean, tarde: boolean}>> = {}
+      for (const disp of disps) {
+        const detalles = (disp.detalles as Record<string, any>) || {}
+        for (const [key, val] of Object.entries(detalles)) {
+          const mM = key.match(/^viogen_manana_(.+)$/)
+          const mT = key.match(/^viogen_tarde_(.+)$/)
+          if (mM) {
+            const fecha = mM[1]
+            if (!cuadrante[fecha]) cuadrante[fecha] = {}
+            if (!cuadrante[fecha][disp.usuarioId]) cuadrante[fecha][disp.usuarioId] = { manana: false, tarde: false }
+            cuadrante[fecha][disp.usuarioId].manana = !!val
+          }
+          if (mT) {
+            const fecha = mT[1]
+            if (!cuadrante[fecha]) cuadrante[fecha] = {}
+            if (!cuadrante[fecha][disp.usuarioId]) cuadrante[fecha][disp.usuarioId] = { manana: false, tarde: false }
+            cuadrante[fecha][disp.usuarioId].tarde = !!val
+          }
+        }
+      }
+      return NextResponse.json({ cuadrante })
+    }
+        if (tipo === 'stats') {
       const [espacios, centros, contactos, casosActivos] = await Promise.all([
         prisma.espacioAcogida.count({ where: { estado: 'activo' } }),
         prisma.centroEmergencia.count({ where: { activo: true } }),
@@ -128,7 +165,23 @@ export async function POST(request: NextRequest) {
       })
       return NextResponse.json({ contacto })
     }
-    if (tipo === 'viogen') {
+    if (tipo === 'cuadrante-viogen') {
+      const { usuarioId, semana, fecha, turno, valor } = body
+      const semanaDate = new Date(semana + 'T12:00:00Z')
+      const key = `viogen_${turno}_${fecha}`
+      const existing = await prisma.disponibilidad.findUnique({
+        where: { usuarioId_semanaInicio: { usuarioId, semanaInicio: semanaDate } }
+      })
+      const detalles: Record<string, any> = (existing?.detalles as Record<string, any>) || {}
+      detalles[key] = valor
+      await prisma.disponibilidad.upsert({
+        where: { usuarioId_semanaInicio: { usuarioId, semanaInicio: semanaDate } },
+        create: { usuarioId, semanaInicio: semanaDate, detalles },
+        update: { detalles }
+      })
+      return NextResponse.json({ ok: true })
+    }
+        if (tipo === 'viogen') {
       const año = new Date().getFullYear()
       const totalCasos = await prisma.casoViogen.count()
       const numeroCaso = `VG-${año}-${String(totalCasos + 1).padStart(4, '0')}`

@@ -139,7 +139,7 @@ export default function AccionSocialPage() {
 
   // Cuadrante VIOGEN - semana actual
   const [semanaOffset, setSemanaOffset] = useState(0)
-  const [cuadrante, setCuadrante] = useState<Record<string, Record<string, boolean>>>({})
+  const [cuadrante, setCuadrante] = useState<Record<string, Record<string, {manana: boolean, tarde: boolean}>>>({})
   const [miembrosViogen, setMiembrosViogen] = useState<any[]>([])
 
   // Modales
@@ -202,6 +202,7 @@ export default function AccionSocialPage() {
 
   useEffect(() => { cargarDatos() }, [])
   useEffect(() => { if (inventoryTab === 'peticiones') cargarPeticiones() }, [inventoryTab])
+  useEffect(() => { if (mainTab === 'cuadrante') cargarCuadrante() }, [semanaOffset, mainTab])
 
   // ─── Cuadrante VIOGEN - generar días de la semana ─────────────────────────
 
@@ -217,11 +218,68 @@ export default function AccionSocialPage() {
     })
   }
 
-  const toggleDisponibilidad = (miembro: string, fecha: string) => {
+  // Obtener lunes de la semana actual (para la API)
+  const getLunesSemana = () => {
+    const hoy = new Date()
+    hoy.setDate(hoy.getDate() + semanaOffset * 7)
+    const lunes = new Date(hoy)
+    lunes.setDate(hoy.getDate() - ((hoy.getDay() + 6) % 7))
+    return lunes.toISOString().split('T')[0]
+  }
+
+  const cargarCuadrante = async () => {
+    try {
+      const semana = getLunesSemana()
+      const res = await fetch(`/api/accion-social?tipo=cuadrante-viogen&semana=${semana}`)
+      const data = await res.json()
+      setCuadrante(data.cuadrante || {})
+    } catch (e) { console.error('Error cargando cuadrante viogen:', e) }
+  }
+
+  const toggleDisponibilidadTurno = async (usuarioId: string, fecha: string, turno: 'manana' | 'tarde', puedeEditar: boolean) => {
+    if (!puedeEditar) return
+    const actual = cuadrante[fecha]?.[usuarioId]?.[turno] ?? false
+    const nuevoValor = !actual
+    // Optimistic update
     setCuadrante(prev => ({
       ...prev,
-      [fecha]: { ...(prev[fecha] || {}), [miembro]: !(prev[fecha]?.[miembro] ?? false) }
+      [fecha]: {
+        ...(prev[fecha] || {}),
+        [usuarioId]: {
+          manana: prev[fecha]?.[usuarioId]?.manana ?? false,
+          tarde: prev[fecha]?.[usuarioId]?.tarde ?? false,
+          [turno]: nuevoValor
+        }
+      }
     }))
+    try {
+      await fetch('/api/accion-social', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tipo: 'cuadrante-viogen',
+          usuarioId,
+          semana: getLunesSemana(),
+          fecha,
+          turno,
+          valor: nuevoValor
+        })
+      })
+    } catch (e) {
+      console.error('Error guardando cuadrante:', e)
+      // Revert on error
+      setCuadrante(prev => ({
+        ...prev,
+        [fecha]: {
+          ...(prev[fecha] || {}),
+          [usuarioId]: {
+            manana: prev[fecha]?.[usuarioId]?.manana ?? false,
+            tarde: prev[fecha]?.[usuarioId]?.tarde ?? false,
+            [turno]: actual
+          }
+        }
+      }))
+    }
   }
 
   const diasSemana = getDiasSemana()
@@ -915,10 +973,12 @@ export default function AccionSocialPage() {
                       const esAdmin = ['superadmin','admin','coordinador'].includes(session?.user?.rol || '')
                       const esMiembro = miembro.id === (session?.user as any)?.id
                       const puedeEditar = esAdmin || esMiembro
-                      const totalDisp = diasSemana.filter(d => {
+                      const totalDisp = diasSemana.reduce((acc, d) => {
                         const k = d.toISOString().split('T')[0]
-                        return cuadrante[k]?.[miembro.id]
-                      }).length
+                        const t = cuadrante[k]?.[miembro.id]
+                        return acc + (t?.manana ? 1 : 0) + (t?.tarde ? 1 : 0)
+                      }, 0)
+                      const maxDisp = diasSemana.length * 2
                       return (
                         <tr key={mi} className={`border-b border-gray-100 ${mi % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}`}>
                           <td className="py-3 px-4">
@@ -931,26 +991,37 @@ export default function AccionSocialPage() {
                           </td>
                           {diasSemana.map((dia, di) => {
                             const fechaKey = dia.toISOString().split('T')[0]
-                            const disponible = cuadrante[fechaKey]?.[miembro.id] ?? false
+                            const dispManana = cuadrante[fechaKey]?.[miembro.id]?.manana ?? false
+                            const dispTarde = cuadrante[fechaKey]?.[miembro.id]?.tarde ?? false
                             const esHoy = dia.toDateString() === new Date().toDateString()
                             return (
-                              <td key={di} className={`py-2 px-2 text-center ${esHoy ? 'bg-rose-50/50' : ''}`}>
-                                <button
-                                  disabled={!puedeEditar}
-                                  onClick={() => puedeEditar && toggleDisponibilidad(miembro.id, fechaKey)}
-                                  className={`w-full py-2 rounded-lg text-xs font-medium transition-all ${
-                                    disponible
-                                      ? 'bg-green-500 text-white hover:bg-green-600 shadow-sm'
-                                      : 'bg-gray-100 text-gray-400 hover:bg-gray-200 border border-gray-200'
-                                  }`}>
-                                  {disponible ? (
-                                    <span className="flex items-center justify-center gap-1">
-                                      <UserCheck className="w-3 h-3" /> Disp.
-                                    </span>
-                                  ) : (
-                                    <span className="text-gray-300">—</span>
-                                  )}
-                                </button>
+                              <td key={di} className={`py-2 px-1 text-center ${esHoy ? 'bg-rose-50/50' : ''}`}>
+                                <div className="flex gap-0.5">
+                                  {/* Mañana */}
+                                  <button
+                                    disabled={!puedeEditar}
+                                    title="Mañana 09:00–15:00"
+                                    onClick={() => toggleDisponibilidadTurno(miembro.id, fechaKey, 'manana', puedeEditar)}
+                                    className={`flex-1 py-2 rounded-l-lg text-[10px] font-bold transition-all border ${
+                                      dispManana
+                                        ? 'bg-amber-400 text-white border-amber-500 shadow-sm'
+                                        : 'bg-gray-100 text-gray-300 border-gray-200 hover:bg-amber-50 hover:text-amber-400'
+                                    } ${!puedeEditar ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}>
+                                    M
+                                  </button>
+                                  {/* Tarde */}
+                                  <button
+                                    disabled={!puedeEditar}
+                                    title="Tarde 15:00–21:00"
+                                    onClick={() => toggleDisponibilidadTurno(miembro.id, fechaKey, 'tarde', puedeEditar)}
+                                    className={`flex-1 py-2 rounded-r-lg text-[10px] font-bold transition-all border ${
+                                      dispTarde
+                                        ? 'bg-blue-400 text-white border-blue-500 shadow-sm'
+                                        : 'bg-gray-100 text-gray-300 border-gray-200 hover:bg-blue-50 hover:text-blue-400'
+                                    } ${!puedeEditar ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}>
+                                    T
+                                  </button>
+                                </div>
                               </td>
                             )
                           })}
@@ -960,7 +1031,7 @@ export default function AccionSocialPage() {
                               : totalDisp >= 3 ? 'bg-yellow-100 text-yellow-700'
                               : totalDisp > 0 ? 'bg-orange-100 text-orange-700'
                               : 'bg-gray-100 text-gray-400'
-                            }`}>{totalDisp}/7</span>
+                            }`}>{totalDisp}/{maxDisp}</span>
                           </td>
                         </tr>
                       )
@@ -971,7 +1042,9 @@ export default function AccionSocialPage() {
                       <td className="py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Disponibles / día</td>
                       {diasSemana.map((dia, i) => {
                         const k = dia.toISOString().split('T')[0]
-                        const count = miembrosViogen.filter(m => cuadrante[k]?.[m.id]).length
+                        const countM = miembrosViogen.filter(m => cuadrante[k]?.[m.id]?.manana).length
+                        const countT = miembrosViogen.filter(m => cuadrante[k]?.[m.id]?.tarde).length
+                        const count = countM + countT
                         return (
                           <td key={i} className="py-3 px-2 text-center">
                             <span className={`px-2 py-1 rounded-full text-xs font-bold ${

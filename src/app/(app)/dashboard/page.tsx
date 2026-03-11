@@ -540,7 +540,7 @@ export default function DashboardPage() {
   const [showClima, setShowClima] = useState(false);
   const [showEventDetail, setShowEventDetail] = useState<any>(null);
   const [miembrosViogen, setMiembrosViogen] = useState<any[]>([]);
-  const [guardiasHoy, setGuardiasHoy] = useState<any[]>([]);
+  const [guardiasHoy, setGuardiasHoy] = useState<any>({});
   const [showCreateEvent, setShowCreateEvent] = useState(false);
   const [showParticipantesEvento, setShowParticipantesEvento] = useState<any>(null);
   const [participantesEvento, setParticipantesEvento] = useState<any[]>([]);
@@ -1044,13 +1044,10 @@ export default function DashboardPage() {
             <div className="ml-auto w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
           </div>
           {(() => {
-            const hoy = new Date().toISOString().slice(0, 10);
-            const guardiasHoyViogen = guardiasHoy.filter((g: any) => {
-              const fechaG = new Date(g.fecha).toISOString().slice(0, 10);
-              return fechaG === hoy && miembrosViogen.some((m: any) => m.id === g.usuarioId);
-            });
-            const manana = guardiasHoyViogen.filter((g: any) => g.turno === 'mañana');
-            const tarde = guardiasHoyViogen.filter((g: any) => g.turno === 'tarde');
+            const hoy = new Date().toISOString().split('T')[0];
+            const hoyData = guardiasHoy[hoy] || {};
+            const manana = miembrosViogen.filter((m: any) => hoyData[m.id]?.manana);
+            const tarde = miembrosViogen.filter((m: any) => hoyData[m.id]?.tarde);
             return (
               <div className="space-y-3">
                 <div className="p-3 rounded-lg bg-amber-50 border border-amber-100">
@@ -1063,17 +1060,14 @@ export default function DashboardPage() {
                     <p className="text-xs text-slate-400 italic">Sin cobertura</p>
                   ) : (
                     <div className="space-y-1">
-                      {manana.map((g: any) => {
-                        const m = miembrosViogen.find((x: any) => x.id === g.usuarioId);
-                        return (
-                          <div key={g.id} className="flex items-center gap-2">
-                            <div className="w-5 h-5 rounded-full bg-amber-500 text-white flex items-center justify-center text-[9px] font-bold flex-shrink-0">
-                              {m?.nombre?.charAt(0)}{m?.apellidos?.charAt(0)}
-                            </div>
-                            <span className="text-xs text-slate-700 font-medium">{m?.numeroVoluntario} {m?.nombre} {m?.apellidos}</span>
+                      {manana.map((m: any) => (
+                        <div key={m.id} className="flex items-center gap-2">
+                          <div className="w-5 h-5 rounded-full bg-amber-500 text-white flex items-center justify-center text-[9px] font-bold flex-shrink-0">
+                            {m?.nombre?.charAt(0)}{m?.apellidos?.charAt(0)}
                           </div>
-                        );
-                      })}
+                          <span className="text-xs text-slate-700 font-medium">{m?.numeroVoluntario} {m?.nombre} {m?.apellidos}</span>
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>
@@ -1087,17 +1081,14 @@ export default function DashboardPage() {
                     <p className="text-xs text-slate-400 italic">Sin cobertura</p>
                   ) : (
                     <div className="space-y-1">
-                      {tarde.map((g: any) => {
-                        const m = miembrosViogen.find((x: any) => x.id === g.usuarioId);
-                        return (
-                          <div key={g.id} className="flex items-center gap-2">
-                            <div className="w-5 h-5 rounded-full bg-blue-500 text-white flex items-center justify-center text-[9px] font-bold flex-shrink-0">
-                              {m?.nombre?.charAt(0)}{m?.apellidos?.charAt(0)}
-                            </div>
-                            <span className="text-xs text-slate-700 font-medium">{m?.numeroVoluntario} {m?.nombre} {m?.apellidos}</span>
+                      {tarde.map((m: any) => (
+                        <div key={m.id} className="flex items-center gap-2">
+                          <div className="w-5 h-5 rounded-full bg-blue-500 text-white flex items-center justify-center text-[9px] font-bold flex-shrink-0">
+                            {m?.nombre?.charAt(0)}{m?.apellidos?.charAt(0)}
                           </div>
-                        );
-                      })}
+                          <span className="text-xs text-slate-700 font-medium">{m?.numeroVoluntario} {m?.nombre} {m?.apellidos}</span>
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>
