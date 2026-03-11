@@ -1731,7 +1731,8 @@ export default function IncendiosPage() {
             </div>
             <form onSubmit={async (e) => {
               e.preventDefault()
-              const fd = new FormData(e.currentTarget)
+              const form = e.currentTarget
+              const fd = new FormData(form)
               const res = await fetch('/api/logistica', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -1745,7 +1746,7 @@ export default function IncendiosPage() {
               })
               if (res.ok) {
                 setShowNuevoEdificio(false)
-                e.currentTarget.reset()
+                form.reset()
                 await cargarDatos()
               } else {
                 const err = await res.json()
@@ -1789,7 +1790,8 @@ export default function IncendiosPage() {
             </div>
             <form onSubmit={async (e) => {
               e.preventDefault()
-              const fd = new FormData(e.currentTarget)
+              const form = e.currentTarget
+              const fd = new FormData(form)
               const res = await fetch('/api/logistica', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -1808,7 +1810,7 @@ export default function IncendiosPage() {
               })
               if (res.ok) {
                 setShowEditorEquipos(false)
-                e.currentTarget.reset()
+                form.reset()
                 await cargarDatos()
               } else {
                 const err = await res.json()
