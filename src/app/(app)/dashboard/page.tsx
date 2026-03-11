@@ -539,6 +539,8 @@ export default function DashboardPage() {
   const [showAvailability, setShowAvailability] = useState(false);
   const [showClima, setShowClima] = useState(false);
   const [showEventDetail, setShowEventDetail] = useState<any>(null);
+  const [miembrosViogen, setMiembrosViogen] = useState<any[]>([]);
+  const [guardiasHoy, setGuardiasHoy] = useState<any[]>([]);
   const [showCreateEvent, setShowCreateEvent] = useState(false);
   const [showParticipantesEvento, setShowParticipantesEvento] = useState<any>(null);
   const [participantesEvento, setParticipantesEvento] = useState<any[]>([]);
@@ -615,6 +617,7 @@ export default function DashboardPage() {
       .then(([volData, vehData, climaData, eventosData, guardiasData]: any[]) => {
         setVoluntarios(volData.voluntarios || []);
         setTodosVoluntarios(volData.voluntarios || []);  // guardar copia completa para el selector
+        fetch('/api/accion-social?tipo=miembros-viogen').then(r => r.json()).then(d => setMiembrosViogen(d.miembros || [])).catch(() => {});
         setEnTurno(volData.enTurno || []);
         setTodosHoy(Array.isArray(volData.todosHoy) ? volData.todosHoy : []);
         setTurnoActivo(volData.turnoActivo || null);
@@ -942,7 +945,7 @@ export default function DashboardPage() {
       />
 
       {/* Bottom Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         <div className="bg-gradient-to-br from-indigo-500 to-purple-600 text-white p-6 rounded-xl shadow-lg">
           <h4 className="font-bold flex items-center gap-2 mb-3 text-lg"><span className="text-2xl">✨</span> IA Operativa - Gemini</h4>
           <p className="text-sm text-indigo-100 leading-relaxed">
