@@ -469,6 +469,7 @@ export default function CuadrantesPage() {
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500 px-1">
         <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-green-500 inline-block" /> Asignado</span>
+        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-amber-400 inline-block" /> En prácticas</span>
         <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-indigo-300 inline-block" /> Sugerido</span>
         <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-slate-200 inline-block" /> Disponible</span>
         <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-red-100 inline-block" /> Sin turnos restantes</span>
@@ -565,6 +566,8 @@ export default function CuadrantesPage() {
                           {disponibles.map(u => {
                             const isAsig = asignados.includes(u.id)
                             const isSug = sugeridosSk.includes(u.id) && !isAsig
+                            const esPracticas = !!(u as any)?.fichaVoluntario?.enPracticas
+                            const turnosPrac = (u as any)?.fichaVoluntario?.turnosPracticasRealizados ?? 0
                             const asigCount = turnosAsignadosUsuario(u.id)
                             const restantes = Math.max(0, u.turnosDeseados - asigCount)
                             const agotado = restantes === 0 && !isAsig
@@ -574,7 +577,9 @@ export default function CuadrantesPage() {
                                 onClick={() => !agotado && toggleAsignacion(sk, u.id)}
                                 title={`${u.nombre} ${u.apellidos} · Quiere ${u.turnosDeseados} turnos · ${restantes} restantes`}
                                 className={`flex items-center gap-1 px-1.5 py-1 rounded text-[10px] transition-all select-none ${
-                                  isAsig
+                                  isAsig && esPracticas
+                                    ? 'bg-amber-100 border border-amber-400 text-amber-900 cursor-pointer'
+                                    : isAsig
                                     ? 'bg-green-100 border border-green-300 text-green-900 cursor-pointer'
                                     : isSug
                                     ? 'bg-indigo-50 border border-indigo-200 text-indigo-900 cursor-pointer hover:bg-indigo-100'
@@ -583,10 +588,13 @@ export default function CuadrantesPage() {
                                     : 'bg-white border border-slate-200 text-slate-700 cursor-pointer hover:bg-slate-50'
                                 }`}
                               >
-                                <span className={`w-3 h-3 rounded border flex items-center justify-center flex-shrink-0 ${isAsig ? 'bg-green-500 border-green-500 text-white' : 'border-slate-300'}`} style={{ fontSize: '7px' }}>
+                                <span className={`w-3 h-3 rounded border flex items-center justify-center flex-shrink-0 ${isAsig && esPracticas ? 'bg-amber-500 border-amber-500 text-white' : isAsig ? 'bg-green-500 border-green-500 text-white' : 'border-slate-300'}`} style={{ fontSize: '7px' }}>
                                   {isAsig && '✓'}
                                 </span>
-                                <span className="font-bold truncate flex-1">{u.numeroVoluntario || `${u.nombre.slice(0, 3)}.`}</span>
+                                <span className="font-bold truncate flex-1">
+                                  {u.numeroVoluntario || `${u.nombre.slice(0, 3)}.`}
+                                  {esPracticas && <span className="ml-0.5 text-[7px] font-bold text-amber-600 bg-amber-100 px-0.5 rounded">P{turnosPrac}/15</span>}
+                                </span>
                                 <span className="flex items-center gap-0.5 flex-shrink-0">
                                   {u.responsableTurno && <Shield size={8} className={isAsig ? 'text-green-700' : 'text-indigo-500'} />}
                                   {u.carnetConducir && <Car size={8} className={isAsig ? 'text-green-700' : 'text-blue-500'} />}

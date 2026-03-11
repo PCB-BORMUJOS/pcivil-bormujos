@@ -315,6 +315,8 @@ model Guardia {
   usuarioId  String   @map("usuario_id")
   servicioId String   @map("servicio_id")
   estado     String   @default("programada")
+  horasTurno       Float?   @map("horas_turno")
+  descripcionExtra String?  @map("descripcion_extra")
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
   servicio   Servicio @relation(fields: [servicioId], references: [id])
@@ -389,6 +391,9 @@ model FichaVoluntario {
   ocupacionActual        String?   @map("ocupacion_actual")
   minusvaliaReconocida   String?   @map("minusvalia_reconocida")
   datosAlergias          String?   @map("datos_alergias")
+  enPracticas            Boolean   @default(false) @map("en_practicas")
+  turnosPracticasRealizados Int     @default(0) @map("turnos_practicas_realizados")
+  fechaInicioPracticas   DateTime? @map("fecha_inicio_practicas") @db.Date
   grupoSanguineo         String?   @map("grupo_sanguineo")
   contactoEmergencia     String?   @map("contacto_emergencia")
   telefonoEmergencia     String?   @map("telefono_emergencia")

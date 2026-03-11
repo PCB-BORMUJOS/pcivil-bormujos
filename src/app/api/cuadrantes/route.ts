@@ -27,6 +27,7 @@ export async function GET(request: NextRequest) {
           select: {
             id: true, nombre: true, apellidos: true, numeroVoluntario: true,
             email: true, responsableTurno: true, carnetConducir: true, esOperativo: true,
+            fichaVoluntario: { select: { enPracticas: true, turnosPracticasRealizados: true } },
           }
         }
       },
@@ -48,6 +49,7 @@ export async function GET(request: NextRequest) {
             id: true, nombre: true, apellidos: true, numeroVoluntario: true,
             responsableTurno: true, carnetConducir: true, experiencia: true,
             nivelCompromiso: true, esOperativo: true,
+            fichaVoluntario: { select: { enPracticas: true, turnosPracticasRealizados: true } },
           }
         }
       }
@@ -82,7 +84,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No tienes permisos para crear guardias' }, { status: 403 })
     }
     const body = await request.json()
-    const { fecha, turno, usuarioId, tipo, notas, servicioId, rol } = body
+    const { fecha, turno, usuarioId, tipo, notas, servicioId, rol, horasTurno, descripcionExtra } = body
     if (!fecha || !turno || !usuarioId) {
       return NextResponse.json({ error: 'Fecha, turno y usuarioId son requeridos' }, { status: 400 })
     }
@@ -99,6 +101,8 @@ export async function POST(request: NextRequest) {
         turno, rol: rol || null,
         tipo: tipo || 'programada',
         notas: notas || '',
+        horasTurno: horasTurno ? parseFloat(horasTurno) : null,
+        descripcionExtra: descripcionExtra || null,
         usuarioId,
         servicioId: servicioId || usuarioAsignado?.servicioId || '',
         estado: 'programada'
@@ -110,6 +114,41 @@ export async function POST(request: NextRequest) {
     
     // Generar dieta automáticamente al crear guardia
     try {
+      // Comprobar si está en prácticas
+      const fichaCheck = await prisma.fichaVoluntario.findUnique({ where: { usuarioId } })
+      if (fichaCheck?.enPracticas) {
+        // Incrementar contador de turnos de prácticas
+        const nuevoContador = (fichaCheck.turnosPracticasRealizados ?? 0) + 1
+        const TURNOS_OBLIGATORIOS = 15
+        if (nuevoContador >= TURNOS_OBLIGATORIOS) {
+          // Ha completado las prácticas → pasar a voluntario
+          await prisma.fichaVoluntario.update({
+            where: { usuarioId },
+            data: {
+              enPracticas: false,
+              turnosPracticasRealizados: nuevoContador
+            }
+          })
+          // Notificar al usuario
+          await prisma.notificacion.create({
+            data: {
+              usuarioId,
+              titulo: '¡Prácticas completadas!',
+              mensaje: `Has completado los ${TURNOS_OBLIGATORIOS} turnos de prácticas obligatorios. Ya eres voluntario activo.`,
+              tipo: 'sistema',
+              leida: false
+            }
+          })
+        } else {
+          await prisma.fichaVoluntario.update({
+            where: { usuarioId },
+            data: { turnosPracticasRealizados: nuevoContador }
+          })
+        }
+        // NO generar dieta para personas en prácticas
+        return NextResponse.json({ success: true, guardia })
+      }
+
       const [configBaremo, configKm] = await Promise.all([
         prisma.configuracion.findUnique({ where: { clave: 'baremo_dietas' } }),
         prisma.configuracion.findUnique({ where: { clave: 'precio_km' } })
@@ -123,7 +162,14 @@ export async function POST(request: NextRequest) {
         ? ((typeof rawKm === 'string' ? JSON.parse(rawKm) : rawKm as any)?.precio ?? 0.19)
         : 0.19;
       const horasPorTurno: Record<string, number> = { 'mañana': 5.5, 'tarde': 5, 'noche': 9 };
-      const horasTrabajadas = horasPorTurno[turno.toLowerCase()] ?? 5;
+      const horasTrabajadas = horasTurno ? parseFloat(String(horasTurno)) : (horasPorTurno[turno.toLowerCase()] ?? 5);
+      if (tipo === 'extraordinaria') {
+        const inicioDia = new Date(fecha + 'T00:00:00.000Z');
+        const finDia = new Date(fecha + 'T23:59:59.999Z');
+        await prisma.dieta.deleteMany({
+          where: { usuarioId, fecha: { gte: inicioDia, lte: finDia }, notas: { not: 'extraordinaria' } }
+        });
+      }
       const tramo = [...baremo].reverse().find(t => horasTrabajadas >= (t.horasMin ?? t.minHours ?? 0));
       const importeDia = tramo?.importe ?? tramo?.amount ?? 0;
       const ficha = await prisma.fichaVoluntario.findUnique({ where: { usuarioId } });
