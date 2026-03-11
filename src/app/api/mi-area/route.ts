@@ -60,10 +60,7 @@ export async function GET(request: NextRequest) {
 
       const dietas = await prisma.dieta.findMany({
         where,
-        orderBy: { fecha: 'desc' },
-        include: {
-          guardia: { select: { id: true, turno: true, tipo: true, fecha: true } }
-        }
+        orderBy: { fecha: 'desc' }
       })
 
       const totalesPorMes: Record<string, { totalDietas: number, totalKm: number, totalGeneral: number, numServicios: number }> = {}
