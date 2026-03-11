@@ -51,7 +51,33 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // ... (dietas logic remains)
+    if (tipo === 'dietas') {
+      const usuario2 = await prisma.usuario.findUnique({ where: { email: session.user.email! } })
+      if (!usuario2) return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
+
+      const where: any = { usuarioId: usuario2.id }
+      if (mes) where.mesAnio = mes
+
+      const dietas = await prisma.dieta.findMany({
+        where,
+        orderBy: { fecha: 'desc' },
+        include: {
+          guardia: { select: { id: true, turno: true, tipo: true, fecha: true } }
+        }
+      })
+
+      const totalesPorMes: Record<string, { totalDietas: number, totalKm: number, totalGeneral: number, numServicios: number }> = {}
+      dietas.forEach(d => {
+        const m = d.mesAnio || d.fecha.toISOString().slice(0, 7)
+        if (!totalesPorMes[m]) totalesPorMes[m] = { totalDietas: 0, totalKm: 0, totalGeneral: 0, numServicios: 0 }
+        totalesPorMes[m].totalDietas += Number(d.subtotalDietas ?? 0)
+        totalesPorMes[m].totalKm += Number(d.subtotalKm ?? 0)
+        totalesPorMes[m].totalGeneral += Number(d.totalDieta ?? 0)
+        totalesPorMes[m].numServicios += 1
+      })
+
+      return NextResponse.json({ dietas, totalesPorMes })
+    }
 
     // Construir objeto de respuesta
     const responseData = {
