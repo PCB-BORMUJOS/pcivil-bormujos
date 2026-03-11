@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react'
 import {
   Calendar, ChevronLeft, ChevronRight, RefreshCw, Save,
   Shield, Car, Minus, Plus, Clock, AlertTriangle, CheckCircle2, Info
-} from 'lucide-react'
+, X } from 'lucide-react'
 
 interface UsuarioDisponible {
   id: string
@@ -101,6 +101,11 @@ export default function CuadrantesPage() {
   const [loading, setLoading] = useState(true)
   const [guardando, setGuardando] = useState(false)
   const [pendiente, setPendiente] = useState(false)
+  const [horasSlot, setHorasSlot] = useState<Record<string, number>>({})
+  const [guardandoHoras, setGuardandoHoras] = useState<Record<string, boolean>>({})
+  const [showExtraordinario, setShowExtraordinario] = useState(false)
+  const [extraPersonas, setExtraPersonas] = useState<string[]>([])
+  const [todosUsuarios, setTodosUsuarios] = useState<any[]>([])
 
   const calcularSugerencias = (
     dispMap: Record<string, UsuarioDisponible[]>,
@@ -498,6 +503,36 @@ export default function CuadrantesPage() {
                         <button onClick={() => setCapacidad(p => ({ ...p, [sk]: (p[sk] || 4) + 1 }))} className="w-4 h-4 flex items-center justify-center hover:bg-slate-200 rounded text-slate-400"><Plus size={7} /></button>
                       </div>
                     </div>
+                    <div className="flex items-center gap-0.5 mb-1.5">
+                      {[4, 8, 12].map(h => (
+                        <button
+                          key={h}
+                          disabled={!!guardandoHoras[sk] || asignadosOp.length === 0}
+                          onClick={async () => {
+                            if (asignadosOp.length === 0) { alert('Asigna personas al turno primero'); return }
+                            setGuardandoHoras(p => ({ ...p, [sk]: true }))
+                            let ok = 0
+                            for (const uid of asignadosOp) {
+                              const res = await fetch('/api/cuadrantes/dieta-slot', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ usuarioId: uid, fecha: dateStr, turno: turno.key, horas: h })
+                              })
+                              if (res.ok) ok++
+                            }
+                            setHorasSlot(p => ({ ...p, [sk]: h }))
+                            setGuardandoHoras(p => ({ ...p, [sk]: false }))
+                            alert('Dietas (' + h + 'h) actualizadas para ' + ok + ' personas')
+                          }}
+                          className={'text-[8px] font-bold px-1.5 py-0.5 rounded transition-colors ' + (
+                            horasSlot[sk] === h
+                              ? 'bg-orange-500 text-white'
+                              : 'bg-slate-100 text-slate-500 hover:bg-orange-100 hover:text-orange-700'
+                          ) + ' disabled:opacity-40'}
+                        >+{h}h</button>
+                      ))}
+                      {guardandoHoras[sk] && <span className="text-[8px] text-slate-400 ml-1">...</span>}
+                    </div>
                     <div className="space-y-0.5 max-h-56 overflow-y-auto">
                       {disponibles.length === 0 && asignadosExternos.length === 0 ? (
                         <div className="text-[9px] text-slate-300 text-center py-3">Sin disponibilidad</div>
@@ -633,6 +668,101 @@ export default function CuadrantesPage() {
           </span>
         </div>
       )}
+
+      {showExtraordinario && (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/60" onClick={() => setShowExtraordinario(false)}>
+          <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="bg-orange-500 p-5 text-white flex justify-between items-center">
+              <div>
+                <h2 className="text-xl font-bold">Nuevo Servicio Extraordinario</h2>
+                <p className="text-xs opacity-80 mt-0.5">Turnos de mas de 8h o 12h con dieta extraordinaria</p>
+              </div>
+              <button onClick={() => setShowExtraordinario(false)}><X size={17} /></button>
+            </div>
+            <form onSubmit={async (e) => {
+              e.preventDefault()
+              const form = e.currentTarget
+              const fd = new FormData(form)
+              const fecha = fd.get('fecha') as string
+              const horas = fd.get('horas') as string
+              const descripcion = fd.get('descripcion') as string
+              if (!fecha || !horas || extraPersonas.length === 0) {
+                alert('Selecciona fecha, duracion y al menos una persona')
+                return
+              }
+              let errores = 0
+              for (const uid of extraPersonas) {
+                const res = await fetch('/api/cuadrantes', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ fecha, turno: 'extraordinario', usuarioId: uid, tipo: 'extraordinaria', horasTurno: parseFloat(horas), descripcionExtra: descripcion, notas: descripcion })
+                })
+                if (!res.ok) errores++
+              }
+              if (errores > 0) alert(errores + ' asignaciones fallaron')
+              else alert('Servicio extraordinario creado para ' + extraPersonas.length + ' personas')
+              setShowExtraordinario(false)
+              setExtraPersonas([])
+              form.reset()
+              await cargarDatos()
+            }} className="p-6 overflow-y-auto space-y-4 flex-1">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Fecha *</label>
+                  <input name="fecha" type="date" required defaultValue={toDateStr(new Date())} className="w-full border border-slate-300 rounded-lg p-2.5" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Duracion *</label>
+                  <select name="horas" required className="w-full border border-slate-300 rounded-lg p-2.5">
+                    <option value="">Seleccionar...</option>
+                    <option value="8">Mas de 8 horas (49,15 euro)</option>
+                    <option value="12">Mas de 12 horas (72,37 euro)</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Descripcion del servicio</label>
+                <input name="descripcion" type="text" placeholder="Ej: Emergencia inundaciones, Evento feria..." className="w-full border border-slate-300 rounded-lg p-2.5" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Personas asignadas *
+                  <span className="ml-2 px-2 py-0.5 bg-orange-100 text-orange-700 rounded-full text-xs">{extraPersonas.length} seleccionadas</span>
+                </label>
+                <div className="border border-slate-200 rounded-lg max-h-56 overflow-y-auto divide-y divide-slate-50">
+                  {todosUsuarios.map((u: any) => (
+                    <label key={u.id} className="flex items-center gap-3 p-2.5 hover:bg-slate-50 cursor-pointer">
+                      <input type="checkbox" checked={extraPersonas.includes(u.id)}
+                        onChange={() => setExtraPersonas(prev => prev.includes(u.id) ? prev.filter(id => id !== u.id) : [...prev, u.id])}
+                        className="w-4 h-4 rounded accent-orange-500" />
+                      <span className="text-xs font-bold text-slate-400 w-8">{u.numeroVoluntario || '-'}</span>
+                      <span className="text-sm font-medium text-slate-700">{u.nombre} {u.apellidos}</span>
+                      <span className="ml-auto flex gap-1">
+                        {u.responsableTurno && <span className="px-1.5 py-0.5 bg-indigo-100 text-indigo-700 rounded text-xs">R</span>}
+                        {u.carnetConducir && <span className="px-1.5 py-0.5 bg-green-100 text-green-700 rounded text-xs">C</span>}
+                      </span>
+                    </label>
+                  ))}
+                  {todosUsuarios.length === 0 && <p className="text-slate-400 text-sm text-center py-6">Cargando voluntarios...</p>}
+                </div>
+                <div className="flex gap-2 mt-2">
+                  <button type="button" onClick={() => setExtraPersonas(todosUsuarios.map((u:any) => u.id))} className="text-xs text-indigo-600 hover:underline">Seleccionar todos</button>
+                  <span className="text-slate-300">|</span>
+                  <button type="button" onClick={() => setExtraPersonas([])} className="text-xs text-slate-500 hover:underline">Limpiar</button>
+                </div>
+              </div>
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-700">
+                Si algun voluntario ya tiene turno ordinario ese dia, su dieta ordinaria se reemplazara automaticamente por la extraordinaria.
+              </div>
+              <div className="flex justify-end gap-3 pt-4 border-t">
+                <button type="button" onClick={() => { setShowExtraordinario(false); setExtraPersonas([]) }} className="px-5 py-2.5 text-slate-600 hover:bg-slate-100 rounded-lg font-medium">Cancelar</button>
+                <button type="submit" className="px-5 py-2.5 bg-orange-500 text-white rounded-lg hover:bg-orange-600 font-medium">Crear Servicio Extraordinario</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }
