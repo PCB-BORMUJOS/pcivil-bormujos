@@ -267,15 +267,23 @@ export default function CuadrantesPage() {
     if (!confirm(`¿Guardar el cuadrante sin notificar?\nSe guardarán ${totalAsig} asignaciones.`)) return
     setGuardando(true)
     try {
-      await Promise.all(
-        guardiasGuardadas.map(g =>
-          fetch(`/api/cuadrantes?id=${g.id}`, { method: 'DELETE' })
-        )
-      )
+      // Calcular qué guardias ya guardadas ya NO están en asignaciones (borrar solo esas)
+      const aEliminar = guardiasGuardadas.filter(g => {
+        const dateStr = g.fecha.slice(0, 10)
+        const sk = slotKey(dateStr, g.turno)
+        const uidsEnSlot = asignaciones[sk] || []
+        return !uidsEnSlot.includes(g.usuarioId)
+      })
+
+      // Calcular qué asignaciones son NUEVAS (no existen en guardiasGuardadas)
       const cuerpos: any[] = []
       Object.entries(asignaciones).forEach(([sk, userIds]) => {
         const { fecha, turno } = parseSlotKey(sk)
         userIds.forEach(uid => {
+          const yaExiste = guardiasGuardadas.find(
+            g => g.usuarioId === uid && g.fecha.slice(0, 10) === fecha && g.turno === turno
+          )
+          if (yaExiste) return // ya está guardada, no recrear
           const u =
             disponibilidades[sk]?.find(d => d.id === uid) ||
             guardiasGuardadas.find(g => g.usuarioId === uid)?.usuario
@@ -290,24 +298,40 @@ export default function CuadrantesPage() {
           cuerpos.push({ fecha, turno, usuarioId: uid, tipo: 'programada', rol: rolFinal })
         })
       })
-      const resultados = await Promise.all(
-        cuerpos.map(body =>
-          fetch('/api/cuadrantes', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body),
-          })
+
+      // 1. Borrar solo las que desaparecen
+      if (aEliminar.length > 0) {
+        await Promise.all(
+          aEliminar.map(g =>
+            fetch(`/api/cuadrantes?id=${g.id}`, { method: 'DELETE' })
+          )
         )
-      )
-      const fallidas = resultados.filter(r => !r.ok).length
+      }
+
+      // 2. Crear solo las nuevas
+      let fallidas = 0
+      if (cuerpos.length > 0) {
+        const resultados = await Promise.all(
+          cuerpos.map(body =>
+            fetch('/api/cuadrantes', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(body),
+            })
+          )
+        )
+        fallidas = resultados.filter(r => !r.ok).length
+      }
+
       if (fallidas > 0) {
         alert(`⚠ Cuadrante guardado con ${fallidas} error(es). Recarga para verificar.`)
       } else {
-        alert('Cuadrante guardado correctamente (sin notificaciones)')
+        alert(`Cuadrante guardado correctamente (${aEliminar.length} eliminadas, ${cuerpos.length} nuevas)`)
       }
       await cargarDatos()
     } catch (e) {
-      alert('Error al guardar el cuadrante')
+      console.error('Error guardando cuadrante:', e)
+      alert('Error al guardar el cuadrante. Los datos existentes NO se han borrado.')
     } finally {
       setGuardando(false)
     }
