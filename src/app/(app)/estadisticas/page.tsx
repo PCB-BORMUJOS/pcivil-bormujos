@@ -48,92 +48,61 @@ export default function EstadisticasPage() {
     setLoading(true)
     try {
       const mesParam = mes === 'all' ? '' : `&mes=${mes}`
-      const [
-        resVols, resGuardias, resEventos, resDietas,
-        resFormacion, resVehiculos, resLogistica, resPresupuesto, resPartes
-      ] = await Promise.allSettled([
-        fetch(`/api/voluntarios?stats=1&year=${year}${mesParam}`),
-        fetch(`/api/cuadrantes?stats=1&year=${year}${mesParam}`),
-        fetch(`/api/eventos?year=${year}${mesParam}`),
-        fetch(`/api/admin/dietas?year=${year}${mesParam}`),
-        fetch(`/api/formacion?tipo=stats&year=${year}${mesParam}`),
-        fetch(`/api/vehiculos?stats=1&year=${year}${mesParam}`),
-        fetch(`/api/logistica?stats=1&year=${year}${mesParam}`),
-        fetch(`/api/presupuesto?stats=1&year=${year}${mesParam}`),
-        fetch(`/api/partes/psi?stats=1&year=${year}${mesParam}`),
-      ])
-      const parse = async (r: any) => r.status === 'fulfilled' ? r.value.json().catch(() => ({})) : {}
-      const [dVols, dGuardias, dEventos, dDietas, dFormacion, dVehiculos, dLogistica, dPresupuesto, dPartes] = await Promise.all([
-        parse(resVols), parse(resGuardias), parse(resEventos), parse(resDietas),
-        parse(resFormacion), parse(resVehiculos), parse(resLogistica), parse(resPresupuesto), parse(resPartes)
-      ])
-      setData({ vols: dVols, guardias: dGuardias, eventos: dEventos, dietas: dDietas, formacion: dFormacion, vehiculos: dVehiculos, logistica: dLogistica, presupuesto: dPresupuesto, partes: dPartes })
+      const res = await fetch(`/api/estadisticas?year=${year}${mesParam}`)
+      const raw = await res.json()
+      if (raw.error) { setData({}); return }
+      setData(raw)
     } finally { setLoading(false) }
   }, [year, mes])
 
   useEffect(() => { fetchData() }, [fetchData])
 
-  // ── Derivar datos para gráficas ──────────────────────────────────────────
-  const voluntarios: any[] = data.vols?.voluntarios || []
-  const guardias: any[] = data.guardias?.guardias || []
-  const eventos: any[] = data.eventos?.eventos || []
-  const peticionesDietas: any[] = data.dietas?.dietas || data.dietas?.informes || []
-  const formaciones: any[] = data.formacion?.convocatorias || data.formacion?.formaciones || []
-  const vehiculos: any[] = data.vehiculos?.vehiculos || []
-  const peticionesLog: any[] = data.logistica?.peticiones || []
+  // ── Datos pre-calculados desde /api/estadisticas ───────────────────────────
+  const resumen: any                 = data.resumen              || {}
+  const guardiasPorMes: any[]        = data.guardiasPorMes       || MESES.map(m => ({ mes: m, mañana: 0, tarde: 0, noche: 0 }))
+  const horasPorMes: any[]           = (data.guardiasPorMes      || MESES.map((_: any, i: number) => ({ mes: MESES[i], horas: 0 }))).map((r: any) => ({ mes: r.mes, horas: (r.mañana||0)*6 + (r.tarde||0)*5 + (r.noche||0)*9 }))
+  const dietasPorMes: any[]          = data.dietasPorMes         || MESES.map(m => ({ mes: m, importe: 0 }))
+  const eventosPorMes: any[]         = data.eventosPorMes        || []
+  const cajaPorMes: any[]            = data.cajaPorMes           || []
+  const peticionesLog: any[]         = data.peticionesLog        || []
+  const movimientosCaja: any[]       = data.movimientosCaja      || []
+  const partidas: any[]              = data.partidas             || []
+  const partesPSI: any[]             = data.partesPSI            || []
+  const diasServicio: any[]          = data.diasServicio         || []
 
-  // Guardias por mes
-  const guardiasPorMes = MESES.map((m, i) => ({
-    mes: m,
-    mañana: guardias.filter((g: any) => new Date(g.fecha).getMonth() === i && g.turno === 'mañana').length,
-    tarde:  guardias.filter((g: any) => new Date(g.fecha).getMonth() === i && g.turno === 'tarde').length,
-    noche:  guardias.filter((g: any) => new Date(g.fecha).getMonth() === i && g.turno === 'noche').length,
-  }))
+  // Distribución por área (pre-calculada en API)
+  const statsPorArea: any[]          = data.statsPorArea         || []
+  const areaPie = statsPorArea.map((a: any) => ({ name: a.nombre || a.area || a.areaAsignada, value: a.total || a.count || 0 }))
 
-  // Guardias por voluntario (top 10)
-  const guardiasPorVol = voluntarios.map((v: any) => ({
-    nombre: v.nombre?.split(' ')[0] + ' ' + (v.apellidos?.split(' ')[0] || ''),
-    guardias: guardias.filter((g: any) => g.usuarioId === v.id).length
-  })).sort((a, b) => b.guardias - a.guardias).slice(0, 10)
+  // Guardias por voluntario (pre-calculado en API)
+  const statsVoluntarios: any[]      = data.statsVoluntarios     || []
+  const guardiasPorVol = statsVoluntarios.slice(0, 10).map((v: any) => ({ nombre: v.nombre, guardias: v.totalGuardias || 0 }))
 
-  // Distribución por área
-  const areaCount = voluntarios.reduce((acc: any, v: any) => {
-    const a = v.fichaVoluntario?.areaAsignada || 'Sin área'
-    acc[a] = (acc[a] || 0) + 1
-    return acc
-  }, {})
-  const areaPie = Object.entries(areaCount).map(([name, value]) => ({ name, value }))
+  // Eventos por tipo (pre-calculado en API)
+  const eventosTipoMap: any          = data.eventosTipo          || {}
+  const eventosPie = Object.entries(eventosTipoMap).map(([name, value]) => ({ name, value }))
 
-  // Horas estimadas (mañana=6h, tarde=5h, noche=9h)
-  const horasPorMes = MESES.map((m, i) => {
-    const gM = guardias.filter((g: any) => new Date(g.fecha).getMonth() === i)
-    const h = gM.reduce((acc: number, g: any) => acc + (g.turno === 'mañana' ? 6 : g.turno === 'tarde' ? 5 : 9), 0)
-    return { mes: m, horas: h }
-  })
+  // Formación (pre-calculado en API)
+  const statsFormacion: any          = data.statsFormacion       || {}
+  const formPie = Object.entries(statsFormacion.porEstado || {}).map(([name, value]) => ({ name, value }))
 
-  // Eventos por tipo
-  const eventosTipo = eventos.reduce((acc: any, e: any) => { acc[e.tipo || 'otros'] = (acc[e.tipo || 'otros'] || 0) + 1; return acc }, {})
-  const eventosPie = Object.entries(eventosTipo).map(([name, value]) => ({ name, value }))
+  // Vehículos (pre-calculado en API)
+  const statsVehiculos: any          = data.statsVehiculos       || {}
+  const vehPie = Object.entries(statsVehiculos.porEstado || {}).map(([name, value]) => ({ name, value }))
 
-  // Dietas por mes
-  const dietasPorMes = MESES.map((m, i) => ({
-    mes: m,
-    importe: peticionesDietas.filter((d: any) => new Date(d.fecha || d.createdAt || d.mesAnio || 0).getMonth() === i).reduce((s: number, d: any) => s + Number(d.totalDieta || d.importeTotal || 0), 0)
-  }))
+  // Arrays raw para tablas detalle
+  const voluntarios: any[]    = data.todosVoluntarios || []
+  const guardias: any[]       = data.guardiasRaw      || []
+  const eventos: any[]        = data.eventosRaw       || []
+  const formaciones: any[]    = data.formacionesRaw   || []
+  const vehiculos: any[]      = data.vehiculosRaw     || []
+  const peticionesDietas: any[] = data.diasServicio   || []
 
-  // Formación por estado
-  const formEstado = formaciones.reduce((acc: any, f: any) => { const s = f.estado || 'desconocido'; acc[s] = (acc[s] || 0) + 1; return acc }, {})
-  const formPie = Object.entries(formEstado).map(([name, value]) => ({ name, value }))
-
-  // Vehículos por estado
-  const vehEstado = vehiculos.reduce((acc: any, v: any) => { acc[v.estado || 'desconocido'] = (acc[v.estado || 'desconocido'] || 0) + 1; return acc }, {})
-  const vehPie = Object.entries(vehEstado).map(([name, value]) => ({ name, value }))
-
-  // Total horas servicio
-  const totalHoras = guardias.reduce((acc: number, g: any) => acc + (g.turno === 'mañana' ? 6 : g.turno === 'tarde' ? 5 : 9), 0)
-  const totalGuardias = guardias.length
-  const volsActivos = voluntarios.filter((v: any) => v.activo).length
-  const totalEventos = eventos.length
+  // Resumen global
+  const totalHoras     = resumen.totalHoras     || 0
+  const totalGuardias  = resumen.totalGuardias  || 0
+  const volsActivos    = resumen.totalVoluntarios || 0
+  const totalEventos   = resumen.totalEventos   || 0
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (!active || !payload?.length) return null

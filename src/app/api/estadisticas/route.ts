@@ -254,6 +254,11 @@ export async function GET(request: NextRequest) {
       partesPSI,
       movimientosCaja,
       diasServicio: dietas,
+      todosVoluntarios,
+      guardiasRaw: guardias,
+      eventosRaw: eventos,
+      formacionesRaw: formaciones,
+      vehiculosRaw: vehiculos,
     })
   } catch (error) {
     console.error('Error estadísticas:', error)
