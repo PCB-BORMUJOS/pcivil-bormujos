@@ -2516,8 +2516,7 @@ export default function AdministracionPage() {
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Área Secundaria</label>
                 <select value={fichaData.areaSecundaria || ''} onChange={e => setFichaData({ ...fichaData, areaSecundaria: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm">
                   <option value="">Ninguna</option>
-                  <option value="ADMINISTRACION">Administración</option>
-                  <option value="LOGISTICA">Logística</option>
+                  {AREAS_SERVICIO.filter(a => a.id !== fichaData.areaAsignada).map(a => <option key={a.id} value={a.id}>{a.nombre}</option>)}
                 </select>
               </div>
               <div>
