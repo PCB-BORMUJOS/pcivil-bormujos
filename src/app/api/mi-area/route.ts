@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
         orderBy: { fecha: 'desc' }
       })
 
-      const totalesPorMes: Record<string, { totalDietas: number, totalKm: number, totalGeneral: number, numServicios: number }> = {}
+      const totalesPorMes: Record<string, { totalDietas: number, totalKm: number, total: number, registros: number }> = {}
       dietas.forEach(d => {
         const m = d.mesAnio || d.fecha.toISOString().slice(0, 7)
         if (!totalesPorMes[m]) totalesPorMes[m] = { totalDietas: 0, totalKm: 0, total: 0, registros: 0 }
