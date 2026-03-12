@@ -370,7 +370,7 @@ export default function TransmisionesPage() {
       {/* TAB: EQUIPOS DE RADIO */}
       {mainTab === 'equipos' && (
         <div className="space-y-4">
-          <div className="flex items-center gap-3 flex-wrap">
+          <div className="overflow-x-auto pb-1"><div className="flex items-center gap-2 flex-nowrap min-w-max">
             <span className="text-sm font-medium text-slate-600">Estado:</span>
             <button onClick={() => setFiltroEstadoEquipo('all')} className={`px-3.5 py-1.5 text-xs font-medium rounded-full transition-colors ${filtroEstadoEquipo === 'all' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Todos</button>
             {Object.entries(ESTADOS_EQUIPO).map(([k, v]) => (<button key={k} onClick={() => setFiltroEstadoEquipo(k)} className={`px-3.5 py-1.5 text-xs font-medium rounded-full border transition-colors ${filtroEstadoEquipo === k ? 'bg-slate-800 text-white border-slate-800' : `${v.bg} ${v.color}`}`}>{v.label}</button>))}
@@ -378,9 +378,9 @@ export default function TransmisionesPage() {
             <span className="text-sm font-medium text-slate-600">Tipo:</span>
             <button onClick={() => setFiltroTipoEquipo('all')} className={`px-3.5 py-1.5 text-xs font-medium rounded-full transition-colors ${filtroTipoEquipo === 'all' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Todos</button>
             {TIPOS_EQUIPO.map(t => (<button key={t.value} onClick={() => setFiltroTipoEquipo(t.value)} className={`px-3.5 py-1.5 text-xs font-medium rounded-full transition-colors ${filtroTipoEquipo === t.value ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>{t.label}</button>))}
-          </div>
-          <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
-            <table className="w-full text-sm">
+          </div></div>
+          <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden"><div className="overflow-x-auto">
+            <table className="w-full min-w-[750px] text-sm">
               <thead><tr className="border-b border-slate-100">
                 <th className="text-left px-5 py-3.5 text-xs font-semibold text-slate-500 uppercase">Código</th>
                 <th className="text-left px-5 py-3.5 text-xs font-semibold text-slate-500 uppercase">Tipo</th>
@@ -396,8 +396,8 @@ export default function TransmisionesPage() {
                   const est = ESTADOS_EQUIPO[eq.estado] || ESTADOS_EQUIPO.disponible; const tipoInfo = TIPOS_EQUIPO.find(t => t.value === eq.tipo); const TipoIcon = tipoInfo?.icon || Radio
                   return (
                     <tr key={eq.id} className="hover:bg-slate-50/50 transition-colors cursor-pointer" onClick={() => abrirDetalleEquipo(eq)}>
-                      <td className="px-5 py-4"><span className="font-bold text-purple-600 text-base">{eq.codigo}</span></td>
-                      <td className="px-5 py-4"><div className="flex items-center gap-2 text-slate-600"><TipoIcon className="w-4 h-4 text-slate-400" />{tipoInfo?.label || eq.tipo}</div></td>
+                      <td className="px-5 py-4"><span className="font-bold text-purple-600 text-sm whitespace-nowrap">{eq.codigo}</span></td>
+                      <td className="px-5 py-4"><div className="flex items-center gap-2 text-slate-600 whitespace-nowrap"><TipoIcon className="w-4 h-4 text-slate-400 shrink-0" /><span className="text-xs">{tipoInfo?.label || eq.tipo}</span></div></td>
                       <td className="px-5 py-4"><p className="font-medium text-slate-800">{eq.marca} {eq.modelo}</p>{eq.numeroSerie && <p className="text-xs text-slate-400 mt-0.5">S/N: {eq.numeroSerie}</p>}</td>
                       <td className="px-5 py-4"><span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-200">{CONFIGURACIONES.find(c => c.value === eq.configuracion)?.label || eq.configuracion}</span></td>
                       <td className="px-5 py-4"><BateriaIndicador nivel={eq.estadoBateria ?? undefined} /></td>
@@ -408,7 +408,7 @@ export default function TransmisionesPage() {
                 })}
               </tbody>
             </table>
-          </div>
+          </div></div>
         </div>
       )}
 
