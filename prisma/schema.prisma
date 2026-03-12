@@ -928,6 +928,9 @@ model EquipoRadio {
   // Cobertura estimada
   radioCobertura        Float?    // km estimados
 
+  // Canales configurados (JSON array de CanalRF)
+  canales               Json?     // [{numero,nombre,modo,freqTx,freqRx,...}]
+
   // Ubicación y notas
   ubicacion             String?
   observaciones         String?

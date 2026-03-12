@@ -21,6 +21,20 @@ const Marker = dynamic(() => import('react-leaflet').then(m => m.Marker), { ssr:
 const Popup = dynamic(() => import('react-leaflet').then(m => m.Popup), { ssr: false })
 const Circle = dynamic(() => import('react-leaflet').then(m => m.Circle), { ssr: false })
 
+
+interface CanalRF {
+  numero: number
+  nombre: string
+  modo: 'analogico' | 'digital'
+  freqTx?: number | string
+  freqRx?: number | string
+  subtonoTx?: string
+  subtonoRx?: string
+  potencia?: number | string
+  colorCode?: number | string
+  timeslot?: number | string
+}
+
 interface Articulo { id: string; codigo?: string; nombre: string; descripcion?: string; stockActual: number; stockMinimo: number; unidad: string; familia?: { id: string; nombre: string } }
 interface Familia { id: string; nombre: string; slug: string; _count?: { articulos: number } }
 interface EquipoRadio {
@@ -178,6 +192,8 @@ export default function TransmisionesPage() {
   const [showNuevoMantenimiento, setShowNuevoMantenimiento] = useState(false)
   const [showNuevoCiclo, setShowNuevoCiclo] = useState(false)
   const [showConfigRF, setShowConfigRF] = useState(false)
+  const [canalesRF, setCanalesRF] = useState<CanalRF[]>([])
+  const [canalActivoRF, setCanalActivoRF] = useState(0)
   const [articuloSeleccionado, setArticuloSeleccionado] = useState<Articulo | null>(null)
   const [equipoSeleccionado, setEquipoSeleccionado] = useState<EquipoRadio | null>(null)
   const [nuevaFamilia, setNuevaFamilia] = useState('')
@@ -205,6 +221,20 @@ export default function TransmisionesPage() {
   useEffect(() => { cargarDatos() }, [cargarDatos])
   useEffect(() => { if (inventoryTab === 'peticiones') cargarPeticiones() }, [inventoryTab, cargarPeticiones])
   useEffect(() => { if (equipoSeleccionado && showDetalleEquipo) { cargarMantenimientos(equipoSeleccionado.id); cargarCiclos(equipoSeleccionado.id) } }, [equipoSeleccionado, showDetalleEquipo, cargarMantenimientos, cargarCiclos])
+
+
+  // Init canales cuando se abre ConfigRF
+  useEffect(() => {
+    if (equipoSeleccionado && showConfigRF) {
+      const raw = (equipoSeleccionado as any).canales
+      if (Array.isArray(raw) && raw.length > 0) {
+        setCanalesRF(raw)
+      } else {
+        setCanalesRF([{ numero: 1, nombre: 'Canal 1', modo: 'analogico' }])
+      }
+      setCanalActivoRF(0)
+    }
+  }, [equipoSeleccionado, showConfigRF])
 
   const handleCrearArticulo = async (e: React.FormEvent<HTMLFormElement>) => { e.preventDefault(); const f = new FormData(e.currentTarget); try { setSaving(true); const r = await fetch('/api/logistica', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'articulo', codigo: f.get('codigo'), nombre: f.get('nombre'), descripcion: f.get('descripcion'), stockActual: parseInt(f.get('stockActual') as string) || 0, stockMinimo: parseInt(f.get('stockMinimo') as string) || 0, unidad: f.get('unidad') || 'unidades', familiaId: f.get('familiaId') }) }); if (r.ok) { setShowNuevoArticulo(false); cargarDatos() } } catch (e) { console.error("Error en operación:", e) } finally { setSaving(false) } }
   const handleEditarArticulo = async (e: React.FormEvent<HTMLFormElement>) => { e.preventDefault(); if (!articuloSeleccionado) return; const f = new FormData(e.currentTarget); try { setSaving(true); const r = await fetch('/api/logistica', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'articulo', id: articuloSeleccionado.id, codigo: f.get('codigo'), nombre: f.get('nombre'), descripcion: f.get('descripcion'), stockActual: parseInt(f.get('stockActual') as string) || 0, stockMinimo: parseInt(f.get('stockMinimo') as string) || 0, unidad: f.get('unidad') || 'unidades', familiaId: f.get('familiaId') }) }); if (r.ok) { setShowEditarArticulo(false); setArticuloSeleccionado(null); cargarDatos() } } catch (e) { console.error("Error en operación:", e) } finally { setSaving(false) } }
@@ -730,63 +760,163 @@ export default function TransmisionesPage() {
       {/* MODAL: CONFIGURACIÓN RF */}
       {showConfigRF && equipoSeleccionado && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000] p-4" onClick={() => { setShowConfigRF(false); setEquipoSeleccionado(null) }}>
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between p-6 border-b border-slate-100">
-              <div><h3 className="text-lg font-semibold text-slate-800">Configuración RF</h3><p className="text-sm text-slate-500">{equipoSeleccionado.codigo} - {equipoSeleccionado.marca} {equipoSeleccionado.modelo}</p></div>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            {/* Header */}
+            <div className="flex items-center justify-between p-5 border-b border-slate-100 sticky top-0 bg-white z-10">
+              <div>
+                <h3 className="text-lg font-semibold text-slate-800">Configuración RF</h3>
+                <p className="text-sm text-slate-500">{equipoSeleccionado.codigo} - {equipoSeleccionado.marca} {equipoSeleccionado.modelo}</p>
+              </div>
               <button onClick={() => { setShowConfigRF(false); setEquipoSeleccionado(null) }} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5" /></button>
             </div>
-            <form onSubmit={handleGuardarConfigRF} className="p-6 space-y-6">
+
+            <form onSubmit={handleGuardarConfigRF} className="p-5 space-y-5">
               {/* General */}
               <div>
-                <h4 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-3 flex items-center gap-2"><Zap className="w-4 h-4 text-purple-500" />General</h4>
-                <div className="grid grid-cols-3 gap-4">
-                  <div><label className="block text-xs font-semibold text-slate-500 uppercase mb-1.5">Banda</label><select name="bandaFrecuencia" defaultValue={equipoSeleccionado.bandaFrecuencia || 'VHF'} className="w-full border border-slate-200 rounded-xl py-2.5 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20"><option value="VHF">VHF (136-174 MHz)</option><option value="UHF">UHF (400-470 MHz)</option></select></div>
-                  <div><label className="block text-xs font-semibold text-slate-500 uppercase mb-1.5">Potencia Máx (W)</label><input name="potenciaMaxima" type="number" step="0.1" defaultValue={equipoSeleccionado.potenciaMaxima || ''} className="w-full border border-slate-200 rounded-xl py-2.5 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20" /></div>
-                  <div><label className="block text-xs font-semibold text-slate-500 uppercase mb-1.5">Radio Cobertura (km)</label><input name="radioCobertura" type="number" step="0.5" defaultValue={equipoSeleccionado.radioCobertura || ''} className="w-full border border-slate-200 rounded-xl py-2.5 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20" /></div>
+                <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2"><Zap className="w-4 h-4 text-purple-500" />General</h4>
+                <div className="grid grid-cols-3 gap-3">
+                  <div><label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Banda</label>
+                    <select name="bandaFrecuencia" defaultValue={equipoSeleccionado.bandaFrecuencia || 'VHF'} className="w-full border border-slate-200 rounded-lg py-2 px-3 text-sm">
+                      <option value="VHF">VHF (136-174 MHz)</option><option value="UHF">UHF (400-470 MHz)</option>
+                    </select></div>
+                  <div><label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Potencia Máx (W)</label>
+                    <input name="potenciaMaxima" type="number" step="0.1" defaultValue={equipoSeleccionado.potenciaMaxima || ''} className="w-full border border-slate-200 rounded-lg py-2 px-3 text-sm" /></div>
+                  <div><label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Cobertura (km)</label>
+                    <input name="radioCobertura" type="number" step="0.5" defaultValue={equipoSeleccionado.radioCobertura || ''} className="w-full border border-slate-200 rounded-lg py-2 px-3 text-sm" /></div>
                 </div>
               </div>
-              {/* Analógico */}
+
+              {/* Canales */}
               <div>
-                <h4 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-3 flex items-center gap-2"><Radio className="w-4 h-4 text-blue-500" />Modo Analógico</h4>
-                <div className="grid grid-cols-2 gap-4">
-                  <div><label className="block text-xs font-semibold text-slate-500 uppercase mb-1.5">Canal</label><input name="canalAnalogico" defaultValue={equipoSeleccionado.canalAnalogico || ''} className="w-full border border-slate-200 rounded-xl py-2.5 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20" placeholder="Canal PC" /></div>
-                  <div><label className="block text-xs font-semibold text-slate-500 uppercase mb-1.5">Potencia (W)</label><input name="potenciaAnalogico" type="number" step="0.1" defaultValue={equipoSeleccionado.potenciaAnalogico || ''} className="w-full border border-slate-200 rounded-xl py-2.5 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20" /></div>
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2"><Radio className="w-4 h-4 text-purple-500" />Canales ({canalesRF.length})</h4>
+                  {canalesRF.length < 8 && (
+                    <button type="button" onClick={() => {
+                      const n = canalesRF.length + 1
+                      setCanalesRF([...canalesRF, { numero: n, nombre: `Canal ${n}`, modo: 'analogico' }])
+                      setCanalActivoRF(canalesRF.length)
+                    }} className="flex items-center gap-1 px-2.5 py-1 text-xs bg-purple-50 text-purple-600 rounded-lg hover:bg-purple-100 font-medium">
+                      <Plus className="w-3.5 h-3.5" /> Añadir canal
+                    </button>
+                  )}
                 </div>
-                <div className="grid grid-cols-2 gap-4 mt-3">
-                  <div><label className="block text-xs font-semibold text-slate-500 uppercase mb-1.5">Freq TX (MHz)</label><input name="freqTxAnalogico" type="number" step="0.0001" defaultValue={equipoSeleccionado.freqTxAnalogico || ''} className="w-full border border-slate-200 rounded-xl py-2.5 px-3 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-purple-500/20" placeholder="156.0000" /></div>
-                  <div><label className="block text-xs font-semibold text-slate-500 uppercase mb-1.5">Freq RX (MHz)</label><input name="freqRxAnalogico" type="number" step="0.0001" defaultValue={equipoSeleccionado.freqRxAnalogico || ''} className="w-full border border-slate-200 rounded-xl py-2.5 px-3 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-purple-500/20" placeholder="156.0000" /></div>
+
+                {/* Tabs canales */}
+                <div className="flex gap-1 border-b border-slate-200 mb-4 overflow-x-auto">
+                  {canalesRF.map((canal, idx) => (
+                    <button key={idx} type="button"
+                      onClick={() => setCanalActivoRF(idx)}
+                      className={`px-3 py-2 text-xs font-medium rounded-t whitespace-nowrap border-b-2 transition-colors ${canalActivoRF === idx ? 'border-purple-600 text-purple-600 bg-purple-50' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
+                      {canal.nombre || `Canal ${idx+1}`}
+                    </button>
+                  ))}
                 </div>
-                <div className="grid grid-cols-2 gap-4 mt-3">
-                  <div><label className="block text-xs font-semibold text-slate-500 uppercase mb-1.5">Subtono TX (CTCSS Hz)</label><input name="subtonoTx" defaultValue={equipoSeleccionado.subtonoTx || ''} className="w-full border border-slate-200 rounded-xl py-2.5 px-3 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-purple-500/20" placeholder="67.0" /></div>
-                  <div><label className="block text-xs font-semibold text-slate-500 uppercase mb-1.5">Subtono RX (CTCSS Hz)</label><input name="subtonoRx" defaultValue={equipoSeleccionado.subtonoRx || ''} className="w-full border border-slate-200 rounded-xl py-2.5 px-3 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-purple-500/20" placeholder="67.0" /></div>
-                </div>
+
+                {/* Formulario del canal activo */}
+                {canalesRF[canalActivoRF] && (() => {
+                  const canal = canalesRF[canalActivoRF]
+                  const updateCanal = (field: keyof CanalRF, value: any) => {
+                    const updated = [...canalesRF]
+                    updated[canalActivoRF] = { ...updated[canalActivoRF], [field]: value }
+                    setCanalesRF(updated)
+                  }
+                  return (
+                    <div className="bg-slate-50 rounded-xl p-4 space-y-4">
+                      {/* Nombre y modo */}
+                      <div className="flex gap-3 items-end">
+                        <div className="flex-1">
+                          <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Nombre del canal</label>
+                          <input type="text" value={canal.nombre} onChange={e => updateCanal('nombre', e.target.value)}
+                            className="w-full border border-slate-200 rounded-lg py-2 px-3 text-sm bg-white" placeholder="Canal PC, Repetidor..." />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Modo</label>
+                          <div className="flex rounded-lg border border-slate-200 overflow-hidden bg-white">
+                            <button type="button" onClick={() => updateCanal('modo', 'analogico')}
+                              className={`px-3 py-2 text-xs font-medium transition-colors ${canal.modo === 'analogico' ? 'bg-blue-600 text-white' : 'text-slate-600 hover:bg-slate-50'}`}>
+                              Analógico
+                            </button>
+                            <button type="button" onClick={() => updateCanal('modo', 'digital')}
+                              className={`px-3 py-2 text-xs font-medium transition-colors ${canal.modo === 'digital' ? 'bg-emerald-600 text-white' : 'text-slate-600 hover:bg-slate-50'}`}>
+                              Digital DMR
+                            </button>
+                          </div>
+                        </div>
+                        {canalesRF.length > 1 && (
+                          <button type="button" onClick={() => {
+                            const updated = canalesRF.filter((_, i) => i !== canalActivoRF)
+                            setCanalesRF(updated)
+                            setCanalActivoRF(Math.max(0, canalActivoRF - 1))
+                          }} className="p-2 text-red-400 hover:bg-red-50 rounded-lg">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Frecuencias */}
+                      <div className="grid grid-cols-2 gap-3">
+                        <div><label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Freq TX (MHz)</label>
+                          <input type="number" step="0.0001" value={canal.freqTx ?? ''} onChange={e => updateCanal('freqTx', e.target.value)}
+                            className="w-full border border-slate-200 rounded-lg py-2 px-3 text-sm font-mono bg-white" placeholder="156.0000" /></div>
+                        <div><label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Freq RX (MHz)</label>
+                          <input type="number" step="0.0001" value={canal.freqRx ?? ''} onChange={e => updateCanal('freqRx', e.target.value)}
+                            className="w-full border border-slate-200 rounded-lg py-2 px-3 text-sm font-mono bg-white" placeholder="156.0000" /></div>
+                      </div>
+
+                      {/* Potencia */}
+                      <div className="grid grid-cols-2 gap-3">
+                        <div><label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Potencia (W)</label>
+                          <input type="number" step="0.1" value={canal.potencia ?? ''} onChange={e => updateCanal('potencia', e.target.value)}
+                            className="w-full border border-slate-200 rounded-lg py-2 px-3 text-sm bg-white" /></div>
+                      </div>
+
+                      {/* Específico Analógico */}
+                      {canal.modo === 'analogico' && (
+                        <div className="grid grid-cols-2 gap-3 pt-1 border-t border-slate-200">
+                          <div><label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Subtono TX (CTCSS Hz)</label>
+                            <input type="text" value={canal.subtonoTx ?? ''} onChange={e => updateCanal('subtonoTx', e.target.value)}
+                              className="w-full border border-slate-200 rounded-lg py-2 px-3 text-sm font-mono bg-white" placeholder="67.0" /></div>
+                          <div><label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Subtono RX (CTCSS Hz)</label>
+                            <input type="text" value={canal.subtonoRx ?? ''} onChange={e => updateCanal('subtonoRx', e.target.value)}
+                              className="w-full border border-slate-200 rounded-lg py-2 px-3 text-sm font-mono bg-white" placeholder="67.0" /></div>
+                        </div>
+                      )}
+
+                      {/* Específico Digital DMR */}
+                      {canal.modo === 'digital' && (
+                        <div className="grid grid-cols-2 gap-3 pt-1 border-t border-slate-200">
+                          <div><label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Color Code (0-15)</label>
+                            <input type="number" min={0} max={15} value={canal.colorCode ?? ''} onChange={e => updateCanal('colorCode', e.target.value)}
+                              className="w-full border border-slate-200 rounded-lg py-2 px-3 text-sm bg-white" placeholder="0-15" /></div>
+                          <div><label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Timeslot</label>
+                            <select value={canal.timeslot ?? ''} onChange={e => updateCanal('timeslot', e.target.value)}
+                              className="w-full border border-slate-200 rounded-lg py-2 px-3 text-sm bg-white">
+                              <option value="">-</option><option value="1">TS 1</option><option value="2">TS 2</option>
+                            </select></div>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })()}
               </div>
-              {/* Digital */}
+
+              {/* Coordenadas antena */}
               <div>
-                <h4 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-3 flex items-center gap-2"><Activity className="w-4 h-4 text-emerald-500" />Modo Digital (DMR / Repetidor)</h4>
-                <div className="grid grid-cols-2 gap-4">
-                  <div><label className="block text-xs font-semibold text-slate-500 uppercase mb-1.5">Canal Digital</label><input name="canalDigital" defaultValue={equipoSeleccionado.canalDigital || ''} className="w-full border border-slate-200 rounded-xl py-2.5 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20" placeholder="Repetidor PC" /></div>
-                  <div><label className="block text-xs font-semibold text-slate-500 uppercase mb-1.5">Potencia (W)</label><input name="potenciaDigital" type="number" step="0.1" defaultValue={equipoSeleccionado.potenciaDigital || ''} className="w-full border border-slate-200 rounded-xl py-2.5 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20" /></div>
-                </div>
-                <div className="grid grid-cols-2 gap-4 mt-3">
-                  <div><label className="block text-xs font-semibold text-slate-500 uppercase mb-1.5">Freq TX (MHz)</label><input name="freqTxDigital" type="number" step="0.0001" defaultValue={equipoSeleccionado.freqTxDigital || ''} className="w-full border border-slate-200 rounded-xl py-2.5 px-3 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-purple-500/20" /></div>
-                  <div><label className="block text-xs font-semibold text-slate-500 uppercase mb-1.5">Freq RX (MHz)</label><input name="freqRxDigital" type="number" step="0.0001" defaultValue={equipoSeleccionado.freqRxDigital || ''} className="w-full border border-slate-200 rounded-xl py-2.5 px-3 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-purple-500/20" /></div>
-                </div>
-                <div className="grid grid-cols-2 gap-4 mt-3">
-                  <div><label className="block text-xs font-semibold text-slate-500 uppercase mb-1.5">Color Code</label><input name="colorCode" type="number" min={0} max={15} defaultValue={equipoSeleccionado.colorCode || ''} className="w-full border border-slate-200 rounded-xl py-2.5 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20" placeholder="0-15" /></div>
-                  <div><label className="block text-xs font-semibold text-slate-500 uppercase mb-1.5">Timeslot</label><select name="timeslot" defaultValue={equipoSeleccionado.timeslot || ''} className="w-full border border-slate-200 rounded-xl py-2.5 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20"><option value="">-</option><option value="1">TS 1</option><option value="2">TS 2</option></select></div>
+                <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2"><MapPin className="w-4 h-4 text-red-500" />Ubicación Antena (base/repetidor)</h4>
+                <div className="grid grid-cols-3 gap-3">
+                  <div><label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Latitud</label>
+                    <input name="latitud" type="number" step="0.00000001" defaultValue={equipoSeleccionado.latitud || ''} className="w-full border border-slate-200 rounded-lg py-2 px-3 text-sm font-mono" /></div>
+                  <div><label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Longitud</label>
+                    <input name="longitud" type="number" step="0.00000001" defaultValue={equipoSeleccionado.longitud || ''} className="w-full border border-slate-200 rounded-lg py-2 px-3 text-sm font-mono" /></div>
+                  <div><label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Altura (m)</label>
+                    <input name="alturaAntena" type="number" step="0.1" defaultValue={equipoSeleccionado.alturaAntena || ''} className="w-full border border-slate-200 rounded-lg py-2 px-3 text-sm" /></div>
                 </div>
               </div>
-              {/* Coordenadas */}
-              <div>
-                <h4 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-3 flex items-center gap-2"><MapPin className="w-4 h-4 text-red-500" />Ubicación Antena (base/repetidor)</h4>
-                <div className="grid grid-cols-3 gap-4">
-                  <div><label className="block text-xs font-semibold text-slate-500 uppercase mb-1.5">Latitud</label><input name="latitud" type="number" step="0.00000001" defaultValue={equipoSeleccionado.latitud || ''} className="w-full border border-slate-200 rounded-xl py-2.5 px-3 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-purple-500/20" /></div>
-                  <div><label className="block text-xs font-semibold text-slate-500 uppercase mb-1.5">Longitud</label><input name="longitud" type="number" step="0.00000001" defaultValue={equipoSeleccionado.longitud || ''} className="w-full border border-slate-200 rounded-xl py-2.5 px-3 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-purple-500/20" /></div>
-                  <div><label className="block text-xs font-semibold text-slate-500 uppercase mb-1.5">Altura Antena (m)</label><input name="alturaAntena" type="number" step="0.1" defaultValue={equipoSeleccionado.alturaAntena || ''} className="w-full border border-slate-200 rounded-xl py-2.5 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20" /></div>
-                </div>
+
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={() => { setShowConfigRF(false); setEquipoSeleccionado(null) }} className="flex-1 py-2.5 border border-slate-300 text-slate-700 rounded-xl font-semibold hover:bg-slate-50">Cancelar</button>
+                <button type="submit" disabled={saving} className="flex-1 py-2.5 bg-purple-600 text-white rounded-xl font-semibold hover:bg-purple-700 disabled:opacity-50">{saving ? 'Guardando...' : 'Guardar Configuración'}</button>
               </div>
-              <div className="flex gap-3 pt-2"><button type="button" onClick={() => { setShowConfigRF(false); setEquipoSeleccionado(null) }} className="flex-1 py-2.5 border border-slate-300 text-slate-700 rounded-xl font-semibold hover:bg-slate-50">Cancelar</button><button type="submit" disabled={saving} className="flex-1 py-2.5 bg-purple-600 text-white rounded-xl font-semibold hover:bg-purple-700 disabled:opacity-50">{saving ? 'Guardando...' : 'Guardar Configuración'}</button></div>
             </form>
           </div>
         </div>
