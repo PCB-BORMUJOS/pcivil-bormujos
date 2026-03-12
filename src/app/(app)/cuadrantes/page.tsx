@@ -612,16 +612,23 @@ export default function CuadrantesPage() {
                             )
                           })}
                           {asignadosExternos.map(uid => {
+                            // Buscar en guardias guardadas (ya en BD) o en todosUsuarios (asignación local pendiente de guardar)
                             const g = guardiasGuardadas.find(gr => gr.usuarioId === uid)
-                            if (!g) return null
+                            const uLocal = !g ? todosUsuarios.find((u: any) => u.id === uid) : null
+                            if (!g && !uLocal) return null
+                            const nombre = g ? (g.usuario.numeroVoluntario || g.usuario.nombre) : (uLocal.numeroVoluntario || `${uLocal.nombre.slice(0, 3)}.`)
+                            const esResponsable = g?.rol === 'Responsable'
+                            const esCecopal = g?.rol === 'Cecopal'
+                            const tieneCarnet = g ? g.usuario.carnetConducir : uLocal.carnetConducir
+                            const esOperativo = g ? g.usuario.esOperativo : uLocal.esOperativo
                             return (
                               <div key={uid} onClick={() => toggleAsignacion(sk, uid)} className="flex items-center gap-1 px-1.5 py-1 rounded text-[10px] bg-green-100 border border-green-300 text-green-900 cursor-pointer">
                                 <span className="w-3 h-3 rounded border bg-green-500 border-green-500 text-white flex items-center justify-center flex-shrink-0" style={{ fontSize: '7px' }}>✓</span>
-                                <span className="font-bold truncate flex-1">{g.usuario.numeroVoluntario || g.usuario.nombre}</span>
-                                {g.rol === 'Responsable' && <Shield size={8} className="text-indigo-600" />}
-                                {g.rol === 'Cecopal' && <span className="text-[7px] font-bold text-orange-600">CEP</span>}
-                                {g.usuario.carnetConducir && g.rol !== 'Responsable' && g.rol !== 'Cecopal' && <Car size={8} className="text-green-700" />}
-                                {!g.usuario.esOperativo && <span className="text-[7px] font-bold text-slate-400">ADM</span>}
+                                <span className="font-bold truncate flex-1">{nombre}</span>
+                                {esResponsable && <Shield size={8} className="text-indigo-600" />}
+                                {esCecopal && <span className="text-[7px] font-bold text-orange-600">CEP</span>}
+                                {tieneCarnet && !esResponsable && !esCecopal && <Car size={8} className="text-green-700" />}
+                                {!esOperativo && <span className="text-[7px] font-bold text-slate-400">ADM</span>}
                               </div>
                             )
                           })}
