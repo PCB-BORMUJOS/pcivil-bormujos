@@ -882,9 +882,9 @@ export default function IncendiosPage() {
                       <tr>
                         <th className="text-left p-3 text-xs font-semibold text-slate-500 uppercase">Tipo</th>
                         <th className="text-left p-3 text-xs font-semibold text-slate-500 uppercase">Ubicación</th>
-                        <th className="text-left p-3 text-xs font-semibold text-slate-500 uppercase">N° Serie</th>
+                        <th className="text-left p-3 text-xs font-semibold text-slate-500 uppercase hidden md:table-cell">N° Serie</th>
                         <th className="text-center p-3 text-xs font-semibold text-slate-500 uppercase">Estado</th>
-                        <th className="text-center p-3 text-xs font-semibold text-slate-500 uppercase">Próx. Revisión</th>
+                        <th className="text-center p-3 text-xs font-semibold text-slate-500 uppercase hidden md:table-cell">Próx. Revisión</th>
                         <th className="text-center p-3 text-xs font-semibold text-slate-500 uppercase">Acciones</th>
                       </tr>
                     </thead>
@@ -904,7 +904,7 @@ export default function IncendiosPage() {
                             </div>
                           </td>
                           <td className="p-3 text-sm text-slate-600">{eq.ubicacion}</td>
-                          <td className="p-3 text-sm text-slate-600">{eq.numeroSerie || '-'}</td>
+                          <td className="p-3 text-sm text-slate-600 hidden md:table-cell">{eq.numeroSerie || '-'}</td>
                           <td className="p-3 text-center">
                             <span className={`px-2 py-1 rounded text-xs font-bold ${eq.estado === 'operativo' ? 'bg-green-100 text-green-700' :
                               eq.estado === 'revision_pendiente' ? 'bg-yellow-100 text-yellow-700' :
@@ -950,7 +950,7 @@ export default function IncendiosPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {edificios.map(ed => (
                     <div key={ed.id} className="bg-white border border-slate-200 rounded-lg p-5 hover:shadow-lg transition-all">
                       <div className="flex items-start gap-3">
@@ -1058,7 +1058,7 @@ export default function IncendiosPage() {
                     <th className="text-left p-3 text-xs font-semibold text-slate-500 uppercase">Ubicación</th>
                     <th className="text-left p-3 text-xs font-semibold text-slate-500 uppercase">N° Serie</th>
                     <th className="text-center p-3 text-xs font-semibold text-slate-500 uppercase">Estado</th>
-                    <th className="text-center p-3 text-xs font-semibold text-slate-500 uppercase">Instalación</th>
+                    <th className="text-center p-3 text-xs font-semibold text-slate-500 uppercase hidden md:table-cell">Instalación</th>
                     <th className="text-center p-3 text-xs font-semibold text-slate-500 uppercase">Próx. Revisión</th>
                   </tr>
                 </thead>
@@ -1092,10 +1092,10 @@ export default function IncendiosPage() {
                               'Fuera Servicio'}
                         </span>
                       </td>
-                      <td className="p-3 text-center text-sm text-slate-600">
+                      <td className="p-3 text-center text-sm text-slate-600 hidden md:table-cell">
                         {eq.fechaInstalacion ? new Date(eq.fechaInstalacion).toLocaleDateString('es-ES') : '-'}
                       </td>
-                      <td className="p-3 text-center text-sm text-slate-600">
+                      <td className="p-3 text-center text-sm text-slate-600 hidden md:table-cell">
                         {eq.proximaRevision ? new Date(eq.proximaRevision).toLocaleDateString('es-ES') : '-'}
                       </td>
                     </tr>
@@ -1145,8 +1145,8 @@ export default function IncendiosPage() {
                       <th className="text-left p-3 text-xs font-semibold text-slate-500 uppercase">Código</th>
                       <th className="text-left p-3 text-xs font-semibold text-slate-500 uppercase">Tipo</th>
                       <th className="text-left p-3 text-xs font-semibold text-slate-500 uppercase">Ubicación</th>
-                      <th className="text-center p-3 text-xs font-semibold text-slate-500 uppercase">Latitud</th>
-                      <th className="text-center p-3 text-xs font-semibold text-slate-500 uppercase">Longitud</th>
+                      <th className="text-center p-3 text-xs font-semibold text-slate-500 uppercase hidden lg:table-cell">Latitud</th>
+                      <th className="text-center p-3 text-xs font-semibold text-slate-500 uppercase hidden lg:table-cell">Longitud</th>
                       <th className="text-center p-3 text-xs font-semibold text-slate-500 uppercase">Presión</th>
                       <th className="text-center p-3 text-xs font-semibold text-slate-500 uppercase">Caudal</th>
                       <th className="text-center p-3 text-xs font-semibold text-slate-500 uppercase">Estado</th>
@@ -1159,10 +1159,10 @@ export default function IncendiosPage() {
                         <td className="p-3 font-bold text-slate-800">{hid.codigo}</td>
                         <td className="p-3 text-sm text-slate-600">{hid.tipo}</td>
                         <td className="p-3 text-sm text-slate-600">{hid.ubicacion}</td>
-                        <td className="p-3 text-center text-sm text-slate-600">
+                        <td className="p-3 text-center text-sm text-slate-600 hidden lg:table-cell">
                           {hid.latitud ? hid.latitud.toFixed(8) : '-'}
                         </td>
-                        <td className="p-3 text-center text-sm text-slate-600">
+                        <td className="p-3 text-center text-sm text-slate-600 hidden lg:table-cell">
                           {hid.longitud ? hid.longitud.toFixed(8) : '-'}
                         </td>
                         <td className="p-3 text-center text-sm">{hid.presion ? `${hid.presion} bar` : '-'}</td>
