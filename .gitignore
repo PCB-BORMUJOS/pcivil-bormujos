@@ -9,3 +9,4 @@ secrets/
 DS_Store
 *.log
 secrets/
+tsconfig.tsbuildinfo
