@@ -259,6 +259,7 @@ export default function TransmisionesPage() {
       canalAnalogico: f.get('canalAnalogico') || null, canalDigital: f.get('canalDigital') || null,
       latitud: parseFloat(f.get('latitud') as string) || null, longitud: parseFloat(f.get('longitud') as string) || null,
       alturaAntena: parseFloat(f.get('alturaAntena') as string) || null, radioCobertura: parseFloat(f.get('radioCobertura') as string) || null,
+      canales: canalesRF,
     }) }); if (r.ok) { setShowConfigRF(false); setEquipoSeleccionado(null); cargarDatos() } } catch (e) { console.error("Error en operación:", e) } finally { setSaving(false) }
   }
   const abrirDetalleEquipo = (eq: EquipoRadio) => { setEquipoSeleccionado(eq); setDetalleTab('ficha'); setShowDetalleEquipo(true) }
