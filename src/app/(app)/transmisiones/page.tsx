@@ -249,32 +249,52 @@ export default function TransmisionesPage() {
   const handleNuevoMantenimiento = async (e: React.FormEvent<HTMLFormElement>) => { e.preventDefault(); if (!equipoSeleccionado) return; const f = new FormData(e.currentTarget); try { setSaving(true); const r = await fetch('/api/logistica', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'mantenimiento-equipo', equipoId: equipoSeleccionado.id, tipoMantenimiento: f.get('tipoMantenimiento'), descripcion: f.get('descripcion'), fecha: f.get('fecha'), realizadoPor: f.get('realizadoPor'), coste: parseFloat(f.get('coste') as string) || null, observaciones: f.get('observaciones') }) }); if (r.ok) { setShowNuevoMantenimiento(false); cargarMantenimientos(equipoSeleccionado.id) } } catch (e) { console.error("Error en operación:", e) } finally { setSaving(false) } }
   const handleNuevoCiclo = async (e: React.FormEvent<HTMLFormElement>) => { e.preventDefault(); if (!equipoSeleccionado) return; const f = new FormData(e.currentTarget); try { setSaving(true); const r = await fetch('/api/logistica', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'ciclo-carga', equipoId: equipoSeleccionado.id, fechaInicio: f.get('fechaInicio'), fechaFin: f.get('fechaFin') || null, duracionHoras: parseFloat(f.get('duracionHoras') as string) || null, nivelInicial: parseInt(f.get('nivelInicial') as string) || null, nivelFinal: parseInt(f.get('nivelFinal') as string) || null, observaciones: f.get('observaciones') }) }); if (r.ok) { setShowNuevoCiclo(false); cargarCiclos(equipoSeleccionado.id); cargarDatos() } } catch (e) { console.error("Error en operación:", e) } finally { setSaving(false) } }
   const handleGuardarConfigRF = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault(); if (!equipoSeleccionado) return; const f = new FormData(e.currentTarget)
-    // Derivar campos planos del canal 1 para compatibilidad con tabla Configuración RF
-    const c1 = canalesRF[0]
-    const c1Analogico = c1?.modo === 'analogico' ? c1 : canalesRF.find(c => c.modo === 'analogico')
-    const c1Digital = c1?.modo === 'digital' ? c1 : canalesRF.find(c => c.modo === 'digital')
-    try { setSaving(true); const r = await fetch('/api/logistica', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
-      tipo: 'equipo-radio', id: equipoSeleccionado.id,
-      canales: canalesRF,
-      // Campos planos derivados de canales para tabla resumen
-      freqTxAnalogico: c1Analogico?.freqTx ? parseFloat(String(c1Analogico.freqTx)) : null,
-      freqRxAnalogico: c1Analogico?.freqRx ? parseFloat(String(c1Analogico.freqRx)) : null,
-      subtonoTx: c1Analogico?.subtonoTx || null,
-      subtonoRx: c1Analogico?.subtonoRx || null,
-      potenciaAnalogico: c1Analogico?.potencia ? parseFloat(String(c1Analogico.potencia)) : null,
-      freqTxDigital: c1Digital?.freqTx ? parseFloat(String(c1Digital.freqTx)) : null,
-      freqRxDigital: c1Digital?.freqRx ? parseFloat(String(c1Digital.freqRx)) : null,
-      colorCode: c1Digital?.colorCode ? parseInt(String(c1Digital.colorCode)) : null,
-      timeslot: c1Digital?.timeslot ? parseInt(String(c1Digital.timeslot)) : null,
-      potenciaDigital: c1Digital?.potencia ? parseFloat(String(c1Digital.potencia)) : null,
-      potenciaMaxima: parseFloat(f.get('potenciaMaxima') as string) || null,
-      bandaFrecuencia: f.get('bandaFrecuencia') || null,
-      radioCobertura: parseFloat(f.get('radioCobertura') as string) || null,
-      latitud: parseFloat(f.get('latitud') as string) || null,
-      longitud: parseFloat(f.get('longitud') as string) || null,
-      alturaAntena: parseFloat(f.get('alturaAntena') as string) || null,
-    }) }); if (r.ok) { setShowConfigRF(false); setEquipoSeleccionado(null); cargarDatos() } } catch (e) { console.error("Error en operación:", e) } finally { setSaving(false) }
+    e.preventDefault()
+    if (!equipoSeleccionado) return
+    const f = new FormData(e.currentTarget)
+    const c1Analogico = canalesRF.find(c => c.modo === 'analogico')
+    const c1Digital = canalesRF.find(c => c.modo === 'digital')
+    try {
+      setSaving(true)
+      const r = await fetch('/api/logistica', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tipo: 'equipo-radio',
+          id: equipoSeleccionado.id,
+          canales: canalesRF,
+          freqTxAnalogico: c1Analogico?.freqTx ? parseFloat(String(c1Analogico.freqTx)) : null,
+          freqRxAnalogico: c1Analogico?.freqRx ? parseFloat(String(c1Analogico.freqRx)) : null,
+          subtonoTx: c1Analogico?.subtonoTx || null,
+          subtonoRx: c1Analogico?.subtonoRx || null,
+          potenciaAnalogico: c1Analogico?.potencia ? parseFloat(String(c1Analogico.potencia)) : null,
+          freqTxDigital: c1Digital?.freqTx ? parseFloat(String(c1Digital.freqTx)) : null,
+          freqRxDigital: c1Digital?.freqRx ? parseFloat(String(c1Digital.freqRx)) : null,
+          colorCode: c1Digital?.colorCode ? parseInt(String(c1Digital.colorCode)) : null,
+          timeslot: c1Digital?.timeslot ? parseInt(String(c1Digital.timeslot)) : null,
+          potenciaDigital: c1Digital?.potencia ? parseFloat(String(c1Digital.potencia)) : null,
+          potenciaMaxima: parseFloat(f.get('potenciaMaxima') as string) || null,
+          bandaFrecuencia: f.get('bandaFrecuencia') as string || null,
+          radioCobertura: parseFloat(f.get('radioCobertura') as string) || null,
+          latitud: parseFloat(f.get('latitud') as string) || null,
+          longitud: parseFloat(f.get('longitud') as string) || null,
+          alturaAntena: parseFloat(f.get('alturaAntena') as string) || null,
+        })
+      })
+      if (r.ok) {
+        setShowConfigRF(false)
+        setEquipoSeleccionado(null)
+        cargarDatos()
+      } else {
+        const err = await r.json()
+        console.error('Error API:', err)
+        alert('Error al guardar: ' + (err.error || r.status))
+      }
+    } catch (err) {
+      console.error('Error en operación:', err)
+    } finally {
+      setSaving(false)
+    }
   }
   const abrirDetalleEquipo = (eq: EquipoRadio) => { setEquipoSeleccionado(eq); setDetalleTab('ficha'); setShowDetalleEquipo(true) }
 
