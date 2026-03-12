@@ -228,11 +228,14 @@ export default function TransmisionesPage() {
   useEffect(() => {
     if (equipoSeleccionado && showConfigRF) {
       const raw = equipoSeleccionado.canales
+      console.log('[ConfigRF] equipoSeleccionado.canales:', raw, typeof raw)
+      let canales: CanalRF[] | null = null
       if (Array.isArray(raw) && raw.length > 0) {
-        setCanalesRF(raw)
-      } else {
-        setCanalesRF([{ numero: 1, nombre: 'Canal 1', modo: 'analogico' }])
+        canales = raw as CanalRF[]
+      } else if (typeof raw === 'string') {
+        try { canales = JSON.parse(raw) } catch { canales = null }
       }
+      setCanalesRF(canales && canales.length > 0 ? canales : [{ numero: 1, nombre: 'Canal 1', modo: 'analogico' }])
       setCanalActivoRF(0)
     }
   }, [equipoSeleccionado, showConfigRF])
