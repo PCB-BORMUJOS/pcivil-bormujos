@@ -482,20 +482,44 @@ export default function TransmisionesPage() {
                   <th className="px-3 py-1.5 text-[10px] text-slate-400 font-medium">Max W</th>
                   <th></th>
                 </tr></thead>
-                <tbody className="divide-y divide-slate-50">
+                <tbody className="divide-y divide-slate-100">
                   {equipos.length === 0 ? <tr><td colSpan={8} className="text-center py-12 text-slate-400"><Settings className="w-10 h-10 mx-auto mb-2 opacity-30" /><p className="text-sm">No hay equipos para configurar</p></td></tr>
-                  : equipos.map(eq => (
-                    <tr key={eq.id} className="hover:bg-slate-50/50">
-                      <td className="px-4 py-3"><span className="font-bold text-purple-600">{eq.codigo}</span><span className="text-xs text-slate-400 ml-2">{eq.marca} {eq.modelo}</span></td>
-                      <td className="px-3 py-3 text-center font-mono text-xs">{eq.freqTxAnalogico ? eq.freqTxAnalogico.toFixed(4) : <span className="text-slate-300">-</span>}</td>
-                      <td className="px-3 py-3 text-center font-mono text-xs">{eq.freqRxAnalogico ? eq.freqRxAnalogico.toFixed(4) : <span className="text-slate-300">-</span>}</td>
-                      <td className="px-3 py-3 text-center font-mono text-xs">{eq.freqTxDigital ? eq.freqTxDigital.toFixed(4) : <span className="text-slate-300">-</span>}</td>
-                      <td className="px-3 py-3 text-center font-mono text-xs">{eq.freqRxDigital ? eq.freqRxDigital.toFixed(4) : <span className="text-slate-300">-</span>}</td>
-                      <td className="px-3 py-3 text-center text-xs">{eq.subtonoTx ? <span className="font-mono">{eq.subtonoTx} Hz</span> : <span className="text-slate-300">-</span>}</td>
-                      <td className="px-3 py-3 text-center text-xs">{eq.potenciaMaxima ? <span className="font-bold">{eq.potenciaMaxima}W</span> : <span className="text-slate-300">-</span>}</td>
-                      <td className="px-4 py-3 text-right"><button onClick={() => { setEquipoSeleccionado(eq); setShowConfigRF(true) }} className="p-2 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"><Settings className="w-4 h-4" /></button></td>
-                    </tr>
-                  ))}
+                  : equipos.map(eq => {
+                    const fmtFreq = (v: any) => v ? parseFloat(String(v)).toString() : null
+                    const canales: any[] = Array.isArray(eq.canales) && eq.canales.length > 0 ? eq.canales : []
+                    if (canales.length === 0) {
+                      return (
+                        <tr key={eq.id} className="hover:bg-slate-50/50">
+                          <td className="px-4 py-3"><span className="font-bold text-purple-600 whitespace-nowrap">{eq.codigo}</span><span className="text-xs text-slate-400 ml-2">{eq.marca} {eq.modelo}</span></td>
+                          <td className="px-3 py-3 text-center font-mono text-xs">{eq.freqTxAnalogico ? fmtFreq(eq.freqTxAnalogico) : <span className="text-slate-300">-</span>}</td>
+                          <td className="px-3 py-3 text-center font-mono text-xs">{eq.freqRxAnalogico ? fmtFreq(eq.freqRxAnalogico) : <span className="text-slate-300">-</span>}</td>
+                          <td className="px-3 py-3 text-center font-mono text-xs">{eq.freqTxDigital ? fmtFreq(eq.freqTxDigital) : <span className="text-slate-300">-</span>}</td>
+                          <td className="px-3 py-3 text-center font-mono text-xs">{eq.freqRxDigital ? fmtFreq(eq.freqRxDigital) : <span className="text-slate-300">-</span>}</td>
+                          <td className="px-3 py-3 text-center text-xs">{eq.subtonoTx ? <span className="font-mono">{eq.subtonoTx} Hz</span> : <span className="text-slate-300">-</span>}</td>
+                          <td className="px-3 py-3 text-center text-xs">{eq.potenciaMaxima ? <span className="font-bold">{eq.potenciaMaxima}W</span> : <span className="text-slate-300">-</span>}</td>
+                          <td className="px-4 py-3 text-right"><button onClick={() => { setEquipoSeleccionado(eq); setShowConfigRF(true) }} className="p-2 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"><Settings className="w-4 h-4" /></button></td>
+                        </tr>
+                      )
+                    }
+                    return canales.map((canal: any, idx: number) => (
+                      <tr key={`${eq.id}-${idx}`} className="hover:bg-slate-50/50">
+                        <td className="px-4 py-2">
+                          {idx === 0 && <><span className="font-bold text-purple-600 whitespace-nowrap">{eq.codigo}</span><span className="text-xs text-slate-400 ml-2">{eq.marca} {eq.modelo}</span></>}
+                          <div className="mt-0.5 flex items-center gap-1.5">
+                            <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium ${canal.modo === 'digital' ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'}`}>{canal.modo === 'digital' ? 'DMR' : 'AN'}</span>
+                            <span className="text-xs text-slate-500">{canal.nombre}</span>
+                          </div>
+                        </td>
+                        <td className="px-3 py-2 text-center font-mono text-xs">{canal.modo === 'analogico' && canal.freqTx ? fmtFreq(canal.freqTx) : <span className="text-slate-300">-</span>}</td>
+                        <td className="px-3 py-2 text-center font-mono text-xs">{canal.modo === 'analogico' && canal.freqRx ? fmtFreq(canal.freqRx) : <span className="text-slate-300">-</span>}</td>
+                        <td className="px-3 py-2 text-center font-mono text-xs">{canal.modo === 'digital' && canal.freqTx ? fmtFreq(canal.freqTx) : <span className="text-slate-300">-</span>}</td>
+                        <td className="px-3 py-2 text-center font-mono text-xs">{canal.modo === 'digital' && canal.freqRx ? fmtFreq(canal.freqRx) : <span className="text-slate-300">-</span>}</td>
+                        <td className="px-3 py-2 text-center text-xs">{canal.subtonoTx ? <span className="font-mono">{canal.subtonoTx} Hz</span> : <span className="text-slate-300">-</span>}</td>
+                        <td className="px-3 py-2 text-center text-xs">{idx === 0 && eq.potenciaMaxima ? <span className="font-bold">{eq.potenciaMaxima}W</span> : <span className="text-slate-300">{idx > 0 ? '' : '-'}</span>}</td>
+                        <td className="px-4 py-2 text-right">{idx === 0 && <button onClick={() => { setEquipoSeleccionado(eq); setShowConfigRF(true) }} className="p-2 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"><Settings className="w-4 h-4" /></button>}</td>
+                      </tr>
+                    ))
+                  })}
                 </tbody>
               </table>
             </div>
