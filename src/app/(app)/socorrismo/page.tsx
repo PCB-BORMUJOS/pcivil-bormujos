@@ -723,8 +723,8 @@ export default function SocorrismoPage() {
                   <tbody className="divide-y divide-slate-100">
                     {deas.map(dea => (
                       <tr key={dea.id} className="hover:bg-slate-50">
-                        <td className="p-3 font-bold text-slate-800">{dea.codigo}</td>
-                        <td className="p-3 text-sm text-slate-600">{dea.tipo}</td>
+                        <td className="p-3 font-bold text-sm text-slate-800 whitespace-nowrap">{dea.codigo}</td>
+                        <td className="p-3 text-sm text-slate-600 whitespace-nowrap">{dea.tipo}</td>
                         <td className="p-3 text-sm text-slate-600">{dea.ubicacion}</td>
                         <td className="p-3 text-center">
                           {dea.accesible24h ? (
