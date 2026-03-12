@@ -1156,8 +1156,8 @@ export default function IncendiosPage() {
                   <tbody className="divide-y divide-slate-100">
                     {hidrantes.map(hid => (
                       <tr key={hid.id} className="hover:bg-slate-50">
-                        <td className="p-3 font-bold text-slate-800">{hid.codigo}</td>
-                        <td className="p-3 text-sm text-slate-600">{hid.tipo}</td>
+                        <td className="p-3 font-bold text-sm text-slate-800 whitespace-nowrap">{hid.codigo}</td>
+                        <td className="p-3 text-sm text-slate-600 whitespace-nowrap">{hid.tipo}</td>
                         <td className="p-3 text-sm text-slate-600">{hid.ubicacion}</td>
                         <td className="p-3 text-center text-sm text-slate-600 hidden lg:table-cell">
                           {hid.latitud ? hid.latitud.toFixed(8) : '-'}
