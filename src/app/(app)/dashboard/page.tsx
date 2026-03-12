@@ -400,13 +400,13 @@ function CalendarView({ eventos, guardias, resumenDisponibilidad, onEventClick, 
           Calendario Operativo
         </h2>
         <div className="flex items-center gap-4">
-          <div className="hidden md:flex items-center gap-3 text-[10px]">
-            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500"></span> M ≥4</span>
-            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-500"></span> 3 ind.</span>
-            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500"></span> ≤2 ind.</span>
-            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-500"></span> T ≥4</span>
-            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-pink-500"></span> Evento</span>
-            <span className="flex items-center gap-1"><Lock size={10} className="text-slate-400" /> Privado</span>
+          <div className="hidden md:flex items-center gap-4 text-xs">
+            <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-green-500 flex-shrink-0"></span> <span className="font-medium text-slate-600">Mañana ≥4</span></span>
+            <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-amber-500 flex-shrink-0"></span> <span className="font-medium text-slate-600">3 personas</span></span>
+            <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-red-500 flex-shrink-0"></span> <span className="font-medium text-slate-600">≤2 personas</span></span>
+            <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-blue-500 flex-shrink-0"></span> <span className="font-medium text-slate-600">Tarde ≥4</span></span>
+            <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-pink-500 flex-shrink-0"></span> <span className="font-medium text-slate-600">Evento</span></span>
+            <span className="flex items-center gap-1.5"><Lock size={13} className="text-slate-400" /> <span className="font-medium text-slate-600">Privado</span></span>
           </div>
           <div className="flex items-center gap-2 bg-slate-50 rounded-lg p-1">
             <button onClick={() => changeMonth('prev')} className="p-1.5 hover:bg-white rounded-lg transition-colors"><ChevronLeft size={18} className="text-slate-500" /></button>
