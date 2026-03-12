@@ -1155,7 +1155,7 @@ export async function PUT(request: NextRequest) {
         freqTxAnalogico, freqRxAnalogico, subtonoTx, subtonoRx, potenciaAnalogico,
         freqTxDigital, freqRxDigital, colorCode, timeslot, potenciaDigital,
         potenciaMaxima, bandaFrecuencia, canalAnalogico, canalDigital,
-        latitud, longitud, alturaAntena, radioCobertura } = body
+        latitud, longitud, alturaAntena, radioCobertura, canales } = body
       const equipo = await prisma.equipoRadio.update({
         where: { id },
         data: {
