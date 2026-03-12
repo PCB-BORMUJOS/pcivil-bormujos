@@ -259,6 +259,7 @@ export default function TransmisionesPage() {
     const c1Digital = canalesRF.find(c => c.modo === 'digital')
     try {
       setSaving(true)
+      console.log('[SAVE] canalesRF al guardar:', JSON.stringify(canalesRF))
       const r = await fetch('/api/logistica', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -492,6 +493,7 @@ export default function TransmisionesPage() {
                   <th className="text-center px-3 py-3 text-xs font-semibold text-slate-500 uppercase whitespace-nowrap" colSpan={2}>Analógico</th>
                   <th className="text-center px-3 py-3 text-xs font-semibold text-slate-500 uppercase whitespace-nowrap" colSpan={2}>Digital (DMR)</th>
                   <th className="text-center px-3 py-3 text-xs font-semibold text-slate-500 uppercase whitespace-nowrap">Subtono</th>
+                  <th className="text-center px-3 py-3 text-xs font-semibold text-slate-500 uppercase whitespace-nowrap">Timeslot</th>
                   <th className="text-center px-3 py-3 text-xs font-semibold text-slate-500 uppercase whitespace-nowrap">Potencia</th>
                   <th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Editar</th>
                 </tr>
@@ -502,11 +504,12 @@ export default function TransmisionesPage() {
                   <th className="px-3 py-1.5 text-[10px] text-slate-400 font-medium">TX MHz</th>
                   <th className="px-3 py-1.5 text-[10px] text-slate-400 font-medium">RX MHz</th>
                   <th className="px-3 py-1.5 text-[10px] text-slate-400 font-medium">CTCSS</th>
+                  <th className="px-3 py-1.5 text-[10px] text-slate-400 font-medium">TS/CC</th>
                   <th className="px-3 py-1.5 text-[10px] text-slate-400 font-medium">Max W</th>
                   <th></th>
                 </tr></thead>
                 <tbody className="divide-y divide-slate-100">
-                  {equipos.length === 0 ? <tr><td colSpan={8} className="text-center py-12 text-slate-400"><Settings className="w-10 h-10 mx-auto mb-2 opacity-30" /><p className="text-sm">No hay equipos para configurar</p></td></tr>
+                  {equipos.length === 0 ? <tr><td colSpan={9} className="text-center py-12 text-slate-400"><Settings className="w-10 h-10 mx-auto mb-2 opacity-30" /><p className="text-sm">No hay equipos para configurar</p></td></tr>
                   : equipos.map(eq => {
                     const fmtFreq = (v: any) => v ? parseFloat(String(v)).toString() : null
                     const canales: any[] = Array.isArray(eq.canales) && eq.canales.length > 0 ? eq.canales : []
@@ -519,6 +522,7 @@ export default function TransmisionesPage() {
                           <td className="px-3 py-3 text-center font-mono text-xs">{eq.freqTxDigital ? fmtFreq(eq.freqTxDigital) : <span className="text-slate-300">-</span>}</td>
                           <td className="px-3 py-3 text-center font-mono text-xs">{eq.freqRxDigital ? fmtFreq(eq.freqRxDigital) : <span className="text-slate-300">-</span>}</td>
                           <td className="px-3 py-3 text-center text-xs">{eq.subtonoTx ? <span className="font-mono">{eq.subtonoTx} Hz</span> : <span className="text-slate-300">-</span>}</td>
+                          <td className="px-3 py-3 text-center text-xs"><span className="text-slate-300">-</span></td>
                           <td className="px-3 py-3 text-center text-xs">{eq.potenciaMaxima ? <span className="font-bold">{eq.potenciaMaxima}W</span> : <span className="text-slate-300">-</span>}</td>
                           <td className="px-4 py-3 text-right"><button onClick={() => { setEquipoSeleccionado(eq); setShowConfigRF(true) }} className="p-2 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"><Settings className="w-4 h-4" /></button></td>
                         </tr>
@@ -537,8 +541,9 @@ export default function TransmisionesPage() {
                         <td className="px-3 py-2 text-center font-mono text-xs">{canal.modo === 'analogico' && canal.freqRx ? fmtFreq(canal.freqRx) : <span className="text-slate-300">-</span>}</td>
                         <td className="px-3 py-2 text-center font-mono text-xs">{canal.modo === 'digital' && canal.freqTx ? fmtFreq(canal.freqTx) : <span className="text-slate-300">-</span>}</td>
                         <td className="px-3 py-2 text-center font-mono text-xs">{canal.modo === 'digital' && canal.freqRx ? fmtFreq(canal.freqRx) : <span className="text-slate-300">-</span>}</td>
-                        <td className="px-3 py-2 text-center text-xs">{canal.subtonoTx ? <span className="font-mono">{canal.subtonoTx} Hz</span> : <span className="text-slate-300">-</span>}</td>
-                        <td className="px-3 py-2 text-center text-xs">{idx === 0 && eq.potenciaMaxima ? <span className="font-bold">{eq.potenciaMaxima}W</span> : <span className="text-slate-300">{idx > 0 ? '' : '-'}</span>}</td>
+                        <td className="px-3 py-2 text-center text-xs">{canal.modo === 'analogico' && canal.subtonoTx ? <span className="font-mono">{canal.subtonoTx} Hz</span> : <span className="text-slate-300">-</span>}</td>
+                        <td className="px-3 py-2 text-center text-xs">{canal.modo === 'digital' && canal.timeslot ? <span className="font-mono text-emerald-700">TS{canal.timeslot}{canal.colorCode ? '/CC'+canal.colorCode : ''}</span> : <span className="text-slate-300">-</span>}</td>
+                        <td className="px-3 py-2 text-center text-xs">{canal.potencia ? <span className="font-bold">{canal.potencia}W</span> : idx === 0 && eq.potenciaMaxima ? <span className="font-bold">{eq.potenciaMaxima}W</span> : <span className="text-slate-300">-</span>}</td>
                         <td className="px-4 py-2 text-right">{idx === 0 && <button onClick={() => { setEquipoSeleccionado(eq); setShowConfigRF(true) }} className="p-2 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"><Settings className="w-4 h-4" /></button>}</td>
                       </tr>
                     ))
