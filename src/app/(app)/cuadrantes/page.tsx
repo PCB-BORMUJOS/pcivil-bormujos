@@ -185,32 +185,11 @@ export default function CuadrantesPage() {
           })
         })
       })
-      // Fusionar todos los usuarios activos (para admin: asignar sin restricción de semana)
-      const todosUsuarios: any[] = data.todosUsuariosActivos || []
-      weekDays.forEach(day => {
-        const dateStr = toDateStr(day)
-        TURNOS.forEach(({ key }) => {
-          const sk = slotKey(dateStr, key)
-          if (!dispMap[sk]) dispMap[sk] = []
-          todosUsuarios.forEach(u => {
-            if (!dispMap[sk].find((d: any) => d.id === u.id)) {
-              dispMap[sk].push({
-                id: u.id,
-                nombre: u.nombre,
-                apellidos: u.apellidos,
-                numeroVoluntario: u.numeroVoluntario,
-                responsableTurno: u.responsableTurno,
-                carnetConducir: u.carnetConducir,
-                experiencia: u.experiencia || 'BAJA',
-                nivelCompromiso: u.nivelCompromiso || 'medio',
-                esOperativo: u.esOperativo,
-                turnosDeseados: 4,
-                puedeDobleturno: false,
-              })
-            }
-          })
-        })
-      })
+      // dispMap contiene SOLO disponibilidad real declarada por los voluntarios
+      // todosUsuarios se guarda separado para permitir asignación manual por admin
+      const todosUsuariosActivos: any[] = data.todosUsuariosActivos || []
+      setTodosUsuarios(todosUsuariosActivos)
+      // NO añadir todosUsuarios a dispMap: contaminaría las sugerencias
       setDisponibilidades(dispMap)
       const asigMap: Record<string, string[]> = {}
       guardias.forEach(g => {
@@ -246,7 +225,12 @@ export default function CuadrantesPage() {
     }
   }, [semanaStart])
 
-  useEffect(() => { cargarDatos() }, [cargarDatos])
+  useEffect(() => {
+    cargarDatos()
+    // Recarga automática cada 60s para reflejar disponibilidades nuevas en tiempo real
+    const interval = setInterval(() => { cargarDatos() }, 60_000)
+    return () => clearInterval(interval)
+  }, [cargarDatos])
 
   const toggleAsignacion = (sk: string, userId: string) => {
     setAsignaciones(prev => {
@@ -641,6 +625,29 @@ export default function CuadrantesPage() {
                               </div>
                             )
                           })}
+                          {/* Voluntarios sin disponibilidad declarada — solo para asignación manual admin */}
+                          {todosUsuarios
+                            .filter(u =>
+                              !disponibles.find((d: any) => d.id === u.id) &&
+                              !asignados.includes(u.id)
+                            )
+                            .map(u => (
+                              <div
+                                key={`sinresp-${u.id}`}
+                                onClick={() => toggleAsignacion(sk, u.id)}
+                                title={`${u.nombre} ${u.apellidos} · Sin disponibilidad declarada`}
+                                className="flex items-center gap-1 px-1.5 py-1 rounded text-[10px] bg-white border border-dashed border-slate-200 text-slate-400 cursor-pointer hover:bg-slate-50 opacity-60"
+                              >
+                                <span className="w-3 h-3 rounded border border-slate-300 flex items-center justify-center flex-shrink-0" style={{ fontSize: '7px' }} />
+                                <span className="font-bold truncate flex-1">{u.numeroVoluntario || `${u.nombre.slice(0, 3)}.`}</span>
+                                <span className="flex items-center gap-0.5 flex-shrink-0">
+                                  {u.responsableTurno && <Shield size={8} className="text-slate-300" />}
+                                  {u.carnetConducir && <Car size={8} className="text-slate-300" />}
+                                  {!u.esOperativo && <span className="text-[7px] font-bold text-slate-300 bg-slate-100 px-0.5 rounded">ADM</span>}
+                                </span>
+                              </div>
+                            ))
+                          }
                         </>
                       )}
                     </div>
