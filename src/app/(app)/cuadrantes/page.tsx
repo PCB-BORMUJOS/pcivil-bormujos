@@ -270,7 +270,8 @@ export default function CuadrantesPage() {
           if (yaExiste) return // ya está guardada, no recrear
           const u =
             disponibilidades[sk]?.find(d => d.id === uid) ||
-            guardiasGuardadas.find(g => g.usuarioId === uid)?.usuario
+            guardiasGuardadas.find(g => g.usuarioId === uid)?.usuario ||
+            todosUsuarios.find((t: any) => t.id === uid)
           const resSk = rolEspecial[sk] || {}
           const rolFinal = resSk.responsable === uid
             ? 'Responsable'
@@ -337,7 +338,8 @@ export default function CuadrantesPage() {
         userIds.forEach(uid => {
           const u =
             disponibilidades[sk]?.find(d => d.id === uid) ||
-            guardiasGuardadas.find(g => g.usuarioId === uid)?.usuario
+            guardiasGuardadas.find(g => g.usuarioId === uid)?.usuario ||
+            todosUsuarios.find((t: any) => t.id === uid)
           const resSk = rolEspecial[sk] || {}
           const rolFinal = resSk.responsable === uid
             ? 'Responsable'
