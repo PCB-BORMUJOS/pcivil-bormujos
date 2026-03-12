@@ -45,6 +45,7 @@ interface EquipoRadio {
   freqTxDigital?: number; freqRxDigital?: number; colorCode?: number; timeslot?: number; potenciaDigital?: number;
   potenciaMaxima?: number; bandaFrecuencia?: string; canalAnalogico?: string; canalDigital?: string;
   latitud?: number; longitud?: number; alturaAntena?: number; radioCobertura?: number;
+  canales?: CanalRF[];
 }
 interface MantenimientoEquipo { id: string; equipoId: string; tipo: string; descripcion: string; fecha: string; realizadoPor?: string; coste?: number; observaciones?: string }
 interface CicloCarga { id: string; equipoId: string; fechaInicio: string; fechaFin?: string; duracionHoras?: number; nivelInicial?: number; nivelFinal?: number; observaciones?: string }
@@ -226,7 +227,7 @@ export default function TransmisionesPage() {
   // Init canales cuando se abre ConfigRF
   useEffect(() => {
     if (equipoSeleccionado && showConfigRF) {
-      const raw = (equipoSeleccionado as any).canales
+      const raw = equipoSeleccionado.canales
       if (Array.isArray(raw) && raw.length > 0) {
         setCanalesRF(raw)
       } else {
