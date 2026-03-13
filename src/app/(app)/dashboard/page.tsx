@@ -625,8 +625,7 @@ export default function DashboardPage() {
         setVoluntarios(volData.voluntarios || []);
         setTodosVoluntarios(volData.voluntarios || []);  // guardar copia completa para el selector
         fetch('/api/accion-social?tipo=miembros-viogen').then(r => r.json()).then(d => setMiembrosViogen(d.miembros || [])).catch(() => {});
-        setEnTurno(volData.enTurno || []);
-        setTodosHoy(Array.isArray(volData.todosHoy) ? volData.todosHoy : []);
+        calcularEnTurnoDesdeGuardias(guardiasData.guardias || []);
         setTurnoActivo(volData.turnoActivo || null);
         setStats(volData.stats || { total: 0, responsablesTurno: 0, conCarnet: 0, experienciaAlta: 0 });
         setVehiculos(vehData.vehiculos || []);
@@ -789,15 +788,31 @@ export default function DashboardPage() {
   };
 
   // Función para cargar todos los voluntarios (modo genérico)
+  const calcularEnTurnoDesdeGuardias = (todasGuardias: any[]) => {
+    const ahora = new Date();
+    const horaEs = parseInt(ahora.toLocaleString('es-ES', { timeZone: 'Europe/Madrid', hour: '2-digit', hour12: false }));
+    const turnoActivo = horaEs >= 9 && horaEs < 15 ? 'mañana' : horaEs >= 17 && horaEs < 22 ? 'tarde' : null;
+    const fechaEs = new Date(ahora.toLocaleString('en-US', { timeZone: 'Europe/Madrid' }));
+    const hoyStr = `${fechaEs.getFullYear()}-${String(fechaEs.getMonth()+1).padStart(2,'0')}-${String(fechaEs.getDate()).padStart(2,'0')}`;
+    const guardiasHoy = todasGuardias.filter(g => {
+      const fechaG = new Date(g.fecha).toISOString().slice(0,10);
+      return fechaG === hoyStr && g.estado !== 'cancelada';
+    });
+    const enTurnoHoy = turnoActivo
+      ? guardiasHoy.filter(g => g.turno === turnoActivo)
+      : [];
+    setEnTurno(enTurnoHoy.map(g => ({ ...g.usuario, turno: g.turno, rol: g.rol })));
+    setTodosHoy(guardiasHoy.map(g => ({ ...g.usuario, turno: g.turno, rol: g.rol })));
+  };
+
   const cargarTodosVoluntarios = () => {
     setTurnoSeleccionado(null);
     fetch('/api/voluntarios')
       .then(res => res.json())
       .then(data => {
         setVoluntarios(data.voluntarios || []);
-        setEnTurno(data.enTurno || []);
-        setTodosHoy(Array.isArray(data.todosHoy) ? data.todosHoy : []);
         setStats(data.stats || { total: 0, responsablesTurno: 0, conCarnet: 0, experienciaAlta: 0 });
+        calcularEnTurnoDesdeGuardias(guardias);
       })
       .catch(() => { });
   };
