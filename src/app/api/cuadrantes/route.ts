@@ -71,7 +71,7 @@ export async function GET(request: NextRequest) {
       where: { semanaInicio: { gte: semanaStart, lte: semanaEnd } },
       select: { usuarioId: true }
     })
-    const idsQueRespondieron = [...new Set(todosRespondieron.map(r => r.usuarioId))]
+    const idsQueRespondieron = Array.from(new Set(todosRespondieron.map(r => r.usuarioId)))
     const todosUsuariosActivos = await prisma.usuario.findMany({
       where: { activo: true },
       select: {
