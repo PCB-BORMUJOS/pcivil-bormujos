@@ -842,10 +842,17 @@ export default function DashboardPage() {
     try {
       const res = await fetch(`/api/cuadrantes?id=${guardiaId}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('Error al eliminar');
-      // Recargar guardias del calendario
-      const guardiasRes = await fetch('/api/guardias');
+      // Recargar guardias del calendario + stats de personal en turno
+      const [guardiasRes, volRes] = await Promise.all([
+        fetch('/api/guardias'),
+        fetch('/api/voluntarios')
+      ]);
       const guardiasData = await guardiasRes.json();
+      const volData = await volRes.json();
       setGuardias(guardiasData.guardias || []);
+      setEnTurno(volData.enTurno || []);
+      setTodosHoy(Array.isArray(volData.todosHoy) ? volData.todosHoy : []);
+      setStats(volData.stats || { total: 0, responsablesTurno: 0, conCarnet: 0, experienciaAlta: 0 });
       // Actualizar modal con guardias restantes del mismo turno
       const restantes = (guardiasData.guardias || []).filter((g: any) =>
         new Date(g.fecha).toISOString().split('T')[0] === fecha && g.turno === turno
@@ -1534,29 +1541,46 @@ export default function DashboardPage() {
           <div className="space-y-4 max-h-[500px] overflow-y-auto">
             {/* En Turno Hoy */}
             <div>
-              <h4 className="text-xs font-bold text-slate-500 uppercase mb-2 flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-green-500 inline-block"></span>
-                Personal Hoy
-              </h4>
-              {todosHoy.length === 0 ? (
-                <p className="text-xs text-slate-400 italic pl-4">Sin guardias programadas hoy</p>
-              ) : (
-                <div className="space-y-1.5">
-                  {[...todosHoy].sort((a: any, b: any) => sortInd(a.numeroVoluntario, b.numeroVoluntario)).map((v: any) => (
-                    <div key={v.id} className="flex items-center gap-3 p-2 bg-green-50 rounded-lg border border-green-100">
-                      <div className="w-9 h-9 rounded-full bg-green-600 text-white flex items-center justify-center font-bold text-sm">{v.nombre?.charAt(0)}{v.apellidos?.charAt(0)}</div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-slate-800 text-sm">{v.numeroVoluntario}</span>
-                          {v.turno && <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-100 text-green-700 font-bold">{v.turno}</span>}
-                          {v.rol && <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">{v.rol}</span>}
-                        </div>
-                        <p className="text-xs text-slate-600 truncate">{v.nombre} {v.apellidos}</p>
+              {(() => {
+                // Filtrar por turno activo y ordenar J→S→B
+                const turnoLabel = turnoActivo === 'mañana' ? 'Mañana · 09:00–14:30' : turnoActivo === 'tarde' ? 'Tarde · 17:00–22:00' : null
+                const enTurnoActivo = turnoActivo
+                  ? [...todosHoy]
+                      .filter((v: any) => v.turno === turnoActivo)
+                      .sort((a: any, b: any) => sortInd(a.numeroVoluntario, b.numeroVoluntario))
+                  : []
+                return (
+                  <>
+                    <h4 className="text-xs font-bold text-slate-500 uppercase mb-2 flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-green-500 inline-block"></span>
+                      {turnoLabel ? `En Turno Ahora — ${turnoLabel}` : 'Personal Hoy'}
+                      <span className="ml-auto text-[10px] font-bold text-green-700 bg-green-100 px-2 py-0.5 rounded-full">{enTurnoActivo.length} personas</span>
+                    </h4>
+                    {enTurnoActivo.length === 0 ? (
+                      <p className="text-xs text-slate-400 italic pl-4">
+                        {turnoActivo ? `Sin guardias programadas para el turno ${turnoActivo}` : 'Fuera de horario de turno'}
+                      </p>
+                    ) : (
+                      <div className="space-y-1.5">
+                        {enTurnoActivo.map((v: any) => (
+                          <div key={`${v.id}-${v.turno}`} className="flex items-center gap-3 p-2 bg-green-50 rounded-lg border border-green-100">
+                            <div className="w-9 h-9 rounded-full bg-green-600 text-white flex items-center justify-center font-bold text-sm flex-shrink-0">
+                              {v.nombre?.charAt(0)}{v.apellidos?.charAt(0)}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="font-bold text-slate-800 text-sm">{v.numeroVoluntario}</span>
+                                {v.rol && <span className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700 font-bold">{v.rol}</span>}
+                              </div>
+                              <p className="text-xs text-slate-600 truncate">{v.nombre} {v.apellidos}</p>
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+                    )}
+                  </>
+                )
+              })()}
             </div>
             {/* Todos los Activos */}
             <div>

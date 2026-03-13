@@ -35,9 +35,10 @@ export async function GET() {
       experienciaAlta: voluntarios.filter(v => v.experiencia === 'ALTA').length,
     }
 
-    // Obtener guardias de hoy
-    const hoy = new Date()
-    hoy.setHours(0, 0, 0, 0)
+    // Obtener guardias de hoy — fecha local España (evita bug UTC)
+    const ahoraEs = new Date()
+    const fechaEspana = new Date(ahoraEs.toLocaleString("en-US", { timeZone: "Europe/Madrid" }))
+    const hoy = new Date(fechaEspana.getFullYear(), fechaEspana.getMonth(), fechaEspana.getDate())
     const manana = new Date(hoy)
     manana.setDate(manana.getDate() + 1)
 
