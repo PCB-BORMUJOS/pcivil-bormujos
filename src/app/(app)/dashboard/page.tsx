@@ -535,6 +535,13 @@ function CalendarView({ eventos, guardias, resumenDisponibilidad, onEventClick, 
 // Main Dashboard
 export default function DashboardPage() {
   const [showPersonnel, setShowPersonnel] = useState(false);
+
+  // Ordenación J→S→B numérico ascendente (igual que planificador)
+  const sortInd = (a: string | null, b: string | null): number => {
+    const p = (s: string | null) => !s ? 99 : s.startsWith('J') ? 0 : s.startsWith('S') ? 1 : s.startsWith('B') ? 2 : 3
+    const n = (s: string | null) => { const m = s?.match(/\d+/); return m ? parseInt(m[0]) : 9999 }
+    return p(a) !== p(b) ? p(a) - p(b) : n(a) - n(b)
+  }
   const [showVehicles, setShowVehicles] = useState(false);
   const [showAvailability, setShowAvailability] = useState(false);
   const [showClima, setShowClima] = useState(false);
@@ -1294,7 +1301,7 @@ export default function DashboardPage() {
                     <div>
                       <label className="block text-sm font-medium text-slate-700 mb-1">Formadores (voluntarios del servicio)</label>
                       <div className="border border-slate-300 rounded-lg p-2 max-h-36 overflow-y-auto space-y-1">
-                        {voluntarios.map((v: any) => (
+                        {[...voluntarios].sort((a: any, b: any) => sortInd(a.numeroVoluntario, b.numeroVoluntario)).map((v: any) => (
                           <label key={v.id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-purple-50 cursor-pointer">
                             <input type="checkbox" className="w-4 h-4 accent-purple-600"
                               checked={(newEvent.formadoresIds || []).includes(v.id)}
@@ -1371,7 +1378,7 @@ export default function DashboardPage() {
                 <p className="text-xs text-slate-400 italic pl-4">Sin personal asignado a esta guardia</p>
               ) : (
                 <div className="space-y-2">
-                  {showGuardiaDetail.guardias.map((g, i) => (
+                  {[...showGuardiaDetail.guardias].sort((a: any, b: any) => sortInd(a.usuario?.numeroVoluntario, b.usuario?.numeroVoluntario)).map((g, i) => (
                     <div key={i} className="rounded-lg border border-orange-100 overflow-hidden">
                       {/* Fila principal de la guardia */}
                       <div className="flex items-center gap-3 p-2.5 bg-orange-50">
@@ -1477,7 +1484,7 @@ export default function DashboardPage() {
                     <p className="text-xs text-slate-400 italic pl-4">Sin disponibilidad confirmada</p>
                   ) : (
                     <div className="space-y-1.5">
-                      {todosHoy.map((v: any) => (
+                      {[...todosHoy].sort((a: any, b: any) => sortInd(a.numeroVoluntario, b.numeroVoluntario)).map((v: any) => (
                         <div key={v.id} className="flex items-center gap-3 p-2 bg-green-50 rounded-lg border border-green-100">
                           <div className="w-8 h-8 rounded-full bg-green-600 text-white flex items-center justify-center font-bold text-xs flex-shrink-0">{v.nombre?.charAt(0)}{v.apellidos?.charAt(0)}</div>
                           <div className="flex-1 min-w-0">
@@ -1500,7 +1507,7 @@ export default function DashboardPage() {
                     Personal Activo ({stats.total})
                   </h4>
                   <div className="space-y-1.5">
-                    {voluntarios.map((v: any) => (
+                    {[...voluntarios].sort((a: any, b: any) => sortInd(a.numeroVoluntario, b.numeroVoluntario)).map((v: any) => (
                       <div key={v.id} className="flex items-center gap-3 p-2 bg-slate-50 rounded-lg border border-slate-100">
                         <div className="w-8 h-8 rounded-full bg-slate-400 text-white flex items-center justify-center font-bold text-xs flex-shrink-0">{v.nombre?.charAt(0)}{v.apellidos?.charAt(0)}</div>
                         <div className="flex-1 min-w-0">
@@ -1534,7 +1541,7 @@ export default function DashboardPage() {
                 <p className="text-xs text-slate-400 italic pl-4">Sin guardias programadas hoy</p>
               ) : (
                 <div className="space-y-1.5">
-                  {todosHoy.map((v: any) => (
+                  {[...todosHoy].sort((a: any, b: any) => sortInd(a.numeroVoluntario, b.numeroVoluntario)).map((v: any) => (
                     <div key={v.id} className="flex items-center gap-3 p-2 bg-green-50 rounded-lg border border-green-100">
                       <div className="w-9 h-9 rounded-full bg-green-600 text-white flex items-center justify-center font-bold text-sm">{v.nombre?.charAt(0)}{v.apellidos?.charAt(0)}</div>
                       <div className="flex-1 min-w-0">
@@ -1557,7 +1564,7 @@ export default function DashboardPage() {
                 Personal Activo ({stats.total})
               </h4>
               <div className="space-y-1.5">
-                {voluntarios.map((v: any) => (
+                {[...voluntarios].sort((a: any, b: any) => sortInd(a.numeroVoluntario, b.numeroVoluntario)).map((v: any) => (
                   <div key={v.id} className="flex items-center gap-3 p-2 bg-slate-50 rounded-lg border border-slate-100">
                     <div className="w-9 h-9 rounded-full bg-orange-500 text-white flex items-center justify-center font-bold text-sm">{v.nombre?.charAt(0)}{v.apellidos?.charAt(0)}</div>
                     <div className="flex-1 min-w-0">

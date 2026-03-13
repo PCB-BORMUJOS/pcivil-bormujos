@@ -60,12 +60,12 @@ export async function GET() {
       orderBy: { turno: 'asc' }
     })
 
-    // Determinar turno activo según hora actual (España UTC+1)
+    // Determinar turno activo — hora local España DST-safe
     const ahora = new Date()
-    const horaActual = ahora.getUTCHours() + 1 // UTC+1 España
+    const horaEspana = parseInt(ahora.toLocaleString('es-ES', { timeZone: 'Europe/Madrid', hour: '2-digit', hour12: false }))
     // Mañana: 09:00-14:30, Tarde: 17:00-22:00
-    const turnoActivo = horaActual >= 9 && horaActual < 15 ? 'mañana'
-      : horaActual >= 17 && horaActual < 22 ? 'tarde'
+    const turnoActivo = horaEspana >= 9 && horaEspana < 15 ? 'mañana'
+      : horaEspana >= 17 && horaEspana < 22 ? 'tarde'
       : null
     // enTurno = solo personas en el turno activo ahora mismo
     const enTurnoMap = new Map()
