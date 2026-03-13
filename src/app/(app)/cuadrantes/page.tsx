@@ -151,8 +151,8 @@ export default function CuadrantesPage() {
     const prefixOrder = (ind: string | null): number => {
       if (!ind) return 99
       if (ind.startsWith('J')) return 0
-      if (ind.startsWith('B')) return 1
-      if (ind.startsWith('S')) return 2
+      if (ind.startsWith('S')) return 1
+      if (ind.startsWith('B')) return 2
       return 3
     }
     const numOf = (ind: string | null): number => {
