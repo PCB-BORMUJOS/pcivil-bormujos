@@ -228,9 +228,9 @@ export default function DronesPage() {
   ] as const
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 sm:p-6 space-y-5 sm:space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-0 justify-between">
         <div className="flex items-center gap-3">
           <div className="p-2.5 bg-purple-600 rounded-xl"><Drone className="w-6 h-6 text-white" /></div>
           <div>
@@ -238,7 +238,7 @@ export default function DronesPage() {
             <p className="text-sm text-slate-500">Gestión operativa de aeronaves no tripuladas · Protección Civil Bormujos</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <button onClick={cargarDatos} className="p-2 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-500"><RefreshCw size={16} /></button>
           <button onClick={() => setShowNuevoVuelo(true)} className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold rounded-lg"><Plus size={16} />Nuevo Vuelo</button>
           <button onClick={() => setShowNuevoDrone(true)} className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white text-sm font-semibold rounded-lg"><Drone size={16} />Añadir Drone</button>
@@ -246,7 +246,7 @@ export default function DronesPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
         {[
           { label: 'Drones operativos', value: `${stats?.dronesOperativos ?? 0}/${stats?.totalDrones ?? 0}`, icon: Drone, color: 'text-purple-600' },
           { label: 'Vuelos este mes', value: stats?.vuelosMes ?? 0, icon: Activity, color: 'text-blue-600' },
@@ -271,7 +271,7 @@ export default function DronesPage() {
 
       {/* ─── DASHBOARD ─── */}
       {tab === 'dashboard' && (
-        <div className="grid grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
           {/* Flota resumen */}
           <div className="bg-white rounded-xl border border-slate-100 p-5">
             <h3 className="text-sm font-bold text-slate-700 mb-4 flex items-center gap-2"><Drone className="w-4 h-4 text-purple-600" />Estado de la flota</h3>
@@ -371,10 +371,10 @@ export default function DronesPage() {
               </button>
             ))}
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {dronesF.map(d => (
               <div key={d.id} className="bg-white rounded-xl border border-slate-100 p-5 space-y-4">
-                <div className="flex items-start justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-0 justify-between">
                   <div className="flex items-center gap-3">
                     <div className="p-2 bg-purple-100 rounded-xl"><Drone className="w-5 h-5 text-purple-600" /></div>
                     <div>
@@ -387,7 +387,7 @@ export default function DronesPage() {
                     <button onClick={() => { setDroneSeleccionado(d); setShowEditarDrone(true) }} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400"><Edit size={14} /></button>
                   </div>
                 </div>
-                <div className="grid grid-cols-3 gap-3 text-center">
+                <div className="grid grid-cols-3 gap-2 text-center">
                   <div className="bg-slate-50 rounded-lg p-2"><p className="text-lg font-black text-slate-800">{d.horasVuelo}h</p><p className="text-[10px] text-slate-500">Horas vuelo</p></div>
                   <div className="bg-slate-50 rounded-lg p-2"><p className="text-lg font-black text-slate-800">{d._count?.vuelos ?? 0}</p><p className="text-[10px] text-slate-500">Vuelos</p></div>
                   <div className="bg-slate-50 rounded-lg p-2"><p className="text-lg font-black text-slate-800">{d.categoria}</p><p className="text-[10px] text-slate-500">Categoría</p></div>
@@ -426,13 +426,13 @@ export default function DronesPage() {
             <p className="text-sm text-slate-500">{pilotos.length} pilotos activos</p>
             <button onClick={() => setShowNuevoPiloto(true)} className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white text-sm font-semibold rounded-lg hover:bg-purple-700"><Plus size={14} />Nuevo piloto</button>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {pilotos.map(p => {
               const certs = p.certificaciones || {}
               const segVence = p.seguroRCVigencia ? new Date(p.seguroRCVigencia) < new Date() : false
               return (
                 <div key={p.id} className="bg-white rounded-xl border border-slate-100 p-5 space-y-4">
-                  <div className="flex items-start justify-between">
+                  <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-0 justify-between">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center font-bold text-purple-700">{p.nombre[0]}{p.apellidos[0]}</div>
                       <div>
@@ -660,7 +660,7 @@ export default function DronesPage() {
                     </div>
                     <button onClick={() => setNotamSeleccionado(null)} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400"><X size={16} /></button>
                   </div>
-                  <div className="grid grid-cols-5 gap-3 mb-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-4">
                     <div className="bg-slate-50 rounded-lg p-3">
                       <p className="text-[9px] font-bold text-slate-400 uppercase mb-1">Válido desde</p>
                       <p className="text-xs font-semibold text-slate-700">{desde || '—'}</p>
@@ -850,7 +850,7 @@ export default function DronesPage() {
           <div className="space-y-5">
             {/* Cabecera con progreso */}
             <div className="bg-white rounded-xl border border-slate-100 p-5">
-              <div className="flex items-start justify-between mb-5">
+              <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-0 justify-between mb-5">
                 <div>
                   <h3 className="text-base font-black text-slate-900">Lista de verificación pre-vuelo</h3>
                   <p className="text-xs text-slate-500 mt-0.5">Normativa AESA · Reglamento UE 2019/947 (EASA) · {totalItems} verificaciones · 6 secciones</p>
@@ -880,7 +880,7 @@ export default function DronesPage() {
                 <span className="text-[11px] text-slate-400">— {totalItems - marcados - fallidos} pendientes</span>
               </div>
               {/* Datos vuelo */}
-              <div className="grid grid-cols-3 gap-3 mt-4 pt-4 border-t border-slate-100">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4 pt-4 border-t border-slate-100">
                 <div>
                   <label className="text-[10px] font-bold text-slate-400 uppercase">Piloto al mando</label>
                   <input value={piloCheck} onChange={e => setPiloCheck(e.target.value)} placeholder="Nombre del piloto" className="mt-1 w-full text-xs border border-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-purple-400" />
@@ -955,7 +955,7 @@ export default function DronesPage() {
                             <p className="text-[10px] text-slate-400 mt-0.5 font-semibold tracking-wider uppercase">{item.normativa}</p>
                           </div>
                           {/* Botones OK / NO */}
-                          <div className="flex items-center gap-2 flex-shrink-0">
+                          <div className="flex items-center gap-1.5 flex-shrink-0 ml-auto">
                             <button
                               onClick={() => setCheck(sec.id, item.id, esOK ? null : true)}
                               className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-150 border-2 min-w-[64px] justify-center ${esOK ? 'bg-green-500 border-green-500 text-white shadow-md' : 'bg-white border-slate-200 text-slate-500 hover:border-green-400 hover:text-green-600 hover:bg-green-50'}`}
@@ -1013,7 +1013,7 @@ export default function DronesPage() {
           <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl">
             <div className="flex items-center justify-between p-6 border-b"><h3 className="text-lg font-bold text-slate-900">Nuevo drone</h3><button onClick={() => setShowNuevoDrone(false)}><X size={20} className="text-slate-400" /></button></div>
             <form onSubmit={handleNuevoDrone} className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div><label className={labelCls}>Código *</label><input name="codigo" required placeholder="DJI-001" className={inputCls} /></div>
                 <div><label className={labelCls}>Nombre</label><input name="nombre" placeholder="Mavic 2 Pro Principal" className={inputCls} /></div>
                 <div><label className={labelCls}>Marca *</label><input name="marca" required placeholder="DJI" className={inputCls} /></div>
@@ -1053,7 +1053,7 @@ export default function DronesPage() {
           <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl">
             <div className="flex items-center justify-between p-6 border-b"><h3 className="text-lg font-bold text-slate-900">Editar {droneSeleccionado.codigo}</h3><button onClick={() => setShowEditarDrone(false)}><X size={20} className="text-slate-400" /></button></div>
             <form key={droneSeleccionado.id} onSubmit={handleEditarDrone} className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div><label className={labelCls}>Código *</label><input name="codigo" required defaultValue={droneSeleccionado.codigo} className={inputCls} /></div>
                 <div><label className={labelCls}>Nombre</label><input name="nombre" defaultValue={droneSeleccionado.nombre} className={inputCls} /></div>
                 <div><label className={labelCls}>Marca *</label><input name="marca" required defaultValue={droneSeleccionado.marca} className={inputCls} /></div>
@@ -1089,7 +1089,7 @@ export default function DronesPage() {
           <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl">
             <div className="flex items-center justify-between p-6 border-b"><h3 className="text-lg font-bold text-slate-900">Nuevo piloto RPAS</h3><button onClick={() => setShowNuevoPiloto(false)}><X size={20} className="text-slate-400" /></button></div>
             <form onSubmit={handleNuevoPiloto} className="p-6 space-y-5">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div><label className={labelCls}>Nombre *</label><input name="nombre" required className={inputCls} /></div>
                 <div><label className={labelCls}>Apellidos *</label><input name="apellidos" required className={inputCls} /></div>
                 <div><label className={labelCls}>Email</label><input name="email" type="email" className={inputCls} /></div>
@@ -1113,7 +1113,7 @@ export default function DronesPage() {
                   ))}
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div><label className={labelCls}>Seguro RC — Nº póliza</label><input name="seguroRCNumero" className={inputCls} /></div>
                 <div><label className={labelCls}>Seguro RC — Vigencia</label><input name="seguroRCVigencia" type="date" className={inputCls} /></div>
               </div>
@@ -1139,7 +1139,7 @@ export default function DronesPage() {
               {/* Aeronave y piloto */}
               <div>
                 <p className="text-xs font-bold text-slate-500 uppercase mb-3 flex items-center gap-2"><Drone size={12} />Aeronave y piloto</p>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div><label className={labelCls}>Drone *</label>
                     <select name="droneId" required className={inputCls}>
                       <option value="">— Seleccionar —</option>
@@ -1170,7 +1170,7 @@ export default function DronesPage() {
               {/* Zona de vuelo */}
               <div>
                 <p className="text-xs font-bold text-slate-500 uppercase mb-3 flex items-center gap-2"><MapPin size={12} />Zona de vuelo</p>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div><label className={labelCls}>Municipio</label><input name="municipio" defaultValue="Bormujos" className={inputCls} /></div>
                   <div><label className={labelCls}>Altura máxima (m)</label><input name="alturaMaxima" type="number" placeholder="120" className={inputCls} /></div>
                   <div><label className={labelCls}>Latitud inicio</label><input name="latitudInicio" type="number" step="0.000001" defaultValue="37.3710" className={inputCls} /></div>
@@ -1181,7 +1181,7 @@ export default function DronesPage() {
               {/* Condiciones meteorológicas */}
               <div>
                 <p className="text-xs font-bold text-slate-500 uppercase mb-3 flex items-center gap-2"><Wind size={12} />Condiciones meteorológicas</p>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div><label className={labelCls}>Viento (km/h)</label><input name="viento" type="number" placeholder="15" className={inputCls} /></div>
                   <div><label className={labelCls}>Visibilidad (m)</label><input name="visibilidad" type="number" placeholder="5000" className={inputCls} /></div>
                   <div><label className={labelCls}>Temperatura (°C)</label><input name="temperatura" type="number" className={inputCls} /></div>
@@ -1265,7 +1265,7 @@ export default function DronesPage() {
           <div className="bg-white rounded-2xl w-full max-w-xl max-h-[90vh] overflow-y-auto shadow-2xl">
             <div className="flex items-center justify-between p-6 border-b"><h3 className="text-lg font-bold text-slate-900">Registrar mantenimiento</h3><button onClick={() => setShowNuevoMant(false)}><X size={20} className="text-slate-400" /></button></div>
             <form onSubmit={handleNuevoMant} className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div><label className={labelCls}>Drone *</label>
                   <select name="droneId" required className={inputCls}>
                     <option value="">— Seleccionar —</option>
@@ -1313,7 +1313,7 @@ export default function DronesPage() {
             </div>
             <div className="p-6 space-y-5">
               {/* Datos principales */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="bg-slate-50 rounded-xl p-4 space-y-2">
                   <p className="text-xs font-bold text-slate-500 uppercase">Vigencia</p>
                   <div className="space-y-1">
@@ -1393,7 +1393,7 @@ export default function DronesPage() {
               setSaving(false)
               if (r.ok) { setShowNotamManual(false); cargarDatos() }
             }} className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div><label className={labelCls}>Referencia</label><input name="referencia" placeholder="A1234/26" className={inputCls} /></div>
                 <div><label className={labelCls}>Tipo</label><input name="tipoNotam" placeholder="AERÓDROMO / ESPACIO AÉREO" className={inputCls} /></div>
                 <div><label className={labelCls}>Válido desde</label><input name="fechaInicio" type="datetime-local" className={inputCls} /></div>

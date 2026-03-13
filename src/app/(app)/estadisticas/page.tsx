@@ -27,7 +27,7 @@ function StatCard({ label, value, sub, color = 'indigo', icon: Icon }: any) {
         <span className="text-xs font-bold uppercase tracking-wider opacity-70">{label}</span>
         {Icon && <Icon size={16} className="opacity-60" />}
       </div>
-      <div className="text-3xl font-black">{value ?? '—'}</div>
+      <div className="text-2xl sm:text-3xl font-black">{value ?? '—'}</div>
       {sub && <div className="text-xs mt-1 opacity-60">{sub}</div>}
     </div>
   )
@@ -119,7 +119,7 @@ export default function EstadisticasPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-0 justify-between">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center">
             <BarChart2 size={20} className="text-white" />
@@ -129,7 +129,7 @@ export default function EstadisticasPage() {
             <p className="text-sm text-slate-500">Análisis completo de la actividad operativa</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {/* Año */}
           <div className="relative">
             <select value={year} onChange={e => setYear(Number(e.target.value))} className="appearance-none pl-3 pr-8 py-2 border border-slate-200 rounded-lg text-sm font-medium bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
@@ -152,7 +152,7 @@ export default function EstadisticasPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-slate-100 p-1 rounded-xl overflow-x-auto">
+      <div className="flex gap-1 bg-slate-100 p-1 rounded-xl overflow-x-auto scrollbar-hide -mx-4 sm:mx-0 px-4 sm:px-1">
         {TABS.map(t => {
           const Icon = t.icon
           return (
@@ -171,7 +171,7 @@ export default function EstadisticasPage() {
           {/* ══ TAB PERSONAL ══════════════════════════════════════════════════ */}
           {tab === 'personal' && (
             <div className="space-y-6">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
                 <StatCard label="Voluntarios activos" value={volsActivos} icon={Users} color="indigo" sub={`de ${voluntarios.length} total`} />
                 <StatCard label="Guardias realizadas" value={totalGuardias} icon={Calendar} color="amber" sub={`${year}`} />
                 <StatCard label="Horas de servicio" value={totalHoras.toLocaleString()} icon={Clock} color="green" sub="estimadas" />
@@ -280,7 +280,7 @@ export default function EstadisticasPage() {
           {/* ══ TAB OPERATIVO ═════════════════════════════════════════════════ */}
           {tab === 'operativo' && (
             <div className="space-y-6">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
                 <StatCard label="Total guardias" value={totalGuardias} icon={Calendar} color="indigo" />
                 <StatCard label="Mañana" value={guardias.filter((g:any)=>g.turno==='mañana').length} color="amber" sub="turnos" />
                 <StatCard label="Tarde" value={guardias.filter((g:any)=>g.turno==='tarde').length} color="blue" sub="turnos" />
@@ -364,7 +364,7 @@ export default function EstadisticasPage() {
           {/* ══ TAB FORMACIÓN ═════════════════════════════════════════════════ */}
           {tab === 'formacion' && (
             <div className="space-y-6">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
                 <StatCard label="Total formaciones" value={formaciones.length} icon={Award} color="purple" />
                 <StatCard label="Abiertas" value={formaciones.filter((f:any)=>f.estado==='inscripciones_abiertas').length} color="green" sub="inscripciones" />
                 <StatCard label="Completadas" value={formaciones.filter((f:any)=>f.estado==='completada'||f.estado==='realizada').length} color="indigo" />
@@ -439,7 +439,7 @@ export default function EstadisticasPage() {
           {/* ══ TAB LOGÍSTICA ═════════════════════════════════════════════════ */}
           {tab === 'logistica' && (
             <div className="space-y-6">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
                 <StatCard label="Peticiones" value={peticionesLog.length} icon={Package} color="indigo" />
                 <StatCard label="Pendientes" value={peticionesLog.filter((p:any)=>p.estado==='pendiente').length} color="amber" />
                 <StatCard label="Aprobadas" value={peticionesLog.filter((p:any)=>p.estado==='aprobada').length} color="green" />
@@ -493,7 +493,7 @@ export default function EstadisticasPage() {
           {/* ══ TAB VEHÍCULOS ═════════════════════════════════════════════════ */}
           {tab === 'vehiculos' && (
             <div className="space-y-6">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
                 <StatCard label="Total vehículos" value={vehiculos.length} icon={Car} color="indigo" />
                 <StatCard label="Disponibles" value={vehiculos.filter((v:any)=>v.estado==='disponible').length} color="green" />
                 <StatCard label="En servicio" value={vehiculos.filter((v:any)=>v.estado==='en_servicio').length} color="amber" />
@@ -538,7 +538,7 @@ export default function EstadisticasPage() {
           {/* ══ TAB ECONÓMICO ═════════════════════════════════════════════════ */}
           {tab === 'economico' && (
             <div className="space-y-6">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
                 <StatCard label="Total dietas" value={peticionesDietas.length} icon={FileText} color="indigo" sub={`${year}`} />
                 <StatCard label="Importe dietas" value={peticionesDietas.reduce((a:number,d:any)=>a+Number(d.totalDieta||d.importeTotal||0),0).toLocaleString('es-ES',{style:'currency',currency:'EUR',maximumFractionDigits:0})} color="green" />
                 <StatCard label="Presupuesto ejecutado" value={Number(data.presupuesto?.totalEjecutado||0).toLocaleString('es-ES',{style:'currency',currency:'EUR',maximumFractionDigits:0})} color="amber" />
