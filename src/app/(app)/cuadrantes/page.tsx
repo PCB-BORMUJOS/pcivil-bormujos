@@ -568,122 +568,119 @@ export default function CuadrantesPage() {
                       {guardandoHoras[sk] && <span className="text-[8px] text-slate-400 ml-1">...</span>}
                     </div>
                     <div className="space-y-0.5 max-h-56 overflow-y-auto">
-                      {disponibles.length === 0 && asignadosExternos.length === 0 ? (
-                        <div className="text-[9px] text-slate-300 text-center py-3">Sin disponibilidad</div>
-                      ) : (
-                        <>
-                          {[...disponibles].sort((a, b) => sortIndicativo(a.numeroVoluntario, b.numeroVoluntario)).map(u => {
-                            const isAsig = asignados.includes(u.id)
-                            const isSug = sugeridosSk.includes(u.id) && !isAsig
-                            const esPracticas = !!(u as any)?.fichaVoluntario?.enPracticas
-                            const turnosPrac = (u as any)?.fichaVoluntario?.turnosPracticasRealizados ?? 0
-                            const asigCount = turnosAsignadosUsuario(u.id)
-                            const restantes = Math.max(0, u.turnosDeseados - asigCount)
-                            const agotado = restantes === 0 && !isAsig
-                            return (
-                              <div
-                                key={u.id}
-                                onClick={() => !agotado && toggleAsignacion(sk, u.id)}
-                                title={`${u.nombre} ${u.apellidos} · Quiere ${u.turnosDeseados} turnos · ${restantes} restantes`}
-                                className={`flex items-center gap-1 px-1.5 py-1 rounded text-[10px] transition-all select-none ${
-                                  isAsig && esPracticas
-                                    ? 'bg-amber-100 border border-amber-400 text-amber-900 cursor-pointer'
-                                    : isAsig
-                                    ? 'bg-green-100 border border-green-300 text-green-900 cursor-pointer'
-                                    : isSug
-                                    ? 'bg-indigo-50 border border-indigo-200 text-indigo-900 cursor-pointer hover:bg-indigo-100'
-                                    : agotado
-                                    ? 'bg-red-50 border border-red-100 text-red-300 cursor-not-allowed opacity-50'
-                                    : 'bg-white border border-slate-200 text-slate-700 cursor-pointer hover:bg-slate-50'
-                                }`}
-                              >
-                                <span className={`w-3 h-3 rounded border flex items-center justify-center flex-shrink-0 ${isAsig && esPracticas ? 'bg-amber-500 border-amber-500 text-white' : isAsig ? 'bg-green-500 border-green-500 text-white' : 'border-slate-300'}`} style={{ fontSize: '7px' }}>
-                                  {isAsig && '✓'}
-                                </span>
-                                <span className="font-bold truncate flex-1">
-                                  {u.numeroVoluntario || `${u.nombre.slice(0, 3)}.`}
-                                  {esPracticas && <span className="ml-0.5 text-[7px] font-bold text-amber-600 bg-amber-100 px-0.5 rounded">P{turnosPrac}/15</span>}
-                                </span>
-                                <span className="flex items-center gap-0.5 flex-shrink-0">
-                                  {u.responsableTurno && <Shield size={8} className={isAsig ? 'text-green-700' : 'text-indigo-500'} />}
-                                  {u.carnetConducir && <Car size={8} className={isAsig ? 'text-green-700' : 'text-blue-500'} />}
-                                  {!u.esOperativo && <span className="text-[7px] font-bold text-slate-400 bg-slate-100 px-0.5 rounded">ADM</span>}
-                                </span>
-                                <span className={`text-[8px] font-mono flex-shrink-0 ${isAsig ? 'text-green-600' : restantes === 0 ? 'text-red-400' : 'text-slate-400'}`}>
-                                  [{restantes}↓]</span>
-                                {isAsig && (
-                                  <span className="flex gap-0.5 ml-0.5" onClick={e => e.stopPropagation()}>
-                                    <button
-                                      onClick={() => setRolEspecial(prev => {
-                                        const actual = prev[sk] || {}
-                                        const nuevo = actual.responsable === u.id ? undefined : u.id
-                                        return { ...prev, [sk]: { ...actual, responsable: nuevo } }
-                                      })}
-                                      title="Responsable de turno"
-                                      className={rolEspecial[sk]?.responsable === u.id ? "text-[7px] font-bold px-0.5 rounded bg-indigo-500 text-white" : "text-[7px] font-bold px-0.5 rounded bg-slate-100 text-slate-400 hover:bg-indigo-100"}
-                                    >R</button>
-                                    <button
-                                      onClick={() => setRolEspecial(prev => {
-                                        const actual = prev[sk] || {}
-                                        const nuevo = actual.cecopal === u.id ? undefined : u.id
-                                        return { ...prev, [sk]: { ...actual, cecopal: nuevo } }
-                                      })}
-                                      title="Responsable CECOPAL"
-                                      className={rolEspecial[sk]?.cecopal === u.id ? "text-[7px] font-bold px-0.5 rounded bg-orange-500 text-white" : "text-[7px] font-bold px-0.5 rounded bg-slate-100 text-slate-400 hover:bg-orange-100"}
-                                    >C</button>
-                                  </span>
-                                )}
-                              </div>
-                            )
-                          })}
-                          {asignadosExternos.map(uid => {
-                            // Buscar en guardias guardadas (ya en BD) o en todosUsuarios (asignación local pendiente de guardar)
-                            const g = guardiasGuardadas.find(gr => gr.usuarioId === uid)
-                            const uLocal = !g ? todosUsuarios.find((u: any) => u.id === uid) : null
-                            if (!g && !uLocal) return null
-                            const nombre = g ? (g.usuario.numeroVoluntario || g.usuario.nombre) : (uLocal.numeroVoluntario || `${uLocal.nombre.slice(0, 3)}.`)
-                            const esResponsable = g?.rol === 'Responsable'
-                            const esCecopal = g?.rol === 'Cecopal'
-                            const tieneCarnet = g ? g.usuario.carnetConducir : uLocal.carnetConducir
-                            const esOperativo = g ? g.usuario.esOperativo : uLocal.esOperativo
-                            return (
-                              <div key={uid} onClick={() => toggleAsignacion(sk, uid)} className="flex items-center gap-1 px-1.5 py-1 rounded text-[10px] bg-green-100 border border-green-300 text-green-900 cursor-pointer">
-                                <span className="w-3 h-3 rounded border bg-green-500 border-green-500 text-white flex items-center justify-center flex-shrink-0" style={{ fontSize: '7px' }}>✓</span>
-                                <span className="font-bold truncate flex-1">{nombre}</span>
-                                {esResponsable && <Shield size={8} className="text-indigo-600" />}
-                                {esCecopal && <span className="text-[7px] font-bold text-orange-600">CEP</span>}
-                                {tieneCarnet && !esResponsable && !esCecopal && <Car size={8} className="text-green-700" />}
-                                {!esOperativo && <span className="text-[7px] font-bold text-slate-400">ADM</span>}
-                              </div>
-                            )
-                          })}
-                          {/* Sin respuesta (rojo) o noDisponible (gris) — asignación manual admin */}
-                          {[...todosUsuarios]
-                            .sort((a, b) => sortIndicativo(a.numeroVoluntario, b.numeroVoluntario))
-                            .filter(u =>
-                              !disponibles.find((d: any) => d.id === u.id) &&
-                              !asignados.includes(u.id) &&
-                              !idsQueRespondieron.includes(u.id)
-                            )
-                            .map(u => (
-                              <div
-                                key={`sinresp-${u.id}`}
-                                onClick={() => toggleAsignacion(sk, u.id)}
-                                title={`${u.nombre} ${u.apellidos} · ${idsNoDisponible.includes(u.id) ? 'Ha indicado no disponible esta semana' : 'Sin disponibilidad declarada'}`}
-                                className={`flex items-center gap-1 px-1.5 py-1 rounded text-[10px] cursor-pointer ${idsNoDisponible.includes(u.id) ? 'bg-slate-100 border border-dashed border-slate-300 text-slate-400 opacity-60 hover:bg-slate-200' : 'bg-red-50 border border-dashed border-red-300 text-red-400 hover:bg-red-100'}`}
-                              >
-                                <span className="w-3 h-3 rounded border border-slate-300 flex items-center justify-center flex-shrink-0" style={{ fontSize: '7px' }} />
-                                <span className="font-bold truncate flex-1">{u.numeroVoluntario || `${u.nombre.slice(0, 3)}.`}</span>
-                                <span className="flex items-center gap-0.5 flex-shrink-0">
-                                  {u.responsableTurno && <Shield size={8} className="text-slate-300" />}
-                                  {u.carnetConducir && <Car size={8} className="text-slate-300" />}
-                                  {!u.esOperativo && <span className="text-[7px] font-bold text-slate-300 bg-slate-100 px-0.5 rounded">ADM</span>}
-                                </span>
-                              </div>
-                            ))
+                      {(() => {
+                        // Lista unificada de todos los voluntarios para este slot
+                        const listaCompleta = todosUsuarios.map((u: any) => {
+                          const dispData = disponibles.find((d: any) => d.id === u.id)
+                          const g = guardiasGuardadas.find(gr => gr.usuarioId === u.id)
+                          const isAsig = asignados.includes(u.id)
+                          const haRespondido = idsQueRespondieron.includes(u.id)
+                          const esNoDisponible = idsNoDisponible.includes(u.id)
+                          const tieneDisponibilidadEsteSlot = !!dispData
+                          return {
+                            id: u.id,
+                            numeroVoluntario: u.numeroVoluntario,
+                            nombre: u.nombre,
+                            apellidos: u.apellidos,
+                            responsableTurno: u.responsableTurno,
+                            carnetConducir: u.carnetConducir,
+                            esOperativo: u.esOperativo,
+                            experiencia: u.experiencia || 'BAJA',
+                            turnosDeseados: dispData?.turnosDeseados ?? 4,
+                            fichaVoluntario: dispData?.fichaVoluntario || null,
+                            isAsig,
+                            tieneDisponibilidadEsteSlot,
+                            haRespondido,
+                            esNoDisponible,
+                            guardiaData: g || null,
                           }
-                        </>
-                      )}
+                        })
+                        // Ordenar: J → B → S, numérico ascendente
+                        const listaOrdenada = listaCompleta.sort((a: any, b: any) =>
+                          sortIndicativo(a.numeroVoluntario, b.numeroVoluntario)
+                        )
+                        if (listaOrdenada.length === 0) {
+                          return <div className="text-[9px] text-slate-300 text-center py-3">Sin voluntarios</div>
+                        }
+                        return listaOrdenada.map((u: any) => {
+                          const isSug = sugeridosSk.includes(u.id) && !u.isAsig
+                          const esPracticas = !!u.fichaVoluntario?.enPracticas
+                          const turnosPrac = u.fichaVoluntario?.turnosPracticasRealizados ?? 0
+                          const asigCount = turnosAsignadosUsuario(u.id)
+                          const restantes = Math.max(0, u.turnosDeseados - asigCount)
+                          const agotado = restantes === 0 && !u.isAsig && u.tieneDisponibilidadEsteSlot
+
+                          // Determinar estilo según estado
+                          let className = ''
+                          let clickable = true
+                          if (u.isAsig && esPracticas) {
+                            className = 'bg-amber-100 border border-amber-400 text-amber-900'
+                          } else if (u.isAsig) {
+                            className = 'bg-green-100 border border-green-300 text-green-900'
+                          } else if (u.tieneDisponibilidadEsteSlot && isSug) {
+                            className = 'bg-indigo-50 border border-indigo-200 text-indigo-900 hover:bg-indigo-100'
+                          } else if (u.tieneDisponibilidadEsteSlot && agotado) {
+                            className = 'bg-red-50 border border-red-100 text-red-300 cursor-not-allowed opacity-50'
+                            clickable = false
+                          } else if (u.tieneDisponibilidadEsteSlot) {
+                            className = 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
+                          } else if (!u.haRespondido && !u.esNoDisponible) {
+                            className = 'bg-red-50 border border-dashed border-red-300 text-red-400 hover:bg-red-100'
+                          } else {
+                            // haRespondido pero no para este slot, o noDisponible — no mostrar
+                            return null
+                          }
+
+                          return (
+                            <div
+                              key={u.id}
+                              onClick={() => clickable && toggleAsignacion(sk, u.id)}
+                              title={`${u.nombre} ${u.apellidos}${u.tieneDisponibilidadEsteSlot ? ` · Quiere ${u.turnosDeseados} turnos · ${restantes} restantes` : u.esNoDisponible ? ' · No disponible esta semana' : ' · Sin disponibilidad declarada'}`}
+                              className={`flex items-center gap-1 px-1.5 py-1 rounded text-[10px] transition-all select-none cursor-pointer ${className}`}
+                            >
+                              <span className={`w-3 h-3 rounded border flex items-center justify-center flex-shrink-0 ${u.isAsig && esPracticas ? 'bg-amber-500 border-amber-500 text-white' : u.isAsig ? 'bg-green-500 border-green-500 text-white' : 'border-slate-300'}`} style={{ fontSize: '7px' }}>
+                                {u.isAsig && '✓'}
+                              </span>
+                              <span className="font-bold truncate flex-1">
+                                {u.numeroVoluntario || `${u.nombre.slice(0, 3)}.`}
+                                {esPracticas && <span className="ml-0.5 text-[7px] font-bold text-amber-600 bg-amber-100 px-0.5 rounded">P{turnosPrac}/15</span>}
+                              </span>
+                              <span className="flex items-center gap-0.5 flex-shrink-0">
+                                {u.responsableTurno && <Shield size={8} className={u.isAsig ? 'text-green-700' : u.tieneDisponibilidadEsteSlot ? 'text-indigo-500' : 'text-slate-300'} />}
+                                {u.carnetConducir && <Car size={8} className={u.isAsig ? 'text-green-700' : u.tieneDisponibilidadEsteSlot ? 'text-blue-500' : 'text-slate-300'} />}
+                                {!u.esOperativo && <span className="text-[7px] font-bold text-slate-400 bg-slate-100 px-0.5 rounded">ADM</span>}
+                              </span>
+                              {u.tieneDisponibilidadEsteSlot && (
+                                <span className={`text-[8px] font-mono flex-shrink-0 ${u.isAsig ? 'text-green-600' : restantes === 0 ? 'text-red-400' : 'text-slate-400'}`}>
+                                  [{restantes}↓]
+                                </span>
+                              )}
+                              {u.isAsig && (
+                                <span className="flex gap-0.5 ml-0.5" onClick={e => e.stopPropagation()}>
+                                  <button
+                                    onClick={() => setRolEspecial(prev => {
+                                      const actual = prev[sk] || {}
+                                      const nuevo = actual.responsable === u.id ? undefined : u.id
+                                      return { ...prev, [sk]: { ...actual, responsable: nuevo } }
+                                    })}
+                                    title="Responsable de turno"
+                                    className={rolEspecial[sk]?.responsable === u.id ? "text-[7px] font-bold px-0.5 rounded bg-indigo-500 text-white" : "text-[7px] font-bold px-0.5 rounded bg-slate-100 text-slate-400 hover:bg-indigo-100"}
+                                  >R</button>
+                                  <button
+                                    onClick={() => setRolEspecial(prev => {
+                                      const actual = prev[sk] || {}
+                                      const nuevo = actual.cecopal === u.id ? undefined : u.id
+                                      return { ...prev, [sk]: { ...actual, cecopal: nuevo } }
+                                    })}
+                                    title="Responsable CECOPAL"
+                                    className={rolEspecial[sk]?.cecopal === u.id ? "text-[7px] font-bold px-0.5 rounded bg-orange-500 text-white" : "text-[7px] font-bold px-0.5 rounded bg-slate-100 text-slate-400 hover:bg-orange-100"}
+                                  >C</button>
+                                </span>
+                              )}
+                            </div>
+                          )
+                        })
+                      })()}
                     </div>
                     {slotParcial && (
                       <div className="mt-1 flex items-center gap-0.5 text-[8px] text-amber-600">
