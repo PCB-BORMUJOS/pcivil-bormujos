@@ -107,6 +107,7 @@ export default function CuadrantesPage() {
   const [extraPersonas, setExtraPersonas] = useState<string[]>([])
   const [todosUsuarios, setTodosUsuarios] = useState<any[]>([])
   const [idsNoDisponible, setIdsNoDisponible] = useState<string[]>([])
+  const [idsQueRespondieron, setIdsQueRespondieron] = useState<string[]>([])
 
   const calcularSugerencias = (
     dispMap: Record<string, UsuarioDisponible[]>,
@@ -191,6 +192,7 @@ export default function CuadrantesPage() {
       const todosUsuariosActivos: any[] = data.todosUsuariosActivos || []
       setTodosUsuarios(todosUsuariosActivos)
       setIdsNoDisponible(data.idsNoDisponible || [])
+      setIdsQueRespondieron(data.idsQueRespondieron || [])
       // NO añadir todosUsuarios a dispMap: contaminaría las sugerencias
       setDisponibilidades(dispMap)
       const asigMap: Record<string, string[]> = {}
@@ -636,11 +638,12 @@ export default function CuadrantesPage() {
                               </div>
                             )
                           })}
-                          {/* Voluntarios sin disponibilidad declarada — solo para asignación manual admin */}
+                          {/* Sin respuesta (rojo) o noDisponible (gris) — asignación manual admin */}
                           {todosUsuarios
                             .filter(u =>
                               !disponibles.find((d: any) => d.id === u.id) &&
-                              !asignados.includes(u.id)
+                              !asignados.includes(u.id) &&
+                              !idsQueRespondieron.includes(u.id)
                             )
                             .map(u => (
                               <div

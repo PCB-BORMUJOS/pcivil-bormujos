@@ -65,6 +65,13 @@ export async function GET(request: NextRequest) {
       select: { usuarioId: true }
     })
     const idsNoDisponible = noDisponiblesRegistros.map(r => r.usuarioId)
+
+    // IDs que han respondido ALGO esta semana (con o sin disponibilidad)
+    const todosRespondieron = await prisma.disponibilidad.findMany({
+      where: { semanaInicio: { gte: semanaStart, lte: semanaEnd } },
+      select: { usuarioId: true }
+    })
+    const idsQueRespondieron = [...new Set(todosRespondieron.map(r => r.usuarioId))]
     const todosUsuariosActivos = await prisma.usuario.findMany({
       where: { activo: true },
       select: {
@@ -74,7 +81,7 @@ export async function GET(request: NextRequest) {
       },
       orderBy: [{ numeroVoluntario: 'asc' }]
     })
-    return NextResponse.json({ guardias, disponibilidades, todosUsuariosActivos, idsNoDisponible })
+    return NextResponse.json({ guardias, disponibilidades, todosUsuariosActivos, idsNoDisponible, idsQueRespondieron })
   } catch (error) {
     console.error('Error al obtener guardias:', error)
     return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 })
