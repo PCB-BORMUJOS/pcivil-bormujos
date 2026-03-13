@@ -850,17 +850,17 @@ export default function DronesPage() {
           <div className="space-y-5">
             {/* Cabecera con progreso */}
             <div className="bg-white rounded-xl border border-slate-100 p-5">
-              <div className="flex items-start justify-between mb-4">
+              <div className="flex items-start justify-between mb-5">
                 <div>
-                  <h3 className="text-sm font-bold text-slate-800">Lista de verificación pre-vuelo</h3>
-                  <p className="text-xs text-slate-500 mt-0.5">Normativa AESA y Reglamento UE 2019/947 (EASA) · {totalItems} verificaciones en 6 secciones</p>
+                  <h3 className="text-base font-black text-slate-900">Lista de verificación pre-vuelo</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">Normativa AESA · Reglamento UE 2019/947 (EASA) · {totalItems} verificaciones · 6 secciones</p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button onClick={resetChecklist} className="flex items-center gap-1.5 px-3 py-1.5 text-xs border border-slate-200 rounded-lg text-slate-500 hover:bg-slate-50">
-                    <RefreshCw size={12} />Resetear
+                  <button onClick={resetChecklist} className="flex items-center gap-1.5 px-3 py-2 text-xs border border-slate-200 rounded-xl text-slate-500 hover:bg-slate-50 font-semibold">
+                    <RefreshCw size={12} />Nueva verificación
                   </button>
-                  <div className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm ${aptoVuelo ? 'bg-green-100 text-green-700' : fallidos > 0 ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-500'}`}>
-                    {aptoVuelo ? <><CheckCircle2 size={14} />APTO PARA VUELO</> : fallidos > 0 ? <><AlertTriangle size={14} />NO APTO</> : `${marcados}/${totalItems} verificados`}
+                  <div className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-black text-sm border-2 transition-all ${aptoVuelo ? 'bg-green-500 border-green-500 text-white shadow-md' : fallidos > 0 ? 'bg-red-500 border-red-500 text-white shadow-md' : 'bg-white border-slate-200 text-slate-500'}`}>
+                    {aptoVuelo ? <><CheckCircle2 size={15} />APTO PARA VUELO</> : fallidos > 0 ? <><AlertTriangle size={15} />NO APTO</> : `${marcados} / ${totalItems}`}
                   </div>
                 </div>
               </div>
@@ -876,7 +876,7 @@ export default function DronesPage() {
               </div>
               <div className="flex gap-4 mt-3">
                 <span className="text-[11px] text-green-600 font-semibold">{marcados} OK</span>
-                {fallidos > 0 && <span className="text-[11px] text-red-600 font-semibold">{fallidos} NOK</span>}
+                {fallidos > 0 && <span className="text-[11px] text-red-600 font-semibold">{fallidos} NO</span>}
                 <span className="text-[11px] text-slate-400">— {totalItems - marcados - fallidos} pendientes</span>
               </div>
               {/* Datos vuelo */}
@@ -907,40 +907,66 @@ export default function DronesPage() {
               const secTotal = sec.items.length
               return (
                 <div key={sec.id} className="bg-white rounded-xl border border-slate-100 overflow-hidden">
-                  <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-100">
-                    <div className="flex items-center gap-2.5">
-                      {(() => { const icons: Record<string, any> = { Drone, Radio, Map, User, Wind, AlertTriangle }; const Icon = icons[sec.icon]; return Icon ? <Icon size={15} className={headerColor[sec.color]} /> : null })()}
-                      <span className={`text-sm font-black ${headerColor[sec.color]}`}>{sec.label}</span>
-                      <span className="text-[10px] text-slate-400">{secTotal} verificaciones</span>
+                  <div className={`flex items-center justify-between px-5 py-4 border-b border-slate-100 ${secOK === secTotal && secNOK === 0 ? 'bg-green-50' : secNOK > 0 ? 'bg-red-50/60' : 'bg-slate-50/50'}`}>
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2 rounded-xl ${colorMap[sec.color]}`}>
+                        {(() => { const icons: Record<string, any> = { Drone, Radio, Map, User, Wind, AlertTriangle }; const Icon = icons[sec.icon]; return Icon ? <Icon size={15} /> : null })()}
+                      </div>
+                      <div>
+                        <p className={`text-sm font-black ${headerColor[sec.color]}`}>{sec.label}</p>
+                        <p className="text-[10px] text-slate-400">{secTotal} verificaciones</p>
+                      </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      {secOK > 0 && <span className="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded-full flex items-center gap-1"><Check size={9} />{secOK} OK</span>}
-                      {secNOK > 0 && <span className="text-[10px] font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded-full flex items-center gap-1"><X size={9} />{secNOK} NOK</span>}
-                      {secOK === secTotal && secNOK === 0 && <span className="text-[10px] font-bold text-green-600 flex items-center gap-1"><CheckCircle2 size={11} />Sección completa</span>}
+                      {secOK === secTotal && secNOK === 0
+                        ? <span className="flex items-center gap-1.5 text-xs font-bold text-green-700 bg-green-100 px-3 py-1.5 rounded-xl"><CheckCircle2 size={13} />Sección completa</span>
+                        : <>
+                            {secOK > 0 && <span className="flex items-center gap-1 text-xs font-bold text-green-700 bg-green-100 px-2.5 py-1 rounded-xl"><Check size={11} />{secOK}</span>}
+                            {secNOK > 0 && <span className="flex items-center gap-1 text-xs font-bold text-red-700 bg-red-100 px-2.5 py-1 rounded-xl"><X size={11} />{secNOK} NO</span>}
+                            <span className="text-[11px] text-slate-400">{secTotal - secOK - secNOK} pend.</span>
+                          </>
+                      }
+                      {/* Mini barra progreso sección */}
+                      <div className="w-16 h-1.5 bg-slate-200 rounded-full overflow-hidden ml-1">
+                        <div className={`h-full rounded-full transition-all ${secNOK > 0 ? 'bg-red-400' : 'bg-green-500'}`} style={{ width: `${Math.round((secOK / secTotal) * 100)}%` }} />
+                      </div>
                     </div>
                   </div>
-                  <div className="divide-y divide-slate-50">
+                  <div className="divide-y divide-slate-100">
                     {sec.items.map((item, idx) => {
                       const estado = secChecks[item.id]
+                      const esOK = estado === true
+                      const esNO = estado === false
+                      const esPendiente = estado === null || estado === undefined
                       return (
-                        <div key={item.id} className={`flex items-center gap-4 px-5 py-3 transition-colors ${estado === true ? 'bg-green-50/50' : estado === false ? 'bg-red-50/50' : idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/30'}`}>
-                          <span className="text-[11px] font-bold text-slate-300 w-5 flex-shrink-0">{String(idx + 1).padStart(2, '0')}</span>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs text-slate-700 font-medium leading-relaxed">{item.label}</p>
-                            <p className="text-[10px] text-slate-400 mt-0.5">Ref: {item.normativa}</p>
+                        <div
+                          key={item.id}
+                          className={`flex items-center gap-4 px-5 py-4 transition-all duration-150 ${esOK ? 'bg-green-50' : esNO ? 'bg-red-50' : 'bg-white hover:bg-slate-50/60'}`}
+                        >
+                          {/* Indicador estado */}
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 font-black text-[11px] transition-all ${esOK ? 'bg-green-500 text-white shadow-sm' : esNO ? 'bg-red-500 text-white shadow-sm' : 'bg-slate-100 text-slate-400'}`}>
+                            {esOK ? <Check size={14} strokeWidth={3} /> : esNO ? <X size={14} strokeWidth={3} /> : String(idx + 1).padStart(2, '0')}
                           </div>
-                          <div className="flex items-center gap-1.5 flex-shrink-0">
+                          {/* Texto del ítem */}
+                          <div className="flex-1 min-w-0">
+                            <p className={`text-[13px] font-semibold leading-snug ${esOK ? 'text-green-900' : esNO ? 'text-red-900' : 'text-slate-800'}`}>
+                              {item.label}
+                            </p>
+                            <p className="text-[10px] text-slate-400 mt-0.5 font-semibold tracking-wider uppercase">{item.normativa}</p>
+                          </div>
+                          {/* Botones OK / NO */}
+                          <div className="flex items-center gap-2 flex-shrink-0">
                             <button
-                              onClick={() => setCheck(sec.id, item.id, estado === true ? null : true)}
-                              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all ${estado === true ? 'bg-green-500 text-white shadow-sm' : 'bg-slate-100 text-slate-500 hover:bg-green-100 hover:text-green-700'}`}
+                              onClick={() => setCheck(sec.id, item.id, esOK ? null : true)}
+                              className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-150 border-2 min-w-[64px] justify-center ${esOK ? 'bg-green-500 border-green-500 text-white shadow-md' : 'bg-white border-slate-200 text-slate-500 hover:border-green-400 hover:text-green-600 hover:bg-green-50'}`}
                             >
-                              <Check size={11} />OK
+                              <Check size={12} strokeWidth={3} />OK
                             </button>
                             <button
-                              onClick={() => setCheck(sec.id, item.id, estado === false ? null : false)}
-                              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all ${estado === false ? 'bg-red-500 text-white shadow-sm' : 'bg-slate-100 text-slate-500 hover:bg-red-100 hover:text-red-700'}`}
+                              onClick={() => setCheck(sec.id, item.id, esNO ? null : false)}
+                              className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-150 border-2 min-w-[64px] justify-center ${esNO ? 'bg-red-500 border-red-500 text-white shadow-md' : 'bg-white border-slate-200 text-slate-500 hover:border-red-400 hover:text-red-600 hover:bg-red-50'}`}
                             >
-                              <X size={11} />NOK
+                              <X size={12} strokeWidth={3} />NO
                             </button>
                           </div>
                         </div>
@@ -956,7 +982,7 @@ export default function DronesPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className={`text-sm font-black ${aptoVuelo ? 'text-green-700' : fallidos > 0 ? 'text-red-700' : 'text-slate-500'}`}>
-                    {aptoVuelo ? 'Aeronave apta para operación de vuelo' : fallidos > 0 ? 'Operación NO autorizada — Subsanar ítems NOK' : 'Checklist pendiente de completar'}
+                    {aptoVuelo ? 'Aeronave apta para operación de vuelo' : fallidos > 0 ? 'Operación NO autorizada — Subsanar ítems marcados NO' : 'Checklist pendiente de completar'}
                   </p>
                   <p className="text-[11px] text-slate-500 mt-1">
                     {piloCheck && `Piloto: ${piloCheck} · `}
