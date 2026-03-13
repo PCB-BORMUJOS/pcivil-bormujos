@@ -837,7 +837,7 @@ export default function TransmisionesPage() {
               <button onClick={() => { setShowConfigRF(false); setEquipoSeleccionado(null) }} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5" /></button>
             </div>
 
-            <form onSubmit={handleGuardarConfigRF} className="p-5 space-y-5">
+            <form key={equipoSeleccionado?.id} onSubmit={handleGuardarConfigRF} className="p-5 space-y-5">
               {/* General */}
               <div>
                 <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2"><Zap className="w-4 h-4 text-purple-500" />General</h4>
