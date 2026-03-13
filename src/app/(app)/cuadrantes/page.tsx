@@ -146,6 +146,25 @@ export default function CuadrantesPage() {
     return sugMap
   }
 
+  // Ordenación: J primero, luego B, luego S — dentro de cada grupo por número ascendente
+  const sortIndicativo = (a: string | null, b: string | null): number => {
+    const prefixOrder = (ind: string | null): number => {
+      if (!ind) return 99
+      if (ind.startsWith('J')) return 0
+      if (ind.startsWith('B')) return 1
+      if (ind.startsWith('S')) return 2
+      return 3
+    }
+    const numOf = (ind: string | null): number => {
+      if (!ind) return 9999
+      const match = ind.match(/\d+/)
+      return match ? parseInt(match[0]) : 9999
+    }
+    const pa = prefixOrder(a), pb = prefixOrder(b)
+    if (pa !== pb) return pa - pb
+    return numOf(a) - numOf(b)
+  }
+
   const cargarDatos = useCallback(async () => {
     setLoading(true)
     try {
@@ -553,7 +572,7 @@ export default function CuadrantesPage() {
                         <div className="text-[9px] text-slate-300 text-center py-3">Sin disponibilidad</div>
                       ) : (
                         <>
-                          {disponibles.map(u => {
+                          {[...disponibles].sort((a, b) => sortIndicativo(a.numeroVoluntario, b.numeroVoluntario)).map(u => {
                             const isAsig = asignados.includes(u.id)
                             const isSug = sugeridosSk.includes(u.id) && !isAsig
                             const esPracticas = !!(u as any)?.fichaVoluntario?.enPracticas
@@ -639,7 +658,8 @@ export default function CuadrantesPage() {
                             )
                           })}
                           {/* Sin respuesta (rojo) o noDisponible (gris) — asignación manual admin */}
-                          {todosUsuarios
+                          {[...todosUsuarios]
+                            .sort((a, b) => sortIndicativo(a.numeroVoluntario, b.numeroVoluntario))
                             .filter(u =>
                               !disponibles.find((d: any) => d.id === u.id) &&
                               !asignados.includes(u.id) &&
