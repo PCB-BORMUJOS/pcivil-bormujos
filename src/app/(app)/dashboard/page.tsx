@@ -796,6 +796,7 @@ export default function DashboardPage() {
       .then(data => {
         setVoluntarios(data.voluntarios || []);
         setEnTurno(data.enTurno || []);
+        setTodosHoy(Array.isArray(data.todosHoy) ? data.todosHoy : []);
         setStats(data.stats || { total: 0, responsablesTurno: 0, conCarnet: 0, experienciaAlta: 0 });
       })
       .catch(() => { });
