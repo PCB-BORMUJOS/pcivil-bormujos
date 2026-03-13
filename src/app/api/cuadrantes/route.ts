@@ -38,6 +38,7 @@ export async function GET(request: NextRequest) {
     }
     const semanaStart = new Date(semana + 'T00:00:00.000Z')
     const semanaEnd = new Date(semana + 'T23:59:59.999Z')
+    // Disponibilidades con al menos 1 turno declarado
     const disponibilidades = await prisma.disponibilidad.findMany({
       where: {
         semanaInicio: { gte: semanaStart, lte: semanaEnd },
@@ -54,6 +55,16 @@ export async function GET(request: NextRequest) {
         }
       }
     })
+
+    // IDs que han declarado explícitamente no estar disponibles esta semana
+    const noDisponiblesRegistros = await prisma.disponibilidad.findMany({
+      where: {
+        semanaInicio: { gte: semanaStart, lte: semanaEnd },
+        noDisponible: true
+      },
+      select: { usuarioId: true }
+    })
+    const idsNoDisponible = noDisponiblesRegistros.map(r => r.usuarioId)
     const todosUsuariosActivos = await prisma.usuario.findMany({
       where: { activo: true },
       select: {
@@ -63,7 +74,7 @@ export async function GET(request: NextRequest) {
       },
       orderBy: [{ numeroVoluntario: 'asc' }]
     })
-    return NextResponse.json({ guardias, disponibilidades, todosUsuariosActivos })
+    return NextResponse.json({ guardias, disponibilidades, todosUsuariosActivos, idsNoDisponible })
   } catch (error) {
     console.error('Error al obtener guardias:', error)
     return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 })

@@ -106,6 +106,7 @@ export default function CuadrantesPage() {
   const [showExtraordinario, setShowExtraordinario] = useState(false)
   const [extraPersonas, setExtraPersonas] = useState<string[]>([])
   const [todosUsuarios, setTodosUsuarios] = useState<any[]>([])
+  const [idsNoDisponible, setIdsNoDisponible] = useState<string[]>([])
 
   const calcularSugerencias = (
     dispMap: Record<string, UsuarioDisponible[]>,
@@ -189,6 +190,7 @@ export default function CuadrantesPage() {
       // todosUsuarios se guarda separado para permitir asignación manual por admin
       const todosUsuariosActivos: any[] = data.todosUsuariosActivos || []
       setTodosUsuarios(todosUsuariosActivos)
+      setIdsNoDisponible(data.idsNoDisponible || [])
       // NO añadir todosUsuarios a dispMap: contaminaría las sugerencias
       setDisponibilidades(dispMap)
       const asigMap: Record<string, string[]> = {}
@@ -644,8 +646,8 @@ export default function CuadrantesPage() {
                               <div
                                 key={`sinresp-${u.id}`}
                                 onClick={() => toggleAsignacion(sk, u.id)}
-                                title={`${u.nombre} ${u.apellidos} · Sin disponibilidad declarada`}
-                                className="flex items-center gap-1 px-1.5 py-1 rounded text-[10px] bg-white border border-dashed border-slate-200 text-slate-400 cursor-pointer hover:bg-slate-50 opacity-60"
+                                title={`${u.nombre} ${u.apellidos} · ${idsNoDisponible.includes(u.id) ? 'Ha indicado no disponible esta semana' : 'Sin disponibilidad declarada'}`}
+                                className={`flex items-center gap-1 px-1.5 py-1 rounded text-[10px] cursor-pointer ${idsNoDisponible.includes(u.id) ? 'bg-slate-100 border border-dashed border-slate-300 text-slate-400 opacity-60 hover:bg-slate-200' : 'bg-red-50 border border-dashed border-red-300 text-red-400 hover:bg-red-100'}`}
                               >
                                 <span className="w-3 h-3 rounded border border-slate-300 flex items-center justify-center flex-shrink-0" style={{ fontSize: '7px' }} />
                                 <span className="font-bold truncate flex-1">{u.numeroVoluntario || `${u.nombre.slice(0, 3)}.`}</span>
