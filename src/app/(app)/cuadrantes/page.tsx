@@ -18,6 +18,7 @@ interface UsuarioDisponible {
   esOperativo: boolean
   turnosDeseados: number
   puedeDobleturno: boolean
+  fichaVoluntario?: { enPracticas?: boolean; turnosPracticasRealizados?: number; kmDesplazamiento?: number } | null
 }
 
 interface GuardiaExistente {
