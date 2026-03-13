@@ -638,10 +638,10 @@ export default function CuadrantesPage() {
                               title={`${u.nombre} ${u.apellidos}${u.tieneDisponibilidadEsteSlot ? ` · Quiere ${u.turnosDeseados} turnos · ${restantes} restantes` : u.esNoDisponible ? ' · No disponible esta semana' : ' · Sin disponibilidad declarada'}`}
                               className={`flex items-center gap-1 px-1.5 py-1 rounded text-[10px] transition-all select-none cursor-pointer ${className}`}
                             >
-                              <span className={`w-3 h-3 rounded border flex items-center justify-center flex-shrink-0 ${u.isAsig && esPracticas ? 'bg-amber-500 border-amber-500 text-white' : u.isAsig ? 'bg-green-500 border-green-500 text-white' : 'border-slate-300'}`} style={{ fontSize: '7px' }}>
-                                {u.isAsig && '✓'}
+                              <span className={`w-3 h-3 rounded border flex items-center justify-center flex-shrink-0 ${u.isAsig && u.estadoGuardia === 'ausente' ? 'bg-purple-500 border-purple-500 text-white' : u.isAsig && esPracticas ? 'bg-amber-500 border-amber-500 text-white' : u.isAsig ? 'bg-green-500 border-green-500 text-white' : 'border-slate-300'}`} style={{ fontSize: '7px' }}>
+                                {u.isAsig && u.estadoGuardia === 'ausente' ? '✗' : u.isAsig ? '✓' : ''}
                               </span>
-                              <span className="font-bold truncate flex-1">
+                              <span className={'font-bold truncate flex-1' + (u.isAsig && u.estadoGuardia === 'ausente' ? ' line-through' : '')}>
                                 {u.numeroVoluntario || `${u.nombre.slice(0, 3)}.`}
                                 {esPracticas && <span className="ml-0.5 text-[7px] font-bold text-amber-600 bg-amber-100 px-0.5 rounded">P{turnosPrac}/15</span>}
                               </span>
