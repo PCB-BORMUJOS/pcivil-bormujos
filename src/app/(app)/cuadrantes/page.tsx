@@ -210,6 +210,7 @@ export default function CuadrantesPage() {
       // dispMap contiene SOLO disponibilidad real declarada por los voluntarios
       // todosUsuarios se guarda separado para permitir asignación manual por admin
       const todosUsuariosActivos: any[] = data.todosUsuariosActivos || []
+      console.log('[DEBUG] disp:', (data.disponibilidades||[]).length, 'todos:', todosUsuariosActivos.length, 'keys_data:', Object.keys(data))
       setTodosUsuarios(todosUsuariosActivos)
       setIdsNoDisponible(data.idsNoDisponible || [])
       setIdsQueRespondieron(data.idsQueRespondieron || [])
@@ -285,13 +286,13 @@ export default function CuadrantesPage() {
 
       // Calcular qué asignaciones son NUEVAS (no existen en guardiasGuardadas)
       const cuerpos: any[] = []
+      const cuerposActualizar: any[] = []
       Object.entries(asignaciones).forEach(([sk, userIds]) => {
         const { fecha, turno } = parseSlotKey(sk)
         userIds.forEach(uid => {
           const yaExiste = guardiasGuardadas.find(
             g => g.usuarioId === uid && g.fecha.slice(0, 10) === fecha && g.turno === turno
           )
-          if (yaExiste) return // ya está guardada, no recrear
           const u =
             disponibilidades[sk]?.find(d => d.id === uid) ||
             guardiasGuardadas.find(g => g.usuarioId === uid)?.usuario ||
@@ -304,10 +305,29 @@ export default function CuadrantesPage() {
             : (u as any)?.carnetConducir
             ? 'Conductor'
             : 'Interviniente'
+          if (yaExiste) {
+            // Si el rol cambió, actualizar; si no, saltar
+            if (yaExiste.rol !== rolFinal) {
+              cuerposActualizar.push({ id: yaExiste.id, rol: rolFinal })
+            }
+            return
+          }
           cuerpos.push({ fecha, turno, usuarioId: uid, tipo: 'programada', rol: rolFinal })
         })
       })
 
+      // 0. Actualizar roles que cambiaron
+      if (cuerposActualizar.length > 0) {
+        await Promise.all(
+          cuerposActualizar.map(body =>
+            fetch('/api/cuadrantes', {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(body),
+            })
+          )
+        )
+      }
       // 1. Borrar solo las que desaparecen
       if (aEliminar.length > 0) {
         await Promise.all(
@@ -457,9 +477,9 @@ export default function CuadrantesPage() {
           </button>
           <button
             onClick={handlePublicar}
-            disabled={guardando || !pendiente}
+            disabled={guardando}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold shadow-sm transition-all ${
-              pendiente
+              !guardando
                 ? 'bg-green-600 text-white hover:bg-green-700'
                 : 'bg-slate-100 text-slate-400 cursor-not-allowed'
             } disabled:opacity-60`}
@@ -625,8 +645,8 @@ export default function CuadrantesPage() {
                             // Asignado confirmado → verde
                             className = 'bg-green-100 border border-green-300 text-green-900'
                           } else if (esPracticas) {
-                            // En prácticas (no asignado) → rojo sombreado
-                            className = 'bg-red-100 border border-red-400 text-red-800 hover:bg-red-200'
+                            // En prácticas (no asignado) → ámbar (distinto del rojo de sin-disponibilidad)
+                            className = 'bg-amber-100 border border-amber-400 text-amber-900 hover:bg-amber-200'
                           } else if (u.tieneDisponibilidadEsteSlot && isSug) {
                             // Sugerido por algoritmo con disponibilidad → azul
                             className = 'bg-blue-100 border border-blue-400 text-blue-900 hover:bg-blue-200'

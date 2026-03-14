@@ -73,7 +73,7 @@ export async function GET(request: NextRequest) {
     })
     const idsQueRespondieron = Array.from(new Set(todosRespondieron.map(r => r.usuarioId)))
     const todosUsuariosActivos = await prisma.usuario.findMany({
-      where: { activo: true, numeroVoluntario: { not: 'J-01' } },
+      where: { activo: true, OR: [{ numeroVoluntario: null }, { numeroVoluntario: { not: 'J-01' } }] },
       select: {
         id: true, nombre: true, apellidos: true, numeroVoluntario: true,
         responsableTurno: true, carnetConducir: true, experiencia: true,
@@ -241,14 +241,15 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'No tienes permisos' }, { status: 403 })
     }
     const body = await request.json()
-    const { id, tipo, notas, estado } = body
+    const { id, tipo, notas, estado, rol } = body
     if (!id) return NextResponse.json({ error: 'ID requerido' }, { status: 400 })
     const guardia = await prisma.guardia.update({
       where: { id },
       data: {
         ...(tipo && { tipo }),
         ...(notas !== undefined && { notas }),
-        ...(estado && { estado })
+        ...(estado && { estado }),
+        ...(rol && { rol })
       },
       include: {
         usuario: { select: { id: true, nombre: true, apellidos: true, numeroVoluntario: true } }
