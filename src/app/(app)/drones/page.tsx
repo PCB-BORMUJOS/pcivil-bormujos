@@ -2,7 +2,7 @@
 import React from 'react'
 import { useState, useEffect, useCallback } from 'react'
 import { Check, ClipboardList, 
-  Drone, Plus, RefreshCw, Battery, User, Map, FileText, 
+  Navigation2 as Drone, Plus, RefreshCw, Battery, User, Map, FileText, 
   Wrench, AlertTriangle, CheckCircle2, Clock, Calendar,
   Shield, Radio, Wind, Eye, CloudRain, Navigation,
   Download, Edit, Trash2, ChevronRight, Info,
