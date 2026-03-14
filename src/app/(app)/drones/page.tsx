@@ -7,8 +7,9 @@ import { Check, ClipboardList,
   Shield, Radio, Wind, Eye, CloudRain, Navigation,
   Download, Edit, Trash2, ChevronRight, Info,
   Zap, Target, Activity, BarChart3, Save, X,
-  MapPin, Layers, Bell, BookOpen, Settings
+  MapPin, Layers, Bell, BookOpen, Settings, ShoppingCart, History, Search, Package, CheckCircle
 } from 'lucide-react'
+import { IconDrone } from '@tabler/icons-react'
 import dynamic from 'next/dynamic'
 import 'leaflet/dist/leaflet.css'
 
@@ -69,6 +70,17 @@ export default function DronesPage() {
   const [mantenimientos, setMantenimientos] = useState<Mantenimiento[]>([])
   const [notams, setNotams] = useState<Notam[]>([])
   const [zonas, setZonas] = useState<Zona[]>([])
+  const [articulos, setArticulos] = useState<any[]>([])
+  const [familias, setFamilias] = useState<any[]>([])
+  const [peticiones, setPeticiones] = useState<any[]>([])
+  const [inventoryTab, setInventoryTab] = useState<'stock'|'peticiones'|'movimientos'>('stock')
+  const [searchTerm, setSearchTerm] = useState('')
+  const [selectedFamiliaFilter, setSelectedFamiliaFilter] = useState('all')
+  const [filtroPeticiones, setFiltroPeticiones] = useState('all')
+  const [showNuevoArticulo, setShowNuevoArticulo] = useState(false)
+  const [showNuevaPeticion, setShowNuevaPeticion] = useState(false)
+  const [showGestionFamilias, setShowGestionFamilias] = useState(false)
+  const [categoriaArea, setCategoriaArea] = useState<string|null>(null)
 
   // Selección
   const [droneSeleccionado, setDroneSeleccionado] = useState<Drone | null>(null)
@@ -125,6 +137,10 @@ export default function DronesPage() {
   }, [])
 
   useEffect(() => { cargarDatos() }, [cargarDatos])
+  const cargarInventario = useCallback(async () => { try { const [resInv, resCat] = await Promise.all([fetch("/api/logistica?inventario=drones"), fetch("/api/logistica?tipo=categoria&slug=drones")]); const dataInv = await resInv.json(); const dataCat = await resCat.json(); setArticulos(dataInv.articulos || []); setFamilias(dataInv.familias || []); if (dataCat.categoria) setCategoriaArea(dataCat.categoria.id) } catch(e) { console.error(e) } }, [])
+  const cargarPeticiones = useCallback(async () => { try { const r = await fetch("/api/logistica/peticiones?area=drones"); const d = await r.json(); setPeticiones(d.peticiones || []) } catch(e) { console.error(e) } }, [])
+  useEffect(() => { cargarInventario() }, [cargarInventario])
+  useEffect(() => { if (inventoryTab === "peticiones") cargarPeticiones() }, [inventoryTab, cargarPeticiones])
 
   const consultarNotamsENAIRE = async () => {
     setCargandoNotams(true)
@@ -224,7 +240,8 @@ export default function DronesPage() {
     { id: 'operaciones', label: 'Operaciones', icon: BookOpen },
     { id: 'mantenimiento', label: 'Mantenimiento', icon: Wrench },
     { id: 'mapa', label: 'Mapa de Vuelo', icon: Map },
-    { id: 'checklist', label: 'Check Pre-Vuelo', icon: ClipboardList }
+    { id: "checklist", label: "Check Pre-Vuelo", icon: ClipboardList },
+    { id: "inventario", label: "Inventario del Área", icon: Package }
   ] as const
 
   return (
@@ -1414,6 +1431,61 @@ export default function DronesPage() {
         </div>
       )}
 
+
+      {/* ─── INVENTARIO ─── */}
+      {tab === 'inventario' && (
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+          <div className="flex border-b border-slate-200 bg-slate-50 overflow-x-auto">
+            {[{key:'stock',label:'Stock',icon:Package},{key:'peticiones',label:'Peticiones',icon:ShoppingCart},{key:'movimientos',label:'Movimientos',icon:History}].map(t => (
+              <button key={t.key} onClick={() => setInventoryTab(t.key as any)} className={`flex items-center gap-2 px-6 py-3 text-sm font-medium border-b-2 transition-colors ${inventoryTab === t.key ? 'border-teal-500 text-teal-600 bg-white' : 'border-transparent text-slate-600 hover:text-slate-800'}`}><t.icon className="w-4 h-4" />{t.label}</button>
+            ))}
+          </div>
+          {inventoryTab === 'stock' && (
+            <div className="p-5">
+              <div className="flex flex-wrap gap-3 mb-4">
+                <div className="relative flex-1 min-w-[220px]"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" /><input type="text" placeholder="Buscar artículos..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-400" /></div>
+                <select value={selectedFamiliaFilter} onChange={e => setSelectedFamiliaFilter(e.target.value)} className="px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none"><option value="all">Todas las familias</option>{familias.map(f => <option key={f.id} value={f.id}>{f.nombre}</option>)}</select>
+                <button onClick={() => setShowNuevoArticulo(true)} className="flex items-center gap-2 px-4 py-2.5 bg-teal-600 text-white rounded-xl text-sm font-medium hover:bg-teal-700"><Plus className="w-4 h-4" />Artículo</button>
+                <button onClick={() => setShowGestionFamilias(true)} className="flex items-center gap-2 px-4 py-2.5 bg-slate-800 text-white rounded-xl text-sm font-medium hover:bg-slate-900"><Layers className="w-4 h-4" />Familias</button>
+              </div>
+              <table className="w-full text-sm">
+                <thead><tr className="border-b border-slate-100"><th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Artículo</th><th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Familia</th><th className="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Stock</th><th className="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Estado</th><th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Acciones</th></tr></thead>
+                <tbody className="divide-y divide-slate-50">
+                  {articulos.filter(a => (selectedFamiliaFilter === 'all' || a.familiaId === selectedFamiliaFilter) && (searchTerm === '' || a.nombre.toLowerCase().includes(searchTerm.toLowerCase()))).length === 0
+                    ? <tr><td colSpan={5} className="text-center py-12 text-slate-400"><Package className="w-10 h-10 mx-auto mb-2 opacity-30" /><p>No hay artículos registrados</p></td></tr>
+                    : articulos.filter(a => (selectedFamiliaFilter === 'all' || a.familiaId === selectedFamiliaFilter) && (searchTerm === '' || a.nombre.toLowerCase().includes(searchTerm.toLowerCase()))).map(art => (
+                      <tr key={art.id} className="hover:bg-slate-50/50">
+                        <td className="px-4 py-3"><p className="font-medium text-slate-800">{art.nombre}</p>{art.codigo && <p className="text-xs text-slate-400">{art.codigo}</p>}</td>
+                        <td className="px-4 py-3 text-slate-500">{art.familia?.nombre || '-'}</td>
+                        <td className="px-4 py-3 text-center"><span className={`text-lg font-bold ${art.stockActual <= art.stockMinimo ? 'text-red-600' : 'text-slate-800'}`}>{art.stockActual}</span><span className="text-slate-400 text-xs ml-1">/ {art.stockMinimo}</span></td>
+                        <td className="px-4 py-3 text-center">{art.stockActual <= art.stockMinimo ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-50 text-red-700 border border-red-200"><AlertTriangle className="w-3 h-3" />Bajo</span> : <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200"><CheckCircle className="w-3 h-3" />OK</span>}</td>
+                        <td className="px-4 py-3 text-right"><button onClick={() => {}} className="p-2 text-slate-400 hover:text-teal-600 hover:bg-teal-50 rounded-lg"><Edit className="w-4 h-4" /></button></td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {inventoryTab === 'peticiones' && (
+            <div className="p-5">
+              <div className="flex items-center justify-between mb-4">
+                <button onClick={() => setShowNuevaPeticion(true)} className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg text-sm font-medium hover:bg-teal-700"><Plus className="w-4 h-4" />Nueva Petición</button>
+              </div>
+              <div className="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden">
+                {peticiones.length === 0 ? <div className="text-center py-12 text-slate-400"><ShoppingCart className="w-10 h-10 mx-auto mb-2 opacity-30" /><p>No hay peticiones</p></div>
+                : peticiones.map(pet => (
+                  <div key={pet.id} className="p-4 hover:bg-slate-50">
+                    <div className="flex items-center gap-2 mb-1"><span className="text-xs font-mono text-slate-400">{pet.numero}</span><span className="px-2 py-0.5 rounded-full text-xs font-medium bg-teal-50 text-teal-700 border border-teal-200">{pet.estado}</span></div>
+                    <p className="font-medium text-slate-800">{pet.nombreArticulo}</p>
+                    <p className="text-sm text-slate-500">{pet.cantidad} {pet.unidad} · {new Date(pet.fechaSolicitud).toLocaleDateString('es-ES')}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {inventoryTab === 'movimientos' && <div className="p-12 text-center text-slate-400"><History className="w-12 h-12 mx-auto mb-3 opacity-30" /><p className="font-medium">Historial de movimientos</p><p className="text-sm mt-1">Los movimientos de stock se registrarán aquí</p></div>}
+        </div>
+      )}
     </div>
   )
 }
