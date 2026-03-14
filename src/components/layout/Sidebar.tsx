@@ -30,6 +30,7 @@ import {
   FlaskConical,
   BarChart2,
   Wallet,
+  Navigation2,
 } from 'lucide-react'
 
 interface NavItem {
@@ -49,7 +50,8 @@ const navigation: NavItem[] = [
   { name: 'Incendios', href: '/incendios', icon: Flame },
   { name: 'Socorrismo', href: '/socorrismo', icon: Heart },
   { name: 'Vehículos', href: '/vehiculos', icon: Truck },
-  { name: 'Transmisiones', href: '/transmisiones', icon: Radio },
+  { name: "Transmisiones", href: "/transmisiones", icon: Radio },
+  { name: "Drones", href: "/drones", icon: Navigation2 },
   { name: 'PMA', href: '/pma', icon: AlertTriangle },
   { name: 'Formación', href: '/formacion', icon: GraduationCap },
   { name: 'Acción Social', href: '/accion-social', icon: Users },
