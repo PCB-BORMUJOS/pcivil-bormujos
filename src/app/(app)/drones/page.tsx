@@ -2,14 +2,14 @@
 import React from 'react'
 import { useState, useEffect, useCallback } from 'react'
 import { Check, ClipboardList, 
-  Navigation2 as Drone, Plus, RefreshCw, Battery, User, Map, FileText, 
+  Plus, RefreshCw, Battery, User, Map, FileText, 
   Wrench, AlertTriangle, CheckCircle2, Clock, Calendar,
   Shield, Radio, Wind, Eye, CloudRain, Navigation,
   Download, Edit, Trash2, ChevronRight, Info,
   Zap, Target, Activity, BarChart3, Save, X,
   MapPin, Layers, Bell, BookOpen, Settings, ShoppingCart, History, Search, Package, CheckCircle
 } from 'lucide-react'
-import { IconDrone } from '@tabler/icons-react'
+import { GiDeliveryDrone as DroneIcon } from 'react-icons/gi'
 import dynamic from 'next/dynamic'
 import 'leaflet/dist/leaflet.css'
 
@@ -235,7 +235,7 @@ export default function DronesPage() {
   const labelCls = 'block text-xs font-semibold text-slate-500 uppercase mb-1'
   const TABS = [
     { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
-    { id: 'flota', label: 'Flota', icon: Drone },
+    { id: 'flota', label: 'Flota', icon: DroneIcon },
     { id: 'pilotos', label: 'Pilotos', icon: User },
     { id: 'operaciones', label: 'Operaciones', icon: BookOpen },
     { id: 'mantenimiento', label: 'Mantenimiento', icon: Wrench },
@@ -249,7 +249,7 @@ export default function DronesPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-0 justify-between">
         <div className="flex items-center gap-3">
-          <div className="p-2.5 bg-teal-600 rounded-xl"><Drone className="w-6 h-6 text-white" /></div>
+          <div className="p-2.5 bg-teal-600 rounded-xl"><DroneIcon className="w-6 h-6 text-white" /></div>
           <div>
             <h1 className="text-2xl font-bold text-slate-900">Drones — RPAS</h1>
             <p className="text-sm text-slate-500">Gestión operativa de aeronaves no tripuladas · Protección Civil Bormujos</p>
@@ -258,14 +258,14 @@ export default function DronesPage() {
         <div className="flex items-center gap-2 flex-wrap">
           <button onClick={cargarDatos} className="p-2 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-500"><RefreshCw size={16} /></button>
           <button onClick={() => setShowNuevoVuelo(true)} className="flex items-center gap-2 px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold rounded-lg"><Plus size={16} />Nuevo Vuelo</button>
-          <button onClick={() => setShowNuevoDrone(true)} className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white text-sm font-semibold rounded-lg"><Drone size={16} />Añadir Drone</button>
+          <button onClick={() => setShowNuevoDrone(true)} className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white text-sm font-semibold rounded-lg"><DroneIcon size={16} />Añadir Drone</button>
         </div>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
         {[
-          { label: 'Drones operativos', value: `${stats?.dronesOperativos ?? 0}/${stats?.totalDrones ?? 0}`, icon: Drone, color: 'text-teal-600' },
+          { label: 'Drones operativos', value: `${stats?.dronesOperativos ?? 0}/${stats?.totalDrones ?? 0}`, icon: DroneIcon, color: 'text-teal-600' },
           { label: 'Vuelos este mes', value: stats?.vuelosMes ?? 0, icon: Activity, color: 'text-blue-600' },
           { label: 'Horas de vuelo', value: `${stats?.horasTotales ?? 0}h`, icon: Clock, color: 'text-green-600' },
           { label: 'Alertas', value: (stats?.bateriasAlerta ?? 0) + (stats?.mantPendientes ?? 0), icon: AlertTriangle, color: 'text-red-500' }
@@ -291,7 +291,7 @@ export default function DronesPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
           {/* Flota resumen */}
           <div className="bg-white rounded-xl border border-slate-100 p-5">
-            <h3 className="text-sm font-bold text-slate-700 mb-4 flex items-center gap-2"><Drone className="w-4 h-4 text-teal-600" />Estado de la flota</h3>
+            <h3 className="text-sm font-bold text-slate-700 mb-4 flex items-center gap-2"><DroneIcon className="w-4 h-4 text-teal-600" />Estado de la flota</h3>
             <div className="space-y-3">
               {drones.map(d => (
                 <div key={d.id} className="flex items-center justify-between p-3 rounded-lg bg-slate-50">
@@ -393,7 +393,7 @@ export default function DronesPage() {
               <div key={d.id} className="bg-white rounded-xl border border-slate-100 p-5 space-y-4">
                 <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-0 justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 bg-teal-100 rounded-xl"><Drone className="w-5 h-5 text-teal-600" /></div>
+                    <div className="p-2 bg-teal-100 rounded-xl"><DroneIcon className="w-5 h-5 text-teal-600" /></div>
                     <div>
                       <p className="font-bold text-slate-900">{d.codigo}</p>
                       <p className="text-sm text-slate-500">{d.marca} {d.modelo}</p>
@@ -927,7 +927,7 @@ export default function DronesPage() {
                   <div className={`flex items-center justify-between px-5 py-4 border-b border-slate-100 ${secOK === secTotal && secNOK === 0 ? 'bg-green-50' : secNOK > 0 ? 'bg-red-50/60' : 'bg-slate-50/50'}`}>
                     <div className="flex items-center gap-3">
                       <div className={`p-2 rounded-xl ${colorMap[sec.color]}`}>
-                        {(() => { const icons: Record<string, any> = { Drone, Radio, Map, User, Wind, AlertTriangle }; const Icon = icons[sec.icon]; return Icon ? <Icon size={15} /> : null })()}
+                        {(() => { const icons: Record<string, any> = { Drone: DroneIcon, Radio, Map, User, Wind, AlertTriangle }; const Icon = icons[sec.icon]; return Icon ? <Icon size={15} /> : null })()}
                       </div>
                       <div>
                         <p className={`text-sm font-black ${headerColor[sec.color]}`}>{sec.label}</p>
@@ -1155,7 +1155,7 @@ export default function DronesPage() {
             <form onSubmit={handleNuevoVuelo} className="p-6 space-y-5">
               {/* Aeronave y piloto */}
               <div>
-                <p className="text-xs font-bold text-slate-500 uppercase mb-3 flex items-center gap-2"><Drone size={12} />Aeronave y piloto</p>
+                <p className="text-xs font-bold text-slate-500 uppercase mb-3 flex items-center gap-2"><DroneIcon size={12} />Aeronave y piloto</p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div><label className={labelCls}>Drone *</label>
                     <select name="droneId" required className={inputCls}>
