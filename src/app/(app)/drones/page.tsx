@@ -58,7 +58,7 @@ const ZONA_COLOR: Record<string, string> = {
 }
 
 export default function DronesPage() {
-  const [tab, setTab] = useState<'dashboard' | 'flota' | 'pilotos' | 'operaciones' | 'mantenimiento' | 'mapa' | 'checklist' | 'inventario'>('dashboard')
+  const [tab, setTab] = useState<'inventario' | 'dashboard' | 'flota' | 'pilotos' | 'operaciones' | 'mantenimiento' | 'mapa' | 'checklist'>('inventario')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
@@ -234,6 +234,7 @@ export default function DronesPage() {
   const inputCls = 'w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-400 outline-none'
   const labelCls = 'block text-xs font-semibold text-slate-500 uppercase mb-1'
   const TABS = [
+    { id: 'inventario', label: 'Inventario del Área', icon: Package },
     { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
     { id: 'flota', label: 'Flota', icon: DroneIcon },
     { id: 'pilotos', label: 'Pilotos', icon: User },
@@ -241,7 +242,6 @@ export default function DronesPage() {
     { id: 'mantenimiento', label: 'Mantenimiento', icon: Wrench },
     { id: 'mapa', label: 'Mapa de Vuelo', icon: Map },
     { id: "checklist", label: "Check Pre-Vuelo", icon: ClipboardList },
-    { id: "inventario", label: "Inventario del Área", icon: Package }
   ] as const
 
   return (
@@ -259,6 +259,7 @@ export default function DronesPage() {
           <button onClick={cargarDatos} className="p-2 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-500"><RefreshCw size={16} /></button>
           <button onClick={() => setShowNuevoVuelo(true)} className="flex items-center gap-2 px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold rounded-lg"><Plus size={16} />Nuevo Vuelo</button>
           <button onClick={() => setShowNuevoDrone(true)} className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white text-sm font-semibold rounded-lg"><DroneIcon size={16} />Añadir Drone</button>
+          <button onClick={() => setTab('mapa')} className="flex items-center gap-2 px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white text-sm font-semibold rounded-lg"><Map size={16} />NOTAM</button>
         </div>
       </div>
 
