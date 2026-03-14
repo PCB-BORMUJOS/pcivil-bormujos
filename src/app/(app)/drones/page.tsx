@@ -58,7 +58,7 @@ const ZONA_COLOR: Record<string, string> = {
 }
 
 export default function DronesPage() {
-  const [tab, setTab] = useState<'dashboard' | 'flota' | 'pilotos' | 'operaciones' | 'mantenimiento' | 'mapa' | 'checklist'>('dashboard')
+  const [tab, setTab] = useState<'dashboard' | 'flota' | 'pilotos' | 'operaciones' | 'mantenimiento' | 'mapa' | 'checklist' | 'inventario'>('dashboard')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
