@@ -479,6 +479,10 @@ export default function CuadrantesPage() {
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500 px-1">
         <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-green-500 inline-block" /> Asignado</span>
+        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-blue-400 inline-block" /> Sugerido</span>
+        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-sky-200 inline-block" /> Disponible este turno</span>
+        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-red-300 inline-block" /> En prácticas</span>
+        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-white border border-slate-300 inline-block" /> Asignable (urgencia)</span>
         <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-amber-400 inline-block" /> En prácticas</span>
         <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-indigo-300 inline-block" /> Sugerido</span>
         <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-slate-200 inline-block" /> Disponible</span>
@@ -597,9 +601,9 @@ export default function CuadrantesPage() {
                           }
                         })
                         // Ordenar: J → B → S, numérico ascendente
-                        const listaOrdenada = listaCompleta.sort((a: any, b: any) =>
-                          sortIndicativo(a.numeroVoluntario, b.numeroVoluntario)
-                        )
+                        const listaOrdenada = listaCompleta
+                          .sort((a: any, b: any) => sortIndicativo(a.numeroVoluntario, b.numeroVoluntario))
+                          .filter((u: any) => u.numeroVoluntario !== 'J-01')
                         if (listaOrdenada.length === 0) {
                           return <div className="text-[9px] text-slate-300 text-center py-3">Sin voluntarios</div>
                         }
@@ -615,21 +619,30 @@ export default function CuadrantesPage() {
                           let className = ''
                           let clickable = true
                           if (u.isAsig && esPracticas) {
+                            // Asignado + en prácticas → ámbar
                             className = 'bg-amber-100 border border-amber-400 text-amber-900'
                           } else if (u.isAsig) {
+                            // Asignado confirmado → verde
                             className = 'bg-green-100 border border-green-300 text-green-900'
+                          } else if (esPracticas) {
+                            // En prácticas (no asignado) → rojo sombreado
+                            className = 'bg-red-100 border border-red-400 text-red-800 hover:bg-red-200'
                           } else if (u.tieneDisponibilidadEsteSlot && isSug) {
-                            className = 'bg-indigo-50 border border-indigo-200 text-indigo-900 hover:bg-indigo-100'
+                            // Sugerido por algoritmo con disponibilidad → azul
+                            className = 'bg-blue-100 border border-blue-400 text-blue-900 hover:bg-blue-200'
                           } else if (u.tieneDisponibilidadEsteSlot && agotado) {
-                            className = 'bg-red-50 border border-red-100 text-red-300 cursor-not-allowed opacity-50'
+                            // Ha cubierto sus turnos deseados → gris tenue, no clickable
+                            className = 'bg-slate-50 border border-slate-200 text-slate-300 cursor-not-allowed opacity-40'
                             clickable = false
                           } else if (u.tieneDisponibilidadEsteSlot) {
-                            className = 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
-                          } else if (!u.haRespondido && !u.esNoDisponible) {
+                            // Disponible para este slot → sombreado azul claro
+                            className = 'bg-sky-50 border border-sky-300 text-sky-900 hover:bg-sky-100'
+                          } else if (u.esNoDisponible || !u.haRespondido) {
+                            // Sin disponibilidad declarada esta semana → rojo
                             className = 'bg-red-50 border border-dashed border-red-300 text-red-400 hover:bg-red-100'
                           } else {
-                            // haRespondido pero no para este slot, o noDisponible — no mostrar
-                            return null
+                            // Respondió pero no para este slot → blanco (asignable de urgencia)
+                            className = 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
                           }
 
                           return (

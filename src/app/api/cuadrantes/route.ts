@@ -73,11 +73,12 @@ export async function GET(request: NextRequest) {
     })
     const idsQueRespondieron = Array.from(new Set(todosRespondieron.map(r => r.usuarioId)))
     const todosUsuariosActivos = await prisma.usuario.findMany({
-      where: { activo: true },
+      where: { activo: true, numeroVoluntario: { not: 'J-01' } },
       select: {
         id: true, nombre: true, apellidos: true, numeroVoluntario: true,
         responsableTurno: true, carnetConducir: true, experiencia: true,
         nivelCompromiso: true, esOperativo: true,
+        fichaVoluntario: { select: { enPracticas: true, turnosPracticasRealizados: true } },
       },
       orderBy: [{ numeroVoluntario: 'asc' }]
     })
