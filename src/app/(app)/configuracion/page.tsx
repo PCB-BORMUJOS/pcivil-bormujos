@@ -126,7 +126,7 @@ export default function ConfiguracionPage() {
       }
       // Servicios hardcodeados por ahora
       setServicios([
-        { id: '1', nombre: 'Protección Civil Bormujos', codigo: 'PCB' },
+        { id: 'cmkptn8iq0000l10vyojb2edp', nombre: 'Protección Civil Bormujos', codigo: 'PCB' },
       ]);
     } catch (error) {
       /* error silenciado */;
