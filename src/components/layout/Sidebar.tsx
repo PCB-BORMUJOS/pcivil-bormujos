@@ -32,6 +32,7 @@ import {
   Wallet,
   Navigation2,
 } from 'lucide-react'
+import { IconDrone } from '@tabler/icons-react'
 
 interface NavItem {
   name: string
@@ -51,7 +52,7 @@ const navigation: NavItem[] = [
   { name: 'Socorrismo', href: '/socorrismo', icon: Heart },
   { name: 'Vehículos', href: '/vehiculos', icon: Truck },
   { name: "Transmisiones", href: "/transmisiones", icon: Radio },
-  { name: "Drones", href: "/drones", icon: Navigation2 },
+  { name: "Drones", href: "/drones", icon: IconDrone },
   { name: 'PMA', href: '/pma', icon: AlertTriangle },
   { name: 'Formación', href: '/formacion', icon: GraduationCap },
   { name: 'Acción Social', href: '/accion-social', icon: Users },
