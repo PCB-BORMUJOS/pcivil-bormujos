@@ -9,7 +9,7 @@ import { Check, ClipboardList,
   Zap, Target, Activity, BarChart3, Save, X,
   MapPin, Layers, Bell, BookOpen, Settings, ShoppingCart, History, Search, Package, CheckCircle
 } from 'lucide-react'
-import { GiDeliveryDrone as DroneIcon } from 'react-icons/gi'
+import { TbDrone as DroneIcon } from 'react-icons/tb'
 import dynamic from 'next/dynamic'
 import 'leaflet/dist/leaflet.css'
 

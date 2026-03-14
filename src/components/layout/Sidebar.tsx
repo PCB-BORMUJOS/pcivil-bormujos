@@ -32,7 +32,7 @@ import {
   Wallet,
   Navigation2,
 } from 'lucide-react'
-import { GiDeliveryDrone } from 'react-icons/gi'
+import { TbDrone as GiDeliveryDrone } from 'react-icons/tb'
 
 interface NavItem {
   name: string
