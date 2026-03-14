@@ -32,6 +32,10 @@ export async function POST(request: NextRequest) {
     const importeDia = tramo?.importe ?? tramo?.amount ?? 0
 
     const ficha = await prisma.fichaVoluntario.findUnique({ where: { usuarioId } })
+    // Bloquear dieta si el voluntario está en prácticas
+    if (ficha?.enPracticas) {
+      return NextResponse.json({ error: 'Voluntario en prácticas — no genera dieta hasta completar 15 turnos' }, { status: 403 })
+    }
     const kmIda = Number(ficha?.kmDesplazamiento ?? 0)
     const kilometros = kmIda * 2
     const subtotalKm = parseFloat((kilometros * precioKm).toFixed(2))
