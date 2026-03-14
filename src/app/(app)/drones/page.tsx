@@ -215,7 +215,7 @@ export default function DronesPage() {
   const dronesF = drones.filter(d => filtroEstadoDrone === 'todos' || d.estado === filtroEstadoDrone)
   const vuelosF = vuelos.filter(v => filtroEstadoVuelo === 'todos' || v.estado === filtroEstadoVuelo)
 
-  const inputCls = 'w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-purple-400 outline-none'
+  const inputCls = 'w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-400 outline-none'
   const labelCls = 'block text-xs font-semibold text-slate-500 uppercase mb-1'
   const TABS = [
     { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
@@ -232,7 +232,7 @@ export default function DronesPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-0 justify-between">
         <div className="flex items-center gap-3">
-          <div className="p-2.5 bg-purple-600 rounded-xl"><Drone className="w-6 h-6 text-white" /></div>
+          <div className="p-2.5 bg-teal-600 rounded-xl"><Drone className="w-6 h-6 text-white" /></div>
           <div>
             <h1 className="text-2xl font-bold text-slate-900">Drones — RPAS</h1>
             <p className="text-sm text-slate-500">Gestión operativa de aeronaves no tripuladas · Protección Civil Bormujos</p>
@@ -240,7 +240,7 @@ export default function DronesPage() {
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <button onClick={cargarDatos} className="p-2 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-500"><RefreshCw size={16} /></button>
-          <button onClick={() => setShowNuevoVuelo(true)} className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold rounded-lg"><Plus size={16} />Nuevo Vuelo</button>
+          <button onClick={() => setShowNuevoVuelo(true)} className="flex items-center gap-2 px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold rounded-lg"><Plus size={16} />Nuevo Vuelo</button>
           <button onClick={() => setShowNuevoDrone(true)} className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white text-sm font-semibold rounded-lg"><Drone size={16} />Añadir Drone</button>
         </div>
       </div>
@@ -248,7 +248,7 @@ export default function DronesPage() {
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
         {[
-          { label: 'Drones operativos', value: `${stats?.dronesOperativos ?? 0}/${stats?.totalDrones ?? 0}`, icon: Drone, color: 'text-purple-600' },
+          { label: 'Drones operativos', value: `${stats?.dronesOperativos ?? 0}/${stats?.totalDrones ?? 0}`, icon: Drone, color: 'text-teal-600' },
           { label: 'Vuelos este mes', value: stats?.vuelosMes ?? 0, icon: Activity, color: 'text-blue-600' },
           { label: 'Horas de vuelo', value: `${stats?.horasTotales ?? 0}h`, icon: Clock, color: 'text-green-600' },
           { label: 'Alertas', value: (stats?.bateriasAlerta ?? 0) + (stats?.mantPendientes ?? 0), icon: AlertTriangle, color: 'text-red-500' }
@@ -263,7 +263,7 @@ export default function DronesPage() {
       {/* Tabs */}
       <div className="flex gap-1 border-b border-slate-200">
         {TABS.map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)} className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium rounded-t-lg transition-colors ${tab === t.id ? 'bg-white border border-b-white border-slate-200 text-purple-700 -mb-px' : 'text-slate-500 hover:text-slate-700'}`}>
+          <button key={t.id} onClick={() => setTab(t.id)} className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium rounded-t-lg transition-colors ${tab === t.id ? 'bg-white border border-b-white border-slate-200 text-teal-700 -mb-px' : 'text-slate-500 hover:text-slate-700'}`}>
             <t.icon size={14} />{t.label}
           </button>
         ))}
@@ -274,7 +274,7 @@ export default function DronesPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
           {/* Flota resumen */}
           <div className="bg-white rounded-xl border border-slate-100 p-5">
-            <h3 className="text-sm font-bold text-slate-700 mb-4 flex items-center gap-2"><Drone className="w-4 h-4 text-purple-600" />Estado de la flota</h3>
+            <h3 className="text-sm font-bold text-slate-700 mb-4 flex items-center gap-2"><Drone className="w-4 h-4 text-teal-600" />Estado de la flota</h3>
             <div className="space-y-3">
               {drones.map(d => (
                 <div key={d.id} className="flex items-center justify-between p-3 rounded-lg bg-slate-50">
@@ -347,7 +347,7 @@ export default function DronesPage() {
                     <div>
                       <p className="text-sm font-semibold text-slate-800">{p.nombre} {p.apellidos}</p>
                       <div className="flex gap-1 mt-0.5">
-                        {Object.keys(certs).map(c => <span key={c} className="text-[9px] font-bold bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded">{c}</span>)}
+                        {Object.keys(certs).map(c => <span key={c} className="text-[9px] font-bold bg-teal-100 text-teal-700 px-1.5 py-0.5 rounded">{c}</span>)}
                         {p.externo && <span className="text-[9px] font-bold bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">EXT</span>}
                       </div>
                     </div>
@@ -366,7 +366,7 @@ export default function DronesPage() {
         <div className="space-y-4">
           <div className="flex items-center gap-3">
             {['todos', 'operativo', 'mantenimiento', 'baja'].map(e => (
-              <button key={e} onClick={() => setFiltroEstadoDrone(e)} className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${filtroEstadoDrone === e ? 'bg-purple-600 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
+              <button key={e} onClick={() => setFiltroEstadoDrone(e)} className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${filtroEstadoDrone === e ? 'bg-teal-600 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
                 {e === 'todos' ? 'Todos' : ESTADO_DRONE[e]?.label}
               </button>
             ))}
@@ -376,7 +376,7 @@ export default function DronesPage() {
               <div key={d.id} className="bg-white rounded-xl border border-slate-100 p-5 space-y-4">
                 <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-0 justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 bg-purple-100 rounded-xl"><Drone className="w-5 h-5 text-purple-600" /></div>
+                    <div className="p-2 bg-teal-100 rounded-xl"><Drone className="w-5 h-5 text-teal-600" /></div>
                     <div>
                       <p className="font-bold text-slate-900">{d.codigo}</p>
                       <p className="text-sm text-slate-500">{d.marca} {d.modelo}</p>
@@ -409,7 +409,7 @@ export default function DronesPage() {
                     </div>
                   </div>
                 )}
-                <button onClick={() => { setDroneSeleccionado(d); setShowNuevaBateria(true) }} className="w-full text-xs text-purple-600 hover:text-purple-800 font-medium flex items-center justify-center gap-1 py-1.5 border border-dashed border-purple-200 rounded-lg hover:bg-purple-50">
+                <button onClick={() => { setDroneSeleccionado(d); setShowNuevaBateria(true) }} className="w-full text-xs text-teal-600 hover:text-teal-800 font-medium flex items-center justify-center gap-1 py-1.5 border border-dashed border-teal-200 rounded-lg hover:bg-teal-50">
                   <Plus size={12} />Añadir batería
                 </button>
               </div>
@@ -424,7 +424,7 @@ export default function DronesPage() {
         <div className="space-y-4">
           <div className="flex justify-between items-center">
             <p className="text-sm text-slate-500">{pilotos.length} pilotos activos</p>
-            <button onClick={() => setShowNuevoPiloto(true)} className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white text-sm font-semibold rounded-lg hover:bg-purple-700"><Plus size={14} />Nuevo piloto</button>
+            <button onClick={() => setShowNuevoPiloto(true)} className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white text-sm font-semibold rounded-lg hover:bg-teal-700"><Plus size={14} />Nuevo piloto</button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {pilotos.map(p => {
@@ -434,7 +434,7 @@ export default function DronesPage() {
                 <div key={p.id} className="bg-white rounded-xl border border-slate-100 p-5 space-y-4">
                   <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-0 justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center font-bold text-purple-700">{p.nombre[0]}{p.apellidos[0]}</div>
+                      <div className="w-10 h-10 bg-teal-100 rounded-full flex items-center justify-center font-bold text-teal-700">{p.nombre[0]}{p.apellidos[0]}</div>
                       <div>
                         <p className="font-bold text-slate-900">{p.nombre} {p.apellidos}</p>
                         <p className="text-xs text-slate-500">{p.externo ? '🔗 Piloto externo' : '👮 Voluntario PC'}</p>
@@ -444,9 +444,9 @@ export default function DronesPage() {
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     {Object.entries(certs).map(([cert, data]: [string, any]) => (
-                      <div key={cert} className="flex flex-col items-center bg-purple-50 border border-purple-100 rounded-lg px-2.5 py-1.5">
-                        <span className="text-[10px] font-black text-purple-700">{cert}</span>
-                        {data?.numero && <span className="text-[9px] text-purple-500">{data.numero}</span>}
+                      <div key={cert} className="flex flex-col items-center bg-teal-50 border border-teal-100 rounded-lg px-2.5 py-1.5">
+                        <span className="text-[10px] font-black text-teal-700">{cert}</span>
+                        {data?.numero && <span className="text-[9px] text-teal-500">{data.numero}</span>}
                         {data?.caducidad && <span className={`text-[9px] font-medium ${new Date(data.caducidad) < new Date() ? 'text-red-500' : 'text-slate-500'}`}>Cad: {formatFecha(data.caducidad)}</span>}
                       </div>
                     ))}
@@ -468,7 +468,7 @@ export default function DronesPage() {
           <div className="flex items-center justify-between">
             <div className="flex gap-2">
               {['todos', 'planificado', 'en_curso', 'completado', 'incidencia'].map(e => (
-                <button key={e} onClick={() => setFiltroEstadoVuelo(e)} className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${filtroEstadoVuelo === e ? 'bg-purple-600 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
+                <button key={e} onClick={() => setFiltroEstadoVuelo(e)} className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${filtroEstadoVuelo === e ? 'bg-teal-600 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
                   {e === 'todos' ? 'Todos' : ESTADO_VUELO[e]?.label}
                 </button>
               ))}
@@ -483,7 +483,7 @@ export default function DronesPage() {
               <tbody>
                 {vuelosF.map(v => (
                   <tr key={v.id} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
-                    <td className="px-4 py-3 font-mono text-xs font-bold text-purple-700">{v.numero}</td>
+                    <td className="px-4 py-3 font-mono text-xs font-bold text-teal-700">{v.numero}</td>
                     <td className="px-4 py-3 text-xs text-slate-600">{formatFecha(v.fecha)}</td>
                     <td className="px-4 py-3 text-xs font-medium text-slate-700">{v.drone?.codigo}</td>
                     <td className="px-4 py-3 text-xs text-slate-600">{v.piloto?.nombre} {v.piloto?.apellidos}</td>
@@ -494,7 +494,7 @@ export default function DronesPage() {
                     <td className="px-4 py-3">
                       <div className="flex gap-1">
                         <button onClick={() => { setVueloSeleccionado(v); setShowDetalleVuelo(true) }} className="p-1.5 hover:bg-slate-100 rounded text-slate-400"><Eye size={13} /></button>
-                        <button onClick={() => { setVueloSeleccionado(v); setChecklistData(v.checklist || { items: {}, firmadoPor: '', observaciones: '' }); setShowChecklist(true) }} className="p-1.5 hover:bg-purple-50 rounded text-purple-400" title="Checklist pre-vuelo"><CheckCircle2 size={13} /></button>
+                        <button onClick={() => { setVueloSeleccionado(v); setChecklistData(v.checklist || { items: {}, firmadoPor: '', observaciones: '' }); setShowChecklist(true) }} className="p-1.5 hover:bg-teal-50 rounded text-teal-400" title="Checklist pre-vuelo"><CheckCircle2 size={13} /></button>
                       </div>
                     </td>
                   </tr>
@@ -511,7 +511,7 @@ export default function DronesPage() {
         <div className="space-y-4">
           <div className="flex justify-between items-center">
             <p className="text-sm text-slate-500">{mantenimientos.length} registros de mantenimiento</p>
-            <button onClick={() => setShowNuevoMant(true)} className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white text-sm font-semibold rounded-lg hover:bg-purple-700"><Plus size={14} />Registrar mantenimiento</button>
+            <button onClick={() => setShowNuevoMant(true)} className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white text-sm font-semibold rounded-lg hover:bg-teal-700"><Plus size={14} />Registrar mantenimiento</button>
           </div>
           <div className="bg-white rounded-xl border border-slate-100 overflow-hidden">
             <table className="w-full text-sm">
@@ -523,7 +523,7 @@ export default function DronesPage() {
                   const vencido = m.proximoMantenimiento && new Date(m.proximoMantenimiento) <= new Date()
                   return (
                     <tr key={m.id} className={`border-b border-slate-50 hover:bg-slate-50 ${vencido ? 'bg-red-50' : ''}`}>
-                      <td className="px-4 py-3 text-xs font-bold text-purple-700">{m.drone?.codigo}</td>
+                      <td className="px-4 py-3 text-xs font-bold text-teal-700">{m.drone?.codigo}</td>
                       <td className="px-4 py-3 text-xs font-medium text-slate-700">{TIPO_MANT[m.tipo] || m.tipo}</td>
                       <td className="px-4 py-3 text-xs text-slate-600">{formatFecha(m.fecha)}</td>
                       <td className="px-4 py-3 text-xs text-slate-600">{m.horasEnElMomento ?? '-'}</td>
@@ -562,13 +562,13 @@ export default function DronesPage() {
                   <span className="w-2.5 h-2.5 rounded-full bg-red-400" />NOTAM
                 </span>
                 <span className="flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-full bg-purple-500" />Vuelo reg.
+                  <span className="w-2.5 h-2.5 rounded-full bg-teal-500" />Vuelo reg.
                 </span>
               </div>
               <button
                 onClick={consultarNotamsENAIRE}
                 disabled={cargandoNotams}
-                className="flex items-center gap-2 px-3 py-1.5 bg-purple-600 text-white text-xs font-semibold rounded-lg hover:bg-purple-700 disabled:opacity-50"
+                className="flex items-center gap-2 px-3 py-1.5 bg-teal-600 text-white text-xs font-semibold rounded-lg hover:bg-teal-700 disabled:opacity-50"
               >
                 {cargandoNotams ? <><RefreshCw size={12} className="animate-spin" />Consultando...</> : <><RefreshCw size={12} />Actualizar NOTAMs</>}
               </button>
@@ -647,12 +647,12 @@ export default function DronesPage() {
             const descripcionFinal = findPart('DESCRIPCIÓN') || findPart('DESCRIPCION') || partes.filter((s: string) => !s.match(/^(DESDE|HASTA|HORARIO)/i)).join(' ').slice(0, 500)
             const hoy = n.fechaFin && new Date(n.fechaFin) < new Date(Date.now() + 24*3600*1000)
             return (
-              <div className="bg-white rounded-xl border border-purple-200 overflow-hidden">
+              <div className="bg-white rounded-xl border border-teal-200 overflow-hidden">
                 <div className={`h-1 w-full ${hoy ? 'bg-yellow-400' : 'bg-red-500'}`} />
                 <div className="p-5">
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center gap-3">
-                      <div className="p-2.5 bg-purple-100 rounded-xl"><Bell className="w-4 h-4 text-purple-600" /></div>
+                      <div className="p-2.5 bg-teal-100 rounded-xl"><Bell className="w-4 h-4 text-teal-600" /></div>
                       <div>
                         <p className="text-sm font-black text-slate-900">{n.referencia || 'NOTAM sin referencia'}</p>
                         <p className="text-xs text-slate-500">{n.fuente}{n.tipo ? ` · ${n.tipo}` : ''}{n.estado ? ` · ${n.estado}` : ''}</p>
@@ -714,12 +714,12 @@ export default function DronesPage() {
                     <div
                       key={n.id}
                       onClick={() => setNotamSeleccionado(sel ? null : n)}
-                      className={`flex items-center gap-4 px-4 py-3 cursor-pointer transition-colors ${sel ? 'bg-purple-50' : 'hover:bg-slate-50'}`}
+                      className={`flex items-center gap-4 px-4 py-3 cursor-pointer transition-colors ${sel ? 'bg-teal-50' : 'hover:bg-slate-50'}`}
                     >
                       <div className={`w-2 h-2 rounded-full flex-shrink-0 ${vencido ? 'bg-slate-300' : hoy ? 'bg-yellow-400' : 'bg-red-500'}`} />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-0.5">
-                          <span className={`text-xs font-bold ${sel ? 'text-purple-700' : 'text-slate-800'}`}>{n.referencia || 'NOTAM'}</span>
+                          <span className={`text-xs font-bold ${sel ? 'text-teal-700' : 'text-slate-800'}`}>{n.referencia || 'NOTAM'}</span>
                           {n.tipo && <span className="text-[9px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded font-bold">{n.tipo}</span>}
                           {hoy && <span className="text-[9px] bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded font-bold">Vence hoy</span>}
                         </div>
@@ -729,7 +729,7 @@ export default function DronesPage() {
                         {n.alturaMax != null && <p className="text-[10px] font-semibold text-orange-600">↑{n.alturaMax} ft</p>}
                         {n.fechaFin && <p className="text-[10px] text-slate-400">{new Date(n.fechaFin).toLocaleDateString('es-ES')}</p>}
                       </div>
-                      <ChevronRight size={14} className={sel ? 'text-purple-400' : 'text-slate-200'} />
+                      <ChevronRight size={14} className={sel ? 'text-teal-400' : 'text-slate-200'} />
                     </div>
                   )
                 })}
@@ -739,7 +739,7 @@ export default function DronesPage() {
           {notams.length === 0 && (
             <div className="bg-white rounded-xl border border-slate-100 p-8 text-center">
               <Bell size={24} className="text-slate-200 mx-auto mb-2" />
-              <p className="text-sm text-slate-400">Sin NOTAMs activos · <button onClick={consultarNotamsENAIRE} className="text-purple-600 hover:underline font-semibold">Actualizar ENAIRE</button></p>
+              <p className="text-sm text-slate-400">Sin NOTAMs activos · <button onClick={consultarNotamsENAIRE} className="text-teal-600 hover:underline font-semibold">Actualizar ENAIRE</button></p>
             </div>
           )}
         </div>
@@ -750,7 +750,7 @@ export default function DronesPage() {
         const SECCIONES_CHECK = [
           {
             id: 'aeronave', label: 'Aeronave', icon: '✈',
-            color: 'purple',
+            color: "teal",
             items: [
               { id: 'bat_carga', label: 'Batería principal ≥ 80% de carga', normativa: 'AESA OP 3.2' },
               { id: 'bat_estado', label: 'Estado físico de baterías: sin hinchazón, golpes ni corrosión', normativa: 'AESA OP 3.2' },
@@ -834,7 +834,7 @@ export default function DronesPage() {
         const resetChecklist = () => { setChecks({}); setNotasCheck(''); setPiloCheck(''); setDroneCheck('') }
 
         const colorMap: Record<string, string> = {
-          purple: 'bg-purple-50 border-purple-100 text-purple-700',
+          purple: 'bg-teal-50 border-teal-100 text-teal-700',
           blue: 'bg-blue-50 border-blue-100 text-blue-700',
           orange: 'bg-orange-50 border-orange-100 text-orange-700',
           green: 'bg-green-50 border-green-100 text-green-700',
@@ -842,7 +842,7 @@ export default function DronesPage() {
           red: 'bg-red-50 border-red-100 text-red-700',
         }
         const headerColor: Record<string, string> = {
-          purple: 'text-purple-700', blue: 'text-blue-700', orange: 'text-orange-700',
+          purple: 'text-teal-700', blue: 'text-blue-700', orange: 'text-orange-700',
           green: 'text-green-700', sky: 'text-sky-700', red: 'text-red-700',
         }
 
@@ -868,7 +868,7 @@ export default function DronesPage() {
               <div className="flex items-center gap-3">
                 <div className="flex-1 bg-slate-100 rounded-full h-2.5 overflow-hidden">
                   <div
-                    className={`h-full rounded-full transition-all duration-300 ${aptoVuelo ? 'bg-green-500' : fallidos > 0 ? 'bg-red-400' : 'bg-purple-500'}`}
+                    className={`h-full rounded-full transition-all duration-300 ${aptoVuelo ? 'bg-green-500' : fallidos > 0 ? 'bg-red-400' : 'bg-teal-500'}`}
                     style={{ width: `${pct}%` }}
                   />
                 </div>
@@ -883,18 +883,18 @@ export default function DronesPage() {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4 pt-4 border-t border-slate-100">
                 <div>
                   <label className="text-[10px] font-bold text-slate-400 uppercase">Piloto al mando</label>
-                  <input value={piloCheck} onChange={e => setPiloCheck(e.target.value)} placeholder="Nombre del piloto" className="mt-1 w-full text-xs border border-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-purple-400" />
+                  <input value={piloCheck} onChange={e => setPiloCheck(e.target.value)} placeholder="Nombre del piloto" className="mt-1 w-full text-xs border border-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-teal-400" />
                 </div>
                 <div>
                   <label className="text-[10px] font-bold text-slate-400 uppercase">Aeronave</label>
-                  <select value={droneCheck} onChange={e => setDroneCheck(e.target.value)} className="mt-1 w-full text-xs border border-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-purple-400">
+                  <select value={droneCheck} onChange={e => setDroneCheck(e.target.value)} className="mt-1 w-full text-xs border border-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-teal-400">
                     <option value="">Seleccionar drone...</option>
                     {drones.map(d => <option key={d.id} value={d.id}>{d.codigo} — {d.modelo}</option>)}
                   </select>
                 </div>
                 <div>
                   <label className="text-[10px] font-bold text-slate-400 uppercase">Observaciones</label>
-                  <input value={notasCheck} onChange={e => setNotasCheck(e.target.value)} placeholder="Notas adicionales..." className="mt-1 w-full text-xs border border-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-purple-400" />
+                  <input value={notasCheck} onChange={e => setNotasCheck(e.target.value)} placeholder="Notas adicionales..." className="mt-1 w-full text-xs border border-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-teal-400" />
                 </div>
               </div>
             </div>
@@ -1040,7 +1040,7 @@ export default function DronesPage() {
               <div><label className={labelCls}>Observaciones</label><textarea name="observaciones" rows={2} className={inputCls} /></div>
               <div className="flex justify-end gap-3 pt-2">
                 <button type="button" onClick={() => setShowNuevoDrone(false)} className="px-4 py-2 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50">Cancelar</button>
-                <button type="submit" disabled={saving} className="px-6 py-2 bg-purple-600 text-white text-sm font-bold rounded-lg hover:bg-purple-700 disabled:opacity-50">{saving ? 'Guardando...' : 'Crear drone'}</button>
+                <button type="submit" disabled={saving} className="px-6 py-2 bg-teal-600 text-white text-sm font-bold rounded-lg hover:bg-teal-700 disabled:opacity-50">{saving ? 'Guardando...' : 'Crear drone'}</button>
               </div>
             </form>
           </div>
@@ -1076,7 +1076,7 @@ export default function DronesPage() {
               <div><label className={labelCls}>Observaciones</label><textarea name="observaciones" rows={2} defaultValue={droneSeleccionado.observaciones} className={inputCls} /></div>
               <div className="flex justify-end gap-3 pt-2">
                 <button type="button" onClick={() => setShowEditarDrone(false)} className="px-4 py-2 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50">Cancelar</button>
-                <button type="submit" disabled={saving} className="px-6 py-2 bg-purple-600 text-white text-sm font-bold rounded-lg hover:bg-purple-700 disabled:opacity-50">{saving ? 'Guardando...' : 'Guardar cambios'}</button>
+                <button type="submit" disabled={saving} className="px-6 py-2 bg-teal-600 text-white text-sm font-bold rounded-lg hover:bg-teal-700 disabled:opacity-50">{saving ? 'Guardando...' : 'Guardar cambios'}</button>
               </div>
             </form>
           </div>
@@ -1106,7 +1106,7 @@ export default function DronesPage() {
                 <div className="grid grid-cols-2 gap-3">
                   {[['A1/A3', 'a1a3'], ['A2', 'a2'], ['STS-01', 'sts01'], ['STS-02', 'sts02']].map(([label, key]) => (
                     <div key={key} className="border border-slate-100 rounded-lg p-3 space-y-2">
-                      <p className="text-xs font-bold text-purple-700">{label}</p>
+                      <p className="text-xs font-bold text-teal-700">{label}</p>
                       <input name={`${key}Num`} placeholder="Nº certificado" className={inputCls} />
                       <input name={`${key}Cad`} type="date" placeholder="Caducidad" className={inputCls} />
                     </div>
@@ -1120,7 +1120,7 @@ export default function DronesPage() {
               <div><label className={labelCls}>Observaciones</label><textarea name="observaciones" rows={2} className={inputCls} /></div>
               <div className="flex justify-end gap-3">
                 <button type="button" onClick={() => setShowNuevoPiloto(false)} className="px-4 py-2 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50">Cancelar</button>
-                <button type="submit" disabled={saving} className="px-6 py-2 bg-purple-600 text-white text-sm font-bold rounded-lg hover:bg-purple-700 disabled:opacity-50">{saving ? 'Guardando...' : 'Registrar piloto'}</button>
+                <button type="submit" disabled={saving} className="px-6 py-2 bg-teal-600 text-white text-sm font-bold rounded-lg hover:bg-teal-700 disabled:opacity-50">{saving ? 'Guardando...' : 'Registrar piloto'}</button>
               </div>
             </form>
           </div>
@@ -1199,7 +1199,7 @@ export default function DronesPage() {
               <div>
                 <p className="text-xs font-bold text-slate-500 uppercase mb-3 flex items-center gap-2"><Bell size={12} />NOTAMs</p>
                 <div className="flex items-center gap-3 mb-3">
-                  <input type="checkbox" name="notamConsultado" id="notamCons" className="w-4 h-4 accent-purple-600" />
+                  <input type="checkbox" name="notamConsultado" id="notamCons" className="w-4 h-4 accent-teal-600" />
                   <label htmlFor="notamCons" className="text-sm text-slate-700">Confirmo que he consultado los NOTAMs vigentes para esta operación</label>
                 </div>
                 <div><label className={labelCls}>Referencia NOTAM (si aplica)</label><input name="notamReferencia" placeholder="A1234/26, B5678/26..." className={inputCls} /></div>
@@ -1207,7 +1207,7 @@ export default function DronesPage() {
               <div><label className={labelCls}>Observaciones previas</label><textarea name="observaciones" rows={2} className={inputCls} /></div>
               <div className="flex justify-end gap-3">
                 <button type="button" onClick={() => setShowNuevoVuelo(false)} className="px-4 py-2 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50">Cancelar</button>
-                <button type="submit" disabled={saving} className="px-6 py-2 bg-purple-600 text-white text-sm font-bold rounded-lg hover:bg-purple-700 disabled:opacity-50">{saving ? 'Registrando...' : 'Registrar vuelo'}</button>
+                <button type="submit" disabled={saving} className="px-6 py-2 bg-teal-600 text-white text-sm font-bold rounded-lg hover:bg-teal-700 disabled:opacity-50">{saving ? 'Registrando...' : 'Registrar vuelo'}</button>
               </div>
             </form>
           </div>
@@ -1288,7 +1288,7 @@ export default function DronesPage() {
               <div><label className={labelCls}>Observaciones</label><textarea name="observaciones" rows={2} className={inputCls} /></div>
               <div className="flex justify-end gap-3">
                 <button type="button" onClick={() => setShowNuevoMant(false)} className="px-4 py-2 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50">Cancelar</button>
-                <button type="submit" disabled={saving} className="px-6 py-2 bg-purple-600 text-white text-sm font-bold rounded-lg hover:bg-purple-700 disabled:opacity-50">{saving ? 'Guardando...' : 'Registrar'}</button>
+                <button type="submit" disabled={saving} className="px-6 py-2 bg-teal-600 text-white text-sm font-bold rounded-lg hover:bg-teal-700 disabled:opacity-50">{saving ? 'Guardando...' : 'Registrar'}</button>
               </div>
             </form>
           </div>
@@ -1302,7 +1302,7 @@ export default function DronesPage() {
             <div className="flex items-center justify-between p-6 border-b">
               <div>
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-purple-100 rounded-lg"><Bell className="w-5 h-5 text-purple-600" /></div>
+                  <div className="p-2 bg-teal-100 rounded-lg"><Bell className="w-5 h-5 text-teal-600" /></div>
                   <div>
                     <h3 className="text-lg font-bold text-slate-900">{notamSeleccionado.referencia || 'NOTAM sin referencia'}</h3>
                     <p className="text-xs text-slate-500">Fuente: {notamSeleccionado.fuente} {notamSeleccionado.estado && `· ${notamSeleccionado.estado}`}</p>
@@ -1407,7 +1407,7 @@ export default function DronesPage() {
               <div><label className={labelCls}>Descripción</label><textarea name="descripcion" rows={3} className={inputCls} /></div>
               <div className="flex justify-end gap-3">
                 <button type="button" onClick={() => setShowNotamManual(false)} className="px-4 py-2 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50">Cancelar</button>
-                <button type="submit" disabled={saving} className="px-6 py-2 bg-purple-600 text-white text-sm font-bold rounded-lg hover:bg-purple-700 disabled:opacity-50">{saving ? 'Guardando...' : 'Registrar NOTAM'}</button>
+                <button type="submit" disabled={saving} className="px-6 py-2 bg-teal-600 text-white text-sm font-bold rounded-lg hover:bg-teal-700 disabled:opacity-50">{saving ? 'Guardando...' : 'Registrar NOTAM'}</button>
               </div>
             </form>
           </div>
