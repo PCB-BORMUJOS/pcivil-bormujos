@@ -27,6 +27,11 @@ export async function middleware(request: NextRequest) {
     '/formacion',
     '/accion-social',
     '/buscar',
+    '/drones',
+    '/presupuesto',
+    '/estadisticas',
+    '/practicas',
+    '/partes',
   ].some(route => request.nextUrl.pathname.startsWith(route))
 
   // Si no hay token y es ruta protegida, redirigir a login
@@ -63,6 +68,10 @@ export const config = {
     '/formacion/:path*',
     '/accion-social/:path*',
     '/buscar/:path*',
+    '/drones/:path*',
+    '/presupuesto/:path*',
+    '/estadisticas/:path*',
+    '/practicas/:path*',
     '/login',
   ],
 }

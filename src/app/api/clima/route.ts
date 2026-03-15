@@ -472,6 +472,10 @@ async function fetchOpenMeteo(): Promise<any> {
 }
 
 export async function GET() {
+  const { getServerSession } = await import('next-auth')
+  const { authOptions } = await import('@/lib/auth')
+  const session = await getServerSession(authOptions)
+  if (!session) return Response.json({ error: 'No autorizado' }, { status: 401 })
   try {
     // Intentar primero con AEMET
     const datosAemet = await fetchAEMET()
