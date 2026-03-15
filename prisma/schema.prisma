@@ -1686,3 +1686,146 @@ model RateLimitEntry {
 
   @@map("rate_limit_entries")
 }
+
+model NotamRegistro {
+  id              String    @id @default(cuid())
+  referencia      String?
+  tipo            String?
+  estado          String?   @default("activo")
+  servicio        String?
+  icao            String?
+  descripcion     String?
+  descripcionHtml String?
+  geoJson         Json?     @map("geo_json")
+  atributosRaw    Json?     @map("atributos_raw")
+  fechaInicio     DateTime? @map("fecha_inicio")
+  fechaFin        DateTime? @map("fecha_fin")
+  alturaMin       Float?    @map("altura_min")
+  alturaMax       Float?    @map("altura_max")
+  radio           Float?
+  latitud         Float?
+  longitud        Float?
+  activo          Boolean   @default(true)
+  fuente          String    @default("manual")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  @@map("notams_registro")
+}
+
+model Drone {
+  id                  String    @id @default(cuid())
+  codigo              String    @unique
+  nombre              String
+  marca               String
+  modelo              String
+  numeroSerie         String?   @map("numero_serie")
+  matriculaAESA       String?   @map("matricula_aesa")
+  categoria           String
+  pesoMaxDespegue     Float?    @map("peso_max_despegue")
+  estado              String    @default("operativo")
+  horasVuelo          Float     @default(0) @map("horas_vuelo")
+  fechaCompra         DateTime? @map("fecha_compra") @db.Date
+  fechaUltimaRevision DateTime? @map("fecha_ultima_revision") @db.Date
+  observaciones       String?
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+  baterias            BateriaDrone[]
+  mantenimientos      MantenimientoDrone[]
+  vuelos              Vuelo[]
+  @@map("drones")
+}
+
+model BateriaDrone {
+  id             String  @id @default(cuid())
+  droneId        String  @map("drone_id")
+  codigo         String
+  capacidadMah   Int?    @map("capacidad_mah")
+  ciclosActuales Int     @default(0) @map("ciclos_actuales")
+  ciclosMaximos  Int     @default(200) @map("ciclos_maximos")
+  estado         String  @default("buena")
+  observaciones  String?
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  drone          Drone   @relation(fields: [droneId], references: [id])
+  @@map("baterias_drone")
+}
+
+model PilotoDrone {
+  id                String    @id @default(cuid())
+  usuarioId         String?   @map("usuario_id")
+  nombre            String
+  apellidos         String
+  email             String?
+  telefono          String?
+  externo           Boolean   @default(false)
+  certificaciones   Json      @default("[]")
+  seguroRCNumero    String?   @map("seguro_rc_numero")
+  seguroRCVigencia  DateTime? @map("seguro_rc_vigencia") @db.Date
+  activo            Boolean   @default(true)
+  observaciones     String?
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+  vuelos            Vuelo[]
+  @@map("pilotos_drone")
+}
+
+model Vuelo {
+  id               String    @id @default(cuid())
+  numero           String    @unique
+  droneId          String    @map("drone_id")
+  pilotoId         String    @map("piloto_id")
+  fecha            DateTime  @db.Date
+  horaInicio       String?   @map("hora_inicio")
+  horaFin          String?   @map("hora_fin")
+  duracionMinutos  Int?      @map("duracion_minutos")
+  tipoOperacion    String    @map("tipo_operacion")
+  municipio        String    @default("Bormujos")
+  descripcionZona  String?   @map("descripcion_zona")
+  latitudInicio    Float?    @map("latitud_inicio")
+  longitudInicio   Float?    @map("longitud_inicio")
+  alturaMaxima     Float?    @map("altura_maxima")
+  condicionesMeteo Json      @default("{}") @map("condiciones_meteo")
+  notamConsultado  Boolean   @default(false) @map("notam_consultado")
+  notamReferencia  String?   @map("notam_referencia")
+  incidencias      String?
+  observaciones    String?
+  estado           String    @default("planificado")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+  drone            Drone     @relation(fields: [droneId], references: [id])
+  piloto           PilotoDrone @relation(fields: [pilotoId], references: [id])
+  checklist        ChecklistVuelo?
+  @@map("vuelos")
+}
+
+model ChecklistVuelo {
+  id           String   @id @default(cuid())
+  vueloId      String   @unique @map("vuelo_id")
+  items        Json     @default("[]")
+  completado   Boolean  @default(false)
+  firmadoPor   String?  @map("firmado_por")
+  observaciones String?
+  createdAt    DateTime @default(now()) @map("created_at")
+  vuelo        Vuelo    @relation(fields: [vueloId], references: [id])
+  @@map("checklists_vuelo")
+}
+
+model MantenimientoDrone {
+  id                  String    @id @default(cuid())
+  droneId             String    @map("drone_id")
+  tipo                String
+  descripcion         String
+  fecha               DateTime  @db.Date
+  horasEnElMomento    Float?    @map("horas_en_el_momento")
+  realizadoPor        String?   @map("realizado_por")
+  coste               Float?
+  piezasSustituidas   String?   @map("piezas_sustituidas")
+  proximoMantenimiento DateTime? @map("proximo_mantenimiento") @db.Date
+  observaciones       String?
+  estado              String    @default("completado")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+  drone               Drone     @relation(fields: [droneId], references: [id])
+  @@map("mantenimientos_drone")
+}
