@@ -26,6 +26,34 @@ const nextConfig = {
           { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
           { key: 'X-XSS-Protection', value: '1; mode=block' },
           {
+            key: 'Content-Security-Policy',
+            value: [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+              "style-src 'self' 'unsafe-inline' https://unpkg.com https://cdnjs.cloudflare.com",
+              "img-src 'self' data: blob: https://*.public.blob.vercel-storage.com https://ui-avatars.com https://*.tile.openstreetmap.org",
+              "font-src 'self'",
+              "connect-src 'self' https://*.neon.tech https://opendata.aemet.es https://api.openweathermap.org",
+              "frame-ancestors 'none'",
+              "base-uri 'self'",
+              "form-action 'self'",
+            ].join('; ')
+          },
+          {
+            key: 'Content-Security-Policy',
+            value: [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+              "style-src 'self' 'unsafe-inline' https://unpkg.com https://cdnjs.cloudflare.com",
+              "img-src 'self' data: blob: https://*.public.blob.vercel-storage.com https://ui-avatars.com https://*.tile.openstreetmap.org",
+              "font-src 'self'",
+              "connect-src 'self' https://*.neon.tech https://opendata.aemet.es https://api.openweathermap.org",
+              "frame-ancestors 'none'",
+              "base-uri 'self'",
+              "form-action 'self'",
+            ].join('; ')
+          },
+          {
             key: 'Strict-Transport-Security',
             value: 'max-age=63072000; includeSubDomains; preload',
           },

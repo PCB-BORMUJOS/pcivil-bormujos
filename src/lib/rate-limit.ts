@@ -1,44 +1,51 @@
-// Rate limiter en memoria - máx 5 intentos fallidos por IP en 15 minutos
-interface Attempt { count: number; firstAttempt: number; blockedUntil?: number }
-const attempts = new Map<string, Attempt>()
+import { prisma } from '@/lib/db'
+
 const MAX_ATTEMPTS = 5
-const WINDOW_MS = 15 * 60 * 1000  // 15 minutos
-const BLOCK_MS = 30 * 60 * 1000   // 30 minutos de bloqueo
+const WINDOW_MS = 15 * 60 * 1000
+const BLOCK_MS = 30 * 60 * 1000
 
-export function checkRateLimit(ip: string): { allowed: boolean; minutosRestantes?: number } {
-  const now = Date.now()
-  const entry = attempts.get(ip)
+export async function checkRateLimit(ip: string): Promise<{ allowed: boolean; minutosRestantes?: number }> {
+  const now = new Date()
+  const entry = await prisma.rateLimitEntry.findUnique({ where: { ip } })
 
-  if (entry?.blockedUntil && now < entry.blockedUntil) {
-    const minutosRestantes = Math.ceil((entry.blockedUntil - now) / 60000)
+  if (entry?.bloqueadoHasta && entry.bloqueadoHasta > now) {
+    const minutosRestantes = Math.ceil((entry.bloqueadoHasta.getTime() - now.getTime()) / 60000)
     return { allowed: false, minutosRestantes }
   }
 
-  if (!entry || now - entry.firstAttempt > WINDOW_MS) {
+  if (!entry || now.getTime() - entry.primerIntento.getTime() > WINDOW_MS) {
     return { allowed: true }
   }
 
-  if (entry.count >= MAX_ATTEMPTS) {
-    entry.blockedUntil = now + BLOCK_MS
-    attempts.set(ip, entry)
+  if (entry.intentos >= MAX_ATTEMPTS) {
+    await prisma.rateLimitEntry.update({
+      where: { ip },
+      data: { bloqueadoHasta: new Date(now.getTime() + BLOCK_MS) }
+    })
     return { allowed: false, minutosRestantes: 30 }
   }
 
   return { allowed: true }
 }
 
-export function registerFailedAttempt(ip: string): void {
-  const now = Date.now()
-  const entry = attempts.get(ip)
+export async function registerFailedAttempt(ip: string): Promise<void> {
+  const now = new Date()
+  const entry = await prisma.rateLimitEntry.findUnique({ where: { ip } })
 
-  if (!entry || now - entry.firstAttempt > WINDOW_MS) {
-    attempts.set(ip, { count: 1, firstAttempt: now })
+  if (!entry || now.getTime() - entry.primerIntento.getTime() > WINDOW_MS) {
+    await prisma.rateLimitEntry.upsert({
+      where: { ip },
+      create: { ip, intentos: 1, primerIntento: now },
+      update: { intentos: 1, primerIntento: now, bloqueadoHasta: null }
+    })
   } else {
-    entry.count++
-    attempts.set(ip, entry)
+    await prisma.rateLimitEntry.update({
+      where: { ip },
+      data: { intentos: { increment: 1 } }
+    })
   }
 }
 
-export function resetAttempts(ip: string): void {
-  attempts.delete(ip)
+export async function resetAttempts(ip: string): Promise<void> {
+  await prisma.rateLimitEntry.deleteMany({ where: { ip } })
 }

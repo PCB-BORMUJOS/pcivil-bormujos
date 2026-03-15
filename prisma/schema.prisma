@@ -1675,3 +1675,14 @@ model InformeDietas {
   partida           PartidaPresupuestaria? @relation(fields: [partidaId], references: [id])
   @@map("informes_dietas")
 }
+
+model RateLimitEntry {
+  id           String   @id @default(cuid())
+  ip           String   @unique
+  intentos     Int      @default(0)
+  primerIntento DateTime @default(now()) @map("primer_intento")
+  bloqueadoHasta DateTime? @map("bloqueado_hasta")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("rate_limit_entries")
+}
