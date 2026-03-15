@@ -1,4 +1,5 @@
 'use client'
+import { useRol } from '@/hooks/useRol'
 
 import dynamic from 'next/dynamic'
 import { useState, useEffect } from 'react'
@@ -104,6 +105,7 @@ const PRIORIDADES = {
 export default function SocorrismoPage() {
   // Estados principales
   const [mainTab, setMainTab] = useState<'inventario' | 'deas' | 'botiquines'>('inventario')
+  const { canEdit, canApprove } = useRol('Socorrismo')
   const [inventoryTab, setInventoryTab] = useState<'stock' | 'peticiones' | 'movimientos'>('stock')
   const [loading, setLoading] = useState(true)
   const [mapReady, setMapReady] = useState(false)

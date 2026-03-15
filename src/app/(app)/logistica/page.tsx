@@ -1,4 +1,5 @@
-'use client';
+'use client'
+import { useRol } from '@/hooks/useRol';
 import { useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { usePermisos } from '@/lib/permisos';

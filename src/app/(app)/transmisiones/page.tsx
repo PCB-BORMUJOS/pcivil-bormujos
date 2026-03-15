@@ -1,4 +1,5 @@
 'use client'
+import { useRol } from '@/hooks/useRol'
 
 import { useState, useEffect, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
@@ -166,6 +167,7 @@ function BateriaIndicador({ nivel }: { nivel?: number }) {
 export default function TransmisionesPage() {
   const { data: session } = useSession()
   const [mainTab, setMainTab] = useState<'inventario' | 'equipos' | 'config_rf' | 'cobertura' | 'codigos'>('inventario')
+  const { canEdit, canApprove } = useRol('Transmisiones')
   const [inventoryTab, setInventoryTab] = useState<'stock' | 'peticiones' | 'movimientos'>('stock')
   const [detalleTab, setDetalleTab] = useState<'ficha' | 'bateria' | 'mantenimiento'>('ficha')
   const [codigosTab, setCodigosTab] = useState<'codigo_q' | 'icao'>('codigo_q')

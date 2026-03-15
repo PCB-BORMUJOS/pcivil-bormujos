@@ -1,4 +1,5 @@
-'use client';
+'use client'
+import { useRol } from '@/hooks/useRol';
 import React, { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import 'leaflet/dist/leaflet.css';
@@ -166,6 +167,7 @@ const AREAS_NOMBRE: Record<string, string> = {
 
 export default function IncendiosPage() {
   const [mainTab, setMainTab] = useState<'inventario' | 'eci-edificios' | 'inventario-eci' | 'hidrantes'>('inventario');
+  const { canEdit, canApprove } = useRol('Incendios')
   const [inventoryTab, setInventoryTab] = useState<'stock' | 'peticiones' | 'movimientos'>('stock');
 
   const [articulos, setArticulos] = useState<Articulo[]>([]);

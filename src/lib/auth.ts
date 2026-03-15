@@ -22,7 +22,7 @@ export const authOptions: AuthOptions = {
         }
         const usuario = await prisma.usuario.findUnique({
           where: { email: credentials.email },
-          include: { rol: true, servicio: true }
+          include: { rol: true, servicio: true, fichaVoluntario: { select: { areaAsignada: true } } }
         })
         if (!usuario || !usuario.activo) {
           throw new Error('Usuario no encontrado o inactivo')
@@ -47,6 +47,7 @@ export const authOptions: AuthOptions = {
           permisosExtraData: usuario.permisosExtra ?? [],
           servicioId: usuario.servicioId,
           numeroVoluntario: usuario.numeroVoluntario,
+          areaAsignada: usuario.fichaVoluntario?.areaAsignada ?? null,
           ip
         } as any
       }
@@ -75,6 +76,7 @@ export const authOptions: AuthOptions = {
         token.permisos = (user as any).permisos
         token.servicioId = (user as any).servicioId
         token.numeroVoluntario = (user as any).numeroVoluntario
+        token.areaAsignada = (user as any).areaAsignada
       }
       return token
     },
@@ -90,6 +92,7 @@ export const authOptions: AuthOptions = {
         (session.user as any).permisos = token.permisos as any
         (session.user as any).servicioId = token.servicioId as string
         (session.user as any).numeroVoluntario = token.numeroVoluntario as string
+        (session.user as any).areaAsignada = token.areaAsignada as string
       }
       return session
     }

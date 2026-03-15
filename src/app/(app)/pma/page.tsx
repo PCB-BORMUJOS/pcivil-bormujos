@@ -1,4 +1,5 @@
 'use client'
+import { useRol } from '@/hooks/useRol'
 
 import { useState, useEffect, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
@@ -412,6 +413,7 @@ function PlantaSeparadas() {
 export default function PMAPage() {
   const { data: session } = useSession()
   const [mainTab, setMainTab] = useState<'inventario' | 'remolque' | 'despliegues' | 'ficha'>('inventario')
+  const { canEdit, canApprove } = useRol('PMA')
   const [inventoryTab, setInventoryTab] = useState<'stock' | 'peticiones' | 'movimientos'>('stock')
   const [loading, setLoading] = useState(true)
 

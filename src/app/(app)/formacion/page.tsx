@@ -1,6 +1,7 @@
 
 
-'use client';
+'use client'
+import { useRol } from '@/hooks/useRol';
 
 import React, { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
@@ -275,6 +276,7 @@ function Modal({ title, children, onClose, size = 'md' }: {
 export default function FormacionPage() {
   const { data: session } = useSession();
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const { canEdit, canApprove } = useRol('Formación')
   const [isAdmin, setIsAdmin] = useState(false);
   const [isFormacionMember, setIsFormacionMember] = useState(false);
 

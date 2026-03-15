@@ -1,4 +1,5 @@
 'use client'
+import { useRol } from '@/hooks/useRol'
 import React from 'react'
 import { useState, useEffect, useCallback } from 'react'
 import { Check, ClipboardList, 
@@ -59,6 +60,7 @@ const ZONA_COLOR: Record<string, string> = {
 
 export default function DronesPage() {
   const [tab, setTab] = useState<'inventario' | 'dashboard' | 'flota' | 'pilotos' | 'operaciones' | 'mantenimiento' | 'mapa' | 'checklist'>('inventario')
+  const { canEdit, canApprove } = useRol('Drones')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 

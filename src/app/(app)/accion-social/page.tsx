@@ -1,4 +1,5 @@
 'use client'
+import { useRol } from '@/hooks/useRol'
 
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
@@ -113,6 +114,7 @@ export default function AccionSocialPage() {
 
   // Tabs
   const [mainTab, setMainTab] = useState<'inventario' | 'espacios' | 'centros' | 'directorio' | 'viogen' | 'cuadrante'>('inventario')
+  const { canEdit, canApprove } = useRol('Acción Social')
   const [inventoryTab, setInventoryTab] = useState<'stock' | 'peticiones' | 'movimientos'>('stock')
 
   // Datos

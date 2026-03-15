@@ -1,4 +1,5 @@
 'use client'
+import { useRol } from '@/hooks/useRol'
 
 import { useState, useEffect, useCallback } from 'react'
 import dynamic from 'next/dynamic'
@@ -83,6 +84,7 @@ function NivelIndicador({ nivel }: { nivel?: string }) {
 export default function VehiculosPage() {
   const { data: session } = useSession()
   const [mainTab, setMainTab] = useState<'inventario' | 'flota' | 'documentacion' | 'localizacion'>('inventario')
+  const { canEdit, canApprove } = useRol('Vehículos')
   const [inventoryTab, setInventoryTab] = useState<'stock' | 'peticiones' | 'movimientos'>('stock')
   const [vehicleDetailTab, setVehicleDetailTab] = useState<'ficha' | 'niveles' | 'repostajes' | 'documentos' | 'mantenimiento'>('ficha')
   const [loading, setLoading] = useState(true)

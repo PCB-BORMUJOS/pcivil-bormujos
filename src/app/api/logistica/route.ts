@@ -414,6 +414,14 @@ export async function POST(request: NextRequest) {
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
+    const usuarioPost = await prisma.usuario.findUnique({
+      where: { email: session.user.email },
+      include: { rol: true }
+    })
+    const rolPost = usuarioPost?.rol?.nombre?.toLowerCase() || ''
+    if (!['superadmin', 'admin', 'coordinador'].includes(rolPost)) {
+      return NextResponse.json({ error: 'Sin permisos para crear elementos' }, { status: 403 })
+    }
 
     const body = await request.json()
     const { tipo } = body
@@ -994,6 +1002,13 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PUT(request: NextRequest) {
+  const sessionPut = await getServerSession(authOptions)
+  if (!sessionPut?.user?.email) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  const usuarioPut = await prisma.usuario.findUnique({ where: { email: sessionPut.user.email }, include: { rol: true } })
+  const rolPut = usuarioPut?.rol?.nombre?.toLowerCase() || ''
+  if (!['superadmin', 'admin', 'coordinador'].includes(rolPut)) {
+    return NextResponse.json({ error: 'Sin permisos para editar elementos' }, { status: 403 })
+  }
   const session = await getServerSession(authOptions)
   if (!session) {
     return new Response(JSON.stringify({ error: 'No autorizado' }), { status: 401 })
@@ -1240,6 +1255,13 @@ export async function PUT(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
+  const sessionDel = await getServerSession(authOptions)
+  if (!sessionDel?.user?.email) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  const usuarioDel = await prisma.usuario.findUnique({ where: { email: sessionDel.user.email }, include: { rol: true } })
+  const rolDel = usuarioDel?.rol?.nombre?.toLowerCase() || ''
+  if (!['superadmin', 'admin', 'coordinador'].includes(rolDel)) {
+    return NextResponse.json({ error: 'Sin permisos para eliminar elementos' }, { status: 403 })
+  }
   const session = await getServerSession(authOptions)
   if (!session) {
     return new Response(JSON.stringify({ error: 'No autorizado' }), { status: 401 })
