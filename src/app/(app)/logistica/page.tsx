@@ -139,6 +139,7 @@ const ICONOS_AREA: Record<string, any> = {
   'incendios': Flame,
   'eci': Shield,
   'parque-movil': Truck,
+  'vehiculos': Truck,
   'transmisiones': Radio,
   'formacion': GraduationCap,
   'pma': Tent,
