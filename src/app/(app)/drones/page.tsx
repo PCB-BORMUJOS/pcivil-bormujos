@@ -505,18 +505,70 @@ export default function DronesPage() {
                       <button onClick={() => { if(confirm('¿Eliminar piloto ' + p.nombre + ' ' + p.apellidos + '?')) { fetch('/api/drones?tipo=piloto&id=' + p.id, {method:'DELETE'}).then(r => { if(r.ok) cargarDatos() }) } }} className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500"><Trash2 size={14} /></button>
                     </div>
                   </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {Object.entries(certs).map(([cert, data]: [string, any]) => (
-                      <div key={cert} className="flex flex-col items-center bg-teal-50 border border-teal-100 rounded-lg px-2.5 py-1.5">
-                        <span className="text-[10px] font-black text-teal-700">{cert}</span>
-                        {data?.numero && <span className="text-[9px] text-teal-500">{data.numero}</span>}
-                        {data?.caducidad && <span className={`text-[9px] font-medium ${new Date(data.caducidad) < new Date() ? 'text-red-500' : 'text-slate-500'}`}>Cad: {formatFecha(data.caducidad)}</span>}
+                  {/* Certificaciones */}
+                  {(() => {
+                    // certificaciones viene como String[] con JSON dentro
+                    let certsObj: Record<string, any> = {}
+                    try {
+                      const raw = Array.isArray(p.certificaciones) ? p.certificaciones : []
+                      if (raw.length > 0) {
+                        const parsed = typeof raw[0] === 'string' ? JSON.parse(raw[0]) : raw[0]
+                        certsObj = parsed || {}
+                      }
+                    } catch { certsObj = {} }
+                    const certEntries = Object.entries(certsObj)
+                    const CERT_COLORS: Record<string, string> = {
+                      A1A3: 'bg-sky-100 border-sky-200 text-sky-800',
+                      A2:   'bg-violet-100 border-violet-200 text-violet-800',
+                      STS01: 'bg-amber-100 border-amber-200 text-amber-800',
+                      STS02: 'bg-orange-100 border-orange-200 text-orange-800',
+                    }
+                    return (
+                      <div className="space-y-3">
+                        {certEntries.length > 0 ? (
+                          <div>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Certificaciones AESA</p>
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                              {certEntries.map(([cert, data]: [string, any]) => {
+                                const vencido = data?.caducidad && new Date(data.caducidad) < new Date()
+                                const colorCls = CERT_COLORS[cert] || 'bg-teal-100 border-teal-200 text-teal-800'
+                                return (
+                                  <div key={cert} className={`rounded-xl border p-3 ${colorCls}`}>
+                                    <div className="flex items-center justify-between mb-1">
+                                      <span className="text-sm font-black">{cert}</span>
+                                      {vencido
+                                        ? <span className="text-[9px] font-bold bg-red-100 text-red-600 px-1.5 py-0.5 rounded-full">VENCIDO</span>
+                                        : <span className="text-[9px] font-bold bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full">VIGENTE</span>
+                                      }
+                                    </div>
+                                    {data?.numero && <p className="text-[10px] font-semibold opacity-80 truncate">{data.numero}</p>}
+                                    {data?.caducidad && <p className={`text-[10px] mt-0.5 font-medium ${vencido ? 'text-red-600' : 'opacity-60'}`}>Cad: {formatFecha(data.caducidad)}</p>}
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2 p-3 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+                            <AlertTriangle size={14} className="text-slate-300" />
+                            <span className="text-xs text-slate-400 italic">Sin certificaciones registradas</span>
+                          </div>
+                        )}
+                        {/* Seguro RC y contacto */}
+                        <div className="flex flex-wrap items-center gap-3 pt-1 border-t border-slate-100">
+                          {p.seguroRCNumero && (
+                            <div className="flex items-center gap-1.5">
+                              <div className={`w-2 h-2 rounded-full ${p.seguroRCVigencia && new Date(p.seguroRCVigencia) > new Date() ? 'bg-green-400' : 'bg-red-400'}`} />
+                              <span className="text-xs text-slate-600">Seguro RC: <span className="font-semibold">{p.seguroRCNumero}</span></span>
+                              {p.seguroRCVigencia && <span className="text-[10px] text-slate-400">· Hasta {formatFecha(p.seguroRCVigencia)}</span>}
+                            </div>
+                          )}
+                          {p.email && <span className="text-xs text-slate-400">{p.email}</span>}
+                          {p.telefono && <span className="text-xs text-slate-400">{p.telefono}</span>}
+                        </div>
                       </div>
-                    ))}
-                    {Object.keys(certs).length === 0 && <span className="text-xs text-slate-400 italic">Sin certificaciones registradas</span>}
-                  </div>
-                  {p.seguroRCNumero && <p className="text-xs text-slate-500">Seguro RC: <span className="font-semibold">{p.seguroRCNumero}</span> · Vigencia: {formatFecha(p.seguroRCVigencia)}</p>}
-                  {p.email && <p className="text-xs text-slate-400">{p.email} {p.telefono && `· ${p.telefono}`}</p>}
+                    )
+                  })()}
                 </div>
               )
             })}
