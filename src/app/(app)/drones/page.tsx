@@ -84,6 +84,8 @@ export default function DronesPage() {
   const [showNuevoArticulo, setShowNuevoArticulo] = useState(false)
   const [showNuevaPeticion, setShowNuevaPeticion] = useState(false)
   const [showGestionFamilias, setShowGestionFamilias] = useState(false)
+  const [showEditarArticulo, setShowEditarArticulo] = useState(false)
+  const [articuloSeleccionado, setArticuloSeleccionado] = useState<any>(null)
   const [categoriaArea, setCategoriaArea] = useState<string|null>(null)
 
   // Selección
@@ -1479,7 +1481,7 @@ export default function DronesPage() {
                         <td className="px-4 py-3 text-slate-500">{art.familia?.nombre || '-'}</td>
                         <td className="px-4 py-3 text-center"><span className={`text-lg font-bold ${art.stockActual <= art.stockMinimo ? 'text-red-600' : 'text-slate-800'}`}>{art.stockActual}</span><span className="text-slate-400 text-xs ml-1">/ {art.stockMinimo}</span></td>
                         <td className="px-4 py-3 text-center">{art.stockActual <= art.stockMinimo ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-50 text-red-700 border border-red-200"><AlertTriangle className="w-3 h-3" />Bajo</span> : <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200"><CheckCircle className="w-3 h-3" />OK</span>}</td>
-                        <td className="px-4 py-3 text-right"><button onClick={() => {}} className="p-2 text-slate-400 hover:text-teal-600 hover:bg-teal-50 rounded-lg"><Edit className="w-4 h-4" /></button></td>
+                        <td className="px-4 py-3 text-right"><button onClick={() => { setArticuloSeleccionado(art); setShowEditarArticulo(true) }} className="p-2 text-slate-400 hover:text-teal-600 hover:bg-teal-50 rounded-lg"><Edit className="w-4 h-4" /></button></td>
                       </tr>
                     ))}
                 </tbody>
@@ -1749,6 +1751,44 @@ export default function DronesPage() {
               <div className="flex justify-end gap-3 pt-2">
                 <button type="button" onClick={() => setShowNuevaPeticion(false)} className="px-4 py-2 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50">Cancelar</button>
                 <button type="submit" disabled={saving} className="px-6 py-2 bg-teal-600 text-white text-sm font-bold rounded-lg hover:bg-teal-700 disabled:opacity-50">{saving ? 'Guardando...' : 'Crear petición'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Editar Artículo */}
+      {showEditarArticulo && articuloSeleccionado && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000] p-4">
+          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl">
+            <div className="flex items-center justify-between p-6 border-b">
+              <h3 className="text-lg font-bold text-slate-900">Editar artículo</h3>
+              <button onClick={() => setShowEditarArticulo(false)}><X size={20} className="text-slate-400" /></button>
+            </div>
+            <form key={articuloSeleccionado.id} onSubmit={async e => {
+              e.preventDefault()
+              const form = e.currentTarget
+              const f = new FormData(form)
+              setSaving(true)
+              const r = await fetch('/api/logistica', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'articulo', id: articuloSeleccionado.id, nombre: f.get('nombre'), codigo: f.get('codigo'), stockActual: parseInt(f.get('stockActual') as string) || 0, stockMinimo: parseInt(f.get('stockMinimo') as string) || 0, unidad: f.get('unidad') || 'ud', familiaId: f.get('familiaId') }) })
+              setSaving(false)
+              if (r.ok) { setShowEditarArticulo(false); setArticuloSeleccionado(null); cargarInventario() }
+            }} className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2"><label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Nombre *</label><input name="nombre" required defaultValue={articuloSeleccionado.nombre} className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-400" /></div>
+                <div><label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Código</label><input name="codigo" defaultValue={articuloSeleccionado.codigo || ''} className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-400" /></div>
+                <div><label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Unidad</label><input name="unidad" defaultValue={articuloSeleccionado.unidad || 'ud'} className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-400" /></div>
+                <div><label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Stock actual</label><input name="stockActual" type="number" defaultValue={articuloSeleccionado.stockActual} className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-400" /></div>
+                <div><label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Stock mínimo</label><input name="stockMinimo" type="number" defaultValue={articuloSeleccionado.stockMinimo} className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-400" /></div>
+                <div className="col-span-2"><label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Familia</label>
+                  <select name="familiaId" defaultValue={articuloSeleccionado.familiaId} className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-400">
+                    {familias.map(f => <option key={f.id} value={f.id}>{f.nombre}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div className="flex justify-end gap-3 pt-2">
+                <button type="button" onClick={() => setShowEditarArticulo(false)} className="px-4 py-2 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50">Cancelar</button>
+                <button type="submit" disabled={saving} className="px-6 py-2 bg-teal-600 text-white text-sm font-bold rounded-lg hover:bg-teal-700 disabled:opacity-50">{saving ? 'Guardando...' : 'Guardar cambios'}</button>
               </div>
             </form>
           </div>
