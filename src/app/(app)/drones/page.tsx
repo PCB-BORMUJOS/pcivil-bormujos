@@ -1397,9 +1397,13 @@ export default function DronesPage() {
                           pathOptions={{ color: '#ef4444', fillColor: '#ef4444', fillOpacity: 0.15 }}
                         />
                       ) : (
-                        <Marker position={[notamSeleccionado.latitud, notamSeleccionado.longitud]}>
+                        <Circle
+                          center={[notamSeleccionado.latitud, notamSeleccionado.longitud]}
+                          radius={2000}
+                          pathOptions={{ color: '#ef4444', fillColor: '#ef4444', fillOpacity: 0.5, weight: 3 }}
+                        >
                           <Popup>{notamSeleccionado.referencia || 'NOTAM'}</Popup>
-                        </Marker>
+                        </Circle>
                       )}
                       {/* Punto Bormujos como referencia */}
                       <Circle center={[37.3710, -6.0719]} radius={500} pathOptions={{ color: '#3b82f6', fillColor: '#3b82f6', fillOpacity: 0.4, weight: 2 }}>
