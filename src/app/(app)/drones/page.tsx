@@ -676,14 +676,13 @@ export default function DronesPage() {
           {/* Panel detalle NOTAM seleccionado */}
           {notamSeleccionado && (() => {
             const n = notamSeleccionado
+            // Parser NOTAMs ICAO: las fechas vienen de fechaInicio/fechaFin, la descripción de itemE (n.descripcion)
             const rawDesc = (n.descripcionHtml || n.descripcion || '')
-            const descLimpia = rawDesc.replace(/<br\s*\/?>/gi, ' | ').replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s{2,}/g, ' ').trim()
-            const partes = descLimpia.split(' | ').map((s: string) => s.trim()).filter(Boolean)
-            const findPart = (key: string) => { const p = partes.find((s: string) => s.toUpperCase().startsWith(key.toUpperCase() + ':')); return p ? p.slice(key.length + 1).trim() : null }
-            const desde = findPart('DESDE') || (n.fechaInicio ? new Date(n.fechaInicio).toLocaleString('es-ES', {dateStyle:'short',timeStyle:'short'}) : null)
-            const hasta = findPart('HASTA') || (n.fechaFin ? new Date(n.fechaFin).toLocaleString('es-ES', {dateStyle:'short',timeStyle:'short'}) : null)
-            const horario = findPart('HORARIO')
-            const descripcionFinal = findPart('DESCRIPCIÓN') || findPart('DESCRIPCION') || partes.filter((s: string) => !s.match(/^(DESDE|HASTA|HORARIO)/i)).join(' ').slice(0, 500)
+            const descLimpia = rawDesc.replace(/<br\s*\/?>/gi, ' ').replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s{2,}/g, ' ').trim()
+            const desde = n.fechaInicio ? new Date(n.fechaInicio).toLocaleString('es-ES', {dateStyle:'short',timeStyle:'short'}) : null
+            const hasta = n.fechaFin ? new Date(n.fechaFin).toLocaleString('es-ES', {dateStyle:'short',timeStyle:'short'}) : null
+            const horario: string | null = null
+            const descripcionFinal = descLimpia || 'Sin descripción disponible'
             const hoy = n.fechaFin && new Date(n.fechaFin) < new Date(Date.now() + 24*3600*1000)
             return (
               <div className="bg-white rounded-xl border border-teal-200 overflow-hidden">
