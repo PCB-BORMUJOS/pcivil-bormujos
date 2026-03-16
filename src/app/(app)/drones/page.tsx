@@ -920,7 +920,7 @@ export default function DronesPage() {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4 pt-4 border-t border-slate-100">
                 <div>
                   <label className="text-[10px] font-bold text-slate-400 uppercase">Piloto al mando</label>
-                  <input value={piloCheck} onChange={e => setPiloCheck(e.target.value)} placeholder="Nombre del piloto" className="mt-1 w-full text-xs border border-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-teal-400" />
+                  <select value={piloCheck} onChange={e => setPiloCheck(e.target.value)} className="mt-1 w-full text-xs border border-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-teal-400"><option value="">Seleccionar piloto...</option>{pilotos.map(p => <option key={p.id} value={`${p.nombre} ${p.apellidos}`}>{p.nombre} {p.apellidos}{p.externo ? " (externo)" : ""}</option>)}</select>
                 </div>
                 <div>
                   <label className="text-[10px] font-bold text-slate-400 uppercase">Aeronave</label>
@@ -1028,7 +1028,7 @@ export default function DronesPage() {
                 </div>
                 {aptoVuelo && (
                   <button
-                    onClick={() => alert('Checklist guardado. Puedes proceder al registro del vuelo.')}
+                    onClick={() => { if (!droneCheck) { alert('Selecciona una aeronave'); return }; setShowChecklist(false); setShowNuevoVuelo(true) }}
                     className="flex items-center gap-2 px-5 py-2.5 bg-green-600 text-white text-sm font-bold rounded-lg hover:bg-green-700"
                   >
                     <ClipboardList size={15} />Confirmar y registrar vuelo
@@ -1618,6 +1618,137 @@ export default function DronesPage() {
               <div className="flex justify-end gap-3 pt-2">
                 <button type="button" onClick={() => setShowNuevaBateria(false)} className="px-4 py-2 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50">Cancelar</button>
                 <button type="submit" disabled={saving} className="px-6 py-2 bg-teal-600 text-white text-sm font-bold rounded-lg hover:bg-teal-700 disabled:opacity-50">{saving ? 'Guardando...' : 'Añadir batería'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Nuevo Artículo */}
+      {showNuevoArticulo && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000] p-4">
+          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl">
+            <div className="flex items-center justify-between p-6 border-b">
+              <h3 className="text-lg font-bold text-slate-900">Nuevo artículo</h3>
+              <button onClick={() => setShowNuevoArticulo(false)}><X size={20} className="text-slate-400" /></button>
+            </div>
+            <form onSubmit={async e => {
+              e.preventDefault()
+              const form = e.currentTarget
+              const f = new FormData(form)
+              setSaving(true)
+              const r = await fetch('/api/logistica', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'articulo', nombre: f.get('nombre'), codigo: f.get('codigo'), stockActual: parseInt(f.get('stockActual') as string) || 0, stockMinimo: parseInt(f.get('stockMinimo') as string) || 0, unidad: f.get('unidad') || 'ud', familiaId: f.get('familiaId'), servicioId: 'default' }) })
+              setSaving(false)
+              if (r.ok) { setShowNuevoArticulo(false); cargarInventario() }
+            }} className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2"><label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Nombre *</label><input name="nombre" required className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-400" /></div>
+                <div><label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Código</label><input name="codigo" className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-400" /></div>
+                <div><label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Unidad</label><input name="unidad" defaultValue="ud" className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-400" /></div>
+                <div><label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Stock actual</label><input name="stockActual" type="number" defaultValue="0" className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-400" /></div>
+                <div><label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Stock mínimo</label><input name="stockMinimo" type="number" defaultValue="0" className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-400" /></div>
+                <div className="col-span-2"><label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Familia *</label>
+                  <select name="familiaId" required className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-400">
+                    <option value="">Seleccionar familia...</option>
+                    {familias.map(f => <option key={f.id} value={f.id}>{f.nombre}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div className="flex justify-end gap-3 pt-2">
+                <button type="button" onClick={() => setShowNuevoArticulo(false)} className="px-4 py-2 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50">Cancelar</button>
+                <button type="submit" disabled={saving} className="px-6 py-2 bg-teal-600 text-white text-sm font-bold rounded-lg hover:bg-teal-700 disabled:opacity-50">{saving ? 'Guardando...' : 'Crear artículo'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Gestión Familias */}
+      {showGestionFamilias && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000] p-4">
+          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl">
+            <div className="flex items-center justify-between p-6 border-b">
+              <h3 className="text-lg font-bold text-slate-900">Gestión de familias</h3>
+              <button onClick={() => setShowGestionFamilias(false)}><X size={20} className="text-slate-400" /></button>
+            </div>
+            <div className="p-6 space-y-4">
+              <form onSubmit={async e => {
+                e.preventDefault()
+                const form = e.currentTarget
+                const f = new FormData(form)
+                const nombre = f.get('nombre') as string
+                if (!nombre?.trim() || !categoriaArea) return
+                setSaving(true)
+                const r = await fetch('/api/logistica', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'familia', nombre: nombre.trim(), categoriaId: categoriaArea }) })
+                setSaving(false)
+                if (r.ok) { form.reset(); cargarInventario() }
+              }} className="flex gap-2">
+                <input name="nombre" placeholder="Nombre de la nueva familia..." className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-400" />
+                <button type="submit" disabled={saving} className="px-4 py-2 bg-teal-600 text-white text-sm font-bold rounded-lg hover:bg-teal-700 disabled:opacity-50">Añadir</button>
+              </form>
+              <div className="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden">
+                {familias.length === 0 ? <p className="text-center py-8 text-slate-400 text-sm">No hay familias creadas</p>
+                : familias.map(fam => (
+                  <div key={fam.id} className="flex items-center justify-between px-4 py-3">
+                    <div>
+                      <p className="text-sm font-medium text-slate-800">{fam.nombre}</p>
+                      <p className="text-xs text-slate-400">{articulos.filter(a => a.familiaId === fam.id).length} artículos</p>
+                    </div>
+                    <button onClick={async () => {
+                      if (articulos.filter(a => a.familiaId === fam.id).length > 0) { alert('No se puede eliminar una familia con artículos'); return }
+                      if (!confirm('¿Eliminar esta familia?')) return
+                      await fetch(`/api/logistica?tipo=familia&id=${fam.id}`, { method: 'DELETE' })
+                      cargarInventario()
+                    }} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg"><X size={14} /></button>
+                  </div>
+                ))}
+              </div>
+              <div className="flex justify-end">
+                <button onClick={() => setShowGestionFamilias(false)} className="px-4 py-2 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50">Cerrar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Nueva Petición */}
+      {showNuevaPeticion && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000] p-4">
+          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl">
+            <div className="flex items-center justify-between p-6 border-b">
+              <h3 className="text-lg font-bold text-slate-900">Nueva petición</h3>
+              <button onClick={() => setShowNuevaPeticion(false)}><X size={20} className="text-slate-400" /></button>
+            </div>
+            <form onSubmit={async e => {
+              e.preventDefault()
+              const form = e.currentTarget
+              const f = new FormData(form)
+              setSaving(true)
+              const r = await fetch('/api/logistica', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'peticion', nombreArticulo: f.get('nombreArticulo'), cantidad: parseInt(f.get('cantidad') as string) || 1, unidad: f.get('unidad') || 'ud', prioridad: f.get('prioridad') || 'normal', descripcion: f.get('descripcion'), areaOrigen: 'drones' }) })
+              setSaving(false)
+              if (r.ok) { setShowNuevaPeticion(false); cargarInventario() }
+            }} className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2"><label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Material solicitado *</label>
+                  <select name="nombreArticulo" required className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-400">
+                    <option value="">Seleccionar artículo...</option>
+                    {articulos.map(a => <option key={a.id} value={a.nombre}>{a.nombre} (stock: {a.stockActual})</option>)}
+                  </select>
+                </div>
+                <div><label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Cantidad *</label><input name="cantidad" type="number" min="1" defaultValue="1" required className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-400" /></div>
+                <div><label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Prioridad</label>
+                  <select name="prioridad" className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-400">
+                    <option value="baja">Baja</option>
+                    <option value="normal" selected>Normal</option>
+                    <option value="alta">Alta</option>
+                    <option value="urgente">Urgente</option>
+                  </select>
+                </div>
+                <div className="col-span-2"><label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Motivo</label><textarea name="descripcion" rows={2} className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-400" /></div>
+              </div>
+              <div className="flex justify-end gap-3 pt-2">
+                <button type="button" onClick={() => setShowNuevaPeticion(false)} className="px-4 py-2 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50">Cancelar</button>
+                <button type="submit" disabled={saving} className="px-6 py-2 bg-teal-600 text-white text-sm font-bold rounded-lg hover:bg-teal-700 disabled:opacity-50">{saving ? 'Guardando...' : 'Crear petición'}</button>
               </div>
             </form>
           </div>
