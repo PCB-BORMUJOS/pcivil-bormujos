@@ -639,7 +639,7 @@ export default function DronesPage() {
                 {/* NOTAMs ENAIRE */}
                 {notams.filter(n => n.latitud && n.longitud).map(n => {
                   const hoy = n.fechaFin && new Date(n.fechaFin) < new Date(Date.now() + 24*3600*1000)
-                  const sel = notamSeleccionado?.id === n.id
+                  const sel = notamSeleccionado?.referencia === n.referencia
                   const color = sel ? '#7c3aed' : hoy ? '#f59e0b' : '#ef4444'
                   return (
                     <Circle
@@ -746,7 +746,7 @@ export default function DronesPage() {
                 {notams.map(n => {
                   const hoy = n.fechaFin && new Date(n.fechaFin) < new Date(Date.now() + 24*3600*1000)
                   const vencido = n.fechaFin && new Date(n.fechaFin) < new Date()
-                  const sel = notamSeleccionado?.id === n.id
+                  const sel = notamSeleccionado?.referencia === n.referencia
                   const rawD = (n.descripcionHtml || n.descripcion || '').replace(/<[^>]*>/g, ' ').replace(/\s{2,}/g, ' ').trim()
                   return (
                     <div
