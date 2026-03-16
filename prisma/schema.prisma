@@ -71,7 +71,7 @@ model Rol {
   descripcion String?
   permisos    Json
   createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
+  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at")
   usuarios    Usuario[]
 
   @@map("roles")
@@ -342,7 +342,7 @@ model Incidencia {
   asignadoId  String?   @map("asignado_id")
   servicioId  String    @map("servicio_id")
   createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
+  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at")
   asignado    Usuario?  @relation("IncidenciaAsignado", fields: [asignadoId], references: [id])
   creador     Usuario   @relation("IncidenciaCreador", fields: [creadorId], references: [id])
   servicio    Servicio  @relation(fields: [servicioId], references: [id])
@@ -1737,15 +1737,15 @@ model PilotoDrone {
 model Vuelo {
   id              String          @id @default(cuid())
   numero          String          @unique
-  droneId         String
+  droneId         String          @default("")
   drone           Drone           @relation(fields: [droneId], references: [id])
-  pilotoId        String
+  pilotoId        String          @default("")
   piloto          PilotoDrone     @relation(fields: [pilotoId], references: [id])
   fecha           DateTime
   horaInicio      String?
   horaFin         String?
   duracionMinutos Int?
-  tipoOperacion   String
+  tipoOperacion   String          @default("reconocimiento")
   municipio       String          @default("Bormujos")
   descripcionZona String?
   latitudInicio   Float?
@@ -1776,7 +1776,7 @@ model ChecklistVuelo {
 
 model MantenimientoDrone {
   id              String    @id @default(cuid())
-  droneId         String
+  droneId         String    @default("")
   drone           Drone     @relation(fields: [droneId], references: [id])
   tipo            String
   descripcion     String
