@@ -239,7 +239,7 @@ export async function PUT(request: NextRequest) {
     if (tipo === 'piloto') {
       const certs = data.certificaciones
       const piloto = await prisma.pilotoDrone.update({
-        where: { id: data.id },
+        where: { id: id },
         data: {
           nombre: data.nombre, apellidos: data.apellidos,
           email: data.email, telefono: data.telefono,
