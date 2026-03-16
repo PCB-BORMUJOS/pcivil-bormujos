@@ -9,7 +9,7 @@ import {
   Package, Search, AlertTriangle, Plus, TrendingUp, TrendingDown, 
   BarChart3, Calendar, MapPin, Trash2, Eye, X, RefreshCw, ArrowUpDown, Pencil, Archive,
   AlertCircle, CheckCircle, Clock, Box, ChevronDown, ChevronRight, ChevronUp, ExternalLink,
-  Flame, Heart, Truck, Radio, GraduationCap, Shirt, Shield, Layers, Tent, HeartHandshake,
+  Flame, Heart, Truck, Radio, GraduationCap, BookOpen, Shirt, Shield, Layers, Tent, HeartHandshake,
   ClipboardList, ShoppingCart, Check, FileText, FileCheck, Send, Ban,
   History, User, Building, Receipt, Filter, Users, Tag
 } from 'lucide-react';
