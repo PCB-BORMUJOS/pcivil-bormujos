@@ -2,135 +2,178 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 
+// ─── ENAIRE APIs públicas sin autenticación ───────────────────────────────────
+// 1. NOTAMs activos (ÍCARO): https://servais.enaire.es/insignias/rest/services/InfoARES/NOTAM_APP_V3/FeatureServer
+// 2. Zonas UAS RD517/2024:   https://servais.enaire.es/insignia/rest/services/NSF_SRV/SRV_UAS_ZG_V1/FeatureServer
+// 3. Espacio aéreo VIGOR:    https://servais.enaire.es/insignia/rest/services/INSIGNIA_SRV/Aero_SRV_VIGOR_V1/MapServer
+// ─────────────────────────────────────────────────────────────────────────────
+
+const NOTAM_BASE = 'https://servais.enaire.es/insignias/rest/services/InfoARES/NOTAM_APP_V3/FeatureServer'
+const UAS_BASE   = 'https://servais.enaire.es/insignia/rest/services/NSF_SRV/SRV_UAS_ZG_V1/FeatureServer'
+const VIGOR_BASE = 'https://servais.enaire.es/insignia/rest/services/INSIGNIA_SRV/Aero_SRV_VIGOR_V1/MapServer'
+
+// BBox 30km alrededor de Bormujos en WGS84
+const BBOX = '-6.4319,37.0710,-5.7119,37.6710'
+
+function buildQuery(base: string, layer: number, extra: Record<string, string> = {}): string {
+  const p = new URLSearchParams({
+    where: '1=1', outFields: '*',
+    geometry: BBOX, geometryType: 'esriGeometryEnvelope',
+    inSR: '4326', spatialRel: 'esriSpatialRelIntersects',
+    outSR: '4326', f: 'json', resultRecordCount: '100',
+    ...extra
+  })
+  return `${base}/${layer}/query?${p.toString()}`
+}
+
+function parseNum(v: any): number | null {
+  if (v == null || v === '') return null
+  const n = parseFloat(String(v).replace(/[^0-9.]/g, ''))
+  return isNaN(n) ? null : n
+}
+
+function parseFecha(v: any): string | null {
+  if (!v) return null
+  if (typeof v === 'number') return new Date(v).toISOString()
+  if (typeof v === 'string' && /^\d{12,14}$/.test(v))
+    return new Date(`${v.slice(0,4)}-${v.slice(4,6)}-${v.slice(6,8)}T${v.slice(8,10)}:${v.slice(10,12)}:00Z`).toISOString()
+  try { return new Date(v).toISOString() } catch { return null }
+}
+
+function getCoordsFromFeature(f: any): { lat: number|null, lon: number|null, radio: number|null } {
+  const g = f.geometry
+  if (!g) return { lat: null, lon: null, radio: null }
+  if (g.x !== undefined) return { lat: g.y, lon: g.x, radio: null }
+  if (g.rings?.[0]) {
+    const r = g.rings[0]
+    const lons = r.map((p: number[]) => p[0])
+    const lats = r.map((p: number[]) => p[1])
+    const lat = (Math.min(...lats) + Math.max(...lats)) / 2
+    const lon = (Math.min(...lons) + Math.max(...lons)) / 2
+    const radio = Math.round(Math.max(
+      (Math.max(...lons) - Math.min(...lons)) * 111 * Math.cos(lat * Math.PI / 180),
+      (Math.max(...lats) - Math.min(...lats)) * 111
+    ) / 2 * 10) / 10
+    return { lat, lon, radio }
+  }
+  return { lat: null, lon: null, radio: null }
+}
+
+function parsearNotam(feature: any): any {
+  const a = feature.attributes || {}
+  const { lat, lon, radio } = getCoordsFromFeature(feature)
+  const ref = a.notamId ||
+    (a.notamSerie && a.notamNumber
+      ? `${a.notamSerie}${a.notamNumber}/${String(a.notamYear || '').slice(-2)}`
+      : `NOTAM-${String(a.OBJECTID || Math.random().toString(36).slice(2,8)).toUpperCase()}`)
+  const textoCompleto = a.icaoFormatText || a.DESCRIPTION || a.itemE || ''
+  return {
+    referencia: ref,
+    tipo: String(a.qcode || a.incidenceType || a.scope || a.itemA || 'AERÓDROMO').trim(),
+    estado: 'activo',
+    descripcion: String(a.itemE || a.DESCRIPTION || textoCompleto.slice(0,500) || 'Sin descripción').replace(/\s+/g,' ').trim(),
+    descripcionHtml: textoCompleto,
+    atributosRaw: JSON.stringify(a),
+    fechaInicio: parseFecha(a.itemB || a.itemBIcaro || a.icaroCreationTime),
+    fechaFin: parseFecha(a.itemC || a.itemCIcaro),
+    alturaMin: parseNum(a.itemF || a.LOWER_VAL || a.LOWER_VAL_AGL),
+    alturaMax: parseNum(a.itemG || a.UPPER_VAL),
+    radio, latitud: lat, longitud: lon,
+    fuente: 'ENAIRE', activo: true,
+  }
+}
+
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
-  const { searchParams } = new URL(request.url)
-  const lat = searchParams.get('lat') || '37.3710'
-  const lon = searchParams.get('lon') || '-6.0719'
-  const radius = searchParams.get('radius') || '30'
+  const tipo = new URL(request.url).searchParams.get('tipo') || 'notams'
 
-  try {
-    // ENAIRE NOTAMs via ICAO NOTAM Search API (free, no key required for basic)
-    const icaoUrl = `https://applications.icao.int/dataservices/api/notams?api_key=web-arrived&airports=LEZL,LEMD,LEBB&criticality=0&lastUpdated=false&format=json`
-    
-    let notams: any[] = []
-    
-    try {
-      const res = await fetch(icaoUrl, { 
-        headers: { 'Accept': 'application/json' },
-        signal: AbortSignal.timeout(8000)
-      })
-      
-      if (res.ok) {
-        const data = await res.json()
-        const items = Array.isArray(data) ? data : (data.items || data.notams || [])
-        
-        notams = items.map((n: any) => ({
-          id: n.id || n.notamId || `notam-${Math.random().toString(36).slice(2)}`,
-          referencia: n.notamNumber || n.id || 'N/A',
-          tipo: n.type || n.classification || 'AERÓDROMO',
-          estado: 'activo',
-          icao: n.icaoLocation || n.location || 'LEZL',
-          descripcion: n.message || n.description || n.text || '',
-          descripcionHtml: n.message || n.description || '',
-          fechaInicio: n.startValidity || n.effectiveStart || null,
-          fechaFin: n.endValidity || n.effectiveEnd || null,
-          alturaMin: n.lowerLimit ? parseFloat(n.lowerLimit) : null,
-          alturaMax: n.upperLimit ? parseFloat(n.upperLimit) : null,
-          latitud: parseFloat(lat),
-          longitud: parseFloat(lon),
-          fuente: 'enaire',
-          activo: true,
-        }))
-      }
-    } catch (icaoError) {
-      console.log('ICAO API no disponible, usando ENAIRE directo')
-    }
-
-    // Si ICAO falla, intentar ENAIRE directo
-    if (notams.length === 0) {
+  // ── 1. NOTAMs activos (por defecto) ──────────────────────────────────────
+  if (tipo === 'notams') {
+    const notamsParsed: any[] = []
+    for (const capa of [0, 1]) {
       try {
-        const enaire = await fetch(
-          `https://notamweb.enaire.es/NOTAM/RecuperarNOTAMsVigentes?icao=LEZL`,
-          { 
-            headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
-            signal: AbortSignal.timeout(8000)
+        const res = await fetch(buildQuery(NOTAM_BASE, capa), {
+          headers: { Accept: 'application/json' },
+          signal: AbortSignal.timeout(10000)
+        })
+        if (res.ok) {
+          const data = await res.json()
+          if (!data.error) {
+            console.log(`ENAIRE NOTAM capa ${capa}: ${(data.features||[]).length} features`)
+            for (const f of (data.features || [])) notamsParsed.push(parsearNotam(f))
           }
-        )
-        if (enaire.ok) {
-          const data = await enaire.json()
-          const items = data.notams || data.data || []
-          notams = items.map((n: any) => ({
-            id: n.id || `enaire-${Math.random().toString(36).slice(2)}`,
-            referencia: n.numero || n.id || 'N/A',
-            tipo: n.tipo || 'AERÓDROMO',
-            estado: 'activo',
-            icao: n.icao || 'LEZL',
-            descripcion: n.texto || n.mensaje || '',
-            fechaInicio: n.fechaInicio || null,
-            fechaFin: n.fechaFin || null,
-            alturaMin: n.alturaMin || null,
-            alturaMax: n.alturaMax || null,
-            latitud: parseFloat(lat),
-            longitud: parseFloat(lon),
-            fuente: 'enaire',
-            activo: true,
-          }))
         }
-      } catch (enaireError) {
-        console.log('ENAIRE directo tampoco disponible')
-      }
+      } catch (e) { console.warn(`Error NOTAM capa ${capa}:`, e) }
     }
-
-    // Si ninguna fuente externa funciona, devolver NOTAMs de ejemplo para la zona
-    if (notams.length === 0) {
-      notams = [
-        {
-          id: 'demo-1',
-          referencia: 'A0001/26',
-          tipo: 'ESPACIO AÉREO',
-          estado: 'activo',
-          icao: 'LEZL',
-          descripcion: 'ZONA DE ESPACIO AÉREO RESTRINGIDO EN TORNO AL AEROPUERTO DE SEVILLA. ALTURA MÁXIMA 500FT AGL. CONSULTAR NOTAM COMPLETO EN ENAIRE.',
-          fechaInicio: new Date().toISOString(),
-          fechaFin: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-          alturaMin: 0,
-          alturaMax: 500,
-          latitud: 37.4180,
-          longitud: -5.8931,
-          fuente: 'demo',
-          activo: true,
-        },
-        {
-          id: 'demo-2',
-          referencia: 'A0002/26',
-          tipo: 'AERÓDROMO',
-          estado: 'activo',
-          icao: 'LEMD',
-          descripcion: 'OPERACIONES CON RPAS PROHIBIDAS EN RADIO DE 8KM DEL AEROPUERTO SIN AUTORIZACIÓN AESA.',
-          fechaInicio: new Date().toISOString(),
-          fechaFin: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-          alturaMin: 0,
-          alturaMax: 1000,
-          latitud: parseFloat(lat),
-          longitud: parseFloat(lon),
-          fuente: 'demo',
-          activo: true,
-        }
-      ]
-    }
-
-    return NextResponse.json({ 
-      notams,
-      fuente: notams[0]?.fuente || 'demo',
-      total: notams.length,
+    return NextResponse.json({
+      notams: notamsParsed,
+      total: notamsParsed.length,
+      fuente: notamsParsed.length > 0 ? 'ENAIRE-LIVE' : 'SIN-DATOS',
       consultadoEn: new Date().toISOString()
     })
-
-  } catch (error) {
-    console.error('Error proxy NOTAMs:', error)
-    return NextResponse.json({ error: 'Error consultando NOTAMs', notams: [] }, { status: 500 })
   }
+
+  // ── 2. Zonas Geográficas UAS (RD 517/2024) ────────────────────────────────
+  if (tipo === 'zonas-uas') {
+    const capas = [
+      { id: 0, tipo: 'aerodromo',      color: '#ef4444', label: 'Aeródromo/CTR' },
+      { id: 1, tipo: 'medioambiente',  color: '#22c55e', label: 'Medioambiente' },
+      { id: 2, tipo: 'urbano',         color: '#f97316', label: 'Urbano' },
+    ]
+    const zonas: any[] = []
+    for (const capa of capas) {
+      try {
+        const res = await fetch(buildQuery(UAS_BASE, capa.id), { signal: AbortSignal.timeout(8000) })
+        if (res.ok) {
+          const data = await res.json()
+          for (const f of (data.features || [])) {
+            const a = f.attributes || {}
+            const coordenadas = f.geometry?.rings?.[0]?.map((p: number[]) => [p[1], p[0]]) || []
+            zonas.push({
+              id: `uas-${capa.tipo}-${a.OBJECTID || Math.random().toString(36).slice(2,8)}`,
+              nombre: a.NOMBRE || a.NAME || a.designator || `Zona ${capa.label}`,
+              tipo: capa.tipo,
+              color: capa.color,
+              descripcion: a.DESCRIPTION || capa.label,
+              alturaMaxima: parseNum(a.UPPER_LIMIT || a.upper_limit),
+              coordenadas,
+              fuente: 'ENAIRE-UAS'
+            })
+          }
+        }
+      } catch (e) { console.warn(`Error UAS capa ${capa.tipo}:`, e) }
+    }
+    return NextResponse.json({ zonas, total: zonas.length, fuente: 'ENAIRE-UAS', consultadoEn: new Date().toISOString() })
+  }
+
+  // ── 3. Aeródromos y espacio aéreo (VIGOR) ────────────────────────────────
+  if (tipo === 'aerodromes') {
+    const aerodromes: any[] = []
+    try {
+      // Capa 3 = Aeródromos en VIGOR
+      const res = await fetch(buildQuery(VIGOR_BASE, 3), { signal: AbortSignal.timeout(8000) })
+      if (res.ok) {
+        const data = await res.json()
+        for (const f of (data.features || [])) {
+          const a = f.attributes || {}
+          const g = f.geometry
+          if (!g) continue
+          aerodromes.push({
+            id: `ad-${a.OBJECTID || a.ICAO_CODE}`,
+            nombre: a.NOMBRE || a.NAME || a.ICAO_CODE || 'Aeródromo',
+            icao: a.ICAO_CODE || a.DESIGNATOR || '',
+            tipo: a.TIPO || a.TYPE || 'aeropuerto',
+            latitud: g.y ?? null,
+            longitud: g.x ?? null,
+            fuente: 'ENAIRE-VIGOR'
+          })
+        }
+      }
+    } catch (e) { console.warn('Error VIGOR aeródromos:', e) }
+    return NextResponse.json({ aerodromes, total: aerodromes.length, fuente: 'ENAIRE-VIGOR', consultadoEn: new Date().toISOString() })
+  }
+
+  return NextResponse.json({ error: 'Tipo no válido. Usar: notams | zonas-uas | aerodromes' }, { status: 400 })
 }
