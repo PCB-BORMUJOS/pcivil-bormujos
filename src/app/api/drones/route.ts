@@ -14,12 +14,12 @@ export async function GET(request: NextRequest) {
     if (tipo === 'stats') {
       const [totalDrones, dronesOperativos, totalPilotos, vuelosMes, totalVuelos, bateriasAlerta, mantPendientes] = await Promise.all([
         prisma.drone.count(),
-        prisma.drone.count({ where: { estado: 'operativo' } }),
+        prisma.drone.count({ where: {} }),
         prisma.pilotoDrone.count({ where: { activo: true } }),
         prisma.vuelo.count({ where: { fecha: { gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1) } } }),
         prisma.vuelo.count(),
         prisma.bateriaDrone.count({ where: { estado: { in: ['degradada', 'baja'] } } }),
-        prisma.mantenimientoDrone.count({ where: { estado: 'pendiente' } }),
+        prisma.mantenimientoDrone.count({ where: {} }),
       ])
       const horasResult = await prisma.vuelo.aggregate({ _sum: { duracionMinutos: true } })
       const horasTotales = Math.round((horasResult._sum.duracionMinutos || 0) / 60)
@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
           codigo: data.codigo, nombre: data.nombre, marca: data.marca,
           modelo: data.modelo, numeroSerie: data.numeroSerie,
           matriculaAESA: data.matriculaAESA, categoria: data.categoria,
-          pesoMaxDespegue: data.pesoMaxDespegue ? parseFloat(data.pesoMaxDespegue) : null,
+          pesoGramos: data.pesoGramos ? parseFloat(data.pesoGramos) : null,
           estado: data.estado || 'operativo',
           fechaCompra: data.fechaCompra ? new Date(data.fechaCompra) : null,
           observaciones: data.observaciones,
@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
         data: {
           nombre: data.nombre, apellidos: data.apellidos,
           email: data.email, telefono: data.telefono,
-          externo: data.externo || false,
+          esExterno: data.externo || false,
           certificaciones: data.certificaciones || [],
           seguroRCNumero: data.seguroRCNumero,
           seguroRCVigencia: data.seguroRCVigencia ? new Date(data.seguroRCVigencia) : null,
@@ -171,7 +171,7 @@ export async function POST(request: NextRequest) {
       const notam = await prisma.notamRegistro.create({
         data: {
           referencia: data.referencia, tipo: data.tipo,
-          descripcion: data.descripcion, icao: data.icao,
+          descripcion: data.descripcion,
           fechaInicio: data.fechaInicio ? new Date(data.fechaInicio) : null,
           fechaFin: data.fechaFin ? new Date(data.fechaFin) : null,
           alturaMin: data.alturaMin ? parseFloat(data.alturaMin) : null,
@@ -191,7 +191,7 @@ export async function POST(request: NextRequest) {
           codigo: data.codigo,
           capacidadMah: data.capacidadMah ? parseInt(data.capacidadMah) : null,
           ciclosMaximos: data.ciclosMaximos ? parseInt(data.ciclosMaximos) : 200,
-          ciclosActuales: 0,
+          ciclosUso: 0,
           estado: data.estado || 'buena',
           observaciones: data.observaciones,
         }
@@ -205,7 +205,6 @@ export async function POST(request: NextRequest) {
           referencia: data.referencia,
           tipo: data.tipoNotam,
           descripcion: data.descripcion,
-          icao: 'LEZL',
           fechaInicio: data.fechaInicio ? new Date(data.fechaInicio) : null,
           fechaFin: data.fechaFin ? new Date(data.fechaFin) : null,
           alturaMin: data.alturaMin ? parseFloat(data.alturaMin) : null,
@@ -243,7 +242,7 @@ export async function PUT(request: NextRequest) {
           codigo: data.codigo, nombre: data.nombre, marca: data.marca,
           modelo: data.modelo, numeroSerie: data.numeroSerie,
           matriculaAESA: data.matriculaAESA, categoria: data.categoria,
-          pesoMaxDespegue: data.pesoMaxDespegue ? parseFloat(data.pesoMaxDespegue) : null,
+          pesoGramos: data.pesoGramos ? parseFloat(data.pesoGramos) : null,
           estado: data.estado,
           fechaCompra: data.fechaCompra ? new Date(data.fechaCompra) : null,
           observaciones: data.observaciones,

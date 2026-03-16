@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useSession, signOut } from 'next-auth/react'
 import { cn } from '@/lib/utils'
+import { TbDrone as GiDeliveryDrone } from 'react-icons/tb'
 import {
   LayoutDashboard,
   Calendar,
@@ -53,6 +54,7 @@ const navigation: NavItem[] = [
   { name: 'PMA', href: '/pma', icon: AlertTriangle },
   { name: 'Formación', href: '/formacion', icon: GraduationCap },
   { name: 'Acción Social', href: '/accion-social', icon: Users },
+  { name: "Drones", href: "/drones", icon: GiDeliveryDrone },
   { name: 'Gestión Económica', href: '/presupuesto', icon: Wallet, adminOnly: true },
   { name: 'Configuración', href: '/configuracion', icon: Settings, adminOnly: true },
   {

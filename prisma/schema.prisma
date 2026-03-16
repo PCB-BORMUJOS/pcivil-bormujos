@@ -1675,3 +1675,151 @@ model InformeDietas {
   partida           PartidaPresupuestaria? @relation(fields: [partidaId], references: [id])
   @@map("informes_dietas")
 }
+
+model Drone {
+  id             String              @id @default(cuid())
+  codigo         String              @unique
+  nombre         String?
+  marca          String
+  modelo         String
+  numeroSerie    String?
+  matriculaAESA  String?
+  categoria      String              @default("A1")
+  pesoGramos     Int?
+  estado         String              @default("operativo")
+  horasVuelo     Float               @default(0)
+  totalVuelos    Int                 @default(0)
+  notas          String?
+  fechaCompra    DateTime?
+  observaciones  String?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  baterias       BateriaDrone[]
+  vuelos         Vuelo[]
+  mantenimientos MantenimientoDrone[]
+  @@map("drones")
+}
+
+model BateriaDrone {
+  id            String   @id @default(cuid())
+  droneId       String
+  drone         Drone    @relation(fields: [droneId], references: [id])
+  codigo        String
+  capacidadMah  Int?
+  ciclosUso     Int      @default(0)
+  ciclosMaximos Int      @default(300)
+  estado        String   @default("operativa")
+  observaciones String?
+  createdAt     DateTime @default(now())
+  @@map("baterias_drone")
+}
+
+model PilotoDrone {
+  id                String      @id @default(cuid())
+  nombre            String
+  apellidos         String
+  email             String?
+  telefono          String?
+  licenciaAESA      String?
+  certificaciones   String[]
+  seguroRC          String?
+  seguroRCNumero    String?
+  seguroRCVigencia  DateTime?
+  seguroVencimiento DateTime?
+  observaciones     String?
+  esExterno         Boolean     @default(false)
+  activo            Boolean     @default(true)
+  createdAt         DateTime    @default(now())
+  vuelos            Vuelo[]
+  @@map("pilotos_drone")
+}
+
+model Vuelo {
+  id              String          @id @default(cuid())
+  numero          String          @unique
+  droneId         String
+  drone           Drone           @relation(fields: [droneId], references: [id])
+  pilotoId        String
+  piloto          PilotoDrone     @relation(fields: [pilotoId], references: [id])
+  fecha           DateTime
+  horaInicio      String?
+  horaFin         String?
+  duracionMinutos Int?
+  tipoOperacion   String
+  municipio       String          @default("Bormujos")
+  descripcionZona String?
+  latitudInicio   Float?
+  longitudInicio  Float?
+  alturaMaxima    Float?
+  condicionesMeteo Json?
+  notamConsultado Boolean         @default(false)
+  notamReferencia String?
+  incidencias     String?
+  observaciones   String?
+  estado          String          @default("completado")
+  createdAt       DateTime        @default(now())
+  checklist       ChecklistVuelo?
+  @@map("vuelos")
+}
+
+model ChecklistVuelo {
+  id         String   @id @default(cuid())
+  vueloId    String   @unique
+  vuelo      Vuelo    @relation(fields: [vueloId], references: [id])
+  items      Json
+  completado Boolean  @default(false)
+  firmadoPor String?
+  observaciones String?
+  createdAt  DateTime @default(now())
+  @@map("checklists_vuelo")
+}
+
+model MantenimientoDrone {
+  id              String    @id @default(cuid())
+  droneId         String
+  drone           Drone     @relation(fields: [droneId], references: [id])
+  tipo            String
+  descripcion     String
+  fecha           DateTime
+  proximaRevision DateTime?
+  realizadoPor        String?
+  coste               Float?
+  horasEnElMomento    Float?
+  piezasSustituidas   String?
+  proximoMantenimiento DateTime?
+  observaciones       String?
+  createdAt           DateTime  @default(now())
+  @@map("mantenimientos_drone")
+}
+
+model ZonaVueloDron {
+  id           String   @id @default(cuid())
+  nombre       String
+  tipo         String   @default("habitual")
+  descripcion  String?
+  coordenadas  Json?
+  alturaMaxima Float?
+  activa       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+}
+
+model NotamRegistro {
+  id              String    @id @default(cuid())
+  referencia      String    @unique
+  tipo            String?
+  descripcion     String?
+  descripcionHtml String?
+  atributosRaw    String?
+  fechaInicio     DateTime?
+  fechaFin        DateTime?
+  alturaMin       Float?
+  alturaMax       Float?
+  radio           Float?
+  latitud         Float?
+  longitud        Float?
+  fuente          String    @default("ENAIRE")
+  activo          Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  @@map("notams_registro")
+}
