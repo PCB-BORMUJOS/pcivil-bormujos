@@ -102,6 +102,8 @@ export default function DronesPage() {
   const [showNuevoDrone, setShowNuevoDrone] = useState(false)
   const [showEditarDrone, setShowEditarDrone] = useState(false)
   const [showNuevoPiloto, setShowNuevoPiloto] = useState(false)
+  const [showEditarPiloto, setShowEditarPiloto] = useState(false)
+  const [pilotoSeleccionado, setPilotoSeleccionado] = useState<any>(null)
   const [showNuevoVuelo, setShowNuevoVuelo] = useState(false)
   const [showChecklist, setShowChecklist] = useState(false)
   const [showDetalleVuelo, setShowDetalleVuelo] = useState(false)
@@ -203,6 +205,23 @@ export default function DronesPage() {
       if (f.get('sts02Num')) certs.STS02 = { numero: f.get('sts02Num'), caducidad: f.get('sts02Cad') }
       const r = await fetch('/api/drones', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'piloto', nombre: f.get('nombre'), apellidos: f.get('apellidos'), email: f.get('email'), telefono: f.get('telefono'), externo: f.get('externo') === 'true', certificaciones: certs, seguroRCNumero: f.get('seguroRCNumero'), seguroRCVigencia: f.get('seguroRCVigencia'), observaciones: f.get('observaciones') }) })
       if (r.ok) { setShowNuevoPiloto(false); cargarDatos() }
+    } finally { setSaving(false) }
+  }
+
+  const handleEditarPiloto = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    if (!pilotoSeleccionado) return
+    const form = e.currentTarget
+    const f = new FormData(form)
+    try {
+      setSaving(true)
+      const certs: any = {}
+      if (f.get('a1a3Num')) certs.A1A3 = { numero: f.get('a1a3Num'), caducidad: f.get('a1a3Cad') }
+      if (f.get('a2Num')) certs.A2 = { numero: f.get('a2Num'), caducidad: f.get('a2Cad') }
+      if (f.get('sts01Num')) certs.STS01 = { numero: f.get('sts01Num'), caducidad: f.get('sts01Cad') }
+      if (f.get('sts02Num')) certs.STS02 = { numero: f.get('sts02Num'), caducidad: f.get('sts02Cad') }
+      const r = await fetch('/api/drones', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'piloto', id: pilotoSeleccionado.id, nombre: f.get('nombre'), apellidos: f.get('apellidos'), email: f.get('email'), telefono: f.get('telefono'), esExterno: f.get('externo') === 'true', certificaciones: certs, seguroRCNumero: f.get('seguroRCNumero'), seguroRCVigencia: f.get('seguroRCVigencia'), observaciones: f.get('observaciones') }) })
+      if (r.ok) { setShowEditarPiloto(false); setPilotoSeleccionado(null); cargarDatos() }
     } finally { setSaving(false) }
   }
 
@@ -410,7 +429,7 @@ export default function DronesPage() {
               </button>
             ))}
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4">
             {dronesF.map(d => (
               <div key={d.id} className="bg-white rounded-xl border border-slate-100 p-5 space-y-4">
                 <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-0 justify-between">
@@ -424,6 +443,7 @@ export default function DronesPage() {
                   <div className="flex items-center gap-2">
                     <span className={`text-xs font-bold px-2 py-1 rounded-full ${ESTADO_DRONE[d.estado]?.color}`}>{ESTADO_DRONE[d.estado]?.label}</span>
                     <button onClick={() => { setDroneSeleccionado(d); setShowEditarDrone(true) }} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400"><Edit size={14} /></button>
+                    <button onClick={() => { if(confirm('¿Eliminar drone ' + d.codigo + '?')) { fetch('/api/drones?tipo=drone&id=' + d.id, {method:'DELETE'}).then(r => { if(r.ok) cargarDatos() }) } }} className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500"><Trash2 size={14} /></button>
                   </div>
                 </div>
                 <div className="grid grid-cols-3 gap-2 text-center">
@@ -465,7 +485,7 @@ export default function DronesPage() {
             <p className="text-sm text-slate-500">{pilotos.length} pilotos activos</p>
             <button disabled={!canCreate} onClick={() => setShowNuevoPiloto(true)} className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white text-sm font-semibold rounded-lg hover:bg-teal-700 disabled:opacity-40 disabled:cursor-not-allowed"><Plus size={14} />Nuevo piloto</button>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4">
             {pilotos.map(p => {
               const certs = p.certificaciones || {}
               const segVence = p.seguroRCVigencia ? new Date(p.seguroRCVigencia) < new Date() : false
@@ -479,7 +499,11 @@ export default function DronesPage() {
                         <p className="text-xs text-slate-500">{p.externo ? '🔗 Piloto externo' : '👮 Voluntario PC'}</p>
                       </div>
                     </div>
-                    {segVence && <span className="text-[10px] font-bold bg-red-100 text-red-700 px-2 py-0.5 rounded-full flex items-center gap-1"><AlertTriangle size={10} />Seguro vencido</span>}
+                    <div className="flex items-center gap-2">
+                      {segVence && <span className="text-[10px] font-bold bg-red-100 text-red-700 px-2 py-0.5 rounded-full flex items-center gap-1"><AlertTriangle size={10} />Seguro vencido</span>}
+                      <button onClick={() => { setPilotoSeleccionado(p); setShowEditarPiloto(true) }} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400"><Edit size={14} /></button>
+                      <button onClick={() => { if(confirm('¿Eliminar piloto ' + p.nombre + ' ' + p.apellidos + '?')) { fetch('/api/drones?tipo=piloto&id=' + p.id, {method:'DELETE'}).then(r => { if(r.ok) cargarDatos() }) } }} className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500"><Trash2 size={14} /></button>
+                    </div>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     {Object.entries(certs).map(([cert, data]: [string, any]) => (
@@ -1791,6 +1815,54 @@ export default function DronesPage() {
               </div>
               <div className="flex justify-end gap-3 pt-2">
                 <button type="button" onClick={() => setShowEditarArticulo(false)} className="px-4 py-2 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50">Cancelar</button>
+                <button type="submit" disabled={saving} className="px-6 py-2 bg-teal-600 text-white text-sm font-bold rounded-lg hover:bg-teal-700 disabled:opacity-50">{saving ? 'Guardando...' : 'Guardar cambios'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Editar Piloto */}
+      {showEditarPiloto && pilotoSeleccionado && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000] p-4">
+          <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl">
+            <div className="flex items-center justify-between p-6 border-b">
+              <h3 className="text-lg font-bold text-slate-900">Editar piloto</h3>
+              <button onClick={() => setShowEditarPiloto(false)}><X size={20} className="text-slate-400" /></button>
+            </div>
+            <form key={pilotoSeleccionado.id} onSubmit={handleEditarPiloto} className="p-6 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div><label className={labelCls}>Nombre *</label><input name="nombre" required defaultValue={pilotoSeleccionado.nombre} className={inputCls} /></div>
+                <div><label className={labelCls}>Apellidos *</label><input name="apellidos" required defaultValue={pilotoSeleccionado.apellidos} className={inputCls} /></div>
+                <div><label className={labelCls}>Email</label><input name="email" type="email" defaultValue={pilotoSeleccionado.email} className={inputCls} /></div>
+                <div><label className={labelCls}>Teléfono</label><input name="telefono" defaultValue={pilotoSeleccionado.telefono} className={inputCls} /></div>
+                <div><label className={labelCls}>Tipo</label>
+                  <select name="externo" defaultValue={pilotoSeleccionado.externo ? 'true' : 'false'} className={inputCls}>
+                    <option value="false">Voluntario PC Bormujos</option>
+                    <option value="true">Piloto externo</option>
+                  </select>
+                </div>
+                <div><label className={labelCls}>Seguro RC Nº</label><input name="seguroRCNumero" defaultValue={pilotoSeleccionado.seguroRCNumero} className={inputCls} /></div>
+                <div><label className={labelCls}>Vigencia seguro RC</label><input name="seguroRCVigencia" type="date" defaultValue={pilotoSeleccionado.seguroRCVigencia?.slice(0,10)} className={inputCls} /></div>
+              </div>
+              <div className="border-t pt-4">
+                <p className="text-xs font-bold text-slate-500 uppercase mb-3">Certificaciones AESA</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {[['A1A3','a1a3'],['A2','a2'],['STS-01','sts01'],['STS-02','sts02']].map(([label,key]) => {
+                    const d = pilotoSeleccionado.certificaciones?.[label] || {}
+                    return (
+                      <div key={key} className="bg-slate-50 rounded-lg p-3 space-y-2">
+                        <p className="text-xs font-bold text-teal-700">{label}</p>
+                        <input name={key+'Num'} placeholder="Nº certificado" defaultValue={d.numero} className={inputCls} />
+                        <input name={key+'Cad'} type="date" placeholder="Caducidad" defaultValue={d.caducidad?.slice(0,10)} className={inputCls} />
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+              <div><label className={labelCls}>Observaciones</label><textarea name="observaciones" rows={2} defaultValue={pilotoSeleccionado.observaciones} className={inputCls} /></div>
+              <div className="flex justify-end gap-3 pt-2">
+                <button type="button" onClick={() => setShowEditarPiloto(false)} className="px-4 py-2 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50">Cancelar</button>
                 <button type="submit" disabled={saving} className="px-6 py-2 bg-teal-600 text-white text-sm font-bold rounded-lg hover:bg-teal-700 disabled:opacity-50">{saving ? 'Guardando...' : 'Guardar cambios'}</button>
               </div>
             </form>

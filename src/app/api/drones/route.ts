@@ -235,6 +235,23 @@ export async function PUT(request: NextRequest) {
     const { tipo, id, ...data } = body
     if (!id) return NextResponse.json({ error: 'ID requerido' }, { status: 400 })
 
+
+    if (tipo === 'piloto') {
+      const certs = data.certificaciones
+      const piloto = await prisma.pilotoDrone.update({
+        where: { id: data.id },
+        data: {
+          nombre: data.nombre, apellidos: data.apellidos,
+          email: data.email, telefono: data.telefono,
+          esExterno: data.esExterno || false,
+          certificaciones: certs ? [JSON.stringify(certs)] : [],
+          seguroRCNumero: data.seguroRCNumero,
+          seguroRCVigencia: data.seguroRCVigencia ? new Date(data.seguroRCVigencia) : null,
+          observaciones: data.observaciones,
+        }
+      })
+      return NextResponse.json({ piloto })
+    }
     if (tipo === 'drone') {
       const drone = await prisma.drone.update({
         where: { id },
@@ -262,6 +279,30 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ error: 'Tipo no válido' }, { status: 400 })
   } catch (error) {
     console.error('Error API drones PUT:', error)
+    return NextResponse.json({ error: 'Error interno' }, { status: 500 })
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    const { searchParams } = new URL(request.url)
+    const tipo = searchParams.get('tipo')
+    const id = searchParams.get('id')
+    if (!id) return NextResponse.json({ error: 'ID requerido' }, { status: 400 })
+
+    if (tipo === 'drone') {
+      await prisma.drone.delete({ where: { id } })
+      return NextResponse.json({ ok: true })
+    }
+    if (tipo === 'piloto') {
+      await prisma.pilotoDrone.delete({ where: { id } })
+      return NextResponse.json({ ok: true })
+    }
+    return NextResponse.json({ error: 'Tipo no válido' }, { status: 400 })
+  } catch (error) {
+    console.error('Error DELETE drones:', error)
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
   }
 }
