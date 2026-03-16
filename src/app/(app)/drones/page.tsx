@@ -1,14 +1,17 @@
 'use client'
+import { TbDrone as Drone } from 'react-icons/tb'
+import { usePermisos } from '@/lib/permisos'
 import React from 'react'
 import { useState, useEffect, useCallback } from 'react'
 import { Check, ClipboardList, 
-  Drone, Plus, RefreshCw, Battery, User, Map, FileText, 
+  Plus, RefreshCw, Battery, User, Map, FileText, 
   Wrench, AlertTriangle, CheckCircle2, Clock, Calendar,
   Shield, Radio, Wind, Eye, CloudRain, Navigation,
   Download, Edit, Trash2, ChevronRight, Info,
   Zap, Target, Activity, BarChart3, Save, X,
-  MapPin, Layers, Bell, BookOpen, Settings
+  MapPin, Layers, Bell, BookOpen, Settings, ShoppingCart, History, Search, Package, CheckCircle
 } from 'lucide-react'
+import { TbDrone as DroneIcon } from 'react-icons/tb'
 import dynamic from 'next/dynamic'
 import 'leaflet/dist/leaflet.css'
 
@@ -57,7 +60,8 @@ const ZONA_COLOR: Record<string, string> = {
 }
 
 export default function DronesPage() {
-  const [tab, setTab] = useState<'dashboard' | 'flota' | 'pilotos' | 'operaciones' | 'mantenimiento' | 'mapa' | 'checklist'>('dashboard')
+  const [tab, setTab] = useState<'inventario' | 'dashboard' | 'flota' | 'pilotos' | 'operaciones' | 'mantenimiento' | 'mapa' | 'checklist'>('inventario')
+  const { canCreate, canEdit, canDelete } = usePermisos()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
@@ -65,10 +69,22 @@ export default function DronesPage() {
   const [stats, setStats] = useState<Stats | null>(null)
   const [drones, setDrones] = useState<Drone[]>([])
   const [pilotos, setPilotos] = useState<Piloto[]>([])
+  const [isPiloto, setIsPiloto] = useState(false)
   const [vuelos, setVuelos] = useState<Vuelo[]>([])
   const [mantenimientos, setMantenimientos] = useState<Mantenimiento[]>([])
   const [notams, setNotams] = useState<Notam[]>([])
   const [zonas, setZonas] = useState<Zona[]>([])
+  const [articulos, setArticulos] = useState<any[]>([])
+  const [familias, setFamilias] = useState<any[]>([])
+  const [peticiones, setPeticiones] = useState<any[]>([])
+  const [inventoryTab, setInventoryTab] = useState<'stock'|'peticiones'|'movimientos'>('stock')
+  const [searchTerm, setSearchTerm] = useState('')
+  const [selectedFamiliaFilter, setSelectedFamiliaFilter] = useState('all')
+  const [filtroPeticiones, setFiltroPeticiones] = useState('all')
+  const [showNuevoArticulo, setShowNuevoArticulo] = useState(false)
+  const [showNuevaPeticion, setShowNuevaPeticion] = useState(false)
+  const [showGestionFamilias, setShowGestionFamilias] = useState(false)
+  const [categoriaArea, setCategoriaArea] = useState<string|null>(null)
 
   // Selección
   const [droneSeleccionado, setDroneSeleccionado] = useState<Drone | null>(null)
@@ -115,7 +131,14 @@ export default function DronesPage() {
       ])
       setStats(sd)
       setDrones(dd.drones || [])
-      setPilotos(pd.pilotos || [])
+      const pilotosData = pd.pilotos || []
+      setPilotos(pilotosData)
+      // Comprobar si el usuario actual es piloto registrado
+      const sessionRes = await fetch('/api/auth/session')
+      const sessionData = await sessionRes.json()
+      const emailActual = sessionData?.user?.email || ''
+      const esPiloto = pilotosData.some((p: any) => p.email === emailActual)
+      setIsPiloto(esPiloto)
       setVuelos(vd.vuelos || [])
       setMantenimientos(md.mantenimientos || [])
       setNotams(nd.notams || [])
@@ -125,6 +148,10 @@ export default function DronesPage() {
   }, [])
 
   useEffect(() => { cargarDatos() }, [cargarDatos])
+  const cargarInventario = useCallback(async () => { try { const [resInv, resCat] = await Promise.all([fetch("/api/logistica?inventario=drones"), fetch("/api/logistica?tipo=categoria&slug=drones")]); const dataInv = await resInv.json(); const dataCat = await resCat.json(); setArticulos(dataInv.articulos || []); setFamilias(dataInv.familias || []); if (dataCat.categoria) setCategoriaArea(dataCat.categoria.id) } catch(e) { console.error(e) } }, [])
+  const cargarPeticiones = useCallback(async () => { try { const r = await fetch("/api/logistica/peticiones?area=drones"); const d = await r.json(); setPeticiones(d.peticiones || []) } catch(e) { console.error(e) } }, [])
+  useEffect(() => { cargarInventario() }, [cargarInventario])
+  useEffect(() => { if (inventoryTab === "peticiones") cargarPeticiones() }, [inventoryTab, cargarPeticiones])
 
   const consultarNotamsENAIRE = async () => {
     setCargandoNotams(true)
@@ -215,40 +242,50 @@ export default function DronesPage() {
   const dronesF = drones.filter(d => filtroEstadoDrone === 'todos' || d.estado === filtroEstadoDrone)
   const vuelosF = vuelos.filter(v => filtroEstadoVuelo === 'todos' || v.estado === filtroEstadoVuelo)
 
-  const inputCls = 'w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-purple-400 outline-none'
+  const inputCls = 'w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-400 outline-none'
   const labelCls = 'block text-xs font-semibold text-slate-500 uppercase mb-1'
   const TABS = [
+    { id: 'inventario', label: 'Inventario del Área', icon: Package },
     { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
-    { id: 'flota', label: 'Flota', icon: Drone },
+    { id: 'flota', label: 'Flota', icon: DroneIcon },
     { id: 'pilotos', label: 'Pilotos', icon: User },
     { id: 'operaciones', label: 'Operaciones', icon: BookOpen },
     { id: 'mantenimiento', label: 'Mantenimiento', icon: Wrench },
     { id: 'mapa', label: 'Mapa de Vuelo', icon: Map },
-    { id: 'checklist', label: 'Check Pre-Vuelo', icon: ClipboardList }
+    { id: "checklist", label: "Check Pre-Vuelo", icon: ClipboardList },
   ] as const
 
   return (
-    <div className="p-4 sm:p-6 space-y-5 sm:space-y-6">
+    <div className="space-y-5 sm:space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-0 justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
         <div className="flex items-center gap-3">
-          <div className="p-2.5 bg-purple-600 rounded-xl"><Drone className="w-6 h-6 text-white" /></div>
+          <div className="p-2.5 bg-teal-600 rounded-xl flex-shrink-0"><DroneIcon className="w-6 h-6 text-white" /></div>
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">Drones — RPAS</h1>
-            <p className="text-sm text-slate-500">Gestión operativa de aeronaves no tripuladas · Protección Civil Bormujos</p>
+            <p className="text-xs font-bold text-teal-600 uppercase tracking-wider">DRONES — RPAS</p>
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-800">Gestión operativa de aeronaves</h1>
+            <p className="text-slate-500 text-sm hidden sm:block">Aeronaves no tripuladas · Protección Civil Bormujos</p>
           </div>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="hidden sm:flex items-center gap-2 flex-wrap">
           <button onClick={cargarDatos} className="p-2 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-500"><RefreshCw size={16} /></button>
-          <button onClick={() => setShowNuevoVuelo(true)} className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold rounded-lg"><Plus size={16} />Nuevo Vuelo</button>
-          <button onClick={() => setShowNuevoDrone(true)} className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white text-sm font-semibold rounded-lg"><Drone size={16} />Añadir Drone</button>
+          <button onClick={() => setShowNuevoVuelo(true)} className="flex items-center gap-2 px-4 py-2.5 bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold rounded-lg"><Plus size={16} />Nuevo Vuelo</button>
+          <button disabled={!canCreate} onClick={() => setShowNuevoDrone(true)} className="flex items-center gap-2 px-4 py-2.5 bg-slate-800 hover:bg-slate-900 text-white text-sm font-semibold rounded-lg disabled:opacity-40 disabled:cursor-not-allowed"><DroneIcon size={16} />Añadir Drone</button>
+          <button onClick={() => setTab('mapa')} className="flex items-center gap-2 px-4 py-2.5 bg-orange-600 hover:bg-orange-700 text-white text-sm font-semibold rounded-lg"><Map size={16} />NOTAM</button>
+        </div>
+        {/* Móvil */}
+        <div className="flex sm:hidden gap-2 mt-1">
+          <button onClick={cargarDatos} className="p-2.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-500"><RefreshCw size={16} /></button>
+          <button onClick={() => setShowNuevoVuelo(true)} className="flex-1 flex items-center justify-center gap-1.5 py-2.5 bg-teal-600 text-white text-sm font-semibold rounded-lg"><Plus size={15} />Vuelo</button>
+          <button disabled={!canCreate} onClick={() => setShowNuevoDrone(true)} className="flex-1 flex items-center justify-center gap-1.5 py-2.5 bg-slate-800 text-white text-sm font-semibold rounded-lg disabled:opacity-40"><DroneIcon size={15} />Drone</button>
+          <button onClick={() => setTab('mapa')} className="flex-1 flex items-center justify-center gap-1.5 py-2.5 bg-orange-600 text-white text-sm font-semibold rounded-lg"><Map size={15} />NOTAM</button>
         </div>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: 'Drones operativos', value: `${stats?.dronesOperativos ?? 0}/${stats?.totalDrones ?? 0}`, icon: Drone, color: 'text-purple-600' },
+          { label: 'Drones operativos', value: `${stats?.dronesOperativos ?? 0}/${stats?.totalDrones ?? 0}`, icon: DroneIcon, color: 'text-teal-600' },
           { label: 'Vuelos este mes', value: stats?.vuelosMes ?? 0, icon: Activity, color: 'text-blue-600' },
           { label: 'Horas de vuelo', value: `${stats?.horasTotales ?? 0}h`, icon: Clock, color: 'text-green-600' },
           { label: 'Alertas', value: (stats?.bateriasAlerta ?? 0) + (stats?.mantPendientes ?? 0), icon: AlertTriangle, color: 'text-red-500' }
@@ -261,10 +298,10 @@ export default function DronesPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 border-b border-slate-200">
+      <div className="flex border-b border-slate-200 bg-slate-50 overflow-x-auto">
         {TABS.map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)} className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium rounded-t-lg transition-colors ${tab === t.id ? 'bg-white border border-b-white border-slate-200 text-purple-700 -mb-px' : 'text-slate-500 hover:text-slate-700'}`}>
-            <t.icon size={14} />{t.label}
+          <button key={t.id} onClick={() => setTab(t.id)} className={`flex items-center gap-2 px-4 sm:px-6 py-3 text-sm font-medium border-b-2 transition-all whitespace-nowrap ${tab === t.id ? 'border-teal-500 text-teal-600 bg-teal-50' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
+            <t.icon size={20} />{t.label}
           </button>
         ))}
       </div>
@@ -274,7 +311,7 @@ export default function DronesPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
           {/* Flota resumen */}
           <div className="bg-white rounded-xl border border-slate-100 p-5">
-            <h3 className="text-sm font-bold text-slate-700 mb-4 flex items-center gap-2"><Drone className="w-4 h-4 text-purple-600" />Estado de la flota</h3>
+            <h3 className="text-sm font-bold text-slate-700 mb-4 flex items-center gap-2"><DroneIcon className="w-4 h-4 text-teal-600" />Estado de la flota</h3>
             <div className="space-y-3">
               {drones.map(d => (
                 <div key={d.id} className="flex items-center justify-between p-3 rounded-lg bg-slate-50">
@@ -347,7 +384,7 @@ export default function DronesPage() {
                     <div>
                       <p className="text-sm font-semibold text-slate-800">{p.nombre} {p.apellidos}</p>
                       <div className="flex gap-1 mt-0.5">
-                        {Object.keys(certs).map(c => <span key={c} className="text-[9px] font-bold bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded">{c}</span>)}
+                        {Object.keys(certs).map(c => <span key={c} className="text-[9px] font-bold bg-teal-100 text-teal-700 px-1.5 py-0.5 rounded">{c}</span>)}
                         {p.externo && <span className="text-[9px] font-bold bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">EXT</span>}
                       </div>
                     </div>
@@ -366,7 +403,7 @@ export default function DronesPage() {
         <div className="space-y-4">
           <div className="flex items-center gap-3">
             {['todos', 'operativo', 'mantenimiento', 'baja'].map(e => (
-              <button key={e} onClick={() => setFiltroEstadoDrone(e)} className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${filtroEstadoDrone === e ? 'bg-purple-600 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
+              <button key={e} onClick={() => setFiltroEstadoDrone(e)} className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${filtroEstadoDrone === e ? 'bg-teal-600 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
                 {e === 'todos' ? 'Todos' : ESTADO_DRONE[e]?.label}
               </button>
             ))}
@@ -376,7 +413,7 @@ export default function DronesPage() {
               <div key={d.id} className="bg-white rounded-xl border border-slate-100 p-5 space-y-4">
                 <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-0 justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 bg-purple-100 rounded-xl"><Drone className="w-5 h-5 text-purple-600" /></div>
+                    <div className="p-2 bg-teal-100 rounded-xl"><DroneIcon className="w-5 h-5 text-teal-600" /></div>
                     <div>
                       <p className="font-bold text-slate-900">{d.codigo}</p>
                       <p className="text-sm text-slate-500">{d.marca} {d.modelo}</p>
@@ -409,7 +446,7 @@ export default function DronesPage() {
                     </div>
                   </div>
                 )}
-                <button onClick={() => { setDroneSeleccionado(d); setShowNuevaBateria(true) }} className="w-full text-xs text-purple-600 hover:text-purple-800 font-medium flex items-center justify-center gap-1 py-1.5 border border-dashed border-purple-200 rounded-lg hover:bg-purple-50">
+                <button onClick={() => { setDroneSeleccionado(d); setShowNuevaBateria(true) }} className="w-full text-xs text-teal-600 hover:text-teal-800 font-medium flex items-center justify-center gap-1 py-1.5 border border-dashed border-teal-200 rounded-lg hover:bg-teal-50">
                   <Plus size={12} />Añadir batería
                 </button>
               </div>
@@ -424,7 +461,7 @@ export default function DronesPage() {
         <div className="space-y-4">
           <div className="flex justify-between items-center">
             <p className="text-sm text-slate-500">{pilotos.length} pilotos activos</p>
-            <button onClick={() => setShowNuevoPiloto(true)} className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white text-sm font-semibold rounded-lg hover:bg-purple-700"><Plus size={14} />Nuevo piloto</button>
+            <button disabled={!canCreate} onClick={() => setShowNuevoPiloto(true)} className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white text-sm font-semibold rounded-lg hover:bg-teal-700 disabled:opacity-40 disabled:cursor-not-allowed"><Plus size={14} />Nuevo piloto</button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {pilotos.map(p => {
@@ -434,7 +471,7 @@ export default function DronesPage() {
                 <div key={p.id} className="bg-white rounded-xl border border-slate-100 p-5 space-y-4">
                   <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-0 justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center font-bold text-purple-700">{p.nombre[0]}{p.apellidos[0]}</div>
+                      <div className="w-10 h-10 bg-teal-100 rounded-full flex items-center justify-center font-bold text-teal-700">{p.nombre[0]}{p.apellidos[0]}</div>
                       <div>
                         <p className="font-bold text-slate-900">{p.nombre} {p.apellidos}</p>
                         <p className="text-xs text-slate-500">{p.externo ? '🔗 Piloto externo' : '👮 Voluntario PC'}</p>
@@ -444,9 +481,9 @@ export default function DronesPage() {
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     {Object.entries(certs).map(([cert, data]: [string, any]) => (
-                      <div key={cert} className="flex flex-col items-center bg-purple-50 border border-purple-100 rounded-lg px-2.5 py-1.5">
-                        <span className="text-[10px] font-black text-purple-700">{cert}</span>
-                        {data?.numero && <span className="text-[9px] text-purple-500">{data.numero}</span>}
+                      <div key={cert} className="flex flex-col items-center bg-teal-50 border border-teal-100 rounded-lg px-2.5 py-1.5">
+                        <span className="text-[10px] font-black text-teal-700">{cert}</span>
+                        {data?.numero && <span className="text-[9px] text-teal-500">{data.numero}</span>}
                         {data?.caducidad && <span className={`text-[9px] font-medium ${new Date(data.caducidad) < new Date() ? 'text-red-500' : 'text-slate-500'}`}>Cad: {formatFecha(data.caducidad)}</span>}
                       </div>
                     ))}
@@ -468,7 +505,7 @@ export default function DronesPage() {
           <div className="flex items-center justify-between">
             <div className="flex gap-2">
               {['todos', 'planificado', 'en_curso', 'completado', 'incidencia'].map(e => (
-                <button key={e} onClick={() => setFiltroEstadoVuelo(e)} className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${filtroEstadoVuelo === e ? 'bg-purple-600 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
+                <button key={e} onClick={() => setFiltroEstadoVuelo(e)} className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${filtroEstadoVuelo === e ? 'bg-teal-600 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
                   {e === 'todos' ? 'Todos' : ESTADO_VUELO[e]?.label}
                 </button>
               ))}
@@ -483,7 +520,7 @@ export default function DronesPage() {
               <tbody>
                 {vuelosF.map(v => (
                   <tr key={v.id} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
-                    <td className="px-4 py-3 font-mono text-xs font-bold text-purple-700">{v.numero}</td>
+                    <td className="px-4 py-3 font-mono text-xs font-bold text-teal-700">{v.numero}</td>
                     <td className="px-4 py-3 text-xs text-slate-600">{formatFecha(v.fecha)}</td>
                     <td className="px-4 py-3 text-xs font-medium text-slate-700">{v.drone?.codigo}</td>
                     <td className="px-4 py-3 text-xs text-slate-600">{v.piloto?.nombre} {v.piloto?.apellidos}</td>
@@ -494,7 +531,7 @@ export default function DronesPage() {
                     <td className="px-4 py-3">
                       <div className="flex gap-1">
                         <button onClick={() => { setVueloSeleccionado(v); setShowDetalleVuelo(true) }} className="p-1.5 hover:bg-slate-100 rounded text-slate-400"><Eye size={13} /></button>
-                        <button onClick={() => { setVueloSeleccionado(v); setChecklistData(v.checklist || { items: {}, firmadoPor: '', observaciones: '' }); setShowChecklist(true) }} className="p-1.5 hover:bg-purple-50 rounded text-purple-400" title="Checklist pre-vuelo"><CheckCircle2 size={13} /></button>
+                        <button onClick={() => { setVueloSeleccionado(v); setChecklistData(v.checklist || { items: {}, firmadoPor: '', observaciones: '' }); setShowChecklist(true) }} className="p-1.5 hover:bg-teal-50 rounded text-teal-400" title="Checklist pre-vuelo"><CheckCircle2 size={13} /></button>
                       </div>
                     </td>
                   </tr>
@@ -511,7 +548,7 @@ export default function DronesPage() {
         <div className="space-y-4">
           <div className="flex justify-between items-center">
             <p className="text-sm text-slate-500">{mantenimientos.length} registros de mantenimiento</p>
-            <button onClick={() => setShowNuevoMant(true)} className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white text-sm font-semibold rounded-lg hover:bg-purple-700"><Plus size={14} />Registrar mantenimiento</button>
+            <button onClick={() => setShowNuevoMant(true)} className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white text-sm font-semibold rounded-lg hover:bg-teal-700"><Plus size={14} />Registrar mantenimiento</button>
           </div>
           <div className="bg-white rounded-xl border border-slate-100 overflow-hidden">
             <table className="w-full text-sm">
@@ -523,7 +560,7 @@ export default function DronesPage() {
                   const vencido = m.proximoMantenimiento && new Date(m.proximoMantenimiento) <= new Date()
                   return (
                     <tr key={m.id} className={`border-b border-slate-50 hover:bg-slate-50 ${vencido ? 'bg-red-50' : ''}`}>
-                      <td className="px-4 py-3 text-xs font-bold text-purple-700">{m.drone?.codigo}</td>
+                      <td className="px-4 py-3 text-xs font-bold text-teal-700">{m.drone?.codigo}</td>
                       <td className="px-4 py-3 text-xs font-medium text-slate-700">{TIPO_MANT[m.tipo] || m.tipo}</td>
                       <td className="px-4 py-3 text-xs text-slate-600">{formatFecha(m.fecha)}</td>
                       <td className="px-4 py-3 text-xs text-slate-600">{m.horasEnElMomento ?? '-'}</td>
@@ -562,13 +599,13 @@ export default function DronesPage() {
                   <span className="w-2.5 h-2.5 rounded-full bg-red-400" />NOTAM
                 </span>
                 <span className="flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-full bg-purple-500" />Vuelo reg.
+                  <span className="w-2.5 h-2.5 rounded-full bg-teal-500" />Vuelo reg.
                 </span>
               </div>
               <button
                 onClick={consultarNotamsENAIRE}
                 disabled={cargandoNotams}
-                className="flex items-center gap-2 px-3 py-1.5 bg-purple-600 text-white text-xs font-semibold rounded-lg hover:bg-purple-700 disabled:opacity-50"
+                className="flex items-center gap-2 px-3 py-1.5 bg-teal-600 text-white text-xs font-semibold rounded-lg hover:bg-teal-700 disabled:opacity-50"
               >
                 {cargandoNotams ? <><RefreshCw size={12} className="animate-spin" />Consultando...</> : <><RefreshCw size={12} />Actualizar NOTAMs</>}
               </button>
@@ -647,12 +684,12 @@ export default function DronesPage() {
             const descripcionFinal = findPart('DESCRIPCIÓN') || findPart('DESCRIPCION') || partes.filter((s: string) => !s.match(/^(DESDE|HASTA|HORARIO)/i)).join(' ').slice(0, 500)
             const hoy = n.fechaFin && new Date(n.fechaFin) < new Date(Date.now() + 24*3600*1000)
             return (
-              <div className="bg-white rounded-xl border border-purple-200 overflow-hidden">
+              <div className="bg-white rounded-xl border border-teal-200 overflow-hidden">
                 <div className={`h-1 w-full ${hoy ? 'bg-yellow-400' : 'bg-red-500'}`} />
                 <div className="p-5">
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center gap-3">
-                      <div className="p-2.5 bg-purple-100 rounded-xl"><Bell className="w-4 h-4 text-purple-600" /></div>
+                      <div className="p-2.5 bg-teal-100 rounded-xl"><Bell className="w-4 h-4 text-teal-600" /></div>
                       <div>
                         <p className="text-sm font-black text-slate-900">{n.referencia || 'NOTAM sin referencia'}</p>
                         <p className="text-xs text-slate-500">{n.fuente}{n.tipo ? ` · ${n.tipo}` : ''}{n.estado ? ` · ${n.estado}` : ''}</p>
@@ -714,12 +751,12 @@ export default function DronesPage() {
                     <div
                       key={n.id}
                       onClick={() => setNotamSeleccionado(sel ? null : n)}
-                      className={`flex items-center gap-4 px-4 py-3 cursor-pointer transition-colors ${sel ? 'bg-purple-50' : 'hover:bg-slate-50'}`}
+                      className={`flex items-center gap-4 px-4 py-3 cursor-pointer transition-colors ${sel ? 'bg-teal-50' : 'hover:bg-slate-50'}`}
                     >
                       <div className={`w-2 h-2 rounded-full flex-shrink-0 ${vencido ? 'bg-slate-300' : hoy ? 'bg-yellow-400' : 'bg-red-500'}`} />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-0.5">
-                          <span className={`text-xs font-bold ${sel ? 'text-purple-700' : 'text-slate-800'}`}>{n.referencia || 'NOTAM'}</span>
+                          <span className={`text-xs font-bold ${sel ? 'text-teal-700' : 'text-slate-800'}`}>{n.referencia || 'NOTAM'}</span>
                           {n.tipo && <span className="text-[9px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded font-bold">{n.tipo}</span>}
                           {hoy && <span className="text-[9px] bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded font-bold">Vence hoy</span>}
                         </div>
@@ -729,7 +766,7 @@ export default function DronesPage() {
                         {n.alturaMax != null && <p className="text-[10px] font-semibold text-orange-600">↑{n.alturaMax} ft</p>}
                         {n.fechaFin && <p className="text-[10px] text-slate-400">{new Date(n.fechaFin).toLocaleDateString('es-ES')}</p>}
                       </div>
-                      <ChevronRight size={14} className={sel ? 'text-purple-400' : 'text-slate-200'} />
+                      <ChevronRight size={14} className={sel ? 'text-teal-400' : 'text-slate-200'} />
                     </div>
                   )
                 })}
@@ -739,7 +776,7 @@ export default function DronesPage() {
           {notams.length === 0 && (
             <div className="bg-white rounded-xl border border-slate-100 p-8 text-center">
               <Bell size={24} className="text-slate-200 mx-auto mb-2" />
-              <p className="text-sm text-slate-400">Sin NOTAMs activos · <button onClick={consultarNotamsENAIRE} className="text-purple-600 hover:underline font-semibold">Actualizar ENAIRE</button></p>
+              <p className="text-sm text-slate-400">Sin NOTAMs activos · <button onClick={consultarNotamsENAIRE} className="text-teal-600 hover:underline font-semibold">Actualizar ENAIRE</button></p>
             </div>
           )}
         </div>
@@ -750,7 +787,7 @@ export default function DronesPage() {
         const SECCIONES_CHECK = [
           {
             id: 'aeronave', label: 'Aeronave', icon: '✈',
-            color: 'purple',
+            color: "teal",
             items: [
               { id: 'bat_carga', label: 'Batería principal ≥ 80% de carga', normativa: 'AESA OP 3.2' },
               { id: 'bat_estado', label: 'Estado físico de baterías: sin hinchazón, golpes ni corrosión', normativa: 'AESA OP 3.2' },
@@ -834,7 +871,7 @@ export default function DronesPage() {
         const resetChecklist = () => { setChecks({}); setNotasCheck(''); setPiloCheck(''); setDroneCheck('') }
 
         const colorMap: Record<string, string> = {
-          purple: 'bg-purple-50 border-purple-100 text-purple-700',
+          purple: 'bg-teal-50 border-teal-100 text-teal-700',
           blue: 'bg-blue-50 border-blue-100 text-blue-700',
           orange: 'bg-orange-50 border-orange-100 text-orange-700',
           green: 'bg-green-50 border-green-100 text-green-700',
@@ -842,7 +879,7 @@ export default function DronesPage() {
           red: 'bg-red-50 border-red-100 text-red-700',
         }
         const headerColor: Record<string, string> = {
-          purple: 'text-purple-700', blue: 'text-blue-700', orange: 'text-orange-700',
+          purple: 'text-teal-700', blue: 'text-blue-700', orange: 'text-orange-700',
           green: 'text-green-700', sky: 'text-sky-700', red: 'text-red-700',
         }
 
@@ -868,7 +905,7 @@ export default function DronesPage() {
               <div className="flex items-center gap-3">
                 <div className="flex-1 bg-slate-100 rounded-full h-2.5 overflow-hidden">
                   <div
-                    className={`h-full rounded-full transition-all duration-300 ${aptoVuelo ? 'bg-green-500' : fallidos > 0 ? 'bg-red-400' : 'bg-purple-500'}`}
+                    className={`h-full rounded-full transition-all duration-300 ${aptoVuelo ? 'bg-green-500' : fallidos > 0 ? 'bg-red-400' : 'bg-teal-500'}`}
                     style={{ width: `${pct}%` }}
                   />
                 </div>
@@ -883,18 +920,18 @@ export default function DronesPage() {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4 pt-4 border-t border-slate-100">
                 <div>
                   <label className="text-[10px] font-bold text-slate-400 uppercase">Piloto al mando</label>
-                  <input value={piloCheck} onChange={e => setPiloCheck(e.target.value)} placeholder="Nombre del piloto" className="mt-1 w-full text-xs border border-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-purple-400" />
+                  <input value={piloCheck} onChange={e => setPiloCheck(e.target.value)} placeholder="Nombre del piloto" className="mt-1 w-full text-xs border border-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-teal-400" />
                 </div>
                 <div>
                   <label className="text-[10px] font-bold text-slate-400 uppercase">Aeronave</label>
-                  <select value={droneCheck} onChange={e => setDroneCheck(e.target.value)} className="mt-1 w-full text-xs border border-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-purple-400">
+                  <select value={droneCheck} onChange={e => setDroneCheck(e.target.value)} className="mt-1 w-full text-xs border border-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-teal-400">
                     <option value="">Seleccionar drone...</option>
                     {drones.map(d => <option key={d.id} value={d.id}>{d.codigo} — {d.modelo}</option>)}
                   </select>
                 </div>
                 <div>
                   <label className="text-[10px] font-bold text-slate-400 uppercase">Observaciones</label>
-                  <input value={notasCheck} onChange={e => setNotasCheck(e.target.value)} placeholder="Notas adicionales..." className="mt-1 w-full text-xs border border-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-purple-400" />
+                  <input value={notasCheck} onChange={e => setNotasCheck(e.target.value)} placeholder="Notas adicionales..." className="mt-1 w-full text-xs border border-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-teal-400" />
                 </div>
               </div>
             </div>
@@ -910,7 +947,7 @@ export default function DronesPage() {
                   <div className={`flex items-center justify-between px-5 py-4 border-b border-slate-100 ${secOK === secTotal && secNOK === 0 ? 'bg-green-50' : secNOK > 0 ? 'bg-red-50/60' : 'bg-slate-50/50'}`}>
                     <div className="flex items-center gap-3">
                       <div className={`p-2 rounded-xl ${colorMap[sec.color]}`}>
-                        {(() => { const icons: Record<string, any> = { Drone, Radio, Map, User, Wind, AlertTriangle }; const Icon = icons[sec.icon]; return Icon ? <Icon size={15} /> : null })()}
+                        {(() => { const icons: Record<string, any> = { Drone: DroneIcon, Radio, Map, User, Wind, AlertTriangle }; const Icon = icons[sec.icon]; return Icon ? <Icon size={15} /> : null })()}
                       </div>
                       <div>
                         <p className={`text-sm font-black ${headerColor[sec.color]}`}>{sec.label}</p>
@@ -1040,7 +1077,7 @@ export default function DronesPage() {
               <div><label className={labelCls}>Observaciones</label><textarea name="observaciones" rows={2} className={inputCls} /></div>
               <div className="flex justify-end gap-3 pt-2">
                 <button type="button" onClick={() => setShowNuevoDrone(false)} className="px-4 py-2 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50">Cancelar</button>
-                <button type="submit" disabled={saving} className="px-6 py-2 bg-purple-600 text-white text-sm font-bold rounded-lg hover:bg-purple-700 disabled:opacity-50">{saving ? 'Guardando...' : 'Crear drone'}</button>
+                <button type="submit" disabled={saving} className="px-6 py-2 bg-teal-600 text-white text-sm font-bold rounded-lg hover:bg-teal-700 disabled:opacity-50">{saving ? 'Guardando...' : 'Crear drone'}</button>
               </div>
             </form>
           </div>
@@ -1076,7 +1113,7 @@ export default function DronesPage() {
               <div><label className={labelCls}>Observaciones</label><textarea name="observaciones" rows={2} defaultValue={droneSeleccionado.observaciones} className={inputCls} /></div>
               <div className="flex justify-end gap-3 pt-2">
                 <button type="button" onClick={() => setShowEditarDrone(false)} className="px-4 py-2 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50">Cancelar</button>
-                <button type="submit" disabled={saving} className="px-6 py-2 bg-purple-600 text-white text-sm font-bold rounded-lg hover:bg-purple-700 disabled:opacity-50">{saving ? 'Guardando...' : 'Guardar cambios'}</button>
+                <button type="submit" disabled={saving} className="px-6 py-2 bg-teal-600 text-white text-sm font-bold rounded-lg hover:bg-teal-700 disabled:opacity-50">{saving ? 'Guardando...' : 'Guardar cambios'}</button>
               </div>
             </form>
           </div>
@@ -1106,7 +1143,7 @@ export default function DronesPage() {
                 <div className="grid grid-cols-2 gap-3">
                   {[['A1/A3', 'a1a3'], ['A2', 'a2'], ['STS-01', 'sts01'], ['STS-02', 'sts02']].map(([label, key]) => (
                     <div key={key} className="border border-slate-100 rounded-lg p-3 space-y-2">
-                      <p className="text-xs font-bold text-purple-700">{label}</p>
+                      <p className="text-xs font-bold text-teal-700">{label}</p>
                       <input name={`${key}Num`} placeholder="Nº certificado" className={inputCls} />
                       <input name={`${key}Cad`} type="date" placeholder="Caducidad" className={inputCls} />
                     </div>
@@ -1120,7 +1157,7 @@ export default function DronesPage() {
               <div><label className={labelCls}>Observaciones</label><textarea name="observaciones" rows={2} className={inputCls} /></div>
               <div className="flex justify-end gap-3">
                 <button type="button" onClick={() => setShowNuevoPiloto(false)} className="px-4 py-2 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50">Cancelar</button>
-                <button type="submit" disabled={saving} className="px-6 py-2 bg-purple-600 text-white text-sm font-bold rounded-lg hover:bg-purple-700 disabled:opacity-50">{saving ? 'Guardando...' : 'Registrar piloto'}</button>
+                <button type="submit" disabled={saving} className="px-6 py-2 bg-teal-600 text-white text-sm font-bold rounded-lg hover:bg-teal-700 disabled:opacity-50">{saving ? 'Guardando...' : 'Registrar piloto'}</button>
               </div>
             </form>
           </div>
@@ -1138,7 +1175,7 @@ export default function DronesPage() {
             <form onSubmit={handleNuevoVuelo} className="p-6 space-y-5">
               {/* Aeronave y piloto */}
               <div>
-                <p className="text-xs font-bold text-slate-500 uppercase mb-3 flex items-center gap-2"><Drone size={12} />Aeronave y piloto</p>
+                <p className="text-xs font-bold text-slate-500 uppercase mb-3 flex items-center gap-2"><DroneIcon size={12} />Aeronave y piloto</p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div><label className={labelCls}>Drone *</label>
                     <select name="droneId" required className={inputCls}>
@@ -1199,7 +1236,7 @@ export default function DronesPage() {
               <div>
                 <p className="text-xs font-bold text-slate-500 uppercase mb-3 flex items-center gap-2"><Bell size={12} />NOTAMs</p>
                 <div className="flex items-center gap-3 mb-3">
-                  <input type="checkbox" name="notamConsultado" id="notamCons" className="w-4 h-4 accent-purple-600" />
+                  <input type="checkbox" name="notamConsultado" id="notamCons" className="w-4 h-4 accent-teal-600" />
                   <label htmlFor="notamCons" className="text-sm text-slate-700">Confirmo que he consultado los NOTAMs vigentes para esta operación</label>
                 </div>
                 <div><label className={labelCls}>Referencia NOTAM (si aplica)</label><input name="notamReferencia" placeholder="A1234/26, B5678/26..." className={inputCls} /></div>
@@ -1207,7 +1244,7 @@ export default function DronesPage() {
               <div><label className={labelCls}>Observaciones previas</label><textarea name="observaciones" rows={2} className={inputCls} /></div>
               <div className="flex justify-end gap-3">
                 <button type="button" onClick={() => setShowNuevoVuelo(false)} className="px-4 py-2 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50">Cancelar</button>
-                <button type="submit" disabled={saving} className="px-6 py-2 bg-purple-600 text-white text-sm font-bold rounded-lg hover:bg-purple-700 disabled:opacity-50">{saving ? 'Registrando...' : 'Registrar vuelo'}</button>
+                <button type="submit" disabled={saving} className="px-6 py-2 bg-teal-600 text-white text-sm font-bold rounded-lg hover:bg-teal-700 disabled:opacity-50">{saving ? 'Registrando...' : 'Registrar vuelo'}</button>
               </div>
             </form>
           </div>
@@ -1288,7 +1325,7 @@ export default function DronesPage() {
               <div><label className={labelCls}>Observaciones</label><textarea name="observaciones" rows={2} className={inputCls} /></div>
               <div className="flex justify-end gap-3">
                 <button type="button" onClick={() => setShowNuevoMant(false)} className="px-4 py-2 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50">Cancelar</button>
-                <button type="submit" disabled={saving} className="px-6 py-2 bg-purple-600 text-white text-sm font-bold rounded-lg hover:bg-purple-700 disabled:opacity-50">{saving ? 'Guardando...' : 'Registrar'}</button>
+                <button type="submit" disabled={saving} className="px-6 py-2 bg-teal-600 text-white text-sm font-bold rounded-lg hover:bg-teal-700 disabled:opacity-50">{saving ? 'Guardando...' : 'Registrar'}</button>
               </div>
             </form>
           </div>
@@ -1302,7 +1339,7 @@ export default function DronesPage() {
             <div className="flex items-center justify-between p-6 border-b">
               <div>
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-purple-100 rounded-lg"><Bell className="w-5 h-5 text-purple-600" /></div>
+                  <div className="p-2 bg-teal-100 rounded-lg"><Bell className="w-5 h-5 text-teal-600" /></div>
                   <div>
                     <h3 className="text-lg font-bold text-slate-900">{notamSeleccionado.referencia || 'NOTAM sin referencia'}</h3>
                     <p className="text-xs text-slate-500">Fuente: {notamSeleccionado.fuente} {notamSeleccionado.estado && `· ${notamSeleccionado.estado}`}</p>
@@ -1407,13 +1444,185 @@ export default function DronesPage() {
               <div><label className={labelCls}>Descripción</label><textarea name="descripcion" rows={3} className={inputCls} /></div>
               <div className="flex justify-end gap-3">
                 <button type="button" onClick={() => setShowNotamManual(false)} className="px-4 py-2 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50">Cancelar</button>
-                <button type="submit" disabled={saving} className="px-6 py-2 bg-purple-600 text-white text-sm font-bold rounded-lg hover:bg-purple-700 disabled:opacity-50">{saving ? 'Guardando...' : 'Registrar NOTAM'}</button>
+                <button type="submit" disabled={saving} className="px-6 py-2 bg-teal-600 text-white text-sm font-bold rounded-lg hover:bg-teal-700 disabled:opacity-50">{saving ? 'Guardando...' : 'Registrar NOTAM'}</button>
               </div>
             </form>
           </div>
         </div>
       )}
 
+
+      {/* ─── INVENTARIO ─── */}
+      {tab === 'inventario' && (
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+          <div className="flex border-b border-slate-200 bg-slate-50 overflow-x-auto">
+            {[{key:'stock',label:'Stock',icon:Package},{key:'peticiones',label:'Peticiones',icon:ShoppingCart},{key:'movimientos',label:'Movimientos',icon:History}].map(t => (
+              <button key={t.key} onClick={() => setInventoryTab(t.key as any)} className={`flex items-center gap-2 px-6 py-3 text-sm font-medium border-b-2 transition-colors ${inventoryTab === t.key ? 'border-teal-500 text-teal-600 bg-white' : 'border-transparent text-slate-600 hover:text-slate-800'}`}><t.icon className="w-4 h-4" />{t.label}</button>
+            ))}
+          </div>
+          {inventoryTab === 'stock' && (
+            <div className="p-5">
+              <div className="flex flex-wrap gap-3 mb-4">
+                <div className="relative flex-1 min-w-[220px]"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" /><input type="text" placeholder="Buscar artículos..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-400" /></div>
+                <select value={selectedFamiliaFilter} onChange={e => setSelectedFamiliaFilter(e.target.value)} className="px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none"><option value="all">Todas las familias</option>{familias.map(f => <option key={f.id} value={f.id}>{f.nombre}</option>)}</select>
+                <button onClick={() => setShowNuevoArticulo(true)} className="flex items-center gap-2 px-4 py-2.5 bg-teal-600 text-white rounded-xl text-sm font-medium hover:bg-teal-700"><Plus className="w-4 h-4" />Artículo</button>
+                <button onClick={() => setShowGestionFamilias(true)} className="flex items-center gap-2 px-4 py-2.5 bg-slate-800 text-white rounded-xl text-sm font-medium hover:bg-slate-900"><Layers className="w-4 h-4" />Familias</button>
+              </div>
+              <table className="w-full text-sm">
+                <thead><tr className="border-b border-slate-100"><th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Artículo</th><th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Familia</th><th className="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Stock</th><th className="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Estado</th><th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Acciones</th></tr></thead>
+                <tbody className="divide-y divide-slate-50">
+                  {articulos.filter(a => (selectedFamiliaFilter === 'all' || a.familiaId === selectedFamiliaFilter) && (searchTerm === '' || a.nombre.toLowerCase().includes(searchTerm.toLowerCase()))).length === 0
+                    ? <tr><td colSpan={5} className="text-center py-12 text-slate-400"><Package className="w-10 h-10 mx-auto mb-2 opacity-30" /><p>No hay artículos registrados</p></td></tr>
+                    : articulos.filter(a => (selectedFamiliaFilter === 'all' || a.familiaId === selectedFamiliaFilter) && (searchTerm === '' || a.nombre.toLowerCase().includes(searchTerm.toLowerCase()))).map(art => (
+                      <tr key={art.id} className="hover:bg-slate-50/50">
+                        <td className="px-4 py-3"><p className="font-medium text-slate-800">{art.nombre}</p>{art.codigo && <p className="text-xs text-slate-400">{art.codigo}</p>}</td>
+                        <td className="px-4 py-3 text-slate-500">{art.familia?.nombre || '-'}</td>
+                        <td className="px-4 py-3 text-center"><span className={`text-lg font-bold ${art.stockActual <= art.stockMinimo ? 'text-red-600' : 'text-slate-800'}`}>{art.stockActual}</span><span className="text-slate-400 text-xs ml-1">/ {art.stockMinimo}</span></td>
+                        <td className="px-4 py-3 text-center">{art.stockActual <= art.stockMinimo ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-50 text-red-700 border border-red-200"><AlertTriangle className="w-3 h-3" />Bajo</span> : <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200"><CheckCircle className="w-3 h-3" />OK</span>}</td>
+                        <td className="px-4 py-3 text-right"><button onClick={() => {}} className="p-2 text-slate-400 hover:text-teal-600 hover:bg-teal-50 rounded-lg"><Edit className="w-4 h-4" /></button></td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {inventoryTab === 'peticiones' && (
+            <div className="p-5">
+              <div className="flex items-center justify-between mb-4">
+                <button onClick={() => setShowNuevaPeticion(true)} className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg text-sm font-medium hover:bg-teal-700"><Plus className="w-4 h-4" />Nueva Petición</button>
+              </div>
+              <div className="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden">
+                {peticiones.length === 0 ? <div className="text-center py-12 text-slate-400"><ShoppingCart className="w-10 h-10 mx-auto mb-2 opacity-30" /><p>No hay peticiones</p></div>
+                : peticiones.map(pet => (
+                  <div key={pet.id} className="p-4 hover:bg-slate-50">
+                    <div className="flex items-center gap-2 mb-1"><span className="text-xs font-mono text-slate-400">{pet.numero}</span><span className="px-2 py-0.5 rounded-full text-xs font-medium bg-teal-50 text-teal-700 border border-teal-200">{pet.estado}</span></div>
+                    <p className="font-medium text-slate-800">{pet.nombreArticulo}</p>
+                    <p className="text-sm text-slate-500">{pet.cantidad} {pet.unidad} · {new Date(pet.fechaSolicitud).toLocaleDateString('es-ES')}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {inventoryTab === 'movimientos' && <div className="p-12 text-center text-slate-400"><History className="w-12 h-12 mx-auto mb-3 opacity-30" /><p className="font-medium">Historial de movimientos</p><p className="text-sm mt-1">Los movimientos de stock se registrarán aquí</p></div>}
+        </div>
+      )}
+
+      {/* Modal Detalle Vuelo */}
+      {showDetalleVuelo && vueloSeleccionado && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000] p-4">
+          <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl">
+            <div className="flex items-center justify-between p-6 border-b">
+              <div>
+                <h3 className="text-lg font-bold text-slate-900">Vuelo {vueloSeleccionado.numero}</h3>
+                <p className="text-sm text-slate-500">{new Date(vueloSeleccionado.fecha).toLocaleDateString('es-ES')}</p>
+              </div>
+              <button onClick={() => setShowDetalleVuelo(false)}><X size={20} className="text-slate-400" /></button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-slate-50 rounded-xl p-4">
+                  <p className="text-xs text-slate-500 font-medium mb-1">Dron</p>
+                  <p className="font-semibold text-slate-800">{vueloSeleccionado.drone?.nombre || vueloSeleccionado.drone?.codigo || '-'}</p>
+                </div>
+                <div className="bg-slate-50 rounded-xl p-4">
+                  <p className="text-xs text-slate-500 font-medium mb-1">Piloto</p>
+                  <p className="font-semibold text-slate-800">{vueloSeleccionado.piloto ? `${vueloSeleccionado.piloto.nombre} ${vueloSeleccionado.piloto.apellidos}` : '-'}</p>
+                </div>
+                <div className="bg-slate-50 rounded-xl p-4">
+                  <p className="text-xs text-slate-500 font-medium mb-1">Tipo operación</p>
+                  <p className="font-semibold text-slate-800">{TIPO_OPERACION[vueloSeleccionado.tipoOperacion] || vueloSeleccionado.tipoOperacion}</p>
+                </div>
+                <div className="bg-slate-50 rounded-xl p-4">
+                  <p className="text-xs text-slate-500 font-medium mb-1">Estado</p>
+                  <p className={`font-semibold ${ESTADO_VUELO[vueloSeleccionado.estado]?.color || 'text-slate-800'}`}>{ESTADO_VUELO[vueloSeleccionado.estado]?.label || vueloSeleccionado.estado}</p>
+                </div>
+                <div className="bg-slate-50 rounded-xl p-4">
+                  <p className="text-xs text-slate-500 font-medium mb-1">Hora inicio</p>
+                  <p className="font-semibold text-slate-800">{vueloSeleccionado.horaInicio || '-'}</p>
+                </div>
+                <div className="bg-slate-50 rounded-xl p-4">
+                  <p className="text-xs text-slate-500 font-medium mb-1">Duración</p>
+                  <p className="font-semibold text-slate-800">{vueloSeleccionado.duracionMinutos ? `${vueloSeleccionado.duracionMinutos} min` : '-'}</p>
+                </div>
+                <div className="bg-slate-50 rounded-xl p-4">
+                  <p className="text-xs text-slate-500 font-medium mb-1">Municipio</p>
+                  <p className="font-semibold text-slate-800">{vueloSeleccionado.municipio}</p>
+                </div>
+                <div className="bg-slate-50 rounded-xl p-4">
+                  <p className="text-xs text-slate-500 font-medium mb-1">NOTAM consultado</p>
+                  <p className="font-semibold text-slate-800">{vueloSeleccionado.notamConsultado ? 'Sí' : 'No'}</p>
+                </div>
+              </div>
+              {vueloSeleccionado.descripcionZona && (
+                <div className="bg-slate-50 rounded-xl p-4">
+                  <p className="text-xs text-slate-500 font-medium mb-1">Descripción zona</p>
+                  <p className="text-slate-800">{vueloSeleccionado.descripcionZona}</p>
+                </div>
+              )}
+              {vueloSeleccionado.incidencias && (
+                <div className="bg-red-50 rounded-xl p-4">
+                  <p className="text-xs text-red-500 font-medium mb-1">Incidencias</p>
+                  <p className="text-red-800">{vueloSeleccionado.incidencias}</p>
+                </div>
+              )}
+              <div className="flex justify-end">
+                <button onClick={() => setShowDetalleVuelo(false)} className="px-6 py-2 bg-slate-100 text-slate-700 text-sm font-semibold rounded-lg hover:bg-slate-200">Cerrar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Nueva Batería */}
+      {showNuevaBateria && droneSeleccionado && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000] p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
+            <div className="flex items-center justify-between p-6 border-b">
+              <h3 className="text-lg font-bold text-slate-900">Nueva Batería — {droneSeleccionado.nombre}</h3>
+              <button onClick={() => setShowNuevaBateria(false)}><X size={20} className="text-slate-400" /></button>
+            </div>
+            <form onSubmit={async e => {
+              e.preventDefault()
+              const form = e.currentTarget
+              const f = new FormData(form)
+              setSaving(true)
+              const r = await fetch('/api/drones', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  tipo: 'bateria',
+                  droneId: droneSeleccionado.id,
+                  codigo: f.get('codigo'),
+                  capacidadMah: f.get('capacidadMah'),
+                  ciclosMaximos: f.get('ciclosMaximos'),
+                  estado: f.get('estado'),
+                  observaciones: f.get('observaciones'),
+                })
+              })
+              setSaving(false)
+              if (r.ok) { setShowNuevaBateria(false); setDroneSeleccionado(null); cargarDatos() }
+            }} className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2"><label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Código *</label><input name="codigo" required placeholder="BAT-001" className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-400" /></div>
+                <div><label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Capacidad (mAh)</label><input name="capacidadMah" type="number" placeholder="5000" className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-400" /></div>
+                <div><label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Ciclos máx.</label><input name="ciclosMaximos" type="number" defaultValue="200" className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-400" /></div>
+                <div className="col-span-2"><label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Estado</label>
+                  <select name="estado" className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20">
+                    <option value="buena">Buena</option>
+                    <option value="degradada">Degradada</option>
+                    <option value="baja">Baja</option>
+                  </select>
+                </div>
+                <div className="col-span-2"><label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Observaciones</label><textarea name="observaciones" rows={2} className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20" /></div>
+              </div>
+              <div className="flex justify-end gap-3 pt-2">
+                <button type="button" onClick={() => setShowNuevaBateria(false)} className="px-4 py-2 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50">Cancelar</button>
+                <button type="submit" disabled={saving} className="px-6 py-2 bg-teal-600 text-white text-sm font-bold rounded-lg hover:bg-teal-700 disabled:opacity-50">{saving ? 'Guardando...' : 'Añadir batería'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
