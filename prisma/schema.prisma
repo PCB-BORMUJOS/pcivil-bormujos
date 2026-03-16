@@ -1722,7 +1722,7 @@ model PilotoDrone {
   telefono          String?
   licenciaAESA      String?
   certificaciones   String[]
-  seguroRC          String?
+  seguroRC          Boolean   @default(false)
   seguroRCNumero    String?
   seguroRCVigencia  DateTime?
   seguroVencimiento DateTime?
