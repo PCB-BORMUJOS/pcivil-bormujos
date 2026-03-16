@@ -141,7 +141,7 @@ const ICONOS_AREA: Record<string, any> = {
   'parque-movil': Truck,
   'vehiculos': Truck,
   'transmisiones': Radio,
-  'formacion': GraduationCap,
+  'formacion': BookOpen,
   'pma': Tent,
   'vestuario': Shirt,
   'drones': TbDrone,
