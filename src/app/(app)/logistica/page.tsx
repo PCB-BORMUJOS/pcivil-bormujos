@@ -1,4 +1,5 @@
-'use client';
+'use client'
+import { TbDrone } from 'react-icons/tb';
 import { useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { usePermisos } from '@/lib/permisos';
@@ -142,6 +143,7 @@ const ICONOS_AREA: Record<string, any> = {
   'formacion': GraduationCap,
   'pma': AlertTriangle,
   'vestuario': Shirt,
+  'drones': TbDrone,
 };
 
 const ESTADOS_PETICION = {
@@ -777,25 +779,34 @@ export default function LogisticaPage() {
       </div>
 
       {/* Resumen por áreas (solo en inventario general) */}
-      {inventarioActual === 'all' && statsPorArea.length > 0 && (
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
-          {statsPorArea.map(area => {
-            const IconoArea = getIconoArea(area.slug);
-            return (
-              <button key={area.id} onClick={() => handleCambiarInventario(area.slug)} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all text-left">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white" style={{ backgroundColor: area.color }}><IconoArea size={16} /></div>
-                  <span className="font-medium text-slate-800 text-sm truncate">{area.nombre}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-2xl font-bold text-slate-800">{area.totalArticulos}</span>
-                  {area.stockBajo > 0 && <span className="text-xs bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded-full font-bold inline-flex items-center gap-1"><AlertTriangle size={10} />{area.stockBajo}</span>}
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      )}
+
+      {inventarioActual === 'all' && statsPorArea.length > 0 && (() => {
+        const ORDEN_AREAS = ['incendios','socorrismo','vestuario','vehiculos','transmisiones','drones','pma','formacion','accion-social']
+        const areasOrdenadas = [...statsPorArea].sort((a, b) => {
+          const ia = ORDEN_AREAS.indexOf(a.slug)
+          const ib = ORDEN_AREAS.indexOf(b.slug)
+          return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib)
+        })
+        return (
+          <div className="grid grid-cols-3 gap-3">
+            {areasOrdenadas.map(area => {
+              const IconoArea = getIconoArea(area.slug);
+              return (
+                <button key={area.id} onClick={() => handleCambiarInventario(area.slug)} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all text-left">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white" style={{ backgroundColor: area.color }}><IconoArea size={16} /></div>
+                    <span className="font-medium text-slate-800 text-sm truncate">{area.nombre}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-2xl font-bold text-slate-800">{area.totalArticulos}</span>
+                    {area.stockBajo > 0 && <span className="text-xs bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded-full font-bold inline-flex items-center gap-1"><AlertTriangle size={10} />{area.stockBajo}</span>}
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+        )
+      })()}
 
       {/* Tabs y Contenido */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
