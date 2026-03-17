@@ -414,7 +414,7 @@ export default function VehiculosPage() {
       </div>
       {/* MODAL: DETALLE VEHÍCULO */}
       {showDetalleVehiculo && vehiculoSeleccionado && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000] p-4" onClick={() => setShowDetalleVehiculo(false)}>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000] p-4" onClick={(e) => { if (e.target === e.currentTarget) setShowDetalleVehiculo(false) }}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl flex flex-col" style={{ height: '680px' }} onClick={e => e.stopPropagation()}>
             <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-5 rounded-t-2xl flex items-center justify-between shrink-0">
               <div className="flex items-center gap-4">
