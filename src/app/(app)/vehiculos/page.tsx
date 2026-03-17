@@ -415,7 +415,7 @@ export default function VehiculosPage() {
                     <td className="px-5 py-4 text-center"><span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-500">Sin datos</span></td>
                     <td className="px-5 py-4 text-center"><span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-500">Sin datos</span></td>
                     <td className="px-5 py-4 text-center"><span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-500">Sin datos</span></td>
-                    <td className="px-5 py-4 text-right"><button onClick={() => { setVehiculoSeleccionado(v); setVehicleDetailTab('documentos'); setShowDetalleVehiculo(true) }} className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"><Upload className="w-3.5 h-3.5" />Gestionar</button></td>
+                    <td className="px-5 py-4 text-right"><button onClick={() => { setVehiculoSeleccionado(v); setVehicleDetailTab('documentos'); setShowDetalleVehiculo(true) }} className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"><Upload className="w-3.5 h-3.5" />Gestionar</button></td>
                   </tr>
                 ))}
               </tbody>
