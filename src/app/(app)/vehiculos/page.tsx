@@ -153,6 +153,12 @@ export default function VehiculosPage() {
     if (r.ok && vehiculoSeleccionado) cargarRepostajes(vehiculoSeleccionado.id)
   }
 
+  const handleEliminarRepostaje = async (id: string) => {
+    if (!confirm('¿Eliminar este repostaje?')) return
+    const r = await fetch('/api/vehiculos?tipo=repostaje&id=' + id, { method: 'DELETE' })
+    if (r.ok && vehiculoSeleccionado) cargarRepostajes(vehiculoSeleccionado.id)
+  }
+
   const handleNuevoRepostaje = async (e: React.FormEvent<HTMLFormElement>) => { e.preventDefault(); if (!vehiculoSeleccionado) return; const f = new FormData(e.currentTarget); try { setSaving(true); const r = await fetch('/api/vehiculos?tipo=repostaje', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ vehiculoId: vehiculoSeleccionado.id, fecha: f.get('fecha'), litros: parseFloat(f.get('litros') as string), precioLitro: parseFloat(f.get('precioLitro') as string) || null, costeTotal: parseFloat(f.get('costeTotal') as string) || null, kilometraje: parseInt(f.get('kilometraje') as string), tipoCarburante: f.get('tipoCarburante'), gasolinera: f.get('gasolinera') }) }); if (r.ok) { setShowNuevoRepostaje(false); setRepoLitros(''); setRepoPrecio(''); cargarRepostajes(vehiculoSeleccionado.id) } } catch (e) { /* error silenciado */ } finally { setSaving(false) } }
   const handleNuevoFluido = async (e: React.FormEvent<HTMLFormElement>) => { e.preventDefault(); if (!vehiculoSeleccionado) return; const f = new FormData(e.currentTarget); try { setSaving(true); const r = await fetch('/api/vehiculos?tipo=fluido', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ vehiculoId: vehiculoSeleccionado.id, fecha: f.get('fecha'), tipoFluido: f.get('tipoFluido'), accion: f.get('accion'), cantidad: parseFloat(f.get('cantidad') as string) || null, unidad: f.get('unidad'), kilometraje: parseInt(f.get('kilometraje') as string) || null, observaciones: f.get('observaciones') }) }); if (r.ok) { setShowNuevoFluido(false); cargarRegistrosFluidos(vehiculoSeleccionado.id) } } catch (e) { /* error silenciado */ } finally { setSaving(false) } }
   const abrirDetalleVehiculo = (v: Vehiculo) => { setVehiculoSeleccionado(v); setVehicleDetailTab('ficha'); setShowDetalleVehiculo(true) }
