@@ -272,7 +272,7 @@ export default function EstadisticasPage() {
                   <SectionTitle>Distribución por área</SectionTitle>
                   <ResponsiveContainer width="100%" height={240}>
                     <PieChart>
-                      <Pie data={areaPie.length ? areaPie : [{name:'Sin datos',value:1}]} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={90} label={({name,percent}:any)=>`${name} ${((percent||0)*100).toFixed(0)}%`} labelLine={false}>
+                      <Pie data={areaPie.length ? areaPie : [{name:'Sin datos',value:1}]} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={90} label={false} labelLine={false}>
                         {areaPie.map((_:any,i:number) => <Cell key={i} fill={COLORS[i%COLORS.length]} />)}
                       </Pie>
                       <Tooltip /><Legend wrapperStyle={{fontSize:11}} />
@@ -546,7 +546,7 @@ export default function EstadisticasPage() {
                   <SectionTitle>Peticiones por estado</SectionTitle>
                   <ResponsiveContainer width="100%" height={240}>
                     <PieChart>
-                      <Pie data={petPie.length?petPie:[{name:'Sin datos',value:1}]} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={90} label={({name,value}:any)=>`${name}: ${value}`}>
+                      <Pie data={petPie.length?petPie:[{name:'Sin datos',value:1}]} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={90} label={false} labelLine={false}>
                         {(petPie.length?petPie:[{name:'Sin datos',value:1}]).map((_:any,i:number)=><Cell key={i} fill={COLORS[i%COLORS.length]}/>)}
                       </Pie>
                       <Tooltip /><Legend wrapperStyle={{fontSize:11}}/>
