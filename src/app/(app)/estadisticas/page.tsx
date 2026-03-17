@@ -186,7 +186,7 @@ export default function EstadisticasPage() {
   // Mantenimiento por mes
   const mantPorMes = (data.statsVehiculos?.mantenimientoPorMes || []).map((m: any, i: number) => ({ ...m, mes: MESES[i] ?? m.mes }))
 
-  const fmt = (n: number) => n.toLocaleString('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 })
+  const fmt = (n: any) => (Number(n) || 0).toLocaleString('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 })
   const totalHoras = resumen.totalHoras || 0
   const mediaHorasVol = statsVoluntarios.length ? (totalHoras / statsVoluntarios.filter((v: any) => v.guardias > 0).length).toFixed(1) : '0'
 
@@ -653,7 +653,7 @@ export default function EstadisticasPage() {
                     <span className="font-bold text-indigo-700">{v.indicativo}</span>,
                     v.matricula,
                     `${v.marca} ${v.modelo}`,
-                    v.kmActual ? `${v.kmActual.toLocaleString()} km` : '—',
+                    v.kmActual ? `${Number(v.kmActual).toLocaleString()} km` : '—',
                     v.mantenimientos || 0,
                     v.costeMant > 0 ? fmt(v.costeMant) : '—',
                     <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${v.estado==='disponible'?'bg-green-100 text-green-700':v.estado==='mantenimiento'||v.estado==='en_taller'?'bg-red-100 text-red-600':'bg-amber-100 text-amber-700'}`}>{v.estado}</span>,
@@ -673,7 +673,7 @@ export default function EstadisticasPage() {
                 <StatCard label="Gastos caja" value={fmt(resumen.gastos||0)} icon={ArrowUpDown} color="red" />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5">
-                <StatCard label="Saldo" value={fmt(resumen.saldo||0)} color={resumen.saldo>=0?"green":"red"} sub="ingresos - gastos" />
+                <StatCard label="Saldo" value={fmt(resumen.saldo||0)} color={(resumen.saldo||0)>=0?"green":"red"} sub="ingresos - gastos" />
                 <StatCard label="Días de servicio (dietas)" value={resumen.totalDietas > 0 ? (data.diasServicio||[]).length : 0} color="amber" sub="registros de dieta" />
               </div>
 
