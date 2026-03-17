@@ -110,6 +110,8 @@ export default function VehiculosPage() {
   const [showNuevaPeticion, setShowNuevaPeticion] = useState(false)
   const [showGestionFamilias, setShowGestionFamilias] = useState(false)
   const [showNuevoRepostaje, setShowNuevoRepostaje] = useState(false)
+  const [showEditarRepostaje, setShowEditarRepostaje] = useState(false)
+  const [repostajeSeleccionado, setRepostajeSeleccionado] = useState<any>(null)
   const [repoLitros, setRepoLitros] = useState('')
   const [repoPrecio, setRepoPrecio] = useState('')
   const [showNuevoFluido, setShowNuevoFluido] = useState(false)
@@ -159,6 +161,18 @@ export default function VehiculosPage() {
   }
 
   const handleNuevoMantenimiento = async (e: React.FormEvent<HTMLFormElement>) => { e.preventDefault(); if (!vehiculoSeleccionado) return; const f = new FormData(e.currentTarget); try { setSaving(true); const r = await fetch('/api/vehiculos?tipo=mantenimiento', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ vehiculoId: vehiculoSeleccionado.id, fecha: f.get('fecha'), tipo: f.get('tipo'), descripcion: f.get('descripcion'), kilometraje: parseInt(f.get('kilometraje') as string) || null, coste: parseFloat(f.get('coste') as string) || null, proximaRevision: f.get('proximaRevision') || null, realizadoPor: f.get('realizadoPor'), observaciones: f.get('observaciones') }) }); if (r.ok) { setShowNuevoMantenimiento(false); cargarMantenimientos(vehiculoSeleccionado.id) } } catch (e) { /* error silenciado */ } finally { setSaving(false) } }
+  const handleEditarRepostaje = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    if (!repostajeSeleccionado || !vehiculoSeleccionado) return
+    const form = e.currentTarget
+    const f = new FormData(form)
+    try {
+      setSaving(true)
+      const r = await fetch('/api/vehiculos?tipo=repostaje', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: repostajeSeleccionado.id, vehiculoId: vehiculoSeleccionado.id, fecha: f.get('fecha'), litros: parseFloat(f.get('litros') as string), precioLitro: parseFloat(f.get('precioLitro') as string) || null, costeTotal: parseFloat(f.get('costeTotal') as string) || null, kilometraje: parseInt(f.get('kilometraje') as string), tipoCarburante: f.get('tipoCarburante'), gasolinera: f.get('gasolinera') }) })
+      if (r.ok) { setShowEditarRepostaje(false); setRepostajeSeleccionado(null); cargarRepostajes(vehiculoSeleccionado.id) }
+    } catch (e) { } finally { setSaving(false) }
+  }
+
   const handleEliminarRepostaje = async (id: string) => {
     if (!confirm('¿Eliminar este repostaje?')) return
     const r = await fetch('/api/vehiculos?tipo=repostaje&id=' + id, { method: 'DELETE' })
@@ -497,7 +511,7 @@ export default function VehiculosPage() {
                   <div className="border border-slate-200 rounded-xl overflow-hidden">
                     <table className="w-full text-sm">
                       <thead><tr className="border-b border-slate-100"><th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Fecha</th><th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Litros</th><th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase">€/L</th><th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Coste</th><th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Km</th><th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Carburante</th></tr></thead>
-                      <tbody className="divide-y divide-slate-50">{repostajes.length === 0 ? (<tr><td colSpan={6} className="text-center py-8 text-slate-400"><Fuel className="w-8 h-8 mx-auto mb-2 opacity-30" /><p className="text-sm">No hay repostajes</p></td></tr>) : repostajes.map(r => (<tr key={r.id} className="hover:bg-slate-50"><td className="px-4 py-3 text-slate-600">{new Date(r.fecha).toLocaleDateString('es-ES')}</td><td className="px-4 py-3 text-right font-medium">{Number(r.litros).toFixed(1)}</td><td className="px-4 py-3 text-right text-slate-600">{r.precioLitro ? `${Number(r.precioLitro).toFixed(3)}` : '-'}</td><td className="px-4 py-3 text-right font-medium">{r.costeTotal ? `${Number(r.costeTotal).toFixed(2)} €` : '-'}</td><td className="px-4 py-3 text-right text-slate-600">{r.kilometraje?.toLocaleString() || '-'}</td><td className="px-4 py-3 text-slate-600">{r.tipoCarburante}</td><td className="px-4 py-3 text-right"><button onClick={() => handleEliminarRepostaje(r.id)} className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500"><Trash2 className="w-3.5 h-3.5" /></button></td></tr>))}</tbody>
+                      <tbody className="divide-y divide-slate-50">{repostajes.length === 0 ? (<tr><td colSpan={6} className="text-center py-8 text-slate-400"><Fuel className="w-8 h-8 mx-auto mb-2 opacity-30" /><p className="text-sm">No hay repostajes</p></td></tr>) : repostajes.map(r => (<tr key={r.id} className="hover:bg-slate-50"><td className="px-4 py-3 text-slate-600">{new Date(r.fecha).toLocaleDateString('es-ES')}</td><td className="px-4 py-3 text-right font-medium">{Number(r.litros).toFixed(1)}</td><td className="px-4 py-3 text-right text-slate-600">{r.precioLitro ? `${Number(r.precioLitro).toFixed(3)}` : '-'}</td><td className="px-4 py-3 text-right font-medium">{r.costeTotal ? `${Number(r.costeTotal).toFixed(2)} €` : '-'}</td><td className="px-4 py-3 text-right text-slate-600">{r.kilometraje?.toLocaleString() || '-'}</td><td className="px-4 py-3 text-slate-600">{r.tipoCarburante}</td><td className="px-4 py-3 text-right"><div className="flex items-center justify-end gap-1"><button onClick={() => { setRepostajeSeleccionado(r); setShowEditarRepostaje(true) }} className="p-1.5 rounded-lg hover:bg-blue-50 text-slate-400 hover:text-blue-500"><Edit className="w-3.5 h-3.5" /></button><button onClick={() => handleEliminarRepostaje(r.id)} className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500"><Trash2 className="w-3.5 h-3.5" /></button></div></td></tr>))}</tbody>
                     </table>
                   </div>
                 </div>
@@ -668,6 +682,37 @@ export default function VehiculosPage() {
         </div>
       )}
 
+
+      {/* Modal Editar Repostaje */}
+      {showEditarRepostaje && repostajeSeleccionado && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1100] p-4">
+          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="p-5 border-b flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2"><Fuel className="w-5 h-5 text-blue-500" />Editar Repostaje</h3>
+              <button onClick={() => setShowEditarRepostaje(false)} className="p-1 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5 text-slate-400" /></button>
+            </div>
+            <form key={repostajeSeleccionado.id} onSubmit={handleEditarRepostaje} className="p-5 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div><label className="block text-sm font-medium text-slate-700 mb-1">Fecha *</label><input name="fecha" type="date" required defaultValue={repostajeSeleccionado.fecha?.slice(0,10)} className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20" /></div>
+                <div><label className="block text-sm font-medium text-slate-700 mb-1">Carburante *</label><select name="tipoCarburante" defaultValue={repostajeSeleccionado.tipoCarburante} className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"><option value="diesel">Diésel</option><option value="gasolina95">Gasolina 95</option><option value="gasolina98">Gasolina 98</option><option value="electrico">Eléctrico</option><option value="glp">GLP</option></select></div>
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                <div><label className="block text-sm font-medium text-slate-700 mb-1">Litros *</label><input name="litros" type="number" step="0.1" min="0" required defaultValue={repostajeSeleccionado.litros} className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20" /></div>
+                <div><label className="block text-sm font-medium text-slate-700 mb-1">€/Litro</label><input name="precioLitro" type="number" step="0.001" min="0" defaultValue={repostajeSeleccionado.precioLitro} className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20" /></div>
+                <div><label className="block text-sm font-medium text-slate-700 mb-1">Coste Total €</label><input name="costeTotal" type="number" step="0.01" min="0" defaultValue={repostajeSeleccionado.costeTotal} className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20" /></div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div><label className="block text-sm font-medium text-slate-700 mb-1">Kilometraje *</label><input name="kilometraje" type="number" required defaultValue={repostajeSeleccionado.kilometraje} className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20" /></div>
+                <div><label className="block text-sm font-medium text-slate-700 mb-1">Gasolinera</label><input name="gasolinera" defaultValue={repostajeSeleccionado.gasolinera} className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20" /></div>
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <button type="button" onClick={() => setShowEditarRepostaje(false)} className="px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-xl">Cancelar</button>
+                <button type="submit" disabled={saving} className="px-5 py-2.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl disabled:opacity-50">{saving ? 'Guardando...' : 'Guardar cambios'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

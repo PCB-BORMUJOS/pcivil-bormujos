@@ -386,6 +386,25 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ mantenimiento })
     }
 
+    // PUT Repostaje
+    if (tipo === 'repostaje') {
+      const body = await request.json()
+      const { id, fecha, litros, precioLitro, costeTotal, kilometraje, tipoCarburante, gasolinera } = body
+      if (!id) return NextResponse.json({ error: 'ID requerido' }, { status: 400 })
+      const repostaje = await prisma.repostajeVehiculo.update({
+        where: { id },
+        data: {
+          fecha: fecha ? new Date(fecha) : undefined,
+          litros: litros ? parseFloat(litros) : undefined,
+          precioLitro: precioLitro ? parseFloat(precioLitro) : null,
+          costeTotal: costeTotal ? parseFloat(costeTotal) : null,
+          kilometraje: kilometraje ? parseInt(kilometraje) : null,
+          tipoCarburante: tipoCarburante || null,
+          gasolinera: gasolinera || null,
+        }
+      })
+      return NextResponse.json({ repostaje })
+    }
     return NextResponse.json({ error: 'Tipo de operación no válido' }, { status: 400 })
   } catch (error) {
     console.error('Error updating data:', error)
