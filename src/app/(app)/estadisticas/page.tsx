@@ -247,7 +247,7 @@ export default function EstadisticasPage() {
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <StatCard label="Voluntarios activos" value={resumen.totalVoluntarios} icon={Users} color="indigo" sub={`de ${voluntarios.length} registrados`} />
                 <StatCard label="Guardias realizadas" value={resumen.totalGuardias} icon={Calendar} color="amber" sub={`año ${year}`} />
-                <StatCard label="Horas totales" value={totalHoras.toLocaleString()} icon={Clock} color="green" sub="estimadas" />
+                <StatCard label="Horas totales" value={(totalHoras||0).toLocaleString()} icon={Clock} color="green" sub="estimadas" />
                 <StatCard label="Media horas/voluntario" value={`${mediaHorasVol}h`} icon={Activity} color="blue" sub="activos en período" />
               </div>
 
