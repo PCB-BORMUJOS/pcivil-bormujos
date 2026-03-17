@@ -605,8 +605,8 @@ export default function AdministracionPage() {
         ...data.ficha,
         rolId: voluntario.rolId, // Inicializar con el rol actual
         fechaAlta: data.ficha?.fechaAlta ? data.ficha.fechaAlta.split('T')[0] : new Date().toISOString().split('T')[0],
-        localidad: '',
-        provincia: '',
+        localidad: data.ficha?.localidad || '',
+        provincia: data.ficha?.provincia || '',
         areaAsignada: data.ficha?.areaAsignada || '',
         areaSecundaria: data.ficha?.areaSecundaria || '',
         categoria: data.ficha?.categoria || 'VOLUNTARIO',
