@@ -605,8 +605,8 @@ export default function AdministracionPage() {
         ...data.ficha,
         rolId: voluntario.rolId, // Inicializar con el rol actual
         fechaAlta: data.ficha?.fechaAlta ? data.ficha.fechaAlta.split('T')[0] : new Date().toISOString().split('T')[0],
-        localidad: 'BORMUJOS',
-        provincia: 'SEVILLA',
+        localidad: '',
+        provincia: '',
         areaAsignada: data.ficha?.areaAsignada || '',
         areaSecundaria: data.ficha?.areaSecundaria || '',
         categoria: data.ficha?.categoria || 'VOLUNTARIO',
@@ -618,8 +618,8 @@ export default function AdministracionPage() {
       setFichaData({
         rolId: voluntario.rolId,
         fechaAlta: new Date().toISOString().split('T')[0],
-        localidad: 'BORMUJOS',
-        provincia: 'SEVILLA',
+        localidad: '',
+        provincia: '',
         areaAsignada: '',
         areaSecundaria: '',
         categoria: 'VOLUNTARIO'
@@ -1096,7 +1096,7 @@ export default function AdministracionPage() {
             onClick={() => {
               if (activeTab === 'personal') {
                 setSelectedVoluntario({ id: '', numeroVoluntario: '', nombre: '', apellidos: '', email: '', telefono: '', activo: true, rolId: '', rol: { id: '', nombre: '' } } as Voluntario);
-                setFichaData({ fechaAlta: new Date().toISOString().split('T')[0], localidad: 'BORMUJOS', provincia: 'SEVILLA', areaAsignada: '', categoria: 'VOLUNTARIO' });
+                setFichaData({ fechaAlta: new Date().toISOString().split('T')[0], localidad: '',  provincia: '', areaAsignada: '', categoria: 'VOLUNTARIO' });
                 setModoNuevaFicha('existente');
                 setNuevoPassword('');
                 setShowFichaModal(true);
@@ -2291,8 +2291,8 @@ export default function AdministracionPage() {
                               setFichaData({
                                 rolId: vol.rolId || '',
                                 fechaAlta: new Date().toISOString().split('T')[0],
-                                localidad: 'BORMUJOS',
-                                provincia: 'SEVILLA',
+                                localidad: fichaData?.localidad || '',
+                                provincia: fichaData?.provincia || '',
                               });
                             }
                           }
@@ -2428,11 +2428,11 @@ export default function AdministracionPage() {
             <div className="grid grid-cols-4 gap-4">
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Localidad</label>
-                <input type="text" value={fichaData.localidad || 'BORMUJOS'} onChange={e => setFichaData({ ...fichaData, localidad: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm" />
+                <input type="text" value={fichaData.localidad || ''} onChange={e => setFichaData({ ...fichaData, localidad: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm" />
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Provincia</label>
-                <input type="text" value={fichaData.provincia || 'SEVILLA'} onChange={e => setFichaData({ ...fichaData, provincia: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm" />
+                <input type="text" value={fichaData.provincia || ''} onChange={e => setFichaData({ ...fichaData, provincia: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm" />
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">DNI/NIE</label>
