@@ -472,6 +472,16 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ success: true })
     }
 
+    // DELETE Repostaje
+    if (tipo === 'repostaje') {
+      await prisma.repostajeVehiculo.delete({ where: { id } })
+      return NextResponse.json({ success: true })
+    }
+    // DELETE Fluido
+    if (tipo === 'fluido') {
+      await prisma.registroFluidoVehiculo.delete({ where: { id } })
+      return NextResponse.json({ success: true })
+    }
     return NextResponse.json({ error: 'Tipo de operación no válido' }, { status: 400 })
   } catch (error) {
     console.error('Error deleting data:', error)
