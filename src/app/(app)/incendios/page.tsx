@@ -164,7 +164,9 @@ const AREAS_NOMBRE: Record<string, string> = {
   'logistica': 'Logística',
 };
 
+import { usePermisos } from '@/lib/permisos'
 export default function IncendiosPage() {
+  const { canCreate, canEdit, canDelete, canCreatePeticion } = usePermisos()
   const [mainTab, setMainTab] = useState<'inventario' | 'eci-edificios' | 'inventario-eci' | 'hidrantes'>('inventario');
   const [inventoryTab, setInventoryTab] = useState<'stock' | 'peticiones' | 'movimientos'>('stock');
 
@@ -479,17 +481,17 @@ export default function IncendiosPage() {
           {/* Desktop */}
           <div className="hidden sm:flex items-center gap-2">
             <button onClick={cargarDatos} className="flex items-center justify-center p-2.5 text-slate-600 hover:bg-slate-100 rounded-lg border border-slate-200" title="Recargar"><RefreshCw size={18} /></button>
-            <button onClick={() => setShowNuevaPeticion(true)} className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm"><ShoppingCart size={18} />Petición</button>
-            <button onClick={() => setShowNuevoArticulo(true)} className="flex items-center gap-2 px-4 py-2.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-400 font-medium text-sm"><Package size={18} />Artículo</button>
-            <button onClick={() => setShowNuevoHidrante(true)} className="flex items-center gap-2 px-4 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium text-sm"><HidranteIcon size={18} />Hidrante</button>
+            <button disabled={!canCreatePeticion} onClick={() => setShowNuevaPeticion(true)} className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm disabled:opacity-40 disabled:cursor-not-allowed"><ShoppingCart size={18} />Petición</button>
+            <button disabled={!canCreate} onClick={() => setShowNuevoArticulo(true)} className="flex items-center gap-2 px-4 py-2.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-400 font-medium text-sm disabled:opacity-40 disabled:cursor-not-allowed"><Package size={18} />Artículo</button>
+            <button disabled={!canCreate} onClick={() => setShowNuevoHidrante(true)} className="flex items-center gap-2 px-4 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium text-sm disabled:opacity-40 disabled:cursor-not-allowed"><HidranteIcon size={18} />Hidrante</button>
           </div>
         </div>
         {/* Móvil */}
         <div className="flex sm:hidden gap-2 mt-3">
           <button onClick={cargarDatos} className="flex-1 flex items-center justify-center p-2.5 text-slate-600 hover:bg-slate-100 rounded-lg border border-slate-200"><RefreshCw size={18} /></button>
-          <button onClick={() => setShowNuevaPeticion(true)} className="flex-1 flex items-center justify-center px-2 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700"><ShoppingCart size={18} /></button>
-          <button onClick={() => setShowNuevoArticulo(true)} className="flex-1 flex items-center justify-center px-2 py-2.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-400"><Package size={18} /></button>
-          <button onClick={() => setShowNuevoHidrante(true)} className="flex-1 flex items-center justify-center px-2 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700"><HidranteIcon size={18} /></button>
+          <button disabled={!canCreatePeticion} onClick={() => setShowNuevaPeticion(true)} className="flex-1 flex items-center justify-center px-2 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-40"><ShoppingCart size={18} /></button>
+          <button disabled={!canCreate} onClick={() => setShowNuevoArticulo(true)} className="flex-1 flex items-center justify-center px-2 py-2.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-400 disabled:opacity-40"><Package size={18} /></button>
+          <button disabled={!canCreate} onClick={() => setShowNuevoHidrante(true)} className="flex-1 flex items-center justify-center px-2 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-40"><HidranteIcon size={18} /></button>
         </div>
       </div>
 
@@ -681,10 +683,10 @@ export default function IncendiosPage() {
                                     <button onClick={() => { setArticuloSeleccionado(art); setShowEditarArticulo(false); }} className="p-1.5 text-slate-600 hover:bg-slate-100 rounded" title="Ver detalles">
                                       <Eye size={16} />
                                     </button>
-                                    <button onClick={() => { setArticuloSeleccionado(art); setShowEditarArticulo(true); }} className="p-1.5 text-slate-600 hover:bg-slate-100 rounded" title="Editar">
+                                    <button disabled={!canEdit} onClick={() => { setArticuloSeleccionado(art); setShowEditarArticulo(true); }} className="p-1.5 text-slate-600 hover:bg-slate-100 rounded disabled:opacity-40 disabled:cursor-not-allowed" title="Editar">
                                       <Edit size={16} />
                                     </button>
-                                    <button onClick={async () => { if (confirm(`¿Eliminar "${art.nombre}"?`)) { await eliminarItem('articulo', art.id); } }} className="p-1.5 text-red-600 hover:bg-red-50 rounded" title="Eliminar">
+                                    <button disabled={!canDelete} onClick={async () => { if (confirm(`¿Eliminar "${art.nombre}"?`)) { await eliminarItem('articulo', art.id); } }} className="p-1.5 text-red-600 hover:bg-red-50 rounded disabled:opacity-40 disabled:cursor-not-allowed" title="Eliminar">
                                       <Trash2 size={16} />
                                     </button>
                                   </div>

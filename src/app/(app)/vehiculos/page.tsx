@@ -80,7 +80,9 @@ function NivelIndicador({ nivel }: { nivel?: string }) {
   return (<div className="flex items-center gap-2"><div className={`w-3 h-3 rounded-full ${n.color}`} /><span className="text-sm text-slate-600">{n.label}</span></div>)
 }
 
+import { usePermisos } from '@/lib/permisos'
 export default function VehiculosPage() {
+  const { canCreate, canEdit, canDelete, canCreatePeticion } = usePermisos()
   const { data: session } = useSession()
   const [mainTab, setMainTab] = useState<'inventario' | 'flota' | 'documentacion' | 'localizacion'>('inventario')
   const [inventoryTab, setInventoryTab] = useState<'stock' | 'peticiones' | 'movimientos'>('stock')
@@ -207,7 +209,7 @@ export default function VehiculosPage() {
           <div className="hidden sm:flex items-center gap-2">
             <button onClick={cargarDatos} className="flex items-center justify-center p-2.5 text-slate-600 hover:bg-slate-100 rounded-lg border border-slate-200" title="Recargar"><RefreshCw className="w-5 h-5" /></button>
             <button onClick={() => setShowNuevaPeticion(true)} className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm"><ShoppingCart size={18} />Petición</button>
-            <button onClick={() => setShowNuevoArticulo(true)} className="flex items-center gap-2 px-4 py-2.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-400 font-medium text-sm"><Package size={18} />Artículo</button>
+            <button disabled={!canCreate} onClick={() => setShowNuevoArticulo(true)} className="flex items-center gap-2 px-4 py-2.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-400 font-medium text-sm disabled:opacity-40 disabled:cursor-not-allowed"><Package size={18} />Artículo</button>
             <button onClick={() => setMainTab("localizacion")} className="flex items-center gap-2 px-4 py-2.5 bg-blue-700 text-white rounded-lg hover:bg-blue-800 font-medium text-sm"><MapPin size={18} />Localización</button>
           </div>
         </div>
@@ -215,7 +217,7 @@ export default function VehiculosPage() {
         <div className="flex sm:hidden gap-2 mt-3">
           <button onClick={cargarDatos} className="flex-1 flex items-center justify-center p-2.5 text-slate-600 hover:bg-slate-100 rounded-lg border border-slate-200"><RefreshCw className="w-5 h-5" /></button>
           <button onClick={() => setShowNuevaPeticion(true)} className="flex-1 flex items-center justify-center px-2 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700"><ShoppingCart size={18} /></button>
-          <button onClick={() => setShowNuevoArticulo(true)} className="flex-1 flex items-center justify-center px-2 py-2.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-400"><Package size={18} /></button>
+          <button disabled={!canCreate} onClick={() => setShowNuevoArticulo(true)} className="flex-1 flex items-center justify-center px-2 py-2.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-400 disabled:opacity-40"><Package size={18} /></button>
           <button onClick={() => setMainTab("localizacion")} className="flex-1 flex items-center justify-center px-2 py-2.5 bg-blue-700 text-white rounded-lg hover:bg-blue-800"><MapPin size={18} /></button>
         </div>
       </div>
