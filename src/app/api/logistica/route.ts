@@ -11,16 +11,11 @@ const isValid = (val: any) => val !== undefined && val !== null && val !== '';
 
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions)
-  if (!session) {
+  if (!session?.user) {
     return new Response(JSON.stringify({ error: 'No autorizado' }), { status: 401 })
   }
 
   try {
-    // CORRECCIÓN 2: getServerSession vacío para evitar error de importación
-    const session = await getServerSession()
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
-    }
 
     const { searchParams } = new URL(request.url)
     const tipo = searchParams.get('tipo')
@@ -405,15 +400,20 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions)
-  if (!session) {
+  if (!session?.user) {
     return new Response(JSON.stringify({ error: 'No autorizado' }), { status: 401 })
+  }
+  const userRol = (session.user as any).rol as string ?? 'voluntario'
+  const permisosExtra: string[] = (session.user as any).permisosExtra ?? []
+  const permisosRol: string[] = (session.user as any).permisos ?? []
+  const todosPermisos = Array.from(new Set([...permisosRol, ...permisosExtra]))
+  const nivelRol = ({ superadmin: 4, admin: 3, coordinador: 2, voluntario: 1 } as Record<string,number>)[userRol] ?? 1
+  const puedeCrear = nivelRol >= 2 || todosPermisos.includes('inventario.crear')
+  if (!puedeCrear) {
+    return NextResponse.json({ error: 'Sin permiso para crear' }, { status: 403 })
   }
 
   try {
-    const session = await getServerSession()
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
-    }
 
     const body = await request.json()
     const { tipo } = body

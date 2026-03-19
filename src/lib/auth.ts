@@ -75,6 +75,20 @@ export const authOptions: AuthOptions = {
         token.permisos = (user as any).permisos
         token.servicioId = (user as any).servicioId
         token.numeroVoluntario = (user as any).numeroVoluntario
+      } else {
+        // Renovación de token: releer permisosExtra desde BD para reflejar cambios sin re-login
+        if (token.id) {
+          try {
+            const u = await prisma.usuario.findUnique({
+              where: { id: token.id as string },
+              select: { permisosExtra: true, rol: { select: { permisos: true } } }
+            })
+            if (u) {
+              ;(token as any).permisosExtra = (u.permisosExtra as string[]) ?? []
+              token.permisos = u.rol.permisos as any
+            }
+          } catch (_) {}
+        }
       }
       return token
     },
