@@ -76,14 +76,14 @@ const navigation: NavItem[] = [
   },
   { name: 'Manuales', href: '/manuales', icon: BookOpen },
   { name: 'Prácticas', href: '/practicas', icon: FlaskConical },
-  { name: 'Estadísticas', href: '/estadisticas', icon: BarChart2 },
+  { name: 'Estadísticas', href: '/estadisticas', icon: BarChart2, adminOnly: true },
 ]
 
 export default function Sidebar() {
   const pathname = usePathname()
   const { data: session, status } = useSession()
   const userRole = session?.user?.rol || ''
-  const isAdmin = ['superadmin', 'admin', 'coordinador'].includes(userRole)
+  const isAdmin = ['superadmin', 'admin'].includes(userRole)
 
   const [collapsed, setCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)

@@ -2,13 +2,23 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { getToken } from 'next-auth/jwt'
 
+const ADMIN_ONLY_ROUTES = [
+  '/administracion',
+  '/estadisticas',
+  '/presupuesto',
+  '/configuracion',
+  '/cuadrantes',
+]
+
 export async function middleware(request: NextRequest) {
-  const token = await getToken({ 
-    req: request, 
-    secret: process.env.NEXTAUTH_SECRET 
+  const token = await getToken({
+    req: request,
+    secret: process.env.NEXTAUTH_SECRET
   })
 
-  const isAuthPage = request.nextUrl.pathname === '/login'
+  const pathname = request.nextUrl.pathname
+  const isAuthPage = pathname === '/login'
+
   const isProtectedRoute = [
     '/dashboard',
     '/cuadrantes',
@@ -27,18 +37,30 @@ export async function middleware(request: NextRequest) {
     '/formacion',
     '/accion-social',
     '/buscar',
-  ].some(route => request.nextUrl.pathname.startsWith(route))
+    '/estadisticas',
+    '/presupuesto',
+    '/drones',
+    '/practicas',
+  ].some(route => pathname.startsWith(route))
 
-  // Si no hay token y es ruta protegida, redirigir a login
   if (!token && isProtectedRoute) {
     const loginUrl = new URL('/login', request.url)
-    loginUrl.searchParams.set('callbackUrl', request.nextUrl.pathname)
+    loginUrl.searchParams.set('callbackUrl', pathname)
     return NextResponse.redirect(loginUrl)
   }
 
-  // Si hay token y está en login, redirigir a dashboard
   if (token && isAuthPage) {
     return NextResponse.redirect(new URL('/dashboard', request.url))
+  }
+
+  if (token && isProtectedRoute) {
+    const userRole = (token as any).rol as string ?? 'voluntario'
+    const isAdmin = ['superadmin', 'admin'].includes(userRole)
+    const isAdminRoute = ADMIN_ONLY_ROUTES.some(route => pathname.startsWith(route))
+
+    if (isAdminRoute && !isAdmin) {
+      return NextResponse.redirect(new URL('/dashboard', request.url))
+    }
   }
 
   return NextResponse.next()
@@ -63,6 +85,10 @@ export const config = {
     '/formacion/:path*',
     '/accion-social/:path*',
     '/buscar/:path*',
+    '/estadisticas/:path*',
+    '/presupuesto/:path*',
+    '/drones/:path*',
+    '/practicas/:path*',
     '/login',
   ],
 }
