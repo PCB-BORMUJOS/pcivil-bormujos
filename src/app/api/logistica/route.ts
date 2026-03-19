@@ -437,8 +437,8 @@ export async function POST(request: NextRequest) {
       const articulo = await prisma.articulo.create({
         data: {
           codigo, nombre, descripcion,
-          stockActual: stockActual || 0,
-          stockMinimo: stockMinimo || 0,
+          stockActual: parseInt(String(stockActual)) || 0,
+          stockMinimo: parseInt(String(stockMinimo)) || 0,
           unidad: unidad || 'unidad',
           tieneCaducidad: tieneCaducidad || false,
           fechaCaducidad: fechaCaducidad ? new Date(fechaCaducidad) : null,
