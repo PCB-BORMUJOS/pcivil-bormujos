@@ -21,10 +21,6 @@ export async function GET(request: NextRequest) {
 
     // GET Documentos de un vehículo
     if (tipo === 'documentos') {
-      const session = await getServerSession(authOptions)
-      if (!session?.user?.id) {
-        return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
-      }
 
       if (!vehiculoId) {
         return NextResponse.json({ error: 'vehiculoId requerido' }, { status: 400 })

@@ -6,7 +6,11 @@ import { prisma } from '@/lib/db'
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    if (!session?.user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    const rol = (session.user as any).rol as string ?? 'voluntario'
+    if (!['superadmin', 'admin'].includes(rol)) {
+      return NextResponse.json({ error: 'Sin permisos suficientes' }, { status: 403 })
+    }
 
     const { searchParams } = new URL(request.url)
     const year = parseInt(searchParams.get('year') || String(new Date().getFullYear()))

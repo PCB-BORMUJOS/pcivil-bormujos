@@ -8,8 +8,13 @@ import { hash } from 'bcryptjs'
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    if (!session?.user?.email) {
+    if (!session?.user) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    }
+    const rol = (session.user as any).rol as string ?? 'voluntario'
+    const nivelRol = ({ superadmin: 4, admin: 3, coordinador: 2, voluntario: 1 } as Record<string,number>)[rol] ?? 1
+    if (nivelRol < 2) {
+      return NextResponse.json({ error: 'Sin permisos suficientes' }, { status: 403 })
     }
 
     const { searchParams } = new URL(request.url)

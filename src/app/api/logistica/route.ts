@@ -993,16 +993,20 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   const session = await getServerSession(authOptions)
-  if (!session) {
+  if (!session?.user) {
     return new Response(JSON.stringify({ error: 'No autorizado' }), { status: 401 })
+  }
+  const _userRol = (session.user as any).rol as string ?? 'voluntario'
+  const _permisosExtra: string[] = (session.user as any).permisosExtra ?? []
+  const _permisosRol: string[] = (session.user as any).permisos ?? []
+  const _todosPermisos = Array.from(new Set([..._permisosRol, ..._permisosExtra]))
+  const _nivelRol = ({ superadmin: 4, admin: 3, coordinador: 2, voluntario: 1 } as Record<string,number>)[_userRol] ?? 1
+  const _puedeEditar = _nivelRol >= 2 || _todosPermisos.includes('inventario.editar')
+  if (!_puedeEditar) {
+    return NextResponse.json({ error: 'Sin permiso para editar' }, { status: 403 })
   }
 
   try {
-    const session = await getServerSession()
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
-    }
-
     const body = await request.json()
     const { tipo, id } = body
 
@@ -1239,16 +1243,20 @@ export async function PUT(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   const session = await getServerSession(authOptions)
-  if (!session) {
+  if (!session?.user) {
     return new Response(JSON.stringify({ error: 'No autorizado' }), { status: 401 })
+  }
+  const _delRol = (session.user as any).rol as string ?? 'voluntario'
+  const _delPermisosExtra: string[] = (session.user as any).permisosExtra ?? []
+  const _delPermisosRol: string[] = (session.user as any).permisos ?? []
+  const _delTodos = Array.from(new Set([..._delPermisosRol, ..._delPermisosExtra]))
+  const _delNivel = ({ superadmin: 4, admin: 3, coordinador: 2, voluntario: 1 } as Record<string,number>)[_delRol] ?? 1
+  const _puedeEliminar = _delNivel >= 3 || _delTodos.includes('inventario.eliminar')
+  if (!_puedeEliminar) {
+    return NextResponse.json({ error: 'Sin permiso para eliminar' }, { status: 403 })
   }
 
   try {
-    const session = await getServerSession()
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
-    }
-
     const { searchParams } = new URL(request.url)
     const tipo = searchParams.get('tipo')
     const id = searchParams.get('id')

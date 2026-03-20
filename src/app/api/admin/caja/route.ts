@@ -6,19 +6,15 @@ import { registrarAudit, getUsuarioAudit } from '@/lib/audit'
 
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions)
-  if (!session) {
+  if (!session?.user) {
     return new Response(JSON.stringify({ error: 'No autorizado' }), { status: 401 })
   }
-  const rol = (session.user as any)?.rol?.toLowerCase() || ''
-  if (!['superadministrador', 'superadmin', 'admin', 'coordinador'].includes(rol)) {
+  const rol = (session.user as any)?.rol as string ?? 'voluntario'
+  if (!['superadmin', 'admin'].includes(rol)) {
     return new Response(JSON.stringify({ error: 'Sin permisos suficientes' }), { status: 403 })
   }
 
   try {
-    const session = await getServerSession()
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
-    }
 
     const movimientos = await prisma.movimientoCaja.findMany({
       orderBy: { fecha: 'desc' },
