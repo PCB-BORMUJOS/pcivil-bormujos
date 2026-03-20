@@ -7,7 +7,7 @@ import { prisma } from '@/lib/db'
 // POST: Generar cuadrante automáticamente basado en disponibilidades
 export async function POST(request: NextRequest) {
     try {
-        const session = await getServerSession()
+        const session = await getServerSession(authOptions)
         if (!session?.user?.email) {
             const { usuarioId, usuarioNombre } = getUsuarioAudit(session)
             await registrarAudit({ accion: 'CREATE', entidad: 'Cuadrante', descripcion: 'Cuadrante generado automáticamente', usuarioId, usuarioNombre, modulo: 'Cuadrantes' })

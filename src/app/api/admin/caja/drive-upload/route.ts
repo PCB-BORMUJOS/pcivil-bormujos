@@ -7,7 +7,7 @@ const CAJA_TICKETS_FOLDER_ID = process.env.CAJA_TICKETS_FOLDER_ID || '10X11xzEnP
 
 export async function POST(request: NextRequest) {
     try {
-        const session = await getServerSession()
+        const session = await getServerSession(authOptions)
         if (!session?.user) {
             return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
         }

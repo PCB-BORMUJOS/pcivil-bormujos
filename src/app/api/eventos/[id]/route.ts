@@ -25,7 +25,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const session = await getServerSession()
+    const session = await getServerSession(authOptions)
     if (!session?.user?.email) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     
     const usuario = await prisma.usuario.findUnique({ where: { email: session.user.email }, include: { rol: true } })
@@ -68,7 +68,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const session = await getServerSession()
+    const session = await getServerSession(authOptions)
     if (!session?.user?.email) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     
     const usuario = await prisma.usuario.findUnique({ where: { email: session.user.email }, include: { rol: true } })
