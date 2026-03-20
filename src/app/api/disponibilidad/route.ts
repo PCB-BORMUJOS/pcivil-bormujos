@@ -6,15 +6,11 @@ import { prisma } from '@/lib/db'
 
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions)
-  if (!session) {
+  if (!session?.user) {
     return new Response(JSON.stringify({ error: 'No autorizado' }), { status: 401 })
   }
 
   try {
-    const session = await getServerSession()
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
-    }
 
     const usuario = await prisma.usuario.findUnique({
       where: { email: session.user.email }

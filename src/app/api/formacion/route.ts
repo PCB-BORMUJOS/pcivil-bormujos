@@ -6,8 +6,8 @@ import { registrarAudit, getUsuarioAudit } from '@/lib/audit'
 
 export async function GET(request: NextRequest) {
     try {
-        const session = await getServerSession()
-        if (!session?.user?.email) {
+        const session = await getServerSession(authOptions)
+        if (!session?.user) {
             return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
         }
 

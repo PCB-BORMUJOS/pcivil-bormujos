@@ -6,7 +6,8 @@ import { registrarAudit, getUsuarioAudit } from '@/lib/audit'
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession()
+    const session = await getServerSession(authOptions)
+    if (!session?.user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     const { searchParams } = new URL(request.url)
     const mes = searchParams.get('mes')
     const incluirPrivados = searchParams.get('privados') === 'true'
@@ -98,8 +99,8 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession()
-    if (!session?.user?.email) {
+    const session = await getServerSession(authOptions)
+    if (!session?.user) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
 
@@ -174,8 +175,8 @@ export async function POST(request: NextRequest) {
 // PATCH - Actualizar fecha de evento (para drag & drop)
 export async function PATCH(request: NextRequest) {
   try {
-    const session = await getServerSession()
-    if (!session?.user?.email) {
+    const session = await getServerSession(authOptions)
+    if (!session?.user) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
 

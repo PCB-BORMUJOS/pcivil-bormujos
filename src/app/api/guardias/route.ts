@@ -5,6 +5,10 @@ import { prisma } from '@/lib/db'
 import { registrarAudit, getUsuarioAudit } from '@/lib/audit'
 
 export async function GET(request: NextRequest) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user) {
+    return new Response(JSON.stringify({ error: 'No autorizado' }), { status: 401 })
+  }
   try {
     const { searchParams } = new URL(request.url)
     const mes = searchParams.get('mes')
@@ -37,8 +41,8 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession()
-    if (!session?.user?.email) {
+    const session = await getServerSession(authOptions)
+    if (!session?.user) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
     
