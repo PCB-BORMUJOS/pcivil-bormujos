@@ -591,9 +591,7 @@ export async function POST(request: NextRequest) {
     }
 
     // ===== HIDRANTE =====
-    console.log('[DEBUG] Verificando hidrante:', { tipo, bodyKeys: Object.keys(body) })
     const esHidrante = tipo === 'hidrante'
-    console.log('[DEBUG] esHidrante:', esHidrante)
 
     if (esHidrante) {
       const { codigo, tipoHidrante, ubicacion, latitud, longitud, presion, caudal, estado } = body

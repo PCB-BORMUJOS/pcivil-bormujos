@@ -108,13 +108,7 @@ export async function POST(request: NextRequest) {
 
         const body = await request.json()
 
-        // Debug payload
-        console.log('POST /api/partes/psi payload:', {
-            indicativosInforman: body.indicativosInforman,
-            firmaInformante: body.firmaInformante ? 'PRESENT' : 'MISSING',
-            responsableTurno: body.responsableTurno,
-            firmaResponsable: body.firmaResponsable ? 'PRESENT' : 'MISSING'
-        })
+
 
         // Validar campos obligatorios (dos niveles: borrador vs finalización)
         const esBorrador = !body.finalizar
