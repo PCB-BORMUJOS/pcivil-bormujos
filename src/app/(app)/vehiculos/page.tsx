@@ -1,4 +1,5 @@
 'use client'
+import { usePermisos } from '@/lib/permisos'
 
 import { useState, useEffect, useCallback } from 'react'
 import dynamic from 'next/dynamic'
@@ -80,7 +81,6 @@ function NivelIndicador({ nivel }: { nivel?: string }) {
   return (<div className="flex items-center gap-2"><div className={`w-3 h-3 rounded-full ${n.color}`} /><span className="text-sm text-slate-600">{n.label}</span></div>)
 }
 
-import { usePermisos } from '@/lib/permisos'
 export default function VehiculosPage() {
   const { canCreate, canEdit, canDelete, canCreatePeticion } = usePermisos()
   const { data: session } = useSession()

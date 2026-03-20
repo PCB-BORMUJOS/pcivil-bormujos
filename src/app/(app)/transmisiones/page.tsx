@@ -1,4 +1,5 @@
 'use client'
+import { usePermisos } from '@/lib/permisos'
 
 import { useState, useEffect, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
@@ -163,7 +164,6 @@ function BateriaIndicador({ nivel }: { nivel?: number }) {
   )
 }
 
-import { usePermisos } from '@/lib/permisos'
 export default function TransmisionesPage() {
   const { canCreate, canEdit, canDelete, canCreatePeticion } = usePermisos()
   const { data: session } = useSession()

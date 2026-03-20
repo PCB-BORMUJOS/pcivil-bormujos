@@ -1,4 +1,5 @@
 'use client'
+import { usePermisos } from '@/lib/permisos'
 
 import dynamic from 'next/dynamic'
 import { useState, useEffect } from 'react'
@@ -101,7 +102,6 @@ const PRIORIDADES = {
   urgente: { label: 'Urgente', color: 'bg-red-100 text-red-600' },
 }
 
-import { usePermisos } from '@/lib/permisos'
 export default function SocorrismoPage() {
   const { canCreate, canEdit, canDelete, canCreatePeticion } = usePermisos()
   // Estados principales

@@ -1,4 +1,5 @@
 'use client';
+import { usePermisos } from '@/lib/permisos'
 import React, { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import 'leaflet/dist/leaflet.css';
@@ -164,7 +165,6 @@ const AREAS_NOMBRE: Record<string, string> = {
   'logistica': 'Logística',
 };
 
-import { usePermisos } from '@/lib/permisos'
 export default function IncendiosPage() {
   const { canCreate, canEdit, canDelete, canCreatePeticion } = usePermisos()
   const [mainTab, setMainTab] = useState<'inventario' | 'eci-edificios' | 'inventario-eci' | 'hidrantes'>('inventario');
