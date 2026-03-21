@@ -344,10 +344,10 @@ function CalendarView({ eventos, guardias, resumenDisponibilidad, onEventClick, 
     setCurrentDate(newDate);
     onMesChange(newDate);
   };
-  const _tn = new Date().toLocaleDateString('es-ES', { timeZone: 'Europe/Madrid' }).split('/');
-  const todayDay = parseInt(_tn[0]);
+  const _tn = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' }).split('-'); // YYYY-MM-DD siempre
+  const todayYear = parseInt(_tn[0]);
   const todayMonth = parseInt(_tn[1]) - 1;
-  const todayYear = parseInt(_tn[2]);
+  const todayDay = parseInt(_tn[2]);
   const isToday = (d: typeof days[0]) => d.current && d.num === todayDay && month === todayMonth && year === todayYear;
 
   const getEventosDelDia = (date: string) => {
