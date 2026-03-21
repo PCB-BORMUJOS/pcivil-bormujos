@@ -547,6 +547,7 @@ export default function DashboardPage() {
   const [showClima, setShowClima] = useState(false);
   const [showEventDetail, setShowEventDetail] = useState<any>(null);
   const [miembrosViogen, setMiembrosViogen] = useState<any[]>([]);
+  const [cuadranteViogen, setCuadranteViogen] = useState<any>({});
   const [guardiasHoy, setGuardiasHoy] = useState<any>({});
   const [showCreateEvent, setShowCreateEvent] = useState(false);
   const [showParticipantesEvento, setShowParticipantesEvento] = useState<any>(null);
@@ -625,6 +626,15 @@ export default function DashboardPage() {
         setVoluntarios(volData.voluntarios || []);
         setTodosVoluntarios(volData.voluntarios || []);  // guardar copia completa para el selector
         fetch('/api/accion-social?tipo=miembros-viogen').then(r => r.json()).then(d => setMiembrosViogen(d.miembros || [])).catch(() => {});
+        // Cargar cuadrante VIOGEN de la semana actual
+        const hoyStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' });
+        const hoyDate = new Date(hoyStr);
+        const diaSemana = hoyDate.getDay(); // 0=dom, 1=lun...
+        const diasHastaLunes = diaSemana === 0 ? -6 : 1 - diaSemana;
+        const lunes = new Date(hoyDate);
+        lunes.setDate(hoyDate.getDate() + diasHastaLunes);
+        const semanaStr = lunes.toLocaleDateString('en-CA');
+        fetch(`/api/accion-social?tipo=cuadrante-viogen&semana=${semanaStr}`).then(r => r.json()).then(d => setCuadranteViogen(d.cuadrante || {})).catch(() => {});
         calcularEnTurnoDesdeGuardias(guardiasData.guardias || []);
         setTurnoActivo(volData.turnoActivo || null);
         setStats(volData.stats || { total: 0, responsablesTurno: 0, conCarnet: 0, experienciaAlta: 0 });
@@ -1074,10 +1084,10 @@ export default function DashboardPage() {
             <div className="ml-auto w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
           </div>
           {(() => {
-            const hoy = new Date().toISOString().split('T')[0];
-            const hoyData = guardiasHoy[hoy] || {};
-            const manana = miembrosViogen.filter((m: any) => hoyData[m.id]?.manana);
-            const tarde = miembrosViogen.filter((m: any) => hoyData[m.id]?.tarde);
+            const hoy = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' });
+            const hoyViogen = cuadranteViogen[hoy] || {};
+            const manana = miembrosViogen.filter((m: any) => hoyViogen[m.id]?.manana === true);
+            const tarde  = miembrosViogen.filter((m: any) => hoyViogen[m.id]?.tarde === true);
             return (
               <div className="space-y-3">
                 <div className="p-3 rounded-lg bg-amber-50 border border-amber-100">
