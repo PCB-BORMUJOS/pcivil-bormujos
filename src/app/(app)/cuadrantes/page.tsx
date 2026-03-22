@@ -740,6 +740,97 @@ export default function CuadrantesPage() {
         </div>
       )}
 
+
+      {/* ── Tabla resumen por voluntario ─────────────────────────────────── */}
+      {!loading && todosUsuarios.length > 0 && (() => {
+        // Generar fechas de la semana
+        const fechasSemana = DIAS.map((_, i) => {
+          const d = new Date(semanaStart)
+          d.setDate(semanaStart.getDate() + i)
+          return d.toISOString().split('T')[0]
+        })
+        const diasCortos = ['L','M','X','J','V','S','D']
+
+        // Para cada usuario calcular disponibilidad y asignaciones
+        const filas = todosUsuarios
+          .filter(u => u.id !== 'J-01' && u.activo !== false)
+          .map(u => {
+            const dispSlots: string[] = []
+            const asigSlots: string[] = []
+            fechasSemana.forEach((fecha, di) => {
+              TURNOS.forEach(({ key, label }) => {
+                const sk = slotKey(fecha, key)
+                const disp = disponibilidades[sk]?.some(d => d.id === u.id)
+                const asig = (asignaciones[sk] || []).includes(u.id)
+                if (disp) dispSlots.push(`${diasCortos[di]}${label.charAt(0)}`)
+                if (asig) asigSlots.push(`${diasCortos[di]}${label.charAt(0)}`)
+              })
+            })
+            return { u, dispSlots, asigSlots }
+          })
+          .filter(f => f.dispSlots.length > 0 || f.asigSlots.length > 0)
+          .sort((a, b) => (a.u.numeroVoluntario || '').localeCompare(b.u.numeroVoluntario || ''))
+
+        if (filas.length === 0) return null
+
+        return (
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
+              <h3 className="text-sm font-bold text-slate-700">Resumen por voluntario</h3>
+              <span className="text-xs text-slate-400">{filas.length} con actividad esta semana</span>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-100">
+                    <th className="text-left py-2 px-3 font-semibold text-slate-500 uppercase tracking-wide">Indicativo</th>
+                    <th className="text-left py-2 px-3 font-semibold text-slate-500 uppercase tracking-wide">Nombre</th>
+                    <th className="text-left py-2 px-3 font-semibold text-slate-500 uppercase tracking-wide">Disponibilidad solicitada</th>
+                    <th className="text-left py-2 px-3 font-semibold text-slate-500 uppercase tracking-wide">Turnos asignados</th>
+                    <th className="text-center py-2 px-3 font-semibold text-slate-500 uppercase tracking-wide">Asig.</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filas.map(({ u, dispSlots, asigSlots }) => (
+                    <tr key={u.id} className="border-b border-slate-50 hover:bg-slate-50/60">
+                      <td className="py-2 px-3">
+                        <span className="font-mono font-bold text-indigo-700">{u.numeroVoluntario || '—'}</span>
+                      </td>
+                      <td className="py-2 px-3 font-medium text-slate-800">{u.nombre} {u.apellidos}</td>
+                      <td className="py-2 px-3">
+                        <div className="flex flex-wrap gap-1">
+                          {dispSlots.length === 0
+                            ? <span className="text-slate-300 italic">—</span>
+                            : dispSlots.map((s, i) => (
+                              <span key={i} className="px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded font-mono">{s}</span>
+                            ))
+                          }
+                        </div>
+                      </td>
+                      <td className="py-2 px-3">
+                        <div className="flex flex-wrap gap-1">
+                          {asigSlots.length === 0
+                            ? <span className="text-slate-300 italic">—</span>
+                            : asigSlots.map((s, i) => (
+                              <span key={i} className="px-1.5 py-0.5 bg-green-100 text-green-700 rounded font-mono font-bold">{s}</span>
+                            ))
+                          }
+                        </div>
+                      </td>
+                      <td className="py-2 px-3 text-center">
+                        <span className={`font-bold ${asigSlots.length > 0 ? 'text-green-600' : 'text-slate-300'}`}>
+                          {asigSlots.length}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )
+      })()}
+
       {showExtraordinario && (
         <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/60" onClick={() => setShowExtraordinario(false)}>
           <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
