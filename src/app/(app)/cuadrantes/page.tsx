@@ -785,9 +785,11 @@ export default function CuadrantesPage() {
                   <tr className="bg-slate-50 border-b border-slate-100">
                     <th className="text-left py-2 px-3 font-semibold text-slate-500 uppercase tracking-wide">Indicativo</th>
                     <th className="text-left py-2 px-3 font-semibold text-slate-500 uppercase tracking-wide">Nombre</th>
-                    <th className="text-left py-2 px-3 font-semibold text-slate-500 uppercase tracking-wide">Disponibilidad solicitada</th>
+                    <th className="text-left py-2 px-3 font-semibold text-slate-500 uppercase tracking-wide">Disponible en</th>
+                    <th className="text-center py-2 px-3 font-semibold text-slate-500 uppercase tracking-wide">Solicita</th>
                     <th className="text-left py-2 px-3 font-semibold text-slate-500 uppercase tracking-wide">Turnos asignados</th>
                     <th className="text-center py-2 px-3 font-semibold text-slate-500 uppercase tracking-wide">Asig.</th>
+                    <th className="text-center py-2 px-3 font-semibold text-slate-500 uppercase tracking-wide">Estado</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -796,31 +798,48 @@ export default function CuadrantesPage() {
                       <td className="py-2 px-3">
                         <span className="font-mono font-bold text-indigo-700">{u.numeroVoluntario || '—'}</span>
                       </td>
-                      <td className="py-2 px-3 font-medium text-slate-800">{u.nombre} {u.apellidos}</td>
+                      <td className="py-2 px-3 font-medium text-slate-800 whitespace-nowrap">{u.nombre} {u.apellidos}</td>
                       <td className="py-2 px-3">
                         <div className="flex flex-wrap gap-1">
                           {dispSlots.length === 0
-                            ? <span className="text-slate-300 italic">—</span>
+                            ? <span className="text-slate-300 italic text-xs">Sin declarar</span>
                             : dispSlots.map((s, i) => (
-                              <span key={i} className="px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded font-mono">{s}</span>
-                            ))
-                          }
-                        </div>
-                      </td>
-                      <td className="py-2 px-3">
-                        <div className="flex flex-wrap gap-1">
-                          {asigSlots.length === 0
-                            ? <span className="text-slate-300 italic">—</span>
-                            : asigSlots.map((s, i) => (
-                              <span key={i} className="px-1.5 py-0.5 bg-green-100 text-green-700 rounded font-mono font-bold">{s}</span>
+                              <span key={i} className="px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded font-mono text-[10px]">{s}</span>
                             ))
                           }
                         </div>
                       </td>
                       <td className="py-2 px-3 text-center">
-                        <span className={`font-bold ${asigSlots.length > 0 ? 'text-green-600' : 'text-slate-300'}`}>
+                        {u.turnosDeseados > 0 ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded font-bold text-xs">
+                            {u.turnosDeseados}t
+                          </span>
+                        ) : <span className="text-slate-300">—</span>}
+                      </td>
+                      <td className="py-2 px-3">
+                        <div className="flex flex-wrap gap-1">
+                          {asigSlots.length === 0
+                            ? <span className="text-slate-300 italic text-xs">Sin asignar</span>
+                            : asigSlots.map((s, i) => (
+                              <span key={i} className="px-1.5 py-0.5 bg-green-100 text-green-700 rounded font-mono font-bold text-[10px]">{s}</span>
+                            ))
+                          }
+                        </div>
+                      </td>
+                      <td className="py-2 px-3 text-center">
+                        <span className={`font-bold text-sm ${asigSlots.length > 0 ? 'text-green-600' : 'text-slate-300'}`}>
                           {asigSlots.length}
                         </span>
+                      </td>
+                      <td className="py-2 px-3 text-center">
+                        {(() => {
+                          const deseados = u.turnosDeseados || 0
+                          const asig = asigSlots.length
+                          if (deseados === 0) return <span className="text-slate-300 text-xs">—</span>
+                          if (asig >= deseados) return <span className="px-1.5 py-0.5 bg-green-100 text-green-700 rounded text-[10px] font-bold">✓ Cubierto</span>
+                          if (asig > 0) return <span className="px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded text-[10px] font-bold">Parcial {asig}/{deseados}</span>
+                          return <span className="px-1.5 py-0.5 bg-red-50 text-red-500 rounded text-[10px]">Sin asignar</span>
+                        })()}
                       </td>
                     </tr>
                   ))}
