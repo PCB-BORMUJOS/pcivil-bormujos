@@ -291,7 +291,6 @@ export default function CuadrantesPage() {
           const yaExiste = guardiasGuardadas.find(
             g => g.usuarioId === uid && g.fecha.slice(0, 10) === fecha && g.turno === turno
           )
-          if (yaExiste) return // ya está guardada, no recrear
           const u =
             disponibilidades[sk]?.find(d => d.id === uid) ||
             guardiasGuardadas.find(g => g.usuarioId === uid)?.usuario ||
@@ -304,6 +303,14 @@ export default function CuadrantesPage() {
             : (u as any)?.carnetConducir
             ? 'Conductor'
             : 'Interviniente'
+          if (yaExiste) {
+            // Si el rol cambió, eliminar y recrear
+            if (yaExiste.rol !== rolFinal) {
+              aEliminar.push(yaExiste)
+              cuerpos.push({ fecha, turno, usuarioId: uid, tipo: 'programada', rol: rolFinal })
+            }
+            return
+          }
           cuerpos.push({ fecha, turno, usuarioId: uid, tipo: 'programada', rol: rolFinal })
         })
       })
