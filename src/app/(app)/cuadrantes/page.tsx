@@ -747,7 +747,7 @@ export default function CuadrantesPage() {
         const fechasSemana = DIAS.map((_, i) => {
           const d = new Date(semanaStart)
           d.setDate(semanaStart.getDate() + i)
-          return d.toISOString().split('T')[0]
+          return d.toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' })
         })
         const diasCortos = ['L','M','X','J','V','S','D']
 
