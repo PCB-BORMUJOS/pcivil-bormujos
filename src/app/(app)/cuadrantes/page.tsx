@@ -751,24 +751,35 @@ export default function CuadrantesPage() {
         })
         const diasCortos = ['L','M','X','J','V','S','D']
 
+        // Construir mapa userId -> turnosDeseados desde disponibilidades
+        const turnosDeseadosMap: Record<string, number> = {}
+        Object.values(disponibilidades).flat().forEach((d: any) => {
+          if (d.turnosDeseados && !turnosDeseadosMap[d.id]) turnosDeseadosMap[d.id] = d.turnosDeseados
+        })
+
+        // Todos los userIds con actividad (disp O asignado)
+        const userIdsConActividad = new Set<string>()
+        Object.values(disponibilidades).flat().forEach((d: any) => userIdsConActividad.add(d.id))
+        Object.values(asignaciones).flat().forEach((id: any) => userIdsConActividad.add(id))
+
         // Para cada usuario calcular disponibilidad y asignaciones
         const filas = todosUsuarios
-          .filter(u => u.id !== 'J-01' && u.activo !== false)
+          .filter(u => userIdsConActividad.has(u.id))
           .map(u => {
             const dispSlots: string[] = []
             const asigSlots: string[] = []
             fechasSemana.forEach((fecha, di) => {
               TURNOS.forEach(({ key, label }) => {
                 const sk = slotKey(fecha, key)
-                const disp = disponibilidades[sk]?.some(d => d.id === u.id)
+                const disp = disponibilidades[sk]?.some((d: any) => d.id === u.id)
                 const asig = (asignaciones[sk] || []).includes(u.id)
                 if (disp) dispSlots.push(`${diasCortos[di]}${label.charAt(0)}`)
                 if (asig) asigSlots.push(`${diasCortos[di]}${label.charAt(0)}`)
               })
             })
-            return { u, dispSlots, asigSlots }
+            const turnosDeseados = turnosDeseadosMap[u.id] || 0
+            return { u: { ...u, turnosDeseados }, dispSlots, asigSlots }
           })
-          .filter(f => f.dispSlots.length > 0 || f.asigSlots.length > 0)
           .sort((a, b) => (a.u.numeroVoluntario || '').localeCompare(b.u.numeroVoluntario || ''))
 
         if (filas.length === 0) return null
