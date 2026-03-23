@@ -105,6 +105,9 @@ export default function CuadrantesPage() {
   const [pendiente, setPendiente] = useState(false)
   const [horasSlot, setHorasSlot] = useState<Record<string, number>>({})
   const [guardandoHoras, setGuardandoHoras] = useState<Record<string, boolean>>({})
+  // Horas individuales por persona por slot: key = `${uid}_${dateStr}_${turno}`
+  const [horasPersona, setHorasPersona] = useState<Record<string, number>>({})
+  const [guardandoPersona, setGuardandoPersona] = useState<Record<string, boolean>>({})
   const [showExtraordinario, setShowExtraordinario] = useState(false)
   const [extraPersonas, setExtraPersonas] = useState<string[]>([])
   const [todosUsuarios, setTodosUsuarios] = useState<any[]>([])
@@ -670,6 +673,29 @@ export default function CuadrantesPage() {
                               )}
                               {u.isAsig && (
                                 <span className="flex gap-0.5 ml-0.5" onClick={e => e.stopPropagation()}>
+                                  {/* Botones horas individuales */}
+                                  {[4, 8, 12].map(h => {
+                                    const pk = `${u.id}_${dateStr}_${turno.key}`
+                                    const activo = horasPersona[pk] === h
+                                    return (
+                                      <button
+                                        key={h}
+                                        disabled={!!guardandoPersona[pk]}
+                                        title={`Asignar +${h}h a ${u.numeroVoluntario}`}
+                                        onClick={async () => {
+                                          setGuardandoPersona(p => ({ ...p, [pk]: true }))
+                                          setHorasPersona(p => ({ ...p, [pk]: h }))
+                                          await fetch('/api/cuadrantes/dieta-slot', {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({ usuarioId: u.id, fecha: dateStr, turno: turno.key, horas: h })
+                                          })
+                                          setGuardandoPersona(p => ({ ...p, [pk]: false }))
+                                        }}
+                                        className={`text-[9px] font-bold px-1 py-0.5 rounded transition-colors disabled:opacity-40 ${activo ? 'bg-orange-500 text-white' : 'bg-slate-100 text-slate-400 hover:bg-orange-100 hover:text-orange-700'}`}
+                                      >+{h}h</button>
+                                    )
+                                  })}
                                   <button
                                     onClick={() => setRolEspecial(prev => {
                                       const actual = prev[sk] || {}
