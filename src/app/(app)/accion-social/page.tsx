@@ -108,6 +108,113 @@ const ESTADOS_PETICION: Record<string, { label: string; color: string }> = {
 
 // ─── Componente Principal ─────────────────────────────────────────────────────
 
+
+function GestionFamiliasModal({ familias, categoriaId, onClose, onRefresh }: {
+  familias: Familia[]
+  categoriaId: string | null
+  onClose: () => void
+  onRefresh: () => void
+}) {
+  const [editandoId, setEditandoId] = useState<string | null>(null)
+  const [editandoNombre, setEditandoNombre] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  const handleCrear = async (e: React.FormEvent<HTMLFormElement>) => {
+    const form = e.currentTarget
+    e.preventDefault()
+    if (!categoriaId) { alert('Categoría no encontrada en BD'); return }
+    const fd = new FormData(form)
+    const nombre = fd.get('nombre') as string
+    if (!nombre.trim()) return
+    setSaving(true)
+    try {
+      await fetch('/api/logistica', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tipo: 'familia', nombre, categoriaId })
+      })
+      form.reset()
+      onRefresh()
+    } finally { setSaving(false) }
+  }
+
+  const handleEditar = async (id: string) => {
+    if (!editandoNombre.trim()) return
+    setSaving(true)
+    try {
+      await fetch('/api/logistica', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tipo: 'familia', id, nombre: editandoNombre })
+      })
+      setEditandoId(null)
+      setEditandoNombre('')
+      onRefresh()
+    } finally { setSaving(false) }
+  }
+
+  const handleEliminar = async (fam: Familia) => {
+    if ((fam._count?.articulos ?? 0) > 0) {
+      alert(`No se puede eliminar "${fam.nombre}": tiene ${fam._count?.articulos} artículo(s).`)
+      return
+    }
+    if (!confirm(`¿Eliminar la familia "${fam.nombre}"?`)) return
+    await fetch(`/api/logistica?tipo=familia&id=${fam.id}`, { method: 'DELETE' })
+    onRefresh()
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000] p-4">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
+        <div className="flex items-center justify-between p-4 border-b">
+          <h3 className="font-semibold text-gray-900">Gestión de Familias</h3>
+          <button onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-lg"><X className="w-4 h-4" /></button>
+        </div>
+        <div className="p-4 space-y-4">
+          <form onSubmit={handleCrear} className="flex gap-2">
+            <input name="nombre" placeholder="Nueva familia..." required className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500/20" />
+            <button type="submit" disabled={saving} className="px-3 py-2 bg-rose-600 text-white rounded-lg text-sm font-medium disabled:opacity-40">Añadir</button>
+          </form>
+          <div className="space-y-2 max-h-72 overflow-y-auto">
+            {familias.length === 0 && <p className="text-sm text-gray-400 text-center py-6">Sin familias creadas</p>}
+            {familias.map(fam => (
+              <div key={fam.id} className="flex items-center gap-2 py-2 px-3 bg-gray-50 rounded-lg">
+                {editandoId === fam.id ? (
+                  <>
+                    <input
+                      value={editandoNombre}
+                      onChange={e => setEditandoNombre(e.target.value)}
+                      className="flex-1 border border-rose-300 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500/20"
+                      autoFocus
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') handleEditar(fam.id)
+                        if (e.key === 'Escape') { setEditandoId(null); setEditandoNombre('') }
+                      }}
+                    />
+                    <button onClick={() => handleEditar(fam.id)} disabled={saving} className="px-2 py-1 bg-rose-600 text-white rounded text-xs font-medium disabled:opacity-40">Guardar</button>
+                    <button onClick={() => { setEditandoId(null); setEditandoNombre('') }} className="px-2 py-1 border border-gray-200 text-gray-500 rounded text-xs">Cancelar</button>
+                  </>
+                ) : (
+                  <>
+                    <span className="flex-1 text-sm font-medium text-gray-700">{fam.nombre}</span>
+                    <span className="text-xs text-gray-400 mr-1">{fam._count?.articulos ?? 0} art.</span>
+                    <button onClick={() => { setEditandoId(fam.id); setEditandoNombre(fam.nombre) }} className="p-1 text-gray-400 hover:text-rose-600 rounded transition-colors" title="Editar">
+                      <Edit className="w-3.5 h-3.5" />
+                    </button>
+                    <button onClick={() => handleEliminar(fam)} className="p-1 text-gray-400 hover:text-red-500 rounded transition-colors" title="Eliminar">
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function AccionSocialPage() {
   const { data: session } = useSession()
 
@@ -1184,43 +1291,12 @@ export default function AccionSocialPage() {
 
       {/* Modal Gestión Familias */}
       {showGestionFamilias && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000] p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
-            <div className="flex items-center justify-between p-4 border-b">
-              <h3 className="font-semibold text-gray-900">Gestión de Familias</h3>
-              <button onClick={() => setShowGestionFamilias(false)} className="p-1.5 hover:bg-gray-100 rounded-lg"><X className="w-4 h-4" /></button>
-            </div>
-            <div className="p-4 space-y-4">
-              <form onSubmit={async e => {
-                e.preventDefault()
-                const fd = new FormData(e.currentTarget)
-                if (!categoriaId) { alert('Categoría no encontrada'); return }
-                await fetch('/api/logistica', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ tipo: 'familia', nombre: fd.get('nombre'), categoriaId }) })
-                ;(e.target as HTMLFormElement).reset(); cargarDatos()
-              }} className="flex gap-2">
-                <input name="nombre" placeholder="Nueva familia..." required className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm" />
-                <button type="submit" className="px-3 py-2 bg-rose-600 text-white rounded-lg text-sm font-medium">Añadir</button>
-              </form>
-              <div className="space-y-2">
-                {familias.map(f => (
-                  <div key={f.id} className="flex items-center justify-between py-2 px-3 bg-gray-50 rounded-lg">
-                    <span className="text-sm font-medium text-gray-700">{f.nombre}</span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-gray-400">{f._count?.articulos ?? 0} artículos</span>
-                      <button onClick={async () => {
-                        if ((f._count?.articulos ?? 0) > 0) { alert('No se puede eliminar: tiene artículos'); return }
-                        if (!confirm(`¿Eliminar familia "${f.nombre}"?`)) return
-                        await fetch(`/api/logistica?tipo=familia&id=${f.id}`, { method: 'DELETE' })
-                        cargarDatos()
-                      }} className="p-1 text-gray-400 hover:text-red-500 rounded"><Trash2 className="w-3.5 h-3.5" /></button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
+        <GestionFamiliasModal
+          familias={familias}
+          categoriaId={categoriaId}
+          onClose={() => setShowGestionFamilias(false)}
+          onRefresh={cargarDatos}
+        />
       )}
 
       {/* Modal Nuevo Espacio */}
