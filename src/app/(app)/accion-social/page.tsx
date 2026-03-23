@@ -43,6 +43,7 @@ interface CentroEmergencia {
   id: string; nombre: string; tipo: string; direccion: string
   telefono?: string; responsable?: string; capacidad?: number
   latitud?: number; longitud?: number; descripcion?: string; activo: boolean
+  estado?: string; email?: string; notas?: string
 }
 interface Contacto {
   id: string; nombre: string; entidad?: string; categoria: string
@@ -1491,6 +1492,59 @@ export default function AccionSocialPage() {
               </div>
               <div className="flex justify-end gap-2 pt-2">
                 <button type="button" onClick={() => setShowNuevoContacto(false)} className="px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-600">Cancelar</button>
+                <button type="submit" className="px-4 py-2 bg-rose-600 text-white rounded-lg text-sm font-medium">Guardar</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+
+      {/* Modal Editar Centro */}
+      {showEditCentro && centroSel && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000] p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-4 border-b sticky top-0 bg-white">
+              <h3 className="font-semibold text-gray-900">Editar Centro de Emergencia</h3>
+              <button onClick={() => { setShowEditCentro(false); setCentroSel(null) }} className="p-1.5 hover:bg-gray-100 rounded-lg"><X className="w-4 h-4" /></button>
+            </div>
+            <form onSubmit={async e => {
+              const form = e.currentTarget
+              e.preventDefault()
+              const fd = new FormData(form)
+              await fetch('/api/accion-social', { method: 'PUT', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tipo: 'centro', id: centroSel.id,
+                  nombre: fd.get('nombre'), tipoCentro: fd.get('tipoCentro'),
+                  direccion: fd.get('direccion'), responsable: fd.get('responsable'),
+                  telefono: fd.get('telefono'), email: fd.get('email'),
+                  capacidad: fd.get('capacidad') ? parseInt(fd.get('capacidad') as string) : null,
+                  latitud: fd.get('latitud') ? parseFloat(fd.get('latitud') as string) : null,
+                  longitud: fd.get('longitud') ? parseFloat(fd.get('longitud') as string) : null,
+                  estado: fd.get('estado'), notas: fd.get('notas') }) })
+              setShowEditCentro(false); setCentroSel(null); cargarDatos()
+            }} className="p-4 space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <input name="nombre" defaultValue={centroSel.nombre} required placeholder="Nombre *" className="col-span-2 border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+                <select name="tipoCentro" defaultValue={centroSel.tipo} className="border border-gray-200 rounded-lg px-3 py-2 text-sm">
+                  {Object.entries(TIPOS_CENTRO).map(([k, v]: any) => <option key={k} value={k}>{v.label}</option>)}
+                </select>
+                <select name="estado" defaultValue={centroSel.estado || 'activo'} className="border border-gray-200 rounded-lg px-3 py-2 text-sm">
+                  <option value="activo">Activo</option>
+                  <option value="inactivo">Inactivo</option>
+                  <option value="mantenimiento">En mantenimiento</option>
+                </select>
+                <input name="direccion" defaultValue={centroSel.direccion} required placeholder="Dirección *" className="col-span-2 border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+                <input name="responsable" defaultValue={centroSel.responsable || ''} placeholder="Responsable" className="border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+                <input name="telefono" defaultValue={centroSel.telefono || ''} placeholder="Teléfono" className="border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+                <input name="email" defaultValue={centroSel.email || ''} placeholder="Email" className="col-span-2 border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+                <input name="capacidad" type="number" defaultValue={centroSel.capacidad || ''} placeholder="Capacidad (personas)" className="border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+                <div className="border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-400 flex items-center">Capacidad actual: {centroSel.capacidad || '—'}</div>
+                <input name="latitud" defaultValue={centroSel.latitud || ''} placeholder="Latitud" className="border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+                <input name="longitud" defaultValue={centroSel.longitud || ''} placeholder="Longitud" className="border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+                <textarea name="notas" defaultValue={centroSel.notas || ''} rows={2} placeholder="Notas" className="col-span-2 border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none" />
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <button type="button" onClick={() => { setShowEditCentro(false); setCentroSel(null) }} className="px-4 py-2 border border-gray-200 rounded-lg text-sm">Cancelar</button>
                 <button type="submit" className="px-4 py-2 bg-rose-600 text-white rounded-lg text-sm font-medium">Guardar</button>
               </div>
             </form>
