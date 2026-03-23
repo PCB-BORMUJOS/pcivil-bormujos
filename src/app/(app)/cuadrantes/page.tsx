@@ -581,7 +581,7 @@ export default function CuadrantesPage() {
                       ))}
                       {guardandoHoras[sk] && <span className="text-[8px] text-slate-400 ml-1">...</span>}
                     </div>
-                    <div className="space-y-0.5 max-h-56 overflow-y-auto">
+                    <div className="space-y-0.5 max-h-56 overflow-y-auto pr-1">
                       {(() => {
                         // Lista unificada de todos los voluntarios para este slot
                         const listaCompleta = todosUsuarios.map((u: any) => {
@@ -652,7 +652,7 @@ export default function CuadrantesPage() {
                               key={u.id}
                               onClick={() => clickable && toggleAsignacion(sk, u.id)}
                               title={`${u.nombre} ${u.apellidos}${u.tieneDisponibilidadEsteSlot ? ` · Quiere ${u.turnosDeseados} turnos · ${restantes} restantes` : u.esNoDisponible ? ' · No disponible esta semana' : ' · Sin disponibilidad declarada'}`}
-                              className={`flex items-center gap-1.5 px-2 py-2 rounded-lg text-[13px] font-medium transition-all select-none cursor-pointer ${className}`}
+                              className={`flex items-center gap-1.5 px-2 py-2 mr-0.5 rounded-lg text-[13px] font-medium transition-all select-none cursor-pointer ${className}`}
                             >
                               <span className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${u.isAsig && u.estadoGuardia === 'ausente' ? 'bg-purple-500 border-purple-500 text-white' : u.isAsig && esPracticas ? 'bg-amber-500 border-amber-500 text-white' : u.isAsig ? 'bg-green-500 border-green-500 text-white' : 'border-slate-300'}`} style={{ fontSize: '9px' }}>
                                 {u.isAsig && u.estadoGuardia === 'ausente' ? '✗' : u.isAsig ? '✓' : ''}
@@ -662,12 +662,12 @@ export default function CuadrantesPage() {
                                 {esPracticas && <span className="ml-0.5 text-[7px] font-bold text-amber-600 bg-amber-100 px-0.5 rounded">P{turnosPrac}/15</span>}
                               </span>
                               <span className="flex items-center gap-0.5 flex-shrink-0">
-                                {u.responsableTurno && <Shield size={11} className={u.isAsig ? 'text-green-700' : u.tieneDisponibilidadEsteSlot ? 'text-indigo-500' : 'text-slate-300'} />}
-                                {u.carnetConducir && <Car size={11} className={u.isAsig ? 'text-green-700' : u.tieneDisponibilidadEsteSlot ? 'text-blue-500' : 'text-slate-300'} />}
-                                {!u.esOperativo && <span className="text-[7px] font-bold text-slate-400 bg-slate-100 px-0.5 rounded">ADM</span>}
+                                {u.responsableTurno && <Shield size={14} className={u.isAsig ? 'text-green-700' : u.tieneDisponibilidadEsteSlot ? 'text-indigo-500' : 'text-slate-300'} />}
+                                {u.carnetConducir && <Car size={14} className={u.isAsig ? 'text-green-700' : u.tieneDisponibilidadEsteSlot ? 'text-blue-500' : 'text-slate-300'} />}
+                                {!u.esOperativo && <span className="text-[9px] font-bold text-slate-500 bg-slate-100 px-1 py-0.5 rounded">ADM</span>}
                               </span>
                               {u.tieneDisponibilidadEsteSlot && (
-                                <span className={`text-[10px] font-mono flex-shrink-0 ${u.isAsig ? 'text-green-600' : restantes === 0 ? 'text-red-400' : 'text-slate-400'}`}>
+                                <span className={`text-[11px] font-mono flex-shrink-0 ${u.isAsig ? 'text-green-600' : restantes === 0 ? 'text-red-400' : 'text-slate-400'}`}>
                                   [{restantes}↓]
                                 </span>
                               )}
