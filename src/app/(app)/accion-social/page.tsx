@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import dynamic from 'next/dynamic'
 import 'leaflet/dist/leaflet.css'
-import L from 'leaflet'
 import {
   Heart, Phone, Building2, MapPin, Users, AlertTriangle,
   Plus, RefreshCw, Search, ChevronDown, ChevronUp, Edit,
@@ -87,7 +86,10 @@ const MAP_ICON_SVGS: Record<string, { path: string; color: string; bg: string }>
   default:               { path: 'M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z M12 11.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z', color: '#6b7280', bg: '#f3f4f6' },
 }
 
-function createMapIcon(tipo: string): L.DivIcon {
+function createMapIcon(tipo: string): any {
+  if (typeof window === 'undefined') return undefined
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const L = require('leaflet')
   const def = MAP_ICON_SVGS[tipo] || MAP_ICON_SVGS.default
   const svgHtml = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${def.color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="${def.path}"/></svg>`
   return L.divIcon({
