@@ -273,8 +273,8 @@ export default function AccionSocialPage() {
     try {
       setLoading(true)
       const [resInv, resCat, resEsp, resCent, resCont, resCasos, resMiembros, resStats] = await Promise.all([
-        fetch('/api/logistica?inventario=accion_social'),
-        fetch('/api/logistica?tipo=categoria&slug=accion_social'),
+        fetch('/api/logistica?inventario=accion-social'),
+        fetch('/api/logistica?tipo=categoria&slug=accion-social'),
         fetch('/api/accion-social?tipo=espacios'),
         fetch('/api/accion-social?tipo=centros'),
         fetch('/api/accion-social?tipo=directorio'),
