@@ -795,28 +795,28 @@ export default function AccionSocialPage() {
                   </thead>
                   <tbody>
                     {centros.map(c => (
-                      <tr key={c.id} className="border-b border-gray-50 hover:bg-gray-50">
-                        <td className="py-3 px-3 font-medium text-gray-900">{c.nombre}</td>
-                        <td className="py-3 px-3">
-                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${TIPOS_CENTRO[c.tipo]?.color}`}>
+                      <tr key={c.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                        <td className="py-3.5 px-4 text-sm font-semibold text-gray-900">{c.nombre}</td>
+                        <td className="py-3.5 px-4">
+                          <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${TIPOS_CENTRO[c.tipo]?.color}`}>
                             {TIPOS_CENTRO[c.tipo]?.label || c.tipo}
                           </span>
                         </td>
-                        <td className="py-3 px-3 text-gray-500 text-xs">{c.direccion}</td>
-                        <td className="py-3 px-3 text-gray-500 text-xs">{c.responsable || '—'}</td>
-                        <td className="py-3 px-3">
-                          {c.capacidad ? <span className="font-semibold text-teal-700">{c.capacidad} pers.</span> : '—'}
+                        <td className="py-3.5 px-4 text-sm text-gray-600">{c.direccion}</td>
+                        <td className="py-3.5 px-4 text-sm text-gray-600">{c.responsable || '—'}</td>
+                        <td className="py-3.5 px-4 text-sm">
+                          {c.capacidad ? <span className="font-semibold text-teal-700">{c.capacidad} pers.</span> : <span className="text-gray-400">—</span>}
                         </td>
-                        <td className="py-3 px-3 text-gray-500 text-xs">{c.telefono || '—'}</td>
-                        <td className="py-3 px-3">
+                        <td className="py-3.5 px-4 text-sm text-gray-600">{c.telefono || '—'}</td>
+                        <td className="py-3.5 px-4">
                           <div className="flex gap-1">
                             <button onClick={() => { setCentroSel(c); setShowEditCentro(true) }}
-                              className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded"><Edit className="w-3.5 h-3.5" /></button>
+                              className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"><Edit className="w-4 h-4" /></button>
                             <button onClick={async () => {
                               if (!confirm(`¿Eliminar "${c.nombre}"?`)) return
                               await fetch(`/api/accion-social?tipo=centro&id=${c.id}`, { method: 'DELETE' })
                               cargarDatos()
-                            }} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"><Trash2 className="w-3.5 h-3.5" /></button>
+                            }} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"><Trash2 className="w-4 h-4" /></button>
                           </div>
                         </td>
                       </tr>
