@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useCallback } from 'react'
+import { useSession } from 'next-auth/react'
 import {
   Calendar, ChevronLeft, ChevronRight, RefreshCw, Save,
   Shield, Car, Minus, Plus, Clock, AlertTriangle, CheckCircle2, Info
@@ -109,6 +110,8 @@ export default function CuadrantesPage() {
   const [todosUsuarios, setTodosUsuarios] = useState<any[]>([])
   const [idsNoDisponible, setIdsNoDisponible] = useState<string[]>([])
   const [idsQueRespondieron, setIdsQueRespondieron] = useState<string[]>([])
+  const { data: session } = useSession()
+  const isAdmin = ['superadmin', 'admin'].includes((session?.user as any)?.rol ?? '')
 
   const calcularSugerencias = (
     dispMap: Record<string, UsuarioDisponible[]>,
@@ -531,14 +534,14 @@ export default function CuadrantesPage() {
                 const slotParcial = asignadosOp.length > 0 && asignadosOp.length < cap
                 const asignadosExternos = asignados.filter(uid => !disponibles.find(d => d.id === uid))
                 return (
-                  <div key={dayIdx} className={`border-r border-slate-100 last:border-r-0 p-2 ${dayIdx >= 5 ? 'bg-slate-50/60' : ''} ${turno.key === 'tarde' ? 'bg-slate-50/30' : ''}`}>
+                  <div key={dayIdx} className={`border-r border-slate-100 last:border-r-0 p-2.5 ${dayIdx >= 5 ? 'bg-slate-50/60' : ''} ${turno.key === 'tarde' ? 'bg-slate-50/30' : ''}`}>
                     <div className={`flex items-center justify-between mb-1.5 pb-1 border-b ${turno.key === 'mañana' ? 'border-amber-100' : 'border-indigo-100'}`}>
                       <div className="flex items-center gap-1">
                         <Clock size={9} className={turno.key === 'mañana' ? 'text-amber-500' : 'text-indigo-500'} />
-                        <span className={`text-[9px] font-bold uppercase tracking-wide ${turno.key === 'mañana' ? 'text-amber-600' : 'text-indigo-600'}`}>{turno.label}</span>
+                        <span className={`text-[11px] font-bold uppercase tracking-wide ${turno.key === 'mañana' ? 'text-amber-600' : 'text-indigo-600'}`}>{turno.label}</span>
                       </div>
                       <div className="flex items-center gap-0.5">
-                        <span className={`text-[9px] font-bold px-1 py-0.5 rounded ${slotOk ? 'bg-green-100 text-green-700' : slotParcial ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-400'}`}>
+                        <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded ${slotOk ? 'bg-green-100 text-green-700' : slotParcial ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-400'}`}>
                           {asignadosOp.length}/{cap}
                         </span>
                         <button onClick={() => setCapacidad(p => ({ ...p, [sk]: Math.max(1, (p[sk] || 4) - 1) }))} className="w-4 h-4 flex items-center justify-center hover:bg-slate-200 rounded text-slate-400"><Minus size={7} /></button>
@@ -634,8 +637,10 @@ export default function CuadrantesPage() {
                             className = 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
                           } else if (!u.haRespondido && !u.esNoDisponible) {
                             className = 'bg-red-50 border border-dashed border-red-300 text-red-400 hover:bg-red-100'
+                          } else if (isAdmin && !u.esNoDisponible) {
+                            // Admin puede ver y asignar voluntarios sin disponibilidad declarada
+                            className = 'bg-slate-50 border border-dashed border-slate-200 text-slate-400 hover:bg-slate-100 hover:text-slate-600'
                           } else {
-                            // haRespondido pero no para este slot, o noDisponible — no mostrar
                             return null
                           }
 
@@ -644,9 +649,9 @@ export default function CuadrantesPage() {
                               key={u.id}
                               onClick={() => clickable && toggleAsignacion(sk, u.id)}
                               title={`${u.nombre} ${u.apellidos}${u.tieneDisponibilidadEsteSlot ? ` · Quiere ${u.turnosDeseados} turnos · ${restantes} restantes` : u.esNoDisponible ? ' · No disponible esta semana' : ' · Sin disponibilidad declarada'}`}
-                              className={`flex items-center gap-1 px-1.5 py-1 rounded text-[10px] transition-all select-none cursor-pointer ${className}`}
+                              className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-[12px] transition-all select-none cursor-pointer ${className}`}
                             >
-                              <span className={`w-3 h-3 rounded border flex items-center justify-center flex-shrink-0 ${u.isAsig && u.estadoGuardia === 'ausente' ? 'bg-purple-500 border-purple-500 text-white' : u.isAsig && esPracticas ? 'bg-amber-500 border-amber-500 text-white' : u.isAsig ? 'bg-green-500 border-green-500 text-white' : 'border-slate-300'}`} style={{ fontSize: '7px' }}>
+                              <span className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${u.isAsig && u.estadoGuardia === 'ausente' ? 'bg-purple-500 border-purple-500 text-white' : u.isAsig && esPracticas ? 'bg-amber-500 border-amber-500 text-white' : u.isAsig ? 'bg-green-500 border-green-500 text-white' : 'border-slate-300'}`} style={{ fontSize: '9px' }}>
                                 {u.isAsig && u.estadoGuardia === 'ausente' ? '✗' : u.isAsig ? '✓' : ''}
                               </span>
                               <span className={'font-bold truncate flex-1' + (u.isAsig && u.estadoGuardia === 'ausente' ? ' line-through' : '')}>
@@ -654,12 +659,12 @@ export default function CuadrantesPage() {
                                 {esPracticas && <span className="ml-0.5 text-[7px] font-bold text-amber-600 bg-amber-100 px-0.5 rounded">P{turnosPrac}/15</span>}
                               </span>
                               <span className="flex items-center gap-0.5 flex-shrink-0">
-                                {u.responsableTurno && <Shield size={8} className={u.isAsig ? 'text-green-700' : u.tieneDisponibilidadEsteSlot ? 'text-indigo-500' : 'text-slate-300'} />}
-                                {u.carnetConducir && <Car size={8} className={u.isAsig ? 'text-green-700' : u.tieneDisponibilidadEsteSlot ? 'text-blue-500' : 'text-slate-300'} />}
+                                {u.responsableTurno && <Shield size={11} className={u.isAsig ? 'text-green-700' : u.tieneDisponibilidadEsteSlot ? 'text-indigo-500' : 'text-slate-300'} />}
+                                {u.carnetConducir && <Car size={11} className={u.isAsig ? 'text-green-700' : u.tieneDisponibilidadEsteSlot ? 'text-blue-500' : 'text-slate-300'} />}
                                 {!u.esOperativo && <span className="text-[7px] font-bold text-slate-400 bg-slate-100 px-0.5 rounded">ADM</span>}
                               </span>
                               {u.tieneDisponibilidadEsteSlot && (
-                                <span className={`text-[8px] font-mono flex-shrink-0 ${u.isAsig ? 'text-green-600' : restantes === 0 ? 'text-red-400' : 'text-slate-400'}`}>
+                                <span className={`text-[10px] font-mono flex-shrink-0 ${u.isAsig ? 'text-green-600' : restantes === 0 ? 'text-red-400' : 'text-slate-400'}`}>
                                   [{restantes}↓]
                                 </span>
                               )}
@@ -672,7 +677,7 @@ export default function CuadrantesPage() {
                                       return { ...prev, [sk]: { ...actual, responsable: nuevo } }
                                     })}
                                     title="Responsable de turno"
-                                    className={rolEspecial[sk]?.responsable === u.id ? "text-[7px] font-bold px-0.5 rounded bg-indigo-500 text-white" : "text-[7px] font-bold px-0.5 rounded bg-slate-100 text-slate-400 hover:bg-indigo-100"}
+                                    className={rolEspecial[sk]?.responsable === u.id ? "text-[9px] font-bold px-1 py-0.5 rounded bg-indigo-500 text-white" : "text-[9px] font-bold px-1 py-0.5 rounded bg-slate-100 text-slate-400 hover:bg-indigo-100"}
                                   >R</button>
                                   <button
                                     onClick={() => setRolEspecial(prev => {
@@ -681,7 +686,7 @@ export default function CuadrantesPage() {
                                       return { ...prev, [sk]: { ...actual, cecopal: nuevo } }
                                     })}
                                     title="Responsable CECOPAL"
-                                    className={rolEspecial[sk]?.cecopal === u.id ? "text-[7px] font-bold px-0.5 rounded bg-orange-500 text-white" : "text-[7px] font-bold px-0.5 rounded bg-slate-100 text-slate-400 hover:bg-orange-100"}
+                                    className={rolEspecial[sk]?.cecopal === u.id ? "text-[9px] font-bold px-1 py-0.5 rounded bg-orange-500 text-white" : "text-[9px] font-bold px-1 py-0.5 rounded bg-slate-100 text-slate-400 hover:bg-orange-100"}
                                   >C</button>
                                 </span>
                               )}
@@ -691,12 +696,12 @@ export default function CuadrantesPage() {
                       })()}
                     </div>
                     {slotParcial && (
-                      <div className="mt-1 flex items-center gap-0.5 text-[8px] text-amber-600">
+                      <div className="mt-1.5 flex items-center gap-1 text-[10px] text-amber-600">
                         <AlertTriangle size={8} /><span>Faltan {cap - asignadosOp.length}</span>
                       </div>
                     )}
                     {slotOk && asignados.length > 0 && (
-                      <div className="mt-1 flex items-center gap-0.5 text-[8px] text-green-600">
+                      <div className="mt-1.5 flex items-center gap-1 text-[10px] text-green-600">
                         <CheckCircle2 size={8} /><span>Cubierto</span>
                       </div>
                     )}
