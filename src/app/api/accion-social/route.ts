@@ -145,7 +145,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ espacio })
     }
     if (tipo === 'centro') {
-      const centro = await prisma.centroEmergencia.create({
+      const centro = await prisma.centroEmergencia.update({
+        where: { id: body.id },
         data: {
           nombre: body.nombre, tipo: body.tipoCentro, direccion: body.direccion,
           telefono: body.telefono || null, responsable: body.responsable || null,
