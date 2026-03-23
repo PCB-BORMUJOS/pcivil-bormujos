@@ -65,6 +65,40 @@ interface DisponibilidadViogen {
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 
+// ─── Iconos SVG para markers del mapa ────────────────────────────────────────
+const MAP_ICON_SVGS: Record<string, { path: string; color: string; bg: string }> = {
+  // Centros
+  pabellon:              { path: 'M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z M9 22V12h6v10', color: '#0d9488', bg: '#ccfbf1' },
+  centro_multifuncional: { path: 'M19 21V5a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v16 M1 21h22 M9 21V9h6v12', color: '#0891b2', bg: '#cffafe' },
+  ceu:                   { path: 'M12 2L2 7l10 5 10-5-10-5z M2 17l10 5 10-5 M2 12l10 5 10-5', color: '#059669', bg: '#d1fae5' },
+  otro:                  { path: 'M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z M12 11.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z', color: '#6b7280', bg: '#f3f4f6' },
+  // Espacios
+  hotel:                 { path: 'M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z', color: '#7c3aed', bg: '#ede9fe' },
+  albergue:              { path: 'M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z', color: '#db2777', bg: '#fce7f3' },
+  polideportivo:         { path: 'M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z', color: '#2563eb', bg: '#dbeafe' },
+  // Directorio
+  policia:               { path: 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z', color: '#1d4ed8', bg: '#dbeafe' },
+  guardia_civil:         { path: 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z', color: '#15803d', bg: '#dcfce7' },
+  sanidad:               { path: 'M22 12h-4l-3 9L9 3l-3 9H2', color: '#dc2626', bg: '#fee2e2' },
+  juzgado:               { path: 'M3 21h18 M3 7v1a3 3 0 0 0 6 0V7m0 1a3 3 0 0 0 6 0V7m0 1a3 3 0 0 0 6 0V7H3l2-4h14l2 4 M5 21V10.85', color: '#92400e', bg: '#fef3c7' },
+  servicios_sociales:    { path: 'M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2 M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z M23 21v-2a4 4 0 0 0-3-3.87 M16 3.13a4 4 0 0 1 0 7.75', color: '#be185d', bg: '#fce7f3' },
+  vivienda:              { path: 'M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z M9 22V12h6v10', color: '#b45309', bg: '#fef3c7' },
+  educacion:             { path: 'M12 2L2 7l10 5 10-5-10-5z M2 17l10 5 10-5 M2 12l10 5 10-5', color: '#7c3aed', bg: '#ede9fe' },
+  default:               { path: 'M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z M12 11.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z', color: '#6b7280', bg: '#f3f4f6' },
+}
+
+function createMapIcon(tipo: string): L.DivIcon {
+  const def = MAP_ICON_SVGS[tipo] || MAP_ICON_SVGS.default
+  const svgHtml = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${def.color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="${def.path}"/></svg>`
+  return L.divIcon({
+    html: `<div style="background:${def.bg};border:2px solid ${def.color};border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.2);">${svgHtml}</div>`,
+    className: '',
+    iconSize: [36, 36],
+    iconAnchor: [18, 18],
+    popupAnchor: [0, -20],
+  })
+}
+
 const TIPOS_ESPACIO: Record<string, { label: string; color: string }> = {
   hotel:       { label: 'Hotel',                color: 'bg-blue-100 text-blue-800' },
   hostal:      { label: 'Hostal',               color: 'bg-sky-100 text-sky-800' },
@@ -715,7 +749,7 @@ export default function AccionSocialPage() {
                 <MapContainer center={[37.3710, -6.0710]} zoom={14} style={{ height: '100%', width: '100%' }}>
                   <TileLayer attribution='&copy; OpenStreetMap' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
                   {centros.filter(c => c.latitud && c.longitud).map(c => (
-                    <Marker key={c.id} position={[c.latitud!, c.longitud!]}>
+                    <Marker key={c.id} position={[c.latitud!, c.longitud!]} icon={createMapIcon(c.tipo)}>
                       <Popup>
                         <div className="text-sm min-w-[180px]">
                           <p className="font-bold text-gray-900">{c.nombre}</p>
@@ -729,7 +763,7 @@ export default function AccionSocialPage() {
                     </Marker>
                   ))}
                   {espacios.filter(e => e.latitud && e.longitud && e.estado === 'activo').map(e => (
-                    <Marker key={e.id} position={[e.latitud!, e.longitud!]}>
+                    <Marker key={e.id} position={[e.latitud!, e.longitud!]} icon={createMapIcon(e.tipo)}>
                       <Popup>
                         <div className="text-sm min-w-[160px]">
                           <p className="font-bold text-gray-900">{e.nombre}</p>
