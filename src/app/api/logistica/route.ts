@@ -434,6 +434,19 @@ export async function POST(request: NextRequest) {
         })
       }
 
+      // Si existe un artículo inactivo con el mismo código, liberar el código para permitir reutilizarlo
+      if (codigo && servicio) {
+        const articuloInactivo = await prisma.articulo.findFirst({
+          where: { codigo, servicioId: servicio.id, activo: false }
+        })
+        if (articuloInactivo) {
+          await prisma.articulo.update({
+            where: { id: articuloInactivo.id },
+            data: { codigo: null }
+          })
+        }
+      }
+
       const articulo = await prisma.articulo.create({
         data: {
           codigo, nombre, descripcion,
