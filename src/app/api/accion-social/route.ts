@@ -241,6 +241,35 @@ export async function PUT(request: NextRequest) {
       })
       return NextResponse.json({ caso })
     }
+    if (tipo === 'centro') {
+      const centro = await prisma.centroEmergencia.update({
+        where: { id },
+        data: {
+          nombre: body.nombre,
+          tipo: body.tipoCentro,
+          direccion: body.direccion,
+          telefono: body.telefono || null,
+          responsable: body.responsable || null,
+          capacidad: body.capacidad ? parseInt(body.capacidad) : null,
+          latitud: body.latitud ? parseFloat(body.latitud) : null,
+          longitud: body.longitud ? parseFloat(body.longitud) : null,
+          descripcion: body.notas || null,
+        }
+      })
+      return NextResponse.json({ centro })
+    }
+    if (tipo === 'contacto') {
+      const contacto = await prisma.contactoDirectorio.update({
+        where: { id },
+        data: {
+          nombre: body.nombre, entidad: body.entidad || null, categoria: body.categoria,
+          cargo: body.cargo || null, telefono: body.telefono,
+          telefonoAlt: body.telefonoAlt || null, email: body.email || null,
+          disponibilidad: body.disponibilidad || null, notas: body.notas || null
+        }
+      })
+      return NextResponse.json({ contacto })
+    }
     return NextResponse.json({ error: 'Tipo no válido' }, { status: 400 })
   } catch (error) {
     console.error('Error PUT /api/accion-social:', error)
