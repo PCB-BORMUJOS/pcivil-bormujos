@@ -510,17 +510,17 @@ export default function CuadrantesPage() {
         </div>
       ) : (
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-x-auto">
-          <div className="grid grid-cols-7 border-b border-slate-200 bg-slate-50 min-w-[900px]">
+          <div className="grid grid-cols-7 border-b border-slate-200 bg-slate-50 min-w-[1200px]">
             {weekDays.map((day, idx) => (
               <div key={idx} className={`p-3 text-center border-r border-slate-200 last:border-r-0 ${idx >= 5 ? 'bg-slate-100' : ''}`}>
-                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{DIA_LABELS[idx]}</div>
-                <div className="text-xl font-bold text-slate-800 leading-tight">{day.getDate()}</div>
-                <div className="text-[10px] text-slate-400 capitalize">{day.toLocaleDateString('es-ES', { month: 'short' })}</div>
+                <div className="text-xs font-bold text-slate-400 uppercase tracking-widest">{DIA_LABELS[idx]}</div>
+                <div className="text-2xl font-bold text-slate-800 leading-tight">{day.getDate()}</div>
+                <div className="text-xs text-slate-400 capitalize">{day.toLocaleDateString('es-ES', { month: 'short' })}</div>
               </div>
             ))}
           </div>
           {TURNOS.map((turno, turnoIdx) => (
-            <div key={turno.key} className={`grid grid-cols-7 min-w-[900px] ${turnoIdx === 0 ? 'border-b-2 border-slate-200' : ''}`}>
+            <div key={turno.key} className={`grid grid-cols-7 min-w-[1200px] ${turnoIdx === 0 ? 'border-b-2 border-slate-200' : ''}`}>
               {weekDays.map((day, dayIdx) => {
                 const dateStr = toDateStr(day)
                 const sk = slotKey(dateStr, turno.key)
@@ -540,7 +540,7 @@ export default function CuadrantesPage() {
                   <div key={dayIdx} className={`border-r border-slate-100 last:border-r-0 p-2.5 ${dayIdx >= 5 ? 'bg-slate-50/60' : ''} ${turno.key === 'tarde' ? 'bg-slate-50/30' : ''}`}>
                     <div className={`flex items-center justify-between mb-1.5 pb-1 border-b ${turno.key === 'mañana' ? 'border-amber-100' : 'border-indigo-100'}`}>
                       <div className="flex items-center gap-1">
-                        <Clock size={9} className={turno.key === 'mañana' ? 'text-amber-500' : 'text-indigo-500'} />
+                        <Clock size={12} className={turno.key === 'mañana' ? 'text-amber-500' : 'text-indigo-500'} />
                         <span className={`text-[11px] font-bold uppercase tracking-wide ${turno.key === 'mañana' ? 'text-amber-600' : 'text-indigo-600'}`}>{turno.label}</span>
                       </div>
                       <div className="flex items-center gap-0.5">
@@ -652,7 +652,7 @@ export default function CuadrantesPage() {
                               key={u.id}
                               onClick={() => clickable && toggleAsignacion(sk, u.id)}
                               title={`${u.nombre} ${u.apellidos}${u.tieneDisponibilidadEsteSlot ? ` · Quiere ${u.turnosDeseados} turnos · ${restantes} restantes` : u.esNoDisponible ? ' · No disponible esta semana' : ' · Sin disponibilidad declarada'}`}
-                              className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-[12px] transition-all select-none cursor-pointer ${className}`}
+                              className={`flex items-center gap-1.5 px-2 py-2 rounded-lg text-[13px] font-medium transition-all select-none cursor-pointer ${className}`}
                             >
                               <span className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${u.isAsig && u.estadoGuardia === 'ausente' ? 'bg-purple-500 border-purple-500 text-white' : u.isAsig && esPracticas ? 'bg-amber-500 border-amber-500 text-white' : u.isAsig ? 'bg-green-500 border-green-500 text-white' : 'border-slate-300'}`} style={{ fontSize: '9px' }}>
                                 {u.isAsig && u.estadoGuardia === 'ausente' ? '✗' : u.isAsig ? '✓' : ''}
