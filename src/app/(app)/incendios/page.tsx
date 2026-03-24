@@ -925,7 +925,7 @@ export default function IncendiosPage() {
                               <button onClick={() => setEquipoSeleccionado(eq)} className="p-1.5 text-slate-600 hover:bg-slate-100 rounded" title="Editar equipo">
                                 <Edit size={16} />
                               </button>
-                              <button onClick={() => { if (confirm(`¿Eliminar equipo en "${eq.ubicacion}"?`)) alert('Eliminando...'); }} className="p-1.5 text-red-600 hover:bg-red-50 rounded" title="Eliminar">
+                              <button onClick={async () => { if (confirm(`¿Eliminar equipo en "${eq.ubicacion}"?`)) { await eliminarItem('equipo-eci', eq.id); } }} className="p-1.5 text-red-600 hover:bg-red-50 rounded" title="Eliminar">
                                 <Trash2 size={16} />
                               </button>
                             </div>
@@ -1582,7 +1582,7 @@ export default function IncendiosPage() {
 
       {/* ======================================== MODAL: EDITAR EQUIPO ECI ======================================== */}
       {equipoSeleccionado && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60" onClick={() => setEquipoSeleccionado(null)}>
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/60" onClick={() => setEquipoSeleccionado(null)}>
           <div className="bg-white rounded-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
             <div className="bg-red-600 p-5 text-white flex justify-between items-center">
               <h2 className="text-xl font-bold">Editar Equipo ECI</h2>
