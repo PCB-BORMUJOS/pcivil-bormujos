@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 
 // Iconos centralizados
-import { TIPOS_EQUIPO_ECI } from '@/lib/iconos-config';
+import { TIPOS_EQUIPO_ECI, getIconoEquipoECI } from '@/lib/iconos-config';
 
 // Icono de hidrante personalizado
 const HidranteIcon = ({ size = 22, className = '' }: { size?: number; className?: string }) => (
@@ -896,7 +896,7 @@ export default function IncendiosPage() {
                           <td className="p-3">
                             <div className="flex items-center gap-2">
                               {(() => {
-                                const Icon = TIPOS_EQUIPO_ECI[eq.tipo] || Package;
+                                const Icon = getIconoEquipoECI(eq.tipo, eq.subtipo) || Package;
                                 return <Icon size={28} className="text-red-600" />;
                               })()}
                               <div>
@@ -1070,7 +1070,7 @@ export default function IncendiosPage() {
                       <td className="p-3">
                         <div className="flex items-center gap-2">
                           {(() => {
-                            const Icon = TIPOS_EQUIPO_ECI[eq.tipo] || Package;
+                            const Icon = getIconoEquipoECI(eq.tipo, eq.subtipo) || Package;
                             return <Icon size={24} className="text-red-600" />;
                           })()}
                           <div>
