@@ -130,7 +130,7 @@ interface Articulo {
   stockActual: number; stockMinimo: number; unidad: string;
   familia: { nombre: string; id: string };
 }
-interface Familia { id: string; nombre: string; slug: string; }
+interface Familia { id: string; nombre: string; slug: string; _count?: { articulos: number } }
 interface Edificio { id: string; nombre: string; direccion: string | null; responsable?: string | null; telefono?: string | null; _count?: { equiposECI: number }; }
 interface EquipoECI {
   id: string; tipo: string; subtipo: string | null; ubicacion: string; numeroSerie: string | null;
@@ -199,6 +199,8 @@ export default function IncendiosPage() {
   const [showEditarArticulo, setShowEditarArticulo] = useState(false);
   const [showNuevaPeticion, setShowNuevaPeticion] = useState(false);
   const [showGestionFamilias, setShowGestionFamilias] = useState(false);
+  const [familiaEditando, setFamiliaEditando] = useState<{id: string, nombre: string} | null>(null);
+  const [nombreFamiliaEdit, setNombreFamiliaEdit] = useState('');
   const [showNuevoEdificio, setShowNuevoEdificio] = useState(false);
   const [showNuevoEquipo, setShowNuevoEquipo] = useState(false);
   const [showEditorEquipos, setShowEditorEquipos] = useState(false);
@@ -1298,8 +1300,61 @@ export default function IncendiosPage() {
               <div className="space-y-2 max-h-80 overflow-y-auto">
                 {familias.map(fam => (
                   <div key={fam.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
-                    <span className="font-medium text-slate-700">{fam.nombre}</span>
-                    <span className="text-xs text-slate-400">{0} artículos</span>
+                    {familiaEditando?.id === fam.id ? (
+                      <div className="flex items-center gap-2 flex-1">
+                        <input
+                          value={nombreFamiliaEdit}
+                          onChange={e => setNombreFamiliaEdit(e.target.value)}
+                          className="flex-1 border border-slate-300 rounded-lg p-1.5 text-sm"
+                          autoFocus
+                        />
+                        <button
+                          onClick={async () => {
+                            if (!nombreFamiliaEdit.trim()) return
+                            const res = await fetch('/api/logistica', {
+                              method: 'PUT',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ tipo: 'familia', id: fam.id, nombre: nombreFamiliaEdit.trim() })
+                            })
+                            if (res.ok) { cargarDatos(); setFamiliaEditando(null); }
+                          }}
+                          className="px-2 py-1 bg-orange-600 text-white rounded text-xs hover:bg-orange-700"
+                        >Guardar</button>
+                        <button
+                          onClick={() => setFamiliaEditando(null)}
+                          className="px-2 py-1 bg-slate-200 text-slate-600 rounded text-xs hover:bg-slate-300"
+                        >Cancelar</button>
+                      </div>
+                    ) : (
+                      <>
+                        <div>
+                          <span className="font-medium text-slate-700">{fam.nombre}</span>
+                          <span className="text-xs text-slate-400 ml-2">{fam._count?.articulos ?? 0} artículos</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => { setFamiliaEditando(fam); setNombreFamiliaEdit(fam.nombre); }}
+                            className="p-1.5 text-slate-400 hover:text-orange-600 hover:bg-orange-50 rounded transition-colors"
+                            title="Editar"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                          </button>
+                          <button
+                            onClick={async () => {
+                              const count = fam._count?.articulos ?? 0
+                              if (count > 0) { alert(`No se puede eliminar: tiene ${count} artículo(s) asociado(s).`); return; }
+                              if (!confirm(`¿Eliminar la familia "${fam.nombre}"?`)) return
+                              const res = await fetch(`/api/logistica?tipo=familia&id=${fam.id}`, { method: 'DELETE' })
+                              if (res.ok) cargarDatos()
+                            }}
+                            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                            title="Eliminar"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                          </button>
+                        </div>
+                      </>
+                    )}
                   </div>
                 ))}
               </div>

@@ -330,7 +330,7 @@ export async function GET(request: NextRequest) {
     // Obtener familias
     const familias = await prisma.familiaArticulo.findMany({
       where: { categoriaId: { in: categoriasIds } },
-      include: { categoria: true },
+      include: { categoria: true, _count: { select: { articulos: true } } },
       orderBy: [
         { categoria: { orden: 'asc' } },
         { nombre: 'asc' }
