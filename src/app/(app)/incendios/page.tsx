@@ -308,7 +308,11 @@ export default function IncendiosPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tipo: 'articulo', ...formData })
       })
-      if (res.ok) { await cargarDatos(); return true }
+      if (res.ok) {
+        await cargarDatos()
+        if (selectedEdificio) { await cargarEquiposEdificio(selectedEdificio.id) }
+        return true
+      }
       return false
     } catch (error) {
       /* error silenciado */
@@ -323,7 +327,11 @@ export default function IncendiosPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tipo: 'edificio', ...formData })
       })
-      if (res.ok) { await cargarDatos(); return true }
+      if (res.ok) {
+        await cargarDatos()
+        if (selectedEdificio) { await cargarEquiposEdificio(selectedEdificio.id) }
+        return true
+      }
       return false
     } catch (error) {
       /* error silenciado */
@@ -338,7 +346,11 @@ export default function IncendiosPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tipo: 'equipo-eci', ...formData })
       })
-      if (res.ok) { await cargarDatos(); return true }
+      if (res.ok) {
+        await cargarDatos()
+        if (selectedEdificio) { await cargarEquiposEdificio(selectedEdificio.id) }
+        return true
+      }
       return false
     } catch (error) {
       /* error silenciado */
@@ -385,7 +397,11 @@ export default function IncendiosPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tipo: 'articulo', id, ...formData })
       })
-      if (res.ok) { await cargarDatos(); return true }
+      if (res.ok) {
+        await cargarDatos()
+        if (selectedEdificio) { await cargarEquiposEdificio(selectedEdificio.id) }
+        return true
+      }
       return false
     } catch (error) {
       /* error silenciado */
@@ -400,7 +416,11 @@ export default function IncendiosPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tipo: 'edificio', id, ...formData })
       })
-      if (res.ok) { await cargarDatos(); return true }
+      if (res.ok) {
+        await cargarDatos()
+        if (selectedEdificio) { await cargarEquiposEdificio(selectedEdificio.id) }
+        return true
+      }
       return false
     } catch (error) {
       /* error silenciado */
@@ -415,7 +435,11 @@ export default function IncendiosPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tipo: 'equipo-eci', id, ...formData })
       })
-      if (res.ok) { await cargarDatos(); return true }
+      if (res.ok) {
+        await cargarDatos()
+        if (selectedEdificio) { await cargarEquiposEdificio(selectedEdificio.id) }
+        return true
+      }
       return false
     } catch (error) {
       /* error silenciado */
@@ -430,7 +454,11 @@ export default function IncendiosPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tipo: 'hidrante', id, tipoHidrante: formData.tipo, codigo: formData.codigo, ubicacion: formData.ubicacion, latitud: formData.latitud, longitud: formData.longitud, presion: formData.presion, caudal: formData.caudal, estado: formData.estado })
       })
-      if (res.ok) { await cargarDatos(); return true }
+      if (res.ok) {
+        await cargarDatos()
+        if (selectedEdificio) { await cargarEquiposEdificio(selectedEdificio.id) }
+        return true
+      }
       return false
     } catch (error) {
       /* error silenciado */
