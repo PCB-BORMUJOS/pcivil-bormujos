@@ -581,7 +581,8 @@ export async function POST(request: NextRequest) {
 
     // ===== EQUIPO ECI =====
     if (tipo === 'equipo-eci') {
-      const { edificioId, tipo: tipoEquipo, subtipo, ubicacion, numeroSerie, estado, observaciones } = body
+      const { edificioId, tipo: _tipo, tipoEquipo: tipoEquipoField, subtipo, ubicacion, numeroSerie, estado, observaciones } = body
+      const tipoEquipo = tipoEquipoField || _tipo
 
       if (!edificioId || !tipoEquipo || !ubicacion) {
         return NextResponse.json({ error: 'Edificio, tipo y ubicación son requeridos' }, { status: 400 })

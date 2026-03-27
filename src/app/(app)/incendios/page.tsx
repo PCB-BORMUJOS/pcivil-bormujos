@@ -1890,7 +1890,7 @@ export default function IncendiosPage() {
                 body: JSON.stringify({
                   tipo: 'equipo-eci',
                   edificioId: fd.get('edificioId'),
-                  tipo_equipo: fd.get('tipo_equipo'),
+                  tipoEquipo: fd.get('tipo_equipo'),
                   subtipo: fd.get('subtipo'),
                   ubicacion: fd.get('ubicacion'),
                   numeroSerie: fd.get('numeroSerie'),
