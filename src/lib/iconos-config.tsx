@@ -73,6 +73,18 @@ const RepetidorIcon = ({ size = 24, className = '' }: { size?: number; className
 // MAPEOS
 // ============================================================================
 
+// Central PCI
+const CentralIcon = ({ size = 24, className = '' }: { size?: number; className?: string }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
+    <rect x="2" y="6" width="20" height="13" rx="2" stroke="#64748b" strokeWidth="1.8"/>
+    <circle cx="7" cy="12" r="1.5" fill="#64748b"/>
+    <circle cx="12" cy="12" r="1.5" fill="#64748b"/>
+    <circle cx="17" cy="12" r="1.5" fill="#64748b"/>
+    <line x1="6" y1="6" x2="6" y2="4" stroke="#64748b" strokeWidth="1.8" strokeLinecap="round"/>
+    <line x1="18" y1="6" x2="18" y2="4" stroke="#64748b" strokeWidth="1.8" strokeLinecap="round"/>
+  </svg>
+)
+
 export const TIPOS_EQUIPO_ECI: Record<string, any> = {
   extintor:    ExtintorABCIcon,
   bie:         BIEIcon,
@@ -80,6 +92,9 @@ export const TIPOS_EQUIPO_ECI: Record<string, any> = {
   pulsador:    PulsadorIcon,
   alarma:      AlarmIcon,
   señalizacion: EmergenciaIcon,
+  central:      CentralIcon,
+  otro:         Package,
+  'equipo-eci': Package,
 }
 
 export const getIconoEquipoECI = (tipo: string, subtipo?: string | null): any => {
@@ -88,6 +103,17 @@ export const getIconoEquipoECI = (tipo: string, subtipo?: string | null): any =>
     return ExtintorABCIcon
   }
   return TIPOS_EQUIPO_ECI[tipo] || Package
+}
+
+export const getColorEquipoECI = (_tipo: string): string => ''
+
+export const getLabelEquipoECI = (tipo: string): string => {
+  const labels: Record<string, string> = {
+    extintor: 'Extintor', bie: 'BIE', detector: 'Detector',
+    pulsador: 'Pulsador', alarma: 'Alarma/Sirena', señalizacion: 'Señalización',
+    central: 'Central PCI', otro: 'Otro', 'equipo-eci': 'Equipo ECI',
+  }
+  return labels[tipo] ?? tipo
 }
 
 export const TIPOS_EQUIPO_RADIO: Record<string, any> = {
