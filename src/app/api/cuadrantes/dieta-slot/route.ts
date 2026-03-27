@@ -13,6 +13,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Faltan campos' }, { status: 400 })
     }
 
+    // Guard: voluntarios en prácticas NO generan dieta
+    const fichaGuard = await prisma.fichaVoluntario.findUnique({
+      where: { usuarioId },
+      select: { enPracticas: true }
+    })
+    if (fichaGuard?.enPracticas) {
+      return NextResponse.json({ ok: true, dieta: null, enPracticas: true })
+    }
+
     const [configBaremo, configKm] = await Promise.all([
       prisma.configuracion.findUnique({ where: { clave: 'baremo_dietas' } }),
       prisma.configuracion.findUnique({ where: { clave: 'precio_km' } }),
