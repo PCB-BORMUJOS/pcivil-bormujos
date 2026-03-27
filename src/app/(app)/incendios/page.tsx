@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 
 // Iconos centralizados
-import { TIPOS_EQUIPO_ECI, getIconoEquipoECI } from '@/lib/iconos-config';
+import { TIPOS_EQUIPO_ECI, getIconoEquipoECI, getColorEquipoECI } from '@/lib/iconos-config';
 
 // Icono de hidrante personalizado
 const HidranteIcon = ({ size = 22, className = '' }: { size?: number; className?: string }) => (
@@ -204,6 +204,7 @@ export default function IncendiosPage() {
   const [showNuevoEdificio, setShowNuevoEdificio] = useState(false);
   const [showNuevoEquipo, setShowNuevoEquipo] = useState(false);
   const [showEditorEquipos, setShowEditorEquipos] = useState(false);
+  const [edificioPreseleccionado, setEdificioPreseleccionado] = useState<string>('');
   const [edificioEditorId, setEdificioEditorId] = useState<string>('');
   const [equiposEditor, setEquiposEditor] = useState<EquipoECI[]>([]);
   const [modoEditorEquipo, setModoEditorEquipo] = useState<'lista' | 'crear' | 'editar'>('lista');
@@ -440,7 +441,13 @@ export default function IncendiosPage() {
   const eliminarItem = async (tipo: string, id: string) => {
     try {
       const res = await fetch(`/api/logistica?tipo=${tipo}&id=${id}`, { method: 'DELETE' })
-      if (res.ok) { await cargarDatos(); return true }
+      if (res.ok) {
+        await cargarDatos()
+        if (tipo === 'equipo-eci' && selectedEdificio) {
+          await cargarEquiposEdificio(selectedEdificio.id)
+        }
+        return true
+      }
       return false
     } catch (error) {
       /* error silenciado */
@@ -844,7 +851,7 @@ export default function IncendiosPage() {
                       )}
                     </div>
                   </div>
-                  <button onClick={() => setShowNuevoEquipo(true)} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center gap-2">
+                  <button onClick={() => { setEdificioPreseleccionado(selectedEdificio?.id || ''); setShowEditorEquipos(true); }} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center gap-2">
                     <Plus size={18} />
                     Añadir Equipo
                   </button>
@@ -899,7 +906,7 @@ export default function IncendiosPage() {
                             <div className="flex items-center gap-2">
                               {(() => {
                                 const Icon = getIconoEquipoECI(eq.tipo, eq.subtipo) || Package;
-                                return <Icon size={28} className="text-red-600" />;
+                                return <Icon size={28} className={getColorEquipoECI(eq.tipo)} />;
                               })()}
                               <div>
                                 <p className="font-medium text-slate-800">{TIPOS_EQUIPO_LABELS[eq.tipo]}</p>
@@ -1867,8 +1874,12 @@ export default function IncendiosPage() {
               })
               if (res.ok) {
                 setShowEditorEquipos(false)
+                setEdificioPreseleccionado('')
                 form.reset()
                 await cargarDatos()
+                if (selectedEdificio) {
+                  await cargarEquiposEdificio(selectedEdificio.id)
+                }
               } else {
                 const err = await res.json()
                 alert(err.error || 'Error al crear equipo')
@@ -1877,7 +1888,7 @@ export default function IncendiosPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Edificio *</label>
-                  <select name="edificioId" required className="w-full border border-slate-300 rounded-lg p-2.5">
+                  <select name="edificioId" required className="w-full border border-slate-300 rounded-lg p-2.5" defaultValue={edificioPreseleccionado}>
                     <option value="">Seleccionar edificio...</option>
                     {edificios.map((ed: any) => (
                       <option key={ed.id} value={ed.id}>{ed.nombre}</option>
