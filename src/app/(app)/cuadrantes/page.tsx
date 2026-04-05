@@ -258,7 +258,7 @@ export default function CuadrantesPage() {
   useEffect(() => {
     cargarDatos()
     // Recarga automática cada 60s para reflejar disponibilidades nuevas en tiempo real
-    const interval = setInterval(() => { cargarDatos() }, 60_000)
+    const interval = setInterval(() => { cargarDatos() }, 300_000)
     return () => clearInterval(interval)
   }, [cargarDatos])
 
