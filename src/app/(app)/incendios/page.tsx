@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 
 // Iconos centralizados
-import { TIPOS_EQUIPO_ECI } from '@/lib/iconos-config';
+import { TIPOS_EQUIPO_ECI, getIconoEquipoECI, getColorEquipoECI } from '@/lib/iconos-config';
 
 // Icono de hidrante personalizado
 const HidranteIcon = ({ size = 22, className = '' }: { size?: number; className?: string }) => (
@@ -130,7 +130,7 @@ interface Articulo {
   stockActual: number; stockMinimo: number; unidad: string;
   familia: { nombre: string; id: string };
 }
-interface Familia { id: string; nombre: string; slug: string; }
+interface Familia { id: string; nombre: string; slug: string; _count?: { articulos: number } }
 interface Edificio { id: string; nombre: string; direccion: string | null; responsable?: string | null; telefono?: string | null; _count?: { equiposECI: number }; }
 interface EquipoECI {
   id: string; tipo: string; subtipo: string | null; ubicacion: string; numeroSerie: string | null;
@@ -199,9 +199,12 @@ export default function IncendiosPage() {
   const [showEditarArticulo, setShowEditarArticulo] = useState(false);
   const [showNuevaPeticion, setShowNuevaPeticion] = useState(false);
   const [showGestionFamilias, setShowGestionFamilias] = useState(false);
+  const [familiaEditando, setFamiliaEditando] = useState<{id: string, nombre: string} | null>(null);
+  const [nombreFamiliaEdit, setNombreFamiliaEdit] = useState('');
   const [showNuevoEdificio, setShowNuevoEdificio] = useState(false);
   const [showNuevoEquipo, setShowNuevoEquipo] = useState(false);
   const [showEditorEquipos, setShowEditorEquipos] = useState(false);
+  const [edificioPreseleccionado, setEdificioPreseleccionado] = useState<string>('');
   const [edificioEditorId, setEdificioEditorId] = useState<string>('');
   const [equiposEditor, setEquiposEditor] = useState<EquipoECI[]>([]);
   const [modoEditorEquipo, setModoEditorEquipo] = useState<'lista' | 'crear' | 'editar'>('lista');
@@ -305,7 +308,11 @@ export default function IncendiosPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tipo: 'articulo', ...formData })
       })
-      if (res.ok) { await cargarDatos(); return true }
+      if (res.ok) {
+        await cargarDatos()
+        if (selectedEdificio) { await cargarEquiposEdificio(selectedEdificio.id) }
+        return true
+      }
       return false
     } catch (error) {
       /* error silenciado */
@@ -320,7 +327,11 @@ export default function IncendiosPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tipo: 'edificio', ...formData })
       })
-      if (res.ok) { await cargarDatos(); return true }
+      if (res.ok) {
+        await cargarDatos()
+        if (selectedEdificio) { await cargarEquiposEdificio(selectedEdificio.id) }
+        return true
+      }
       return false
     } catch (error) {
       /* error silenciado */
@@ -335,7 +346,11 @@ export default function IncendiosPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tipo: 'equipo-eci', ...formData })
       })
-      if (res.ok) { await cargarDatos(); return true }
+      if (res.ok) {
+        await cargarDatos()
+        if (selectedEdificio) { await cargarEquiposEdificio(selectedEdificio.id) }
+        return true
+      }
       return false
     } catch (error) {
       /* error silenciado */
@@ -382,7 +397,11 @@ export default function IncendiosPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tipo: 'articulo', id, ...formData })
       })
-      if (res.ok) { await cargarDatos(); return true }
+      if (res.ok) {
+        await cargarDatos()
+        if (selectedEdificio) { await cargarEquiposEdificio(selectedEdificio.id) }
+        return true
+      }
       return false
     } catch (error) {
       /* error silenciado */
@@ -397,7 +416,11 @@ export default function IncendiosPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tipo: 'edificio', id, ...formData })
       })
-      if (res.ok) { await cargarDatos(); return true }
+      if (res.ok) {
+        await cargarDatos()
+        if (selectedEdificio) { await cargarEquiposEdificio(selectedEdificio.id) }
+        return true
+      }
       return false
     } catch (error) {
       /* error silenciado */
@@ -412,7 +435,11 @@ export default function IncendiosPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tipo: 'equipo-eci', id, ...formData })
       })
-      if (res.ok) { await cargarDatos(); return true }
+      if (res.ok) {
+        await cargarDatos()
+        if (selectedEdificio) { await cargarEquiposEdificio(selectedEdificio.id) }
+        return true
+      }
       return false
     } catch (error) {
       /* error silenciado */
@@ -427,7 +454,11 @@ export default function IncendiosPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tipo: 'hidrante', id, tipoHidrante: formData.tipo, codigo: formData.codigo, ubicacion: formData.ubicacion, latitud: formData.latitud, longitud: formData.longitud, presion: formData.presion, caudal: formData.caudal, estado: formData.estado })
       })
-      if (res.ok) { await cargarDatos(); return true }
+      if (res.ok) {
+        await cargarDatos()
+        if (selectedEdificio) { await cargarEquiposEdificio(selectedEdificio.id) }
+        return true
+      }
       return false
     } catch (error) {
       /* error silenciado */
@@ -438,7 +469,13 @@ export default function IncendiosPage() {
   const eliminarItem = async (tipo: string, id: string) => {
     try {
       const res = await fetch(`/api/logistica?tipo=${tipo}&id=${id}`, { method: 'DELETE' })
-      if (res.ok) { await cargarDatos(); return true }
+      if (res.ok) {
+        await cargarDatos()
+        if (tipo === 'equipo-eci' && selectedEdificio) {
+          await cargarEquiposEdificio(selectedEdificio.id)
+        }
+        return true
+      }
       return false
     } catch (error) {
       /* error silenciado */
@@ -842,7 +879,7 @@ export default function IncendiosPage() {
                       )}
                     </div>
                   </div>
-                  <button onClick={() => setShowNuevoEquipo(true)} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center gap-2">
+                  <button onClick={() => { setEdificioPreseleccionado(selectedEdificio?.id || ''); setShowEditorEquipos(true); }} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center gap-2">
                     <Plus size={18} />
                     Añadir Equipo
                   </button>
@@ -896,8 +933,8 @@ export default function IncendiosPage() {
                           <td className="p-3">
                             <div className="flex items-center gap-2">
                               {(() => {
-                                const Icon = TIPOS_EQUIPO_ECI[eq.tipo] || Package;
-                                return <Icon size={28} className="text-red-600" />;
+                                const Icon = getIconoEquipoECI(eq.tipo, eq.subtipo) || Package;
+                                return <Icon size={28} className={getColorEquipoECI(eq.tipo)} />;
                               })()}
                               <div>
                                 <p className="font-medium text-slate-800">{TIPOS_EQUIPO_LABELS[eq.tipo]}</p>
@@ -925,7 +962,7 @@ export default function IncendiosPage() {
                               <button onClick={() => setEquipoSeleccionado(eq)} className="p-1.5 text-slate-600 hover:bg-slate-100 rounded" title="Editar equipo">
                                 <Edit size={16} />
                               </button>
-                              <button onClick={() => { if (confirm(`¿Eliminar equipo en "${eq.ubicacion}"?`)) alert('Eliminando...'); }} className="p-1.5 text-red-600 hover:bg-red-50 rounded" title="Eliminar">
+                              <button onClick={async () => { if (confirm(`¿Eliminar equipo en "${eq.ubicacion}"?`)) { await eliminarItem('equipo-eci', eq.id); } }} className="p-1.5 text-red-600 hover:bg-red-50 rounded" title="Eliminar">
                                 <Trash2 size={16} />
                               </button>
                             </div>
@@ -1070,7 +1107,7 @@ export default function IncendiosPage() {
                       <td className="p-3">
                         <div className="flex items-center gap-2">
                           {(() => {
-                            const Icon = TIPOS_EQUIPO_ECI[eq.tipo] || Package;
+                            const Icon = getIconoEquipoECI(eq.tipo, eq.subtipo) || Package;
                             return <Icon size={24} className="text-red-600" />;
                           })()}
                           <div>
@@ -1298,8 +1335,61 @@ export default function IncendiosPage() {
               <div className="space-y-2 max-h-80 overflow-y-auto">
                 {familias.map(fam => (
                   <div key={fam.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
-                    <span className="font-medium text-slate-700">{fam.nombre}</span>
-                    <span className="text-xs text-slate-400">{0} artículos</span>
+                    {familiaEditando?.id === fam.id ? (
+                      <div className="flex items-center gap-2 flex-1">
+                        <input
+                          value={nombreFamiliaEdit}
+                          onChange={e => setNombreFamiliaEdit(e.target.value)}
+                          className="flex-1 border border-slate-300 rounded-lg p-1.5 text-sm"
+                          autoFocus
+                        />
+                        <button
+                          onClick={async () => {
+                            if (!nombreFamiliaEdit.trim()) return
+                            const res = await fetch('/api/logistica', {
+                              method: 'PUT',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ tipo: 'familia', id: fam.id, nombre: nombreFamiliaEdit.trim() })
+                            })
+                            if (res.ok) { cargarDatos(); setFamiliaEditando(null); }
+                          }}
+                          className="px-2 py-1 bg-orange-600 text-white rounded text-xs hover:bg-orange-700"
+                        >Guardar</button>
+                        <button
+                          onClick={() => setFamiliaEditando(null)}
+                          className="px-2 py-1 bg-slate-200 text-slate-600 rounded text-xs hover:bg-slate-300"
+                        >Cancelar</button>
+                      </div>
+                    ) : (
+                      <>
+                        <div>
+                          <span className="font-medium text-slate-700">{fam.nombre}</span>
+                          <span className="text-xs text-slate-400 ml-2">{fam._count?.articulos ?? 0} artículos</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => { setFamiliaEditando(fam); setNombreFamiliaEdit(fam.nombre); }}
+                            className="p-1.5 text-slate-400 hover:text-orange-600 hover:bg-orange-50 rounded transition-colors"
+                            title="Editar"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                          </button>
+                          <button
+                            onClick={async () => {
+                              const count = fam._count?.articulos ?? 0
+                              if (count > 0) { alert(`No se puede eliminar: tiene ${count} artículo(s) asociado(s).`); return; }
+                              if (!confirm(`¿Eliminar la familia "${fam.nombre}"?`)) return
+                              const res = await fetch(`/api/logistica?tipo=familia&id=${fam.id}`, { method: 'DELETE' })
+                              if (res.ok) cargarDatos()
+                            }}
+                            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                            title="Eliminar"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                          </button>
+                        </div>
+                      </>
+                    )}
                   </div>
                 ))}
               </div>
@@ -1582,7 +1672,7 @@ export default function IncendiosPage() {
 
       {/* ======================================== MODAL: EDITAR EQUIPO ECI ======================================== */}
       {equipoSeleccionado && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60" onClick={() => setEquipoSeleccionado(null)}>
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/60" onClick={() => setEquipoSeleccionado(null)}>
           <div className="bg-white rounded-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
             <div className="bg-red-600 p-5 text-white flex justify-between items-center">
               <h2 className="text-xl font-bold">Editar Equipo ECI</h2>
@@ -1800,7 +1890,7 @@ export default function IncendiosPage() {
                 body: JSON.stringify({
                   tipo: 'equipo-eci',
                   edificioId: fd.get('edificioId'),
-                  tipo_equipo: fd.get('tipo_equipo'),
+                  tipoEquipo: fd.get('tipo_equipo'),
                   subtipo: fd.get('subtipo'),
                   ubicacion: fd.get('ubicacion'),
                   numeroSerie: fd.get('numeroSerie'),
@@ -1812,8 +1902,12 @@ export default function IncendiosPage() {
               })
               if (res.ok) {
                 setShowEditorEquipos(false)
+                setEdificioPreseleccionado('')
                 form.reset()
                 await cargarDatos()
+                if (selectedEdificio) {
+                  await cargarEquiposEdificio(selectedEdificio.id)
+                }
               } else {
                 const err = await res.json()
                 alert(err.error || 'Error al crear equipo')
@@ -1822,7 +1916,7 @@ export default function IncendiosPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Edificio *</label>
-                  <select name="edificioId" required className="w-full border border-slate-300 rounded-lg p-2.5">
+                  <select name="edificioId" required className="w-full border border-slate-300 rounded-lg p-2.5" defaultValue={edificioPreseleccionado}>
                     <option value="">Seleccionar edificio...</option>
                     {edificios.map((ed: any) => (
                       <option key={ed.id} value={ed.id}>{ed.nombre}</option>

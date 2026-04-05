@@ -1,165 +1,140 @@
 // ============================================================================
 // CONFIGURACIÓN CENTRALIZADA DE ICONOS - PROTECCIÓN CIVIL BORMUJOS
 // ============================================================================
-// Este archivo contiene TODOS los iconos del sistema mapeados de forma centralizada
-// para mantener consistencia visual en toda la aplicación.
 
 import React from 'react'
-
-// Lucide Icons (ya instalado)
-import { 
-  Package, 
-  ShoppingCart, 
-  RefreshCw, 
-  Truck,
-  Car
-} from 'lucide-react'
-
-// React Icons
+import { Package } from 'lucide-react'
 import { PiFireExtinguisherLight } from 'react-icons/pi'
-import { FaFireExtinguisher, FaMedkit } from 'react-icons/fa'
+import { FaFireExtinguisher } from 'react-icons/fa'
 import { GiWalkieTalkie } from 'react-icons/gi'
-
-// Material UI Icons
 import LocalShippingIcon from '@mui/icons-material/LocalShipping'
 import DirectionsCarIcon from '@mui/icons-material/DirectionsCar'
 import StraightenIcon from '@mui/icons-material/Straighten'
-import DetectorSmokeIcon from '@mui/icons-material/Sensors' // Aproximado, puede que necesites otro
-import NestProtectIcon from '@mui/icons-material/Shield' // Aproximado
-import FireHydrantIcon from '@mui/icons-material/LocalFireDepartment' // Aproximado
-import SirenIcon from '@mui/icons-material/NotificationsActive' // Aproximado
+import { Truck } from 'lucide-react'
 
-// Componentes personalizados para SVG e imágenes
+// ─── Pictogramas ISO para equipos ECI ────────────────────────────────────────
+
 const BIEIcon = ({ size = 24, className = '' }: { size?: number; className?: string }) => (
   <img src="/images/bie-icon.png" alt="BIE" style={{ width: size, height: size }} className={className} />
+)
+
+const EmergenciaIcon = ({ size = 24, className = '' }: { size?: number; className?: string }) => (
+  <img src="/images/emergencia-icon.svg" alt="Señalización" style={{ width: size, height: size }} className={className} />
+)
+
+// Detector de humo — pictograma ISO 7240 (círculo con ondas)
+const DetectorIcon = ({ size = 24, className = '' }: { size?: number; className?: string }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
+    <circle cx="12" cy="14" r="4" stroke="#c0392b" strokeWidth="1.8"/>
+    <circle cx="12" cy="14" r="1.5" fill="#c0392b"/>
+    <path d="M6.5 8.5 A7.5 7.5 0 0 1 17.5 8.5" stroke="#c0392b" strokeWidth="1.8" strokeLinecap="round" fill="none"/>
+    <path d="M4 6 A10.5 10.5 0 0 1 20 6" stroke="#c0392b" strokeWidth="1.5" strokeLinecap="round" fill="none" opacity="0.5"/>
+  </svg>
+)
+
+// Pulsador de alarma — pictograma ISO (mano + botón)
+const PulsadorIcon = ({ size = 24, className = '' }: { size?: number; className?: string }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
+    <rect x="4" y="4" width="16" height="16" rx="3" stroke="#c0392b" strokeWidth="1.8"/>
+    <circle cx="12" cy="12" r="4" fill="#c0392b"/>
+    <circle cx="12" cy="12" r="2" fill="white"/>
+  </svg>
+)
+
+// Alarma/Sirena — campana de alarma
+const AlarmIcon = ({ size = 24, className = '' }: { size?: number; className?: string }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
+    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" stroke="#c0392b" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M13.73 21a2 2 0 0 1-3.46 0" stroke="#c0392b" strokeWidth="1.8" strokeLinecap="round"/>
+    <line x1="12" y1="2" x2="12" y2="4" stroke="#c0392b" strokeWidth="1.8" strokeLinecap="round"/>
+  </svg>
+)
+
+// Extintor CO2
+const ExtintorCO2Icon = ({ size = 24, className = '' }: { size?: number; className?: string }) => (
+  <FaFireExtinguisher size={size} className={className} style={{ color: '#c0392b' }} />
+)
+
+// Extintor ABC/polvo
+const ExtintorABCIcon = ({ size = 24, className = '' }: { size?: number; className?: string }) => (
+  <PiFireExtinguisherLight size={size} className={className} style={{ color: '#c0392b' }} />
+)
+
+// DEA
+const DEAIcon = ({ size = 24, className = '' }: { size?: number; className?: string }) => (
+  <img src="/images/dea-icon.svg" alt="DEA" style={{ width: size, height: size }} className={className} />
 )
 
 const RepetidorIcon = ({ size = 24, className = '' }: { size?: number; className?: string }) => (
   <img src="/images/repetidor-icon.svg" alt="Repetidor" style={{ width: size, height: size }} className={className} />
 )
 
-const EmergenciaIcon = ({ size = 24, className = '' }: { size?: number; className?: string }) => (
-  <img src="/images/emergencia-icon.svg" alt="Emergencia" style={{ width: size, height: size }} className={className} />
-)
-
-const DEAIcon = ({ size = 24, className = '' }: { size?: number; className?: string }) => (
-  <img src="/images/dea-icon.svg" alt="DEA" style={{ width: size, height: size }} className={className} />
-)
-
-const PulsadorIcon = ({ size = 24, className = '' }: { size?: number; className?: string }) => (
-  <span className={`material-symbols-outlined ${className}`} style={{ fontSize: size }}>
-    nest_protect
-  </span>
-)
-
-const DetectorIcon = ({ size = 24, className = '' }: { size?: number; className?: string }) => (
-  <span className={`material-symbols-outlined ${className}`} style={{ fontSize: size }}>
-    detector
-  </span>
-)
-
 // ============================================================================
-// ICONOS POR ÁREA
+// MAPEOS
 // ============================================================================
 
-export const ICONOS_INCENDIOS = {
-  extintor_polvo: PiFireExtinguisherLight,
-  extintor_co2: FaFireExtinguisher,
-  bie: BIEIcon,
-  detector_humo: DetectorIcon,
-  detector_alarma: DetectorIcon, // Mismo que humo por ahora
-  pulsador: PulsadorIcon,
-  hidrante: FireHydrantIcon,
-  sirena: SirenIcon,
+// Central PCI
+const CentralIcon = ({ size = 24, className = '' }: { size?: number; className?: string }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
+    <rect x="2" y="6" width="20" height="13" rx="2" stroke="#64748b" strokeWidth="1.8"/>
+    <circle cx="7" cy="12" r="1.5" fill="#64748b"/>
+    <circle cx="12" cy="12" r="1.5" fill="#64748b"/>
+    <circle cx="17" cy="12" r="1.5" fill="#64748b"/>
+    <line x1="6" y1="6" x2="6" y2="4" stroke="#64748b" strokeWidth="1.8" strokeLinecap="round"/>
+    <line x1="18" y1="6" x2="18" y2="4" stroke="#64748b" strokeWidth="1.8" strokeLinecap="round"/>
+  </svg>
+)
+
+export const TIPOS_EQUIPO_ECI: Record<string, any> = {
+  extintor:    ExtintorABCIcon,
+  bie:         BIEIcon,
+  detector:    DetectorIcon,
+  pulsador:    PulsadorIcon,
+  alarma:      AlarmIcon,
   señalizacion: EmergenciaIcon,
+  central:      CentralIcon,
+  otro:         Package,
+  'equipo-eci': Package,
 }
 
-export const ICONOS_SOCORRISMO = {
-  dea: DEAIcon,
-  botiquin: FaMedkit,
-}
-
-export const ICONOS_TRANSMISIONES = {
-  walkie: GiWalkieTalkie,
-  emisora_portatil: GiWalkieTalkie,
-  repetidor: RepetidorIcon,
-}
-
-export const ICONOS_VEHICULOS = {
-  furgoneta: LocalShippingIcon,
-  turismo: DirectionsCarIcon,
-  pickup: LocalShippingIcon,
-  remolque: StraightenIcon,
-  generico: Truck,
-}
-
-export const ICONOS_GENERAL = {
-  inventario: Package,
-  peticiones: ShoppingCart,
-  movimientos: RefreshCw,
-}
-
-// ============================================================================
-// MAPEO DE TIPOS DE EQUIPO ECI (INCENDIOS)
-// ============================================================================
-
-// Función para obtener el icono según tipo y subtipo
 export const getIconoEquipoECI = (tipo: string, subtipo?: string | null): any => {
   if (tipo === 'extintor') {
-    // Diferenciar extintores por subtipo
-    if (subtipo?.toLowerCase().includes('co2')) {
-      return FaFireExtinguisher; // Extintor CO2 (sólido)
-    }
-    return PiFireExtinguisherLight; // Extintor ABC (outline)
+    if (subtipo?.toLowerCase().includes('co2')) return ExtintorCO2Icon
+    return ExtintorABCIcon
   }
-  
-  // Resto de equipos
-  const iconMap: Record<string, any> = {
-    bie: BIEIcon,
-    detector: DetectorIcon,
-    pulsador: PulsadorIcon,
-    alarma: SirenIcon,
-    señalizacion: EmergenciaIcon,
-  };
-  
-  return iconMap[tipo] || Package;
-};
-
-// Mantener compatibilidad con código antiguo
-export const TIPOS_EQUIPO_ECI: Record<string, any> = {
-  extintor: PiFireExtinguisherLight,
-  bie: BIEIcon,
-  detector: DetectorIcon,
-  pulsador: PulsadorIcon,
-  alarma: SirenIcon,
-  señalizacion: EmergenciaIcon,
-};
-
-// ============================================================================
-// MAPEO DE TIPOS DE EQUIPO RADIO (TRANSMISIONES)
-// ============================================================================
-
-export const TIPOS_EQUIPO_RADIO: Record<string, any> = {
-  portatil: GiWalkieTalkie,
-  movil: GiWalkieTalkie,
-  base: RepetidorIcon,
-  repetidor: RepetidorIcon,
+  return TIPOS_EQUIPO_ECI[tipo] || Package
 }
 
-// ============================================================================
-// MAPEO DE TIPOS DE VEHÍCULOS
-// ============================================================================
+export const getColorEquipoECI = (_tipo: string): string => ''
+
+export const getLabelEquipoECI = (tipo: string): string => {
+  const labels: Record<string, string> = {
+    extintor: 'Extintor', bie: 'BIE', detector: 'Detector',
+    pulsador: 'Pulsador', alarma: 'Alarma/Sirena', señalizacion: 'Señalización',
+    central: 'Central PCI', otro: 'Otro', 'equipo-eci': 'Equipo ECI',
+  }
+  return labels[tipo] ?? tipo
+}
+
+export const TIPOS_EQUIPO_RADIO: Record<string, any> = {
+  portatil:  GiWalkieTalkie,
+  movil:     GiWalkieTalkie,
+  base:      RepetidorIcon,
+  repetidor: RepetidorIcon,
+}
 
 export const TIPOS_VEHICULOS: Record<string, any> = {
   furgoneta: LocalShippingIcon,
-  turismo: DirectionsCarIcon,
-  pickup: LocalShippingIcon,
-  remolque: StraightenIcon,
+  turismo:   DirectionsCarIcon,
+  pickup:    LocalShippingIcon,
+  remolque:  StraightenIcon,
 }
 
-// ============================================================================
-// FUNCIÓN HELPER PARA RENDERIZAR ICONOS
-// ============================================================================
+export const ICONOS_INCENDIOS = TIPOS_EQUIPO_ECI
+export const ICONOS_SOCORRISMO = { dea: DEAIcon }
+export const ICONOS_TRANSMISIONES = TIPOS_EQUIPO_RADIO
+export const ICONOS_VEHICULOS = TIPOS_VEHICULOS
+export const ICONOS_GENERAL = { inventario: Package }
 
 interface IconProps {
   tipo: string
@@ -169,41 +144,16 @@ interface IconProps {
 }
 
 export const RenderIcon = ({ tipo, categoria, size = 24, className = '' }: IconProps) => {
-  let IconComponent
-
+  let IconComponent: any
   switch (categoria) {
-    case 'incendios':
-      IconComponent = TIPOS_EQUIPO_ECI[tipo]
-      break
-    case 'transmisiones':
-      IconComponent = TIPOS_EQUIPO_RADIO[tipo]
-      break
-    case 'vehiculos':
-      IconComponent = TIPOS_VEHICULOS[tipo]
-      break
-    default:
-      IconComponent = Package
+    case 'incendios':    IconComponent = TIPOS_EQUIPO_ECI[tipo]; break
+    case 'transmisiones': IconComponent = TIPOS_EQUIPO_RADIO[tipo]; break
+    case 'vehiculos':    IconComponent = TIPOS_VEHICULOS[tipo]; break
+    default:              IconComponent = Package
   }
-
   if (!IconComponent) IconComponent = Package
-
-  // Si es componente de imagen personalizado
-  if (IconComponent === BIEIcon || IconComponent === RepetidorIcon || IconComponent === EmergenciaIcon || IconComponent === DEAIcon || IconComponent === PulsadorIcon || IconComponent === DetectorIcon) {
-    return <IconComponent size={size} className={className} />
-  }
-
-  // Si es icono de MUI
-  if (IconComponent.toString().includes('MuiSvgIcon')) {
-    return <IconComponent sx={{ fontSize: size }} className={className} />
-  }
-
-  // Si es icono de React Icons o Lucide
   return <IconComponent size={size} className={className} />
 }
-
-// ============================================================================
-// EXPORT DEFAULT
-// ============================================================================
 
 export default {
   incendios: ICONOS_INCENDIOS,

@@ -139,7 +139,7 @@ export async function POST(request: NextRequest) {
         // Incrementar contador de turnos de prácticas
         const nuevoContador = (fichaCheck.turnosPracticasRealizados ?? 0) + 1
         const TURNOS_OBLIGATORIOS = 15
-        if (nuevoContador >= TURNOS_OBLIGATORIOS) {
+        if (nuevoContador === TURNOS_OBLIGATORIOS) {
           // Ha completado las prácticas → pasar a voluntario
           await prisma.fichaVoluntario.update({
             where: { usuarioId },

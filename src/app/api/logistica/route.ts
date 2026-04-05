@@ -330,7 +330,7 @@ export async function GET(request: NextRequest) {
     // Obtener familias
     const familias = await prisma.familiaArticulo.findMany({
       where: { categoriaId: { in: categoriasIds } },
-      include: { categoria: true },
+      include: { categoria: true, _count: { select: { articulos: true } } },
       orderBy: [
         { categoria: { orden: 'asc' } },
         { nombre: 'asc' }
@@ -432,6 +432,19 @@ export async function POST(request: NextRequest) {
         servicio = await prisma.servicio.create({
           data: { nombre: 'Protección Civil Bormujos', codigo: 'PCB' }
         })
+      }
+
+      // Si existe un artículo inactivo con el mismo código, liberar el código para permitir reutilizarlo
+      if (codigo && servicio) {
+        const articuloInactivo = await prisma.articulo.findFirst({
+          where: { codigo, servicioId: servicio.id, activo: false }
+        })
+        if (articuloInactivo) {
+          await prisma.articulo.update({
+            where: { id: articuloInactivo.id },
+            data: { codigo: null }
+          })
+        }
       }
 
       const articulo = await prisma.articulo.create({
@@ -568,7 +581,8 @@ export async function POST(request: NextRequest) {
 
     // ===== EQUIPO ECI =====
     if (tipo === 'equipo-eci') {
-      const { edificioId, tipo: tipoEquipo, subtipo, ubicacion, numeroSerie, estado, observaciones } = body
+      const { edificioId, tipo: _tipo, tipoEquipo: tipoEquipoField, subtipo, ubicacion, numeroSerie, estado, observaciones } = body
+      const tipoEquipo = tipoEquipoField || _tipo
 
       if (!edificioId || !tipoEquipo || !ubicacion) {
         return NextResponse.json({ error: 'Edificio, tipo y ubicación son requeridos' }, { status: 400 })

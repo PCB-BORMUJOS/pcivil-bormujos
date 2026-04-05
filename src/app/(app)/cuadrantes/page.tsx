@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useCallback } from 'react'
+import { useSession } from 'next-auth/react'
 import {
   Calendar, ChevronLeft, ChevronRight, RefreshCw, Save,
   Shield, Car, Minus, Plus, Clock, AlertTriangle, CheckCircle2, Info
@@ -104,11 +105,16 @@ export default function CuadrantesPage() {
   const [pendiente, setPendiente] = useState(false)
   const [horasSlot, setHorasSlot] = useState<Record<string, number>>({})
   const [guardandoHoras, setGuardandoHoras] = useState<Record<string, boolean>>({})
+  // Horas individuales por persona por slot: key = `${uid}_${dateStr}_${turno}`
+  const [horasPersona, setHorasPersona] = useState<Record<string, number>>({})
+  const [guardandoPersona, setGuardandoPersona] = useState<Record<string, boolean>>({})
   const [showExtraordinario, setShowExtraordinario] = useState(false)
   const [extraPersonas, setExtraPersonas] = useState<string[]>([])
   const [todosUsuarios, setTodosUsuarios] = useState<any[]>([])
   const [idsNoDisponible, setIdsNoDisponible] = useState<string[]>([])
   const [idsQueRespondieron, setIdsQueRespondieron] = useState<string[]>([])
+  const { data: session } = useSession()
+  const isAdmin = ['superadmin', 'admin'].includes((session?.user as any)?.rol ?? '')
 
   const calcularSugerencias = (
     dispMap: Record<string, UsuarioDisponible[]>,
@@ -504,17 +510,17 @@ export default function CuadrantesPage() {
         </div>
       ) : (
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-x-auto">
-          <div className="grid grid-cols-7 border-b border-slate-200 bg-slate-50 min-w-[900px]">
+          <div className="grid grid-cols-7 border-b border-slate-200 bg-slate-50 min-w-[1200px]">
             {weekDays.map((day, idx) => (
               <div key={idx} className={`p-3 text-center border-r border-slate-200 last:border-r-0 ${idx >= 5 ? 'bg-slate-100' : ''}`}>
-                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{DIA_LABELS[idx]}</div>
-                <div className="text-xl font-bold text-slate-800 leading-tight">{day.getDate()}</div>
-                <div className="text-[10px] text-slate-400 capitalize">{day.toLocaleDateString('es-ES', { month: 'short' })}</div>
+                <div className="text-xs font-bold text-slate-400 uppercase tracking-widest">{DIA_LABELS[idx]}</div>
+                <div className="text-2xl font-bold text-slate-800 leading-tight">{day.getDate()}</div>
+                <div className="text-xs text-slate-400 capitalize">{day.toLocaleDateString('es-ES', { month: 'short' })}</div>
               </div>
             ))}
           </div>
           {TURNOS.map((turno, turnoIdx) => (
-            <div key={turno.key} className={`grid grid-cols-7 min-w-[900px] ${turnoIdx === 0 ? 'border-b-2 border-slate-200' : ''}`}>
+            <div key={turno.key} className={`grid grid-cols-7 min-w-[1200px] ${turnoIdx === 0 ? 'border-b-2 border-slate-200' : ''}`}>
               {weekDays.map((day, dayIdx) => {
                 const dateStr = toDateStr(day)
                 const sk = slotKey(dateStr, turno.key)
@@ -531,14 +537,14 @@ export default function CuadrantesPage() {
                 const slotParcial = asignadosOp.length > 0 && asignadosOp.length < cap
                 const asignadosExternos = asignados.filter(uid => !disponibles.find(d => d.id === uid))
                 return (
-                  <div key={dayIdx} className={`border-r border-slate-100 last:border-r-0 p-2 ${dayIdx >= 5 ? 'bg-slate-50/60' : ''} ${turno.key === 'tarde' ? 'bg-slate-50/30' : ''}`}>
+                  <div key={dayIdx} className={`border-r border-slate-100 last:border-r-0 p-2.5 ${dayIdx >= 5 ? 'bg-slate-50/60' : ''} ${turno.key === 'tarde' ? 'bg-slate-50/30' : ''}`}>
                     <div className={`flex items-center justify-between mb-1.5 pb-1 border-b ${turno.key === 'mañana' ? 'border-amber-100' : 'border-indigo-100'}`}>
                       <div className="flex items-center gap-1">
-                        <Clock size={9} className={turno.key === 'mañana' ? 'text-amber-500' : 'text-indigo-500'} />
-                        <span className={`text-[9px] font-bold uppercase tracking-wide ${turno.key === 'mañana' ? 'text-amber-600' : 'text-indigo-600'}`}>{turno.label}</span>
+                        <Clock size={12} className={turno.key === 'mañana' ? 'text-amber-500' : 'text-indigo-500'} />
+                        <span className={`text-[11px] font-bold uppercase tracking-wide ${turno.key === 'mañana' ? 'text-amber-600' : 'text-indigo-600'}`}>{turno.label}</span>
                       </div>
                       <div className="flex items-center gap-0.5">
-                        <span className={`text-[9px] font-bold px-1 py-0.5 rounded ${slotOk ? 'bg-green-100 text-green-700' : slotParcial ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-400'}`}>
+                        <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded ${slotOk ? 'bg-green-100 text-green-700' : slotParcial ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-400'}`}>
                           {asignadosOp.length}/{cap}
                         </span>
                         <button onClick={() => setCapacidad(p => ({ ...p, [sk]: Math.max(1, (p[sk] || 4) - 1) }))} className="w-4 h-4 flex items-center justify-center hover:bg-slate-200 rounded text-slate-400"><Minus size={7} /></button>
@@ -575,7 +581,7 @@ export default function CuadrantesPage() {
                       ))}
                       {guardandoHoras[sk] && <span className="text-[8px] text-slate-400 ml-1">...</span>}
                     </div>
-                    <div className="space-y-0.5 max-h-56 overflow-y-auto">
+                    <div className="space-y-0.5 max-h-56 overflow-y-auto pr-1">
                       {(() => {
                         // Lista unificada de todos los voluntarios para este slot
                         const listaCompleta = todosUsuarios.map((u: any) => {
@@ -595,7 +601,7 @@ export default function CuadrantesPage() {
                             esOperativo: u.esOperativo,
                             experiencia: u.experiencia || 'BAJA',
                             turnosDeseados: dispData?.turnosDeseados ?? 4,
-                            fichaVoluntario: dispData?.fichaVoluntario || (u as any).fichaVoluntario || null,
+                            fichaVoluntario: dispData?.fichaVoluntario || null,
                             isAsig,
                             tieneDisponibilidadEsteSlot,
                             haRespondido,
@@ -633,14 +639,12 @@ export default function CuadrantesPage() {
                           } else if (u.tieneDisponibilidadEsteSlot) {
                             className = 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
                           } else if (!u.haRespondido && !u.esNoDisponible) {
-                            // Sin declarar nada esta semana
                             className = 'bg-red-50 border border-dashed border-red-300 text-red-400 hover:bg-red-100'
-                          } else if (u.esNoDisponible) {
-                            // Declaró no disponible esta semana — visible pero muy tenue
-                            className = 'bg-slate-50 border border-dashed border-slate-200 text-slate-300 hover:bg-slate-100'
+                          } else if (isAdmin && !u.esNoDisponible) {
+                            // Admin puede ver y asignar voluntarios sin disponibilidad declarada
+                            className = 'bg-slate-50 border border-dashed border-slate-200 text-slate-400 hover:bg-slate-100 hover:text-slate-600'
                           } else {
-                            // Respondió disponibilidad pero NO para este slot concreto
-                            className = 'bg-slate-50 border border-dashed border-slate-200 text-slate-400 hover:bg-slate-100'
+                            return null
                           }
 
                           return (
@@ -648,9 +652,9 @@ export default function CuadrantesPage() {
                               key={u.id}
                               onClick={() => clickable && toggleAsignacion(sk, u.id)}
                               title={`${u.nombre} ${u.apellidos}${u.tieneDisponibilidadEsteSlot ? ` · Quiere ${u.turnosDeseados} turnos · ${restantes} restantes` : u.esNoDisponible ? ' · No disponible esta semana' : ' · Sin disponibilidad declarada'}`}
-                              className={`flex items-center gap-1 px-1.5 py-1 rounded text-[10px] transition-all select-none cursor-pointer ${className}`}
+                              className={`flex items-center gap-1.5 px-2 py-2 mr-0.5 rounded-lg text-[13px] font-medium transition-all select-none cursor-pointer ${className}`}
                             >
-                              <span className={`w-3 h-3 rounded border flex items-center justify-center flex-shrink-0 ${u.isAsig && u.estadoGuardia === 'ausente' ? 'bg-purple-500 border-purple-500 text-white' : u.isAsig && esPracticas ? 'bg-amber-500 border-amber-500 text-white' : u.isAsig ? 'bg-green-500 border-green-500 text-white' : 'border-slate-300'}`} style={{ fontSize: '7px' }}>
+                              <span className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${u.isAsig && u.estadoGuardia === 'ausente' ? 'bg-purple-500 border-purple-500 text-white' : u.isAsig && esPracticas ? 'bg-amber-500 border-amber-500 text-white' : u.isAsig ? 'bg-green-500 border-green-500 text-white' : 'border-slate-300'}`} style={{ fontSize: '9px' }}>
                                 {u.isAsig && u.estadoGuardia === 'ausente' ? '✗' : u.isAsig ? '✓' : ''}
                               </span>
                               <span className={'font-bold truncate flex-1' + (u.isAsig && u.estadoGuardia === 'ausente' ? ' line-through' : '')}>
@@ -658,17 +662,40 @@ export default function CuadrantesPage() {
                                 {esPracticas && <span className="ml-0.5 text-[7px] font-bold text-amber-600 bg-amber-100 px-0.5 rounded">P{turnosPrac}/15</span>}
                               </span>
                               <span className="flex items-center gap-0.5 flex-shrink-0">
-                                {u.responsableTurno && <Shield size={8} className={u.isAsig ? 'text-green-700' : u.tieneDisponibilidadEsteSlot ? 'text-indigo-500' : 'text-slate-300'} />}
-                                {u.carnetConducir && <Car size={8} className={u.isAsig ? 'text-green-700' : u.tieneDisponibilidadEsteSlot ? 'text-blue-500' : 'text-slate-300'} />}
-                                {!u.esOperativo && <span className="text-[7px] font-bold text-slate-400 bg-slate-100 px-0.5 rounded">ADM</span>}
+                                {u.responsableTurno && <Shield size={14} className={u.isAsig ? 'text-green-700' : u.tieneDisponibilidadEsteSlot ? 'text-indigo-500' : 'text-slate-300'} />}
+                                {u.carnetConducir && <Car size={14} className={u.isAsig ? 'text-green-700' : u.tieneDisponibilidadEsteSlot ? 'text-blue-500' : 'text-slate-300'} />}
+                                {!u.esOperativo && <span className="text-[9px] font-bold text-slate-500 bg-slate-100 px-1 py-0.5 rounded">ADM</span>}
                               </span>
                               {u.tieneDisponibilidadEsteSlot && (
-                                <span className={`text-[8px] font-mono flex-shrink-0 ${u.isAsig ? 'text-green-600' : restantes === 0 ? 'text-red-400' : 'text-slate-400'}`}>
+                                <span className={`text-[11px] font-mono flex-shrink-0 ${u.isAsig ? 'text-green-600' : restantes === 0 ? 'text-red-400' : 'text-slate-400'}`}>
                                   [{restantes}↓]
                                 </span>
                               )}
                               {u.isAsig && (
                                 <span className="flex gap-0.5 ml-0.5" onClick={e => e.stopPropagation()}>
+                                  {/* Botones horas individuales */}
+                                  {[4, 8, 12].map(h => {
+                                    const pk = `${u.id}_${dateStr}_${turno.key}`
+                                    const activo = horasPersona[pk] === h
+                                    return (
+                                      <button
+                                        key={h}
+                                        disabled={!!guardandoPersona[pk]}
+                                        title={`Asignar +${h}h a ${u.numeroVoluntario}`}
+                                        onClick={async () => {
+                                          setGuardandoPersona(p => ({ ...p, [pk]: true }))
+                                          setHorasPersona(p => ({ ...p, [pk]: h }))
+                                          await fetch('/api/cuadrantes/dieta-slot', {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({ usuarioId: u.id, fecha: dateStr, turno: turno.key, horas: h })
+                                          })
+                                          setGuardandoPersona(p => ({ ...p, [pk]: false }))
+                                        }}
+                                        className={`text-[9px] font-bold px-1 py-0.5 rounded transition-colors disabled:opacity-40 ${activo ? 'bg-orange-500 text-white' : 'bg-slate-100 text-slate-400 hover:bg-orange-100 hover:text-orange-700'}`}
+                                      >+{h}h</button>
+                                    )
+                                  })}
                                   <button
                                     onClick={() => setRolEspecial(prev => {
                                       const actual = prev[sk] || {}
@@ -676,7 +703,7 @@ export default function CuadrantesPage() {
                                       return { ...prev, [sk]: { ...actual, responsable: nuevo } }
                                     })}
                                     title="Responsable de turno"
-                                    className={rolEspecial[sk]?.responsable === u.id ? "text-[7px] font-bold px-0.5 rounded bg-indigo-500 text-white" : "text-[7px] font-bold px-0.5 rounded bg-slate-100 text-slate-400 hover:bg-indigo-100"}
+                                    className={rolEspecial[sk]?.responsable === u.id ? "text-[9px] font-bold px-1 py-0.5 rounded bg-indigo-500 text-white" : "text-[9px] font-bold px-1 py-0.5 rounded bg-slate-100 text-slate-400 hover:bg-indigo-100"}
                                   >R</button>
                                   <button
                                     onClick={() => setRolEspecial(prev => {
@@ -685,7 +712,7 @@ export default function CuadrantesPage() {
                                       return { ...prev, [sk]: { ...actual, cecopal: nuevo } }
                                     })}
                                     title="Responsable CECOPAL"
-                                    className={rolEspecial[sk]?.cecopal === u.id ? "text-[7px] font-bold px-0.5 rounded bg-orange-500 text-white" : "text-[7px] font-bold px-0.5 rounded bg-slate-100 text-slate-400 hover:bg-orange-100"}
+                                    className={rolEspecial[sk]?.cecopal === u.id ? "text-[9px] font-bold px-1 py-0.5 rounded bg-orange-500 text-white" : "text-[9px] font-bold px-1 py-0.5 rounded bg-slate-100 text-slate-400 hover:bg-orange-100"}
                                   >C</button>
                                 </span>
                               )}
@@ -695,12 +722,12 @@ export default function CuadrantesPage() {
                       })()}
                     </div>
                     {slotParcial && (
-                      <div className="mt-1 flex items-center gap-0.5 text-[8px] text-amber-600">
+                      <div className="mt-1.5 flex items-center gap-1 text-[10px] text-amber-600">
                         <AlertTriangle size={8} /><span>Faltan {cap - asignadosOp.length}</span>
                       </div>
                     )}
                     {slotOk && asignados.length > 0 && (
-                      <div className="mt-1 flex items-center gap-0.5 text-[8px] text-green-600">
+                      <div className="mt-1.5 flex items-center gap-1 text-[10px] text-green-600">
                         <CheckCircle2 size={8} /><span>Cubierto</span>
                       </div>
                     )}
@@ -775,6 +802,7 @@ export default function CuadrantesPage() {
 
         // Para cada usuario calcular disponibilidad y asignaciones
         const filas = todosUsuarios
+          .filter(u => userIdsConActividad.has(u.id))
           .map(u => {
             const dispSlots: string[] = []
             const asigSlots: string[] = []
@@ -790,7 +818,7 @@ export default function CuadrantesPage() {
             const turnosDeseados = turnosDeseadosMap[u.id] || 0
             return { u: { ...u, turnosDeseados }, dispSlots, asigSlots }
           })
-          .sort((a, b) => sortIndicativo(a.u.numeroVoluntario, b.u.numeroVoluntario))
+          .sort((a, b) => (a.u.numeroVoluntario || '').localeCompare(b.u.numeroVoluntario || ''))
 
         if (filas.length === 0) return null
 
@@ -798,7 +826,7 @@ export default function CuadrantesPage() {
           <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
             <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
               <h3 className="text-sm font-bold text-slate-700">Resumen por voluntario</h3>
-              <span className="text-xs text-slate-400">{filas.length} voluntarios activos</span>
+              <span className="text-xs text-slate-400">{filas.length} con actividad esta semana</span>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-xs">

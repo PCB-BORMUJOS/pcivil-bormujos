@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import dynamic from 'next/dynamic'
 import 'leaflet/dist/leaflet.css'
-import L from 'leaflet'
 import {
   Heart, Phone, Building2, MapPin, Users, AlertTriangle,
   Plus, RefreshCw, Search, ChevronDown, ChevronUp, Edit,
@@ -43,6 +42,7 @@ interface CentroEmergencia {
   id: string; nombre: string; tipo: string; direccion: string
   telefono?: string; responsable?: string; capacidad?: number
   latitud?: number; longitud?: number; descripcion?: string; activo: boolean
+  estado?: string; email?: string; notas?: string
 }
 interface Contacto {
   id: string; nombre: string; entidad?: string; categoria: string
@@ -63,6 +63,43 @@ interface DisponibilidadViogen {
 }
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
+
+// ─── Iconos SVG para markers del mapa ────────────────────────────────────────
+const MAP_ICON_SVGS: Record<string, { path: string; color: string; bg: string }> = {
+  // Centros
+  pabellon:              { path: 'M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z M9 22V12h6v10', color: '#0d9488', bg: '#ccfbf1' },
+  centro_multifuncional: { path: 'M19 21V5a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v16 M1 21h22 M9 21V9h6v12', color: '#0891b2', bg: '#cffafe' },
+  ceu:                   { path: 'M12 2L2 7l10 5 10-5-10-5z M2 17l10 5 10-5 M2 12l10 5 10-5', color: '#059669', bg: '#d1fae5' },
+  otro:                  { path: 'M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z M12 11.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z', color: '#6b7280', bg: '#f3f4f6' },
+  // Espacios
+  hotel:                 { path: 'M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z', color: '#7c3aed', bg: '#ede9fe' },
+  albergue:              { path: 'M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z', color: '#db2777', bg: '#fce7f3' },
+  polideportivo:         { path: 'M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z', color: '#2563eb', bg: '#dbeafe' },
+  // Directorio
+  policia:               { path: 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z', color: '#1d4ed8', bg: '#dbeafe' },
+  guardia_civil:         { path: 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z', color: '#15803d', bg: '#dcfce7' },
+  sanidad:               { path: 'M22 12h-4l-3 9L9 3l-3 9H2', color: '#dc2626', bg: '#fee2e2' },
+  juzgado:               { path: 'M3 21h18 M3 7v1a3 3 0 0 0 6 0V7m0 1a3 3 0 0 0 6 0V7m0 1a3 3 0 0 0 6 0V7H3l2-4h14l2 4 M5 21V10.85', color: '#92400e', bg: '#fef3c7' },
+  servicios_sociales:    { path: 'M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2 M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z M23 21v-2a4 4 0 0 0-3-3.87 M16 3.13a4 4 0 0 1 0 7.75', color: '#be185d', bg: '#fce7f3' },
+  vivienda:              { path: 'M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z M9 22V12h6v10', color: '#b45309', bg: '#fef3c7' },
+  educacion:             { path: 'M12 2L2 7l10 5 10-5-10-5z M2 17l10 5 10-5 M2 12l10 5 10-5', color: '#7c3aed', bg: '#ede9fe' },
+  default:               { path: 'M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z M12 11.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z', color: '#6b7280', bg: '#f3f4f6' },
+}
+
+function createMapIcon(tipo: string): any {
+  if (typeof window === 'undefined') return undefined
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const L = require('leaflet')
+  const def = MAP_ICON_SVGS[tipo] || MAP_ICON_SVGS.default
+  const svgHtml = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${def.color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="${def.path}"/></svg>`
+  return L.divIcon({
+    html: `<div style="background:${def.bg};border:2px solid ${def.color};border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.2);">${svgHtml}</div>`,
+    className: '',
+    iconSize: [36, 36],
+    iconAnchor: [18, 18],
+    popupAnchor: [0, -20],
+  })
+}
 
 const TIPOS_ESPACIO: Record<string, { label: string; color: string }> = {
   hotel:       { label: 'Hotel',                color: 'bg-blue-100 text-blue-800' },
@@ -107,6 +144,113 @@ const ESTADOS_PETICION: Record<string, { label: string; color: string }> = {
 // Miembros VIOGEN cargados dinámicamente desde API
 
 // ─── Componente Principal ─────────────────────────────────────────────────────
+
+
+function GestionFamiliasModal({ familias, categoriaId, onClose, onRefresh }: {
+  familias: Familia[]
+  categoriaId: string | null
+  onClose: () => void
+  onRefresh: () => void
+}) {
+  const [editandoId, setEditandoId] = useState<string | null>(null)
+  const [editandoNombre, setEditandoNombre] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  const handleCrear = async (e: React.FormEvent<HTMLFormElement>) => {
+    const form = e.currentTarget
+    e.preventDefault()
+    if (!categoriaId) { alert('Categoría no encontrada en BD'); return }
+    const fd = new FormData(form)
+    const nombre = fd.get('nombre') as string
+    if (!nombre.trim()) return
+    setSaving(true)
+    try {
+      await fetch('/api/logistica', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tipo: 'familia', nombre, categoriaId })
+      })
+      form.reset()
+      onRefresh()
+    } finally { setSaving(false) }
+  }
+
+  const handleEditar = async (id: string) => {
+    if (!editandoNombre.trim()) return
+    setSaving(true)
+    try {
+      await fetch('/api/logistica', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tipo: 'familia', id, nombre: editandoNombre })
+      })
+      setEditandoId(null)
+      setEditandoNombre('')
+      onRefresh()
+    } finally { setSaving(false) }
+  }
+
+  const handleEliminar = async (fam: Familia) => {
+    if ((fam._count?.articulos ?? 0) > 0) {
+      alert(`No se puede eliminar "${fam.nombre}": tiene ${fam._count?.articulos} artículo(s).`)
+      return
+    }
+    if (!confirm(`¿Eliminar la familia "${fam.nombre}"?`)) return
+    await fetch(`/api/logistica?tipo=familia&id=${fam.id}`, { method: 'DELETE' })
+    onRefresh()
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000] p-4">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
+        <div className="flex items-center justify-between p-4 border-b">
+          <h3 className="font-semibold text-gray-900">Gestión de Familias</h3>
+          <button onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-lg"><X className="w-4 h-4" /></button>
+        </div>
+        <div className="p-4 space-y-4">
+          <form onSubmit={handleCrear} className="flex gap-2">
+            <input name="nombre" placeholder="Nueva familia..." required className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500/20" />
+            <button type="submit" disabled={saving} className="px-3 py-2 bg-rose-600 text-white rounded-lg text-sm font-medium disabled:opacity-40">Añadir</button>
+          </form>
+          <div className="space-y-2 max-h-72 overflow-y-auto">
+            {familias.length === 0 && <p className="text-sm text-gray-400 text-center py-6">Sin familias creadas</p>}
+            {familias.map(fam => (
+              <div key={fam.id} className="flex items-center gap-2 py-2 px-3 bg-gray-50 rounded-lg">
+                {editandoId === fam.id ? (
+                  <>
+                    <input
+                      value={editandoNombre}
+                      onChange={e => setEditandoNombre(e.target.value)}
+                      className="flex-1 border border-rose-300 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500/20"
+                      autoFocus
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') handleEditar(fam.id)
+                        if (e.key === 'Escape') { setEditandoId(null); setEditandoNombre('') }
+                      }}
+                    />
+                    <button onClick={() => handleEditar(fam.id)} disabled={saving} className="px-2 py-1 bg-rose-600 text-white rounded text-xs font-medium disabled:opacity-40">Guardar</button>
+                    <button onClick={() => { setEditandoId(null); setEditandoNombre('') }} className="px-2 py-1 border border-gray-200 text-gray-500 rounded text-xs">Cancelar</button>
+                  </>
+                ) : (
+                  <>
+                    <span className="flex-1 text-sm font-medium text-gray-700">{fam.nombre}</span>
+                    <span className="text-xs text-gray-400 mr-1">{fam._count?.articulos ?? 0} art.</span>
+                    <button onClick={() => { setEditandoId(fam.id); setEditandoNombre(fam.nombre) }} className="p-1 text-gray-400 hover:text-rose-600 rounded transition-colors" title="Editar">
+                      <Edit className="w-3.5 h-3.5" />
+                    </button>
+                    <button onClick={() => handleEliminar(fam)} className="p-1 text-gray-400 hover:text-red-500 rounded transition-colors" title="Eliminar">
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 export default function AccionSocialPage() {
   const { data: session } = useSession()
@@ -154,6 +298,7 @@ export default function AccionSocialPage() {
   const [showNuevoContacto, setShowNuevoContacto] = useState(false)
   const [showEditContacto, setShowEditContacto] = useState(false)
   const [showNuevoCaso, setShowNuevoCaso] = useState(false)
+  const [casoEditando, setCasoEditando] = useState<CasoViogen | null>(null)
   const [articuloSel, setArticuloSel] = useState<Articulo | null>(null)
   const [espacioSel, setEspacioSel] = useState<EspacioAcogida | null>(null)
   const [centroSel, setCentroSel] = useState<CentroEmergencia | null>(null)
@@ -166,8 +311,8 @@ export default function AccionSocialPage() {
     try {
       setLoading(true)
       const [resInv, resCat, resEsp, resCent, resCont, resCasos, resMiembros, resStats] = await Promise.all([
-        fetch('/api/logistica?inventario=accion_social'),
-        fetch('/api/logistica?tipo=categoria&slug=accion_social'),
+        fetch('/api/logistica?inventario=accion-social'),
+        fetch('/api/logistica?tipo=categoria&slug=accion-social'),
         fetch('/api/accion-social?tipo=espacios'),
         fetch('/api/accion-social?tipo=centros'),
         fetch('/api/accion-social?tipo=directorio'),
@@ -606,7 +751,7 @@ export default function AccionSocialPage() {
                 <MapContainer center={[37.3710, -6.0710]} zoom={14} style={{ height: '100%', width: '100%' }}>
                   <TileLayer attribution='&copy; OpenStreetMap' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
                   {centros.filter(c => c.latitud && c.longitud).map(c => (
-                    <Marker key={c.id} position={[c.latitud!, c.longitud!]}>
+                    <Marker key={c.id} position={[c.latitud!, c.longitud!]} icon={createMapIcon(c.tipo)}>
                       <Popup>
                         <div className="text-sm min-w-[180px]">
                           <p className="font-bold text-gray-900">{c.nombre}</p>
@@ -620,7 +765,7 @@ export default function AccionSocialPage() {
                     </Marker>
                   ))}
                   {espacios.filter(e => e.latitud && e.longitud && e.estado === 'activo').map(e => (
-                    <Marker key={e.id} position={[e.latitud!, e.longitud!]}>
+                    <Marker key={e.id} position={[e.latitud!, e.longitud!]} icon={createMapIcon(e.tipo)}>
                       <Popup>
                         <div className="text-sm min-w-[160px]">
                           <p className="font-bold text-gray-900">{e.nombre}</p>
@@ -650,28 +795,28 @@ export default function AccionSocialPage() {
                   </thead>
                   <tbody>
                     {centros.map(c => (
-                      <tr key={c.id} className="border-b border-gray-50 hover:bg-gray-50">
-                        <td className="py-3 px-3 font-medium text-gray-900">{c.nombre}</td>
-                        <td className="py-3 px-3">
-                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${TIPOS_CENTRO[c.tipo]?.color}`}>
+                      <tr key={c.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                        <td className="py-3.5 px-4 text-sm font-semibold text-gray-900">{c.nombre}</td>
+                        <td className="py-3.5 px-4">
+                          <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${TIPOS_CENTRO[c.tipo]?.color}`}>
                             {TIPOS_CENTRO[c.tipo]?.label || c.tipo}
                           </span>
                         </td>
-                        <td className="py-3 px-3 text-gray-500 text-xs">{c.direccion}</td>
-                        <td className="py-3 px-3 text-gray-500 text-xs">{c.responsable || '—'}</td>
-                        <td className="py-3 px-3">
-                          {c.capacidad ? <span className="font-semibold text-teal-700">{c.capacidad} pers.</span> : '—'}
+                        <td className="py-3.5 px-4 text-sm text-gray-600">{c.direccion}</td>
+                        <td className="py-3.5 px-4 text-sm text-gray-600">{c.responsable || '—'}</td>
+                        <td className="py-3.5 px-4 text-sm">
+                          {c.capacidad ? <span className="font-semibold text-teal-700">{c.capacidad} pers.</span> : <span className="text-gray-400">—</span>}
                         </td>
-                        <td className="py-3 px-3 text-gray-500 text-xs">{c.telefono || '—'}</td>
-                        <td className="py-3 px-3">
+                        <td className="py-3.5 px-4 text-sm text-gray-600">{c.telefono || '—'}</td>
+                        <td className="py-3.5 px-4">
                           <div className="flex gap-1">
                             <button onClick={() => { setCentroSel(c); setShowEditCentro(true) }}
-                              className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded"><Edit className="w-3.5 h-3.5" /></button>
+                              className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"><Edit className="w-4 h-4" /></button>
                             <button onClick={async () => {
                               if (!confirm(`¿Eliminar "${c.nombre}"?`)) return
                               await fetch(`/api/accion-social?tipo=centro&id=${c.id}`, { method: 'DELETE' })
                               cargarDatos()
-                            }} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"><Trash2 className="w-3.5 h-3.5" /></button>
+                            }} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"><Trash2 className="w-4 h-4" /></button>
                           </div>
                         </td>
                       </tr>
@@ -888,6 +1033,33 @@ export default function AccionSocialPage() {
                                 <p className="text-sm text-gray-700">{caso.observaciones}</p>
                               </div>
                             )}
+                            {/* Acciones del caso */}
+                            <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-semibold text-gray-400 uppercase">Cambiar estado:</span>
+                                {['activo', 'cerrado', 'derivado'].map(est => (
+                                  <button key={est} onClick={async () => {
+                                    if (caso.estado === est) return
+                                    if (!confirm(`¿Cambiar estado a "${est}"?`)) return
+                                    await fetch('/api/accion-social', {
+                                      method: 'PUT',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({ tipo: 'viogen', id: caso.id, estado: est, observaciones: caso.observaciones, derivadoA: caso.derivadoA, recursosActivados: caso.recursosActivados })
+                                    })
+                                    cargarDatos()
+                                  }} className={`px-2.5 py-1 rounded-full text-xs font-semibold border transition-colors ${
+                                    caso.estado === est
+                                      ? ESTADOS_VIOGEN[est]?.color + ' border-transparent'
+                                      : 'border-gray-200 text-gray-500 hover:bg-gray-50'
+                                  }`}>
+                                    {ESTADOS_VIOGEN[est]?.label}
+                                  </button>
+                                ))}
+                              </div>
+                              <button onClick={() => setCasoEditando(caso)} className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-medium text-gray-600 hover:bg-gray-50 transition-colors">
+                                <Edit className="w-3.5 h-3.5" /> Editar caso
+                              </button>
+                            </div>
                           </div>
                         )}
                       </div>
@@ -1184,43 +1356,12 @@ export default function AccionSocialPage() {
 
       {/* Modal Gestión Familias */}
       {showGestionFamilias && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000] p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
-            <div className="flex items-center justify-between p-4 border-b">
-              <h3 className="font-semibold text-gray-900">Gestión de Familias</h3>
-              <button onClick={() => setShowGestionFamilias(false)} className="p-1.5 hover:bg-gray-100 rounded-lg"><X className="w-4 h-4" /></button>
-            </div>
-            <div className="p-4 space-y-4">
-              <form onSubmit={async e => {
-                e.preventDefault()
-                const fd = new FormData(e.currentTarget)
-                if (!categoriaId) { alert('Categoría no encontrada'); return }
-                await fetch('/api/logistica', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ tipo: 'familia', nombre: fd.get('nombre'), categoriaId }) })
-                ;(e.target as HTMLFormElement).reset(); cargarDatos()
-              }} className="flex gap-2">
-                <input name="nombre" placeholder="Nueva familia..." required className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm" />
-                <button type="submit" className="px-3 py-2 bg-rose-600 text-white rounded-lg text-sm font-medium">Añadir</button>
-              </form>
-              <div className="space-y-2">
-                {familias.map(f => (
-                  <div key={f.id} className="flex items-center justify-between py-2 px-3 bg-gray-50 rounded-lg">
-                    <span className="text-sm font-medium text-gray-700">{f.nombre}</span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-gray-400">{f._count?.articulos ?? 0} artículos</span>
-                      <button onClick={async () => {
-                        if ((f._count?.articulos ?? 0) > 0) { alert('No se puede eliminar: tiene artículos'); return }
-                        if (!confirm(`¿Eliminar familia "${f.nombre}"?`)) return
-                        await fetch(`/api/logistica?tipo=familia&id=${f.id}`, { method: 'DELETE' })
-                        cargarDatos()
-                      }} className="p-1 text-gray-400 hover:text-red-500 rounded"><Trash2 className="w-3.5 h-3.5" /></button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
+        <GestionFamiliasModal
+          familias={familias}
+          categoriaId={categoriaId}
+          onClose={() => setShowGestionFamilias(false)}
+          onRefresh={cargarDatos}
+        />
       )}
 
       {/* Modal Nuevo Espacio */}
@@ -1394,6 +1535,59 @@ export default function AccionSocialPage() {
         </div>
       )}
 
+
+      {/* Modal Editar Centro */}
+      {showEditCentro && centroSel && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000] p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-4 border-b sticky top-0 bg-white">
+              <h3 className="font-semibold text-gray-900">Editar Centro de Emergencia</h3>
+              <button onClick={() => { setShowEditCentro(false); setCentroSel(null) }} className="p-1.5 hover:bg-gray-100 rounded-lg"><X className="w-4 h-4" /></button>
+            </div>
+            <form onSubmit={async e => {
+              const form = e.currentTarget
+              e.preventDefault()
+              const fd = new FormData(form)
+              await fetch('/api/accion-social', { method: 'PUT', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tipo: 'centro', id: centroSel.id,
+                  nombre: fd.get('nombre'), tipoCentro: fd.get('tipoCentro'),
+                  direccion: fd.get('direccion'), responsable: fd.get('responsable'),
+                  telefono: fd.get('telefono'), email: fd.get('email'),
+                  capacidad: fd.get('capacidad') ? parseInt(fd.get('capacidad') as string) : null,
+                  latitud: fd.get('latitud') ? parseFloat(fd.get('latitud') as string) : null,
+                  longitud: fd.get('longitud') ? parseFloat(fd.get('longitud') as string) : null,
+                  estado: fd.get('estado'), notas: fd.get('notas') }) })
+              setShowEditCentro(false); setCentroSel(null); cargarDatos()
+            }} className="p-4 space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <input name="nombre" defaultValue={centroSel.nombre} required placeholder="Nombre *" className="col-span-2 border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+                <select name="tipoCentro" defaultValue={centroSel.tipo} className="border border-gray-200 rounded-lg px-3 py-2 text-sm">
+                  {Object.entries(TIPOS_CENTRO).map(([k, v]: any) => <option key={k} value={k}>{v.label}</option>)}
+                </select>
+                <select name="estado" defaultValue={centroSel.estado || 'activo'} className="border border-gray-200 rounded-lg px-3 py-2 text-sm">
+                  <option value="activo">Activo</option>
+                  <option value="inactivo">Inactivo</option>
+                  <option value="mantenimiento">En mantenimiento</option>
+                </select>
+                <input name="direccion" defaultValue={centroSel.direccion} required placeholder="Dirección *" className="col-span-2 border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+                <input name="responsable" defaultValue={centroSel.responsable || ''} placeholder="Responsable" className="border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+                <input name="telefono" defaultValue={centroSel.telefono || ''} placeholder="Teléfono" className="border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+                <input name="email" defaultValue={centroSel.email || ''} placeholder="Email" className="col-span-2 border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+                <input name="capacidad" type="number" defaultValue={centroSel.capacidad || ''} placeholder="Capacidad (personas)" className="border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+                <div className="border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-400 flex items-center">Capacidad actual: {centroSel.capacidad || '—'}</div>
+                <input name="latitud" defaultValue={centroSel.latitud || ''} placeholder="Latitud" className="border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+                <input name="longitud" defaultValue={centroSel.longitud || ''} placeholder="Longitud" className="border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+                <textarea name="notas" defaultValue={centroSel.notas || ''} rows={2} placeholder="Notas" className="col-span-2 border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none" />
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <button type="button" onClick={() => { setShowEditCentro(false); setCentroSel(null) }} className="px-4 py-2 border border-gray-200 rounded-lg text-sm">Cancelar</button>
+                <button type="submit" className="px-4 py-2 bg-rose-600 text-white rounded-lg text-sm font-medium">Guardar</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Modal Editar Contacto */}
       {showEditContacto && contactoSel && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000] p-4">
@@ -1439,6 +1633,66 @@ export default function AccionSocialPage() {
       )}
 
       {/* Modal Nuevo Caso VIOGEN */}
+
+      {/* Modal Editar Caso VIOGEN */}
+      {casoEditando && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000] p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-4 border-b sticky top-0 bg-white">
+              <div className="flex items-center gap-2">
+                <ShieldAlert className="w-5 h-5 text-red-600" />
+                <h3 className="font-semibold text-gray-900">Editar Caso {casoEditando.numeroCaso}</h3>
+              </div>
+              <button onClick={() => setCasoEditando(null)} className="p-1.5 hover:bg-gray-100 rounded-lg"><X className="w-4 h-4" /></button>
+            </div>
+            <form onSubmit={async e => {
+              const form = e.currentTarget
+              e.preventDefault()
+              const fd = new FormData(form)
+              await fetch('/api/accion-social', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  tipo: 'viogen',
+                  id: casoEditando.id,
+                  estado: fd.get('estado'),
+                  recursosActivados: fd.get('recursosActivados'),
+                  derivadoA: fd.get('derivadoA'),
+                  observaciones: fd.get('observaciones'),
+                })
+              })
+              setCasoEditando(null)
+              cargarDatos()
+            }} className="p-4 space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Estado del caso</label>
+                <select name="estado" defaultValue={casoEditando.estado} required className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm">
+                  <option value="activo">Activo</option>
+                  <option value="cerrado">Cerrado</option>
+                  <option value="derivado">Derivado</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Recursos activados</label>
+                <input name="recursosActivados" defaultValue={casoEditando.recursosActivados || ''} placeholder="Sanitarios, alojamiento..." className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Derivado a</label>
+                <input name="derivadoA" defaultValue={casoEditando.derivadoA || ''} placeholder="Servicios sociales, juzgado, albergue..." className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Observaciones</label>
+                <textarea name="observaciones" defaultValue={casoEditando.observaciones || ''} rows={3} placeholder="Observaciones adicionales..." className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none" />
+              </div>
+              <div className="flex justify-end gap-2 pt-2 border-t">
+                <button type="button" onClick={() => setCasoEditando(null)} className="px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-600">Cancelar</button>
+                <button type="submit" className="px-4 py-2 bg-violet-600 text-white rounded-lg text-sm font-medium hover:bg-violet-700">Guardar cambios</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {showNuevoCaso && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000] p-4">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
