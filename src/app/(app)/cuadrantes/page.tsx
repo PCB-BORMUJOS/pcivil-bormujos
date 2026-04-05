@@ -601,7 +601,7 @@ export default function CuadrantesPage() {
                             esOperativo: u.esOperativo,
                             experiencia: u.experiencia || 'BAJA',
                             turnosDeseados: dispData?.turnosDeseados ?? 4,
-                            fichaVoluntario: dispData?.fichaVoluntario || null,
+                            fichaVoluntario: dispData?.fichaVoluntario || (u as any).fichaVoluntario || null,
                             isAsig,
                             tieneDisponibilidadEsteSlot,
                             haRespondido,
@@ -643,8 +643,11 @@ export default function CuadrantesPage() {
                           } else if (isAdmin && !u.esNoDisponible) {
                             // Admin puede ver y asignar voluntarios sin disponibilidad declarada
                             className = 'bg-slate-50 border border-dashed border-slate-200 text-slate-400 hover:bg-slate-100 hover:text-slate-600'
+                          } else if (u.esNoDisponible) {
+                            className = 'bg-slate-50 border border-dashed border-slate-200 text-slate-300 hover:bg-slate-100'
                           } else {
-                            return null
+                            // Respondió para otros slots pero no este — visible en gris
+                            className = 'bg-slate-50 border border-dashed border-slate-200 text-slate-400 hover:bg-slate-100'
                           }
 
                           return (
@@ -802,7 +805,6 @@ export default function CuadrantesPage() {
 
         // Para cada usuario calcular disponibilidad y asignaciones
         const filas = todosUsuarios
-          .filter(u => userIdsConActividad.has(u.id))
           .map(u => {
             const dispSlots: string[] = []
             const asigSlots: string[] = []
@@ -818,7 +820,7 @@ export default function CuadrantesPage() {
             const turnosDeseados = turnosDeseadosMap[u.id] || 0
             return { u: { ...u, turnosDeseados }, dispSlots, asigSlots }
           })
-          .sort((a, b) => (a.u.numeroVoluntario || '').localeCompare(b.u.numeroVoluntario || ''))
+          .sort((a, b) => sortIndicativo(a.u.numeroVoluntario, b.u.numeroVoluntario))
 
         if (filas.length === 0) return null
 
@@ -826,7 +828,7 @@ export default function CuadrantesPage() {
           <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
             <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
               <h3 className="text-sm font-bold text-slate-700">Resumen por voluntario</h3>
-              <span className="text-xs text-slate-400">{filas.length} con actividad esta semana</span>
+              <span className="text-xs text-slate-400">{filas.length} voluntarios activos</span>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-xs">
