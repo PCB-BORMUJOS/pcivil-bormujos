@@ -78,6 +78,7 @@ export async function GET(request: NextRequest) {
         id: true, nombre: true, apellidos: true, numeroVoluntario: true,
         responsableTurno: true, carnetConducir: true, experiencia: true,
         nivelCompromiso: true, esOperativo: true,
+        fichaVoluntario: { select: { enPracticas: true, turnosPracticasRealizados: true } }
       },
       orderBy: [{ numeroVoluntario: 'asc' }]
     })
