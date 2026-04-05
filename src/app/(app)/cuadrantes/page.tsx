@@ -853,7 +853,9 @@ export default function CuadrantesPage() {
                       <td className="py-2 px-3">
                         <div className="flex flex-wrap gap-1">
                           {dispSlots.length === 0
-                            ? <span className="text-slate-300 italic text-xs">Sin declarar</span>
+                            ? idsNoDisponible.includes(u.id)
+                              ? <span className="text-red-400 italic text-xs font-medium">No disponible</span>
+                              : <span className="text-slate-300 italic text-xs">Sin declarar</span>
                             : dispSlots.map((s, i) => (
                               <span key={i} className="px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded font-mono text-[10px]">{s}</span>
                             ))
