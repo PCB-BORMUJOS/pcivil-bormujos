@@ -1,4 +1,5 @@
-'use client';
+'use client'
+import { PERMISOS_DISPONIBLES } from '@/lib/permisos';
 
 import {
   DndContext,
@@ -48,6 +49,7 @@ interface Voluntario {
     categoria?: string;
     fechaAlta?: string;
   };
+  permisosExtra?: string[];
 }
 
 interface DisponibilidadAdmin {
