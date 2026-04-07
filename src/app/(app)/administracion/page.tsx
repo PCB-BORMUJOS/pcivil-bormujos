@@ -604,6 +604,7 @@ export default function AdministracionPage() {
       setFichaData({
         ...data.ficha,
         rolId: voluntario.rolId, // Inicializar con el rol actual
+        permisosExtra: voluntario.permisosExtra || [],
         fechaAlta: data.ficha?.fechaAlta ? data.ficha.fechaAlta.split('T')[0] : new Date().toISOString().split('T')[0],
         localidad: data.ficha?.localidad || '',
         provincia: data.ficha?.provincia || '',
@@ -720,6 +721,7 @@ export default function AdministracionPage() {
             telefono: selectedVoluntario.telefono,
             numeroVoluntario: selectedVoluntario.numeroVoluntario,
             servicioId: fichaData.servicioId || null,
+            permisosExtra: fichaData.permisosExtra || [],
             accion: 'datos'
           })
         });
@@ -2593,6 +2595,32 @@ export default function AdministracionPage() {
               </div>
             </div>
 
+            {/* Permisos extra */}
+            <div className="border border-slate-200 rounded-xl p-4 bg-slate-50">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-2 h-2 rounded-full bg-violet-500" />
+                <p className="text-xs font-bold text-slate-600 uppercase tracking-wide">Permisos adicionales</p>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {PERMISOS_DISPONIBLES.map(p => (
+                  <label key={p.key} className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-white cursor-pointer transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={(fichaData.permisosExtra || []).includes(p.key)}
+                      onChange={e => {
+                        const actual: string[] = fichaData.permisosExtra || []
+                        const nuevos = e.target.checked
+                          ? [...actual, p.key]
+                          : actual.filter((x: string) => x !== p.key)
+                        setFichaData({ ...fichaData, permisosExtra: nuevos })
+                      }}
+                      className="rounded border-slate-300 text-violet-600"
+                    />
+                    <span className="text-xs text-slate-700">{p.label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
             {/* Permiso conducir */}
             <div className="grid grid-cols-3 gap-4">
               <div>
