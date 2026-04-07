@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
+import { usePermisos } from '@/lib/permisos'
 import dynamic from 'next/dynamic'
 import 'leaflet/dist/leaflet.css'
 import {
@@ -260,6 +261,7 @@ function GestionFamiliasModal({ familias, categoriaId, onClose, onRefresh }: {
 
 export default function AccionSocialPage() {
   const { data: session } = useSession()
+  const { canVerViogen } = usePermisos()
 
   // Tabs
   const [mainTab, setMainTab] = useState<'inventario' | 'espacios' | 'centros' | 'directorio' | 'viogen' | 'cuadrante'>('inventario')
@@ -505,7 +507,7 @@ export default function AccionSocialPage() {
             <button onClick={cargarDatos} className="flex items-center justify-center p-2.5 text-slate-600 hover:bg-slate-100 rounded-lg border border-slate-200 flex-shrink-0" title="Recargar"><RefreshCw size={18} /></button>
             <button onClick={() => setShowNuevaPeticion(true)} className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm" title="Nueva Petición"><ShoppingCart size={18} />Petición</button>
             <button onClick={() => setShowNuevoArticulo(true)} className="flex items-center gap-2 px-4 py-2.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-400 font-medium text-sm" title="Nuevo Artículo"><Package size={18} />Artículo</button>
-            <button onClick={() => setShowNuevoCaso(true)} className="flex items-center gap-2 px-4 py-2.5 bg-violet-600 text-white rounded-lg hover:bg-violet-700 font-medium text-sm" title="Nuevo Caso VIOGEN"><Shield size={18} />VIOGEN</button>
+            {canVerViogen && <button onClick={() => setShowNuevoCaso(true)} className="flex items-center gap-2 px-4 py-2.5 bg-violet-600 text-white rounded-lg hover:bg-violet-700 font-medium text-sm" title="Nuevo Caso VIOGEN"><Shield size={18} />VIOGEN</button>}
           </div>
         </div>
         {/* Botones móvil: fila completa */}
@@ -558,7 +560,7 @@ export default function AccionSocialPage() {
               { key: 'espacios',   icon: Hotel,       label: 'Espacios de Acogida' },
               { key: 'centros',    icon: Building2,   label: 'Centros de Emergencia' },
               { key: 'directorio', icon: BookUser,    label: 'Directorio' },
-              { key: 'viogen',     icon: ShieldAlert, label: 'VIOGEN', badge: stats.casosActivos },
+              ...(canVerViogen ? [{ key: 'viogen' as const, icon: ShieldAlert, label: 'VIOGEN', badge: stats.casosActivos }] : []),
               { key: 'cuadrante',  icon: Calendar,    label: 'Cuadrante VIOGEN' }
             ].map(t => (
               <button key={t.key} onClick={() => setMainTab(t.key as any)}

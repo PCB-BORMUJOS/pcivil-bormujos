@@ -4,6 +4,14 @@ import { registrarAudit, getUsuarioAudit } from '@/lib/audit'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 
+function puedeVerViogen(session: any): boolean {
+  const rol = session?.user?.rol?.toLowerCase() ?? ''
+  if (['superadministrador','superadmin','admin'].includes(rol)) return true
+  const permisosExtra: string[] = session?.user?.permisosExtra ?? []
+  const permisos: string[] = session?.user?.permisos ?? []
+  return [...permisosExtra, ...permisos].includes('viogen.ver')
+}
+
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
@@ -27,6 +35,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ contactos })
     }
     if (tipo === 'viogen') {
+      if (!puedeVerViogen(session)) return NextResponse.json({ error: 'Acceso restringido' }, { status: 403 })
       const estado = searchParams.get('estado')
       const casos = await prisma.casoViogen.findMany({
         where: estado && estado !== 'all' ? { estado } : {},
@@ -186,6 +195,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: true })
     }
         if (tipo === 'viogen') {
+      if (!puedeVerViogen(session)) return NextResponse.json({ error: 'Acceso restringido' }, { status: 403 })
       const año = new Date().getFullYear()
       const totalCasos = await prisma.casoViogen.count()
       const numeroCaso = `VG-${año}-${String(totalCasos + 1).padStart(4, '0')}`
@@ -235,6 +245,7 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ espacio })
     }
     if (tipo === 'viogen') {
+      if (!puedeVerViogen(session)) return NextResponse.json({ error: 'Acceso restringido' }, { status: 403 })
       const caso = await prisma.casoViogen.update({
         where: { id },
         data: {

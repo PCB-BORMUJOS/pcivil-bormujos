@@ -19,6 +19,7 @@ export const PERMISOS_DISPONIBLES = [
   { key: 'vehiculos.editar',   label: 'Editar vehículos' },
   { key: 'partes.crear',       label: 'Crear partes de servicio' },
   { key: 'partes.editar',      label: 'Editar partes de servicio' },
+  { key: 'viogen.ver',         label: 'Ver datos VIOGEN (confidencial)' },
 ] as const
 
 export type PermisoKey = typeof PERMISOS_DISPONIBLES[number]['key']
@@ -52,6 +53,7 @@ export function usePermisos() {
     canManageUsers: nivel >= 3,
     canViewPresupuesto: nivel >= 3,
     canViewAudit: nivel >= 3,
+    canVerViogen: nivel >= 3 || tienePermiso('viogen.ver'),
     tienePermiso,
     todosPermisos,
   }
