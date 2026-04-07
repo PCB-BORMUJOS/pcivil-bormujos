@@ -912,7 +912,7 @@ export default function AccionSocialPage() {
           )}
 
           {/* ══ TAB: VIOGEN ═══════════════════════════════════════════════════ */}
-          {activeTab === 'viogen' && (
+          {mainTab === 'viogen' && (
             <div className="space-y-4">
               <div className="flex items-center gap-3 px-4 py-3 bg-red-50 border border-red-200 rounded-xl">
                 <ShieldAlert size={16} className="text-red-600 shrink-0" />
@@ -1026,7 +1026,7 @@ export default function AccionSocialPage() {
                                   </button>
                                 ))}
                               </div>
-                              <button onClick={() => { setCasoEditando(caso); setShowEditarCaso(true) }} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors"><Edit size={13} /> Editar caso</button>
+                              <button onClick={() => { setCasoEditando(caso) }} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors"><Edit size={13} /> Editar caso</button>
                             </div>
                           </div>
                         </div>
