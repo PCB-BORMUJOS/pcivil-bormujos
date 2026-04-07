@@ -1627,6 +1627,20 @@ export default function AccionSocialPage() {
                   recursosActivados: fd.get('recursosActivados'),
                   derivadoA: fd.get('derivadoA'),
                   observaciones: fd.get('observaciones'),
+                  nivelRiesgo: fd.get('nivelRiesgo') || null,
+                  policiaSolicitante: fd.get('policiaSolicitante') || null,
+                  horaActivacion: fd.get('horaActivacion') ? new Date(fd.get('horaActivacion') as string).toISOString() : null,
+                  horaLlegada: fd.get('horaLlegada') ? new Date(fd.get('horaLlegada') as string).toISOString() : null,
+                  horaFinIntervencion: fd.get('horaFinIntervencion') ? new Date(fd.get('horaFinIntervencion') as string).toISOString() : null,
+                  trasladoCentroSalud: fd.get('trasladoCentroSalud') === 'on',
+                  horaTrasladoSalud: fd.get('horaTrasladoSalud') ? new Date(fd.get('horaTrasladoSalud') as string).toISOString() : null,
+                  centroSaludDestino: fd.get('centroSaludDestino') || null,
+                  trasladoGuardiaCivil: fd.get('trasladoGuardiaCivil') === 'on',
+                  horaEntregaGC: fd.get('horaEntregaGC') ? new Date(fd.get('horaEntregaGC') as string).toISOString() : null,
+                  trasladoJuzgado: fd.get('trasladoJuzgado') === 'on',
+                  horaLlegadaJuzgado: fd.get('horaLlegadaJuzgado') ? new Date(fd.get('horaLlegadaJuzgado') as string).toISOString() : null,
+                  trasladoPradoSS: fd.get('trasladoPradoSS') === 'on',
+                  horaLlegadaPrado: fd.get('horaLlegadaPrado') ? new Date(fd.get('horaLlegadaPrado') as string).toISOString() : null,
                 })
               })
               setCasoEditando(null)
@@ -1651,6 +1665,73 @@ export default function AccionSocialPage() {
               <div>
                 <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Observaciones</label>
                 <textarea name="observaciones" defaultValue={casoEditando.observaciones || ''} rows={3} placeholder="Observaciones adicionales..." className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Nivel de riesgo</label>
+                  <select name="nivelRiesgo" defaultValue={casoEditando.nivelRiesgo || ''} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm">
+                    <option value="">Sin especificar</option>
+                    <option value="bajo">Bajo</option>
+                    <option value="medio">Medio</option>
+                    <option value="alto">Alto</option>
+                    <option value="extremo">Extremo</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Unidad solicitante</label>
+                  <input name="policiaSolicitante" defaultValue={casoEditando.policiaSolicitante || ''} placeholder="Ej: Policía Local Bormujos" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+                </div>
+              </div>
+              <div className="border-t border-gray-100 pt-3">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">⏱ Isócronas operativas</p>
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Hora activación</label>
+                    <input type="datetime-local" name="horaActivacion" defaultValue={casoEditando.horaActivacion ? casoEditando.horaActivacion.slice(0,16) : ''} className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs" />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Hora llegada</label>
+                    <input type="datetime-local" name="horaLlegada" defaultValue={casoEditando.horaLlegada ? casoEditando.horaLlegada.slice(0,16) : ''} className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs" />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Fin intervención</label>
+                    <input type="datetime-local" name="horaFinIntervencion" defaultValue={casoEditando.horaFinIntervencion ? casoEditando.horaFinIntervencion.slice(0,16) : ''} className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs" />
+                  </div>
+                </div>
+              </div>
+              <div className="border-t border-gray-100 pt-3">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">🚑 Traslados realizados</p>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <label className="flex items-center gap-2 min-w-[160px]">
+                      <input type="checkbox" name="trasladoCentroSalud" defaultChecked={casoEditando.trasladoCentroSalud} className="rounded" />
+                      <span className="text-sm font-medium text-gray-700">Centro de Salud</span>
+                    </label>
+                    <input type="datetime-local" name="horaTrasladoSalud" defaultValue={casoEditando.horaTrasladoSalud ? casoEditando.horaTrasladoSalud.slice(0,16) : ''} className="flex-1 border border-gray-200 rounded-lg px-2 py-1.5 text-xs" />
+                    <input name="centroSaludDestino" defaultValue={casoEditando.centroSaludDestino || ''} placeholder="Centro destino" className="flex-1 border border-gray-200 rounded-lg px-2 py-1.5 text-xs" />
+                  </div>
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <label className="flex items-center gap-2 min-w-[160px]">
+                      <input type="checkbox" name="trasladoGuardiaCivil" defaultChecked={casoEditando.trasladoGuardiaCivil} className="rounded" />
+                      <span className="text-sm font-medium text-gray-700">Guardia Civil</span>
+                    </label>
+                    <input type="datetime-local" name="horaEntregaGC" defaultValue={casoEditando.horaEntregaGC ? casoEditando.horaEntregaGC.slice(0,16) : ''} className="flex-1 border border-gray-200 rounded-lg px-2 py-1.5 text-xs" />
+                  </div>
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <label className="flex items-center gap-2 min-w-[160px]">
+                      <input type="checkbox" name="trasladoJuzgado" defaultChecked={casoEditando.trasladoJuzgado} className="rounded" />
+                      <span className="text-sm font-medium text-gray-700">Juzgado VIOGEN Sevilla</span>
+                    </label>
+                    <input type="datetime-local" name="horaLlegadaJuzgado" defaultValue={casoEditando.horaLlegadaJuzgado ? casoEditando.horaLlegadaJuzgado.slice(0,16) : ''} className="flex-1 border border-gray-200 rounded-lg px-2 py-1.5 text-xs" />
+                  </div>
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <label className="flex items-center gap-2 min-w-[160px]">
+                      <input type="checkbox" name="trasladoPradoSS" defaultChecked={casoEditando.trasladoPradoSS} className="rounded" />
+                      <span className="text-sm font-medium text-gray-700">Prado San Sebastián</span>
+                    </label>
+                    <input type="datetime-local" name="horaLlegadaPrado" defaultValue={casoEditando.horaLlegadaPrado ? casoEditando.horaLlegadaPrado.slice(0,16) : ''} className="flex-1 border border-gray-200 rounded-lg px-2 py-1.5 text-xs" />
+                  </div>
+                </div>
               </div>
               <div className="flex justify-end gap-2 pt-2 border-t">
                 <button type="button" onClick={() => setCasoEditando(null)} className="px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-600">Cancelar</button>
