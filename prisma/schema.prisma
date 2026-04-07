@@ -1459,6 +1459,22 @@ model CasoViogen {
   derivadoA          String?
   observaciones      String?
   estado             String   @default("activo")
+  nivelRiesgo        String?
+  policiaSolicitante String?
+  // Isócronas operativas
+  horaActivacion        DateTime?
+  horaLlegada           DateTime?
+  horaFinIntervencion   DateTime?
+  // Traslados
+  trasladoCentroSalud   Boolean  @default(false)
+  horaTrasladoSalud     DateTime?
+  centroSaludDestino    String?
+  trasladoGuardiaCivil  Boolean  @default(false)
+  horaEntregaGC         DateTime?
+  trasladoJuzgado       Boolean  @default(false)
+  horaLlegadaJuzgado    DateTime?
+  trasladoPradoSS       Boolean  @default(false)
+  horaLlegadaPrado      DateTime?
   registradoPorId    String?
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt

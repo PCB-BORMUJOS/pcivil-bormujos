@@ -54,9 +54,15 @@ interface CasoViogen {
   victimaNombre: string; victimaDni?: string; victimaTelefono?: string
   victimaDireccion: string; victimaEdad?: number
   tieneHijos: boolean; numeroHijos?: number; edadesHijos?: string
-  agresorNombre?: string; motivoIntervencion: string
+  agresorNombre?: string; agresorDni?: string; motivoIntervencion: string
   activadoPor?: string; recursosActivados?: string
   derivadoA?: string; observaciones?: string; estado: string; createdAt: string
+  nivelRiesgo?: string; policiaSolicitante?: string
+  horaActivacion?: string; horaLlegada?: string; horaFinIntervencion?: string
+  trasladoCentroSalud: boolean; horaTrasladoSalud?: string; centroSaludDestino?: string
+  trasladoGuardiaCivil: boolean; horaEntregaGC?: string
+  trasladoJuzgado: boolean; horaLlegadaJuzgado?: string
+  trasladoPradoSS: boolean; horaLlegadaPrado?: string
 }
 interface DisponibilidadViogen {
   id: string; usuarioId: string; usuarioNombre: string; fecha: string; disponible: boolean
@@ -299,6 +305,8 @@ export default function AccionSocialPage() {
   const [showEditContacto, setShowEditContacto] = useState(false)
   const [showNuevoCaso, setShowNuevoCaso] = useState(false)
   const [casoEditando, setCasoEditando] = useState<CasoViogen | null>(null)
+  const [filtroCasos, setFiltroCasos] = useState<string>('all')
+  const [casoExpandido, setCasoExpandido] = useState<string | null>(null)
   const [articuloSel, setArticuloSel] = useState<Articulo | null>(null)
   const [espacioSel, setEspacioSel] = useState<EspacioAcogida | null>(null)
   const [centroSel, setCentroSel] = useState<CentroEmergencia | null>(null)
@@ -904,169 +912,129 @@ export default function AccionSocialPage() {
           )}
 
           {/* ══ TAB: VIOGEN ═══════════════════════════════════════════════════ */}
-          {mainTab === 'viogen' && (
+          {activeTab === 'viogen' && (
             <div className="space-y-4">
-              <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">
-                <ShieldAlert className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
-                <p className="text-xs text-red-700">
-                  <strong>Información confidencial.</strong> Registro de intervenciones en colaboración con Policía Local en materia VIOGEN. Acceso restringido.
-                </p>
+              <div className="flex items-center gap-3 px-4 py-3 bg-red-50 border border-red-200 rounded-xl">
+                <ShieldAlert size={16} className="text-red-600 shrink-0" />
+                <p className="text-sm text-red-700"><strong>Información confidencial.</strong> Registro de intervenciones en colaboración con Policía Local en materia VIOGEN. Acceso restringido.</p>
               </div>
-              <div className="flex gap-3 flex-wrap">
-                <div className="relative flex-1 min-w-[200px]">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <input value={searchViogen} onChange={e => setSearchViogen(e.target.value)}
-                    placeholder="Buscar por nombre o número de caso..."
-                    className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm" />
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="relative flex-1">
+                  <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input value={searchViogen} onChange={e => setSearchViogen(e.target.value)} placeholder="Buscar por nombre o número de caso..." className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-red-200" />
                 </div>
-                <div className="flex gap-2">
-                  {Object.entries({ all: 'Todos', activo: 'Activos', cerrado: 'Cerrados', derivado: 'Derivados' }).map(([k, v]) => (
-                    <button key={k} onClick={() => setFiltroViogen(k)}
-                      className={`px-3 py-1.5 text-xs font-medium rounded-full border ${
-                        filtroViogen === k ? 'bg-red-600 text-white border-red-600' : 'border-gray-200 text-gray-600 hover:bg-gray-50'
-                      }`}>{v}</button>
+                <div className="flex gap-2 flex-wrap">
+                  {(['all','activo','cerrado','derivado'] as const).map(f => (
+                    <button key={f} onClick={() => setFiltroCasos(f)} className={`px-3 py-2 rounded-lg text-xs font-medium border transition-all ${filtroCasos === f ? f === 'all' ? 'bg-gray-800 text-white border-gray-800' : f === 'activo' ? 'bg-red-600 text-white border-red-600' : f === 'cerrado' ? 'bg-gray-500 text-white border-gray-500' : 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'}`}>
+                      {f === 'all' ? 'Todos' : f.charAt(0).toUpperCase() + f.slice(1)}
+                      {f !== 'all' && <span className="ml-1.5 opacity-75">{casos.filter(x => x.estado === f).length}</span>}
+                    </button>
                   ))}
                 </div>
               </div>
-              {casosFiltrados.length === 0 ? (
-                <div className="text-center py-16 text-gray-400">
-                  <ShieldAlert className="w-10 h-10 mx-auto mb-3 opacity-30" />
-                  <p className="text-sm">No hay casos registrados</p>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {casosFiltrados.map(caso => {
-                    const reinc = esReincidente(caso)
-                    const exp = expandedCaso === caso.id
-                    return (
-                      <div key={caso.id} className={`border rounded-xl overflow-hidden ${reinc ? 'border-orange-300' : 'border-gray-200'}`}>
-                        <div className={`flex items-center gap-3 p-4 cursor-pointer hover:bg-gray-50 ${reinc ? 'bg-orange-50' : 'bg-white'}`}
-                          onClick={() => setExpandedCaso(exp ? null : caso.id)}>
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className="text-xs font-mono text-gray-400">{caso.numeroCaso}</span>
-                              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${ESTADOS_VIOGEN[caso.estado]?.color}`}>
-                                {ESTADOS_VIOGEN[caso.estado]?.label}
-                              </span>
-                              {reinc && (
-                                <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-orange-200 text-orange-800">
-                                  <AlertTriangle className="w-3 h-3" /> REINCIDENTE — INTERVENCIÓN PREVIA REGISTRADA
-                                </span>
-                              )}
-                              {caso.tieneHijos && (
-                                <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">
-                                  <Baby className="w-3 h-3" /> {caso.numeroHijos} hijo(s)
-                                </span>
-                              )}
+              <div className="space-y-3">
+                {casosFiltrados.length === 0 && (
+                  <div className="text-center py-12 text-gray-400">
+                    <ShieldAlert size={32} className="mx-auto mb-3 opacity-30" />
+                    <p className="text-sm">No hay casos registrados</p>
+                  </div>
+                )}
+                {casosFiltrados.map(caso => {
+                  const isOpen = casoExpandido === caso.id
+                  const reincidente = esReincidente(caso)
+                  const nivelColor = caso.nivelRiesgo === 'extremo' ? 'bg-red-100 text-red-700 border-red-200' : caso.nivelRiesgo === 'alto' ? 'bg-orange-100 text-orange-700 border-orange-200' : caso.nivelRiesgo === 'medio' ? 'bg-yellow-100 text-yellow-700 border-yellow-200' : 'bg-gray-100 text-gray-600 border-gray-200'
+                  return (
+                    <div key={caso.id} className={`bg-white rounded-xl border-l-4 shadow-sm overflow-hidden transition-all ${caso.estado === 'activo' ? 'border-l-red-500' : caso.estado === 'cerrado' ? 'border-l-gray-400' : 'border-l-blue-500'}`}>
+                      <button onClick={() => setCasoExpandido(isOpen ? null : caso.id)} className="w-full text-left px-5 py-4 hover:bg-gray-50 transition-colors">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap mb-1.5">
+                              <span className="font-mono text-xs font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded">{caso.numeroCaso}</span>
+                              <span className={`px-2 py-0.5 rounded-full text-xs font-semibold border ${ESTADOS_VIOGEN[caso.estado]?.color}`}>{ESTADOS_VIOGEN[caso.estado]?.label}</span>
+                              {caso.nivelRiesgo && <span className={`px-2 py-0.5 rounded-full text-xs font-semibold border ${nivelColor}`}>⚠ Riesgo {caso.nivelRiesgo}</span>}
+                              {reincidente && <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-purple-100 text-purple-700 border border-purple-200">Reincidente</span>}
                             </div>
-                            <p className="font-semibold text-gray-900 mt-0.5">{caso.victimaNombre}</p>
-                            <p className="text-xs text-gray-500">
-                              {new Date(caso.fechaIntervencion).toLocaleDateString('es-ES', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' })}
-                              {caso.activadoPor && ` · Activado por: ${caso.activadoPor}`}
-                              {' · '}{caso.victimaDireccion}
-                            </p>
+                            <p className="font-bold text-gray-900 text-base truncate">{caso.victimaNombre}</p>
+                            <div className="flex items-center gap-3 mt-1 text-xs text-gray-500 flex-wrap">
+                              <span className="flex items-center gap-1"><Clock size={11} />{new Date(caso.fechaIntervencion).toLocaleString('es-ES',{dateStyle:'short',timeStyle:'short'})}</span>
+                              <span className="flex items-center gap-1"><MapPin size={11} />{caso.victimaDireccion}</span>
+                              {caso.tieneHijos && caso.numeroHijos && <span className="flex items-center gap-1 text-amber-600"><Baby size={11} />{caso.numeroHijos} hijo{caso.numeroHijos > 1 ? 's' : ''}</span>}
+                            </div>
                           </div>
-                          {exp ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+                          <ChevronDown size={16} className={`text-gray-400 shrink-0 mt-1 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
                         </div>
-                        {exp && (
-                          <div className="border-t border-gray-100 p-4 bg-white space-y-4">
-                            {reinc && (
-                              <div className="bg-orange-100 border-2 border-orange-400 rounded-lg p-3">
-                                <p className="text-xs font-bold text-orange-800 flex items-center gap-1 mb-1">
-                                  <AlertTriangle className="w-3.5 h-3.5" /> ATENCIÓN: Esta persona ya ha sido atendida anteriormente
-                                </p>
-                                <p className="text-xs text-orange-700">
-                                  Casos previos: {casos.filter(c => c.victimaDni === caso.victimaDni && c.id !== caso.id).map(c =>
-                                    `${c.numeroCaso} (${new Date(c.fechaIntervencion).toLocaleDateString('es-ES')})`
-                                  ).join(' · ')}
-                                </p>
+                      </button>
+                      {isOpen && (
+                        <div className="border-t border-gray-100 bg-gray-50/50">
+                          <div className="px-5 py-4 space-y-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                              <div className="bg-white rounded-lg p-3.5 border border-gray-100">
+                                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2 flex items-center gap-1.5"><User size={11} /> Víctima</p>
+                                <p className="font-semibold text-gray-900 text-sm">{caso.victimaNombre}</p>
+                                {caso.victimaDni && <p className="text-xs text-gray-500 mt-0.5">DNI: {caso.victimaDni}</p>}
+                                {caso.victimaEdad && <p className="text-xs text-gray-500">{caso.victimaEdad} años</p>}
+                                {caso.victimaTelefono && <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5"><Phone size={10} />{caso.victimaTelefono}</p>}
+                                {caso.tieneHijos && <p className="text-xs text-amber-600 mt-1 font-medium">{caso.numeroHijos} hijo/s{caso.edadesHijos ? ` (${caso.edadesHijos})` : ''}</p>}
                               </div>
-                            )}
-                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
-                              <div>
-                                <p className="text-xs font-semibold text-gray-400 uppercase mb-1">Víctima</p>
-                                <p className="font-medium">{caso.victimaNombre}</p>
-                                {caso.victimaDni && <p className="text-gray-500">DNI: {caso.victimaDni}</p>}
-                                {caso.victimaEdad && <p className="text-gray-500">Edad: {caso.victimaEdad} años</p>}
-                                {caso.victimaTelefono && <p className="text-gray-500">Telf: {caso.victimaTelefono}</p>}
-                                <p className="text-gray-500">{caso.victimaDireccion}</p>
+                              <div className="bg-white rounded-lg p-3.5 border border-gray-100">
+                                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2 flex items-center gap-1.5"><AlertTriangle size={11} /> Motivo</p>
+                                <p className="text-sm text-gray-700 leading-relaxed">{caso.motivoIntervencion}</p>
+                                {caso.policiaSolicitante && <p className="text-xs text-blue-600 mt-1.5 font-medium">Solicita: {caso.policiaSolicitante}</p>}
                               </div>
-                              {caso.tieneHijos && (
-                                <div>
-                                  <p className="text-xs font-semibold text-gray-400 uppercase mb-1">Menores</p>
-                                  <p className="font-medium">{caso.numeroHijos} hijo(s)</p>
-                                  {caso.edadesHijos && <p className="text-gray-500">Edades: {caso.edadesHijos}</p>}
-                                </div>
-                              )}
-                              {caso.agresorNombre && (
-                                <div>
-                                  <p className="text-xs font-semibold text-gray-400 uppercase mb-1">Posible Agresor</p>
-                                  <p className="font-medium">{caso.agresorNombre}</p>
-                                </div>
-                              )}
-                              <div>
-                                <p className="text-xs font-semibold text-gray-400 uppercase mb-1">Motivo intervención</p>
-                                <p className="text-gray-700">{caso.motivoIntervencion}</p>
+                              <div className="bg-white rounded-lg p-3.5 border border-gray-100">
+                                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2 flex items-center gap-1.5"><UserCheck size={11} /> Recursos y derivación</p>
+                                {caso.recursosActivados && <p className="text-sm text-gray-700 mb-1.5">{caso.recursosActivados}</p>}
+                                {caso.derivadoA && <p className="text-xs text-blue-600 font-medium">{caso.derivadoA}</p>}
+                                {caso.agresorNombre && <div className="mt-2 pt-2 border-t border-gray-100"><p className="text-xs text-gray-400 mb-0.5">Agresor</p><p className="text-xs font-medium text-gray-700">{caso.agresorNombre}</p></div>}
                               </div>
-                              {caso.activadoPor && (
-                                <div>
-                                  <p className="text-xs font-semibold text-gray-400 uppercase mb-1">Activado por</p>
-                                  <p className="text-gray-700">{caso.activadoPor}</p>
-                                </div>
-                              )}
-                              {caso.recursosActivados && (
-                                <div>
-                                  <p className="text-xs font-semibold text-gray-400 uppercase mb-1">Recursos activados</p>
-                                  <p className="text-gray-700">{caso.recursosActivados}</p>
-                                </div>
-                              )}
-                              {caso.derivadoA && (
-                                <div>
-                                  <p className="text-xs font-semibold text-gray-400 uppercase mb-1">Derivado a</p>
-                                  <p className="text-gray-700">{caso.derivadoA}</p>
-                                </div>
-                              )}
                             </div>
-                            {caso.observaciones && (
-                              <div className="bg-gray-50 rounded-lg p-3">
-                                <p className="text-xs font-semibold text-gray-400 uppercase mb-1">Observaciones</p>
-                                <p className="text-sm text-gray-700">{caso.observaciones}</p>
+                            {(caso.horaActivacion || caso.horaLlegada || caso.horaFinIntervencion) && (
+                              <div className="bg-white rounded-lg p-3.5 border border-gray-100">
+                                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3 flex items-center gap-1.5"><Clock size={11} /> Tiempos operativos</p>
+                                <div className="flex items-center">
+                                  {[{label:'Activación',hora:caso.horaActivacion,color:'bg-blue-500'},{label:'Llegada',hora:caso.horaLlegada,color:'bg-amber-500'},{label:'Fin',hora:caso.horaFinIntervencion,color:'bg-green-500'}].map((item,i) => (
+                                    <div key={i} className="flex items-center flex-1 last:flex-none">
+                                      <div className="flex flex-col items-center">
+                                        <div className={`w-3 h-3 rounded-full ${item.hora ? item.color : 'bg-gray-200'}`} />
+                                        <p className="text-xs font-medium text-gray-700 mt-1.5">{item.label}</p>
+                                        <p className="text-xs text-gray-500">{item.hora ? new Date(item.hora).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}) : '—'}</p>
+                                      </div>
+                                      {i < 2 && <div className={`flex-1 h-0.5 mx-2 mb-5 ${item.hora ? 'bg-gray-300' : 'bg-gray-100'}`} />}
+                                    </div>
+                                  ))}
+                                </div>
                               </div>
                             )}
-                            {/* Acciones del caso */}
-                            <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs font-semibold text-gray-400 uppercase">Cambiar estado:</span>
-                                {['activo', 'cerrado', 'derivado'].map(est => (
-                                  <button key={est} onClick={async () => {
-                                    if (caso.estado === est) return
-                                    if (!confirm(`¿Cambiar estado a "${est}"?`)) return
-                                    await fetch('/api/accion-social', {
-                                      method: 'PUT',
-                                      headers: { 'Content-Type': 'application/json' },
-                                      body: JSON.stringify({ tipo: 'viogen', id: caso.id, estado: est, observaciones: caso.observaciones, derivadoA: caso.derivadoA, recursosActivados: caso.recursosActivados })
-                                    })
-                                    cargarDatos()
-                                  }} className={`px-2.5 py-1 rounded-full text-xs font-semibold border transition-colors ${
-                                    caso.estado === est
-                                      ? ESTADOS_VIOGEN[est]?.color + ' border-transparent'
-                                      : 'border-gray-200 text-gray-500 hover:bg-gray-50'
-                                  }`}>
-                                    {ESTADOS_VIOGEN[est]?.label}
+                            {(caso.trasladoCentroSalud || caso.trasladoGuardiaCivil || caso.trasladoJuzgado || caso.trasladoPradoSS) && (
+                              <div className="bg-white rounded-lg p-3.5 border border-gray-100">
+                                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3 flex items-center gap-1.5"><MapPin size={11} /> Traslados</p>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                  {caso.trasladoCentroSalud && <div className="flex items-start gap-2 p-2.5 bg-green-50 rounded-lg border border-green-100"><div className="w-4 h-4 rounded-full bg-green-500 flex items-center justify-center shrink-0 mt-0.5"><span className="text-white text-[9px] font-bold">✓</span></div><div><p className="text-xs font-semibold text-gray-700">Centro de Salud</p>{caso.centroSaludDestino && <p className="text-xs text-gray-500">{caso.centroSaludDestino}</p>}{caso.horaTrasladoSalud && <p className="text-xs text-gray-400">{new Date(caso.horaTrasladoSalud).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})}</p>}</div></div>}
+                                  {caso.trasladoGuardiaCivil && <div className="flex items-start gap-2 p-2.5 bg-blue-50 rounded-lg border border-blue-100"><div className="w-4 h-4 rounded-full bg-blue-500 flex items-center justify-center shrink-0 mt-0.5"><span className="text-white text-[9px] font-bold">✓</span></div><div><p className="text-xs font-semibold text-gray-700">Guardia Civil</p>{caso.horaEntregaGC && <p className="text-xs text-gray-400">{new Date(caso.horaEntregaGC).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})}</p>}</div></div>}
+                                  {caso.trasladoJuzgado && <div className="flex items-start gap-2 p-2.5 bg-purple-50 rounded-lg border border-purple-100"><div className="w-4 h-4 rounded-full bg-purple-500 flex items-center justify-center shrink-0 mt-0.5"><span className="text-white text-[9px] font-bold">✓</span></div><div><p className="text-xs font-semibold text-gray-700">Juzgado VIOGEN Sevilla</p>{caso.horaLlegadaJuzgado && <p className="text-xs text-gray-400">{new Date(caso.horaLlegadaJuzgado).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})}</p>}</div></div>}
+                                  {caso.trasladoPradoSS && <div className="flex items-start gap-2 p-2.5 bg-amber-50 rounded-lg border border-amber-100"><div className="w-4 h-4 rounded-full bg-amber-500 flex items-center justify-center shrink-0 mt-0.5"><span className="text-white text-[9px] font-bold">✓</span></div><div><p className="text-xs font-semibold text-gray-700">Prado San Sebastián</p>{caso.horaLlegadaPrado && <p className="text-xs text-gray-400">{new Date(caso.horaLlegadaPrado).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})}</p>}</div></div>}
+                                </div>
+                              </div>
+                            )}
+                            {caso.observaciones && <div className="bg-amber-50 rounded-lg p-3.5 border border-amber-100"><p className="text-xs font-semibold text-amber-700 uppercase tracking-wide mb-1.5">Observaciones</p><p className="text-sm text-gray-700">{caso.observaciones}</p></div>}
+                            <div className="flex items-center justify-between pt-1">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-xs text-gray-500 font-medium">Estado:</span>
+                                {(['activo','cerrado','derivado'] as const).map(est => (
+                                  <button key={est} onClick={async () => { await fetch('/api/accion-social',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({tipo:'viogen',id:caso.id,estado:est,observaciones:caso.observaciones,derivadoA:caso.derivadoA,recursosActivados:caso.recursosActivados})}); cargarDatos() }} className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${caso.estado===est ? est==='activo' ? 'bg-red-600 text-white border-red-600' : est==='cerrado' ? 'bg-gray-500 text-white border-gray-500' : 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'}`}>
+                                    {est.charAt(0).toUpperCase()+est.slice(1)}
                                   </button>
                                 ))}
                               </div>
-                              <button onClick={() => setCasoEditando(caso)} className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-medium text-gray-600 hover:bg-gray-50 transition-colors">
-                                <Edit className="w-3.5 h-3.5" /> Editar caso
-                              </button>
+                              <button onClick={() => { setCasoEditando(caso); setShowEditarCaso(true) }} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors"><Edit size={13} /> Editar caso</button>
                             </div>
                           </div>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
             </div>
           )}
 

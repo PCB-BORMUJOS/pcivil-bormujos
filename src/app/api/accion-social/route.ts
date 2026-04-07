@@ -237,7 +237,26 @@ export async function PUT(request: NextRequest) {
     if (tipo === 'viogen') {
       const caso = await prisma.casoViogen.update({
         where: { id },
-        data: { estado: body.estado, observaciones: body.observaciones || null, derivadoA: body.derivadoA || null, recursosActivados: body.recursosActivados || null }
+        data: {
+          estado: body.estado,
+          observaciones: body.observaciones || null,
+          derivadoA: body.derivadoA || null,
+          recursosActivados: body.recursosActivados || null,
+          nivelRiesgo: body.nivelRiesgo || null,
+          policiaSolicitante: body.policiaSolicitante || null,
+          horaActivacion: body.horaActivacion ? new Date(body.horaActivacion) : null,
+          horaLlegada: body.horaLlegada ? new Date(body.horaLlegada) : null,
+          horaFinIntervencion: body.horaFinIntervencion ? new Date(body.horaFinIntervencion) : null,
+          trasladoCentroSalud: body.trasladoCentroSalud ?? false,
+          horaTrasladoSalud: body.horaTrasladoSalud ? new Date(body.horaTrasladoSalud) : null,
+          centroSaludDestino: body.centroSaludDestino || null,
+          trasladoGuardiaCivil: body.trasladoGuardiaCivil ?? false,
+          horaEntregaGC: body.horaEntregaGC ? new Date(body.horaEntregaGC) : null,
+          trasladoJuzgado: body.trasladoJuzgado ?? false,
+          horaLlegadaJuzgado: body.horaLlegadaJuzgado ? new Date(body.horaLlegadaJuzgado) : null,
+          trasladoPradoSS: body.trasladoPradoSS ?? false,
+          horaLlegadaPrado: body.horaLlegadaPrado ? new Date(body.horaLlegadaPrado) : null,
+        }
       })
       return NextResponse.json({ caso })
     }
