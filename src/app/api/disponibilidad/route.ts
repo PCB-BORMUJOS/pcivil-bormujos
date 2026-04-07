@@ -44,6 +44,8 @@ export async function GET(request: NextRequest) {
             : disponibilidad.detalles
         }
       })
+      const { usuarioId: uId2, usuarioNombre: uNombre2 } = getUsuarioAudit(session)
+      await registrarAudit({ accion: 'CREATE', entidad: 'Disponibilidad', entidadId: disponibilidad.id, descripcion: `${uNombre2} registró su disponibilidad para la semana ${semanaInicio}`, usuarioId: uId2, usuarioNombre: uNombre2, modulo: 'Dashboard' })
     }
 
     return NextResponse.json({ disponibilidad: null })
@@ -114,11 +116,15 @@ export async function POST(request: NextRequest) {
           estado: data.estado
         }
       })
+      const { usuarioId: uId, usuarioNombre: uNombre } = getUsuarioAudit(session)
+      await registrarAudit({ accion: 'UPDATE', entidad: 'Disponibilidad', entidadId: disponibilidad.id, descripcion: `${uNombre} actualizó su disponibilidad para la semana ${semanaInicio}`, usuarioId: uId, usuarioNombre: uNombre, modulo: 'Dashboard' })
     } else {
       // Crear nueva
       disponibilidad = await prisma.disponibilidad.create({
         data
       })
+      const { usuarioId: uId2, usuarioNombre: uNombre2 } = getUsuarioAudit(session)
+      await registrarAudit({ accion: 'CREATE', entidad: 'Disponibilidad', entidadId: disponibilidad.id, descripcion: `${uNombre2} registró su disponibilidad para la semana ${semanaInicio}`, usuarioId: uId2, usuarioNombre: uNombre2, modulo: 'Dashboard' })
     }
 
     return NextResponse.json({ success: true, disponibilidad })
