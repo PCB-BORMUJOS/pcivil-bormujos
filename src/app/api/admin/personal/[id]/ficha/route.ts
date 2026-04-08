@@ -100,7 +100,7 @@ export async function POST(
       modelo145Adjunto: body.modelo145Adjunto,
       kmDesplazamiento: body.kmDesplazamiento !== undefined ? parseFloat(body.kmDesplazamiento) || 0 : 0,
       enPracticas: body.enPracticas ?? undefined,
-      turnosPracticasRealizados: body.turnosPracticasRealizados !== undefined ? parseInt(body.turnosPracticasRealizados) || 0 : undefined,
+      turnosPracticasRealizados: body.enPracticas === true ? 0 : (body.turnosPracticasRealizados !== undefined ? parseInt(body.turnosPracticasRealizados) || 0 : undefined),
       fechaInicioPracticas: body.fechaInicioPracticas ? new Date(body.fechaInicioPracticas) : null
     }
 

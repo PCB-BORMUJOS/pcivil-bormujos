@@ -1724,6 +1724,7 @@ model BateriaDrone {
   capacidadMah  Int?
   ciclosUso     Int      @default(0)
   ciclosMaximos Int      @default(300)
+  minutosVuelo  Int      @default(0)
   estado        String   @default("operativa")
   observaciones String?
   createdAt     DateTime @default(now())
@@ -1769,10 +1770,22 @@ model Vuelo {
   alturaMaxima    Float?
   condicionesMeteo Json?
   notamConsultado Boolean         @default(false)
-  notamReferencia String?
-  incidencias     String?
-  observaciones   String?
-  estado          String          @default("completado")
+  notamReferencia    String?
+  incidencias        String?
+  observaciones      String?
+  estado             String   @default("completado")
+  categoriaAESA      String?
+  lugarDespegue      String?
+  lugarAterrizaje    String?
+  alturaMedia        Float?
+  bateriaId          String?
+  objetivoMision     String?
+  resultadoMision    String?
+  personalApoyo      String?
+  numeroVccOperador  String?
+  zonaAerea          String?
+  condicionesVuelo   String?
+  bateriasUsadas     Json?
   createdAt       DateTime        @default(now())
   checklist       ChecklistVuelo?
   @@map("vuelos")

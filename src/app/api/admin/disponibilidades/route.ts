@@ -96,7 +96,7 @@ export async function PUT(request: NextRequest) {
     })
 
     const { usuarioId, usuarioNombre } = getUsuarioAudit(session)
-    await registrarAudit({ accion: 'UPDATE', entidad: 'Disponibilidad', entidadId: disponibilidad.id, descripcion: 'Disponibilidad actualizada por admin', usuarioId, usuarioNombre, modulo: 'Administracion' })
+    await registrarAudit({ accion: 'UPDATE', entidad: 'Disponibilidad', entidadId: disponibilidad.id, descripcion: `Disponibilidad de ${disponibilidad.usuario.nombre} ${disponibilidad.usuario.apellidos} modificada por ${usuarioNombre}`, usuarioId, usuarioNombre, modulo: 'Administracion' })
     return NextResponse.json({ success: true, disponibilidad })
   } catch (error) {
     console.error('Error al actualizar disponibilidad:', error)

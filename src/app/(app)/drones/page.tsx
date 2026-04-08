@@ -12,6 +12,7 @@ import { Check, ClipboardList,
   MapPin, Layers, Bell, BookOpen, Settings, ShoppingCart, History, Search, Package, CheckCircle
 } from 'lucide-react'
 import { TbDrone as DroneIcon } from 'react-icons/tb'
+import { ChevronDown } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import 'leaflet/dist/leaflet.css'
 
@@ -24,9 +25,9 @@ const Polygon = dynamic(() => import('react-leaflet').then(m => m.Polygon), { ss
 
 // ─── Interfaces ───────────────────────────────────────────────
 interface Drone { id: string; codigo: string; nombre: string; marca: string; modelo: string; numeroSerie?: string; matriculaAESA?: string; categoria: string; pesoMaxDespegue?: number; estado: string; horasVuelo: number; fechaCompra?: string; fechaUltimaRevision?: string; observaciones?: string; baterias?: Bateria[]; mantenimientos?: Mantenimiento[]; _count?: { vuelos: number } }
-interface Bateria { id: string; droneId: string; codigo: string; capacidadMah?: number; ciclosActuales: number; ciclosMaximos: number; estado: string; observaciones?: string }
+interface Bateria { id: string; droneId: string; codigo: string; capacidadMah?: number; ciclosActuales: number; ciclosMaximos: number; estado: string; observaciones?: string; minutosVuelo?: number }
 interface Piloto { id: string; usuarioId?: string; nombre: string; apellidos: string; email?: string; telefono?: string; externo: boolean; certificaciones: any; seguroRCNumero?: string; seguroRCVigencia?: string; activo: boolean; observaciones?: string }
-interface Vuelo { id: string; numero: string; droneId: string; pilotoId: string; fecha: string; horaInicio?: string; horaFin?: string; duracionMinutos?: number; tipoOperacion: string; municipio: string; descripcionZona?: string; latitudInicio?: number; longitudInicio?: number; alturaMaxima?: number; condicionesMeteo: any; notamConsultado: boolean; notamReferencia?: string; incidencias?: string; observaciones?: string; estado: string; drone?: any; piloto?: any; checklist?: any }
+interface Vuelo { id: string; numero: string; droneId: string; pilotoId: string; fecha: string; horaInicio?: string; horaFin?: string; duracionMinutos?: number; tipoOperacion: string; municipio: string; descripcionZona?: string; latitudInicio?: number; longitudInicio?: number; alturaMaxima?: number; alturaMedia?: number; condicionesMeteo: any; notamConsultado: boolean; notamReferencia?: string; incidencias?: string; observaciones?: string; estado: string; drone?: any; piloto?: any; checklist?: any; categoriaAESA?: string; lugarDespegue?: string; lugarAterrizaje?: string; bateriaId?: string; objetivoMision?: string; resultadoMision?: string; personalApoyo?: string; numeroVccOperador?: string; zonaAerea?: string; condicionesVuelo?: string; bateriasUsadas?: any }
 interface Mantenimiento { id: string; droneId: string; tipo: string; descripcion: string; fecha: string; horasEnElMomento?: number; realizadoPor?: string; coste?: number; piezasSustituidas?: string; proximoMantenimiento?: string; observaciones?: string; drone?: any }
 interface Notam { id: string; referencia?: string; tipo?: string; estado?: string; servicio?: string; icao?: string; descripcionHtml?: string; geoJson?: any; atributosRaw?: any; fechaInicio?: string; fechaFin?: string; alturaMin?: number; alturaMax?: number; radio?: number; latitud?: number; longitud?: number; descripcion?: string; activo: boolean; fuente: string }
 interface Zona { id: string; nombre: string; descripcion?: string; tipo: string; coordenadas: number[][]; alturaMaxima?: number; radio?: number; activa: boolean }
@@ -106,8 +107,11 @@ export default function DronesPage() {
   const [pilotoSeleccionado, setPilotoSeleccionado] = useState<any>(null)
   const [showNuevoVuelo, setShowNuevoVuelo] = useState(false)
   const [pasoNuevoVuelo, setPasoNuevoVuelo] = useState<1|2>(1)
+  const [vueloExpandido, setVueloExpandido] = useState<string | null>(null)
   const [vueloFormData, setVueloFormData] = useState<any>(null)
   const [checklistNuevo, setChecklistNuevo] = useState<Record<string,boolean>>({})
+  const [bateriasSeleccionadas, setBateriasSeleccionadas] = useState<Record<string,number>>({})
+  const [droneSeleccionadoWizard, setDroneSeleccionadoWizard] = useState<string>('')
   const [showChecklist, setShowChecklist] = useState(false)
   const [showDetalleVuelo, setShowDetalleVuelo] = useState(false)
   const [showNuevoMant, setShowNuevoMant] = useState(false)
@@ -268,8 +272,9 @@ export default function DronesPage() {
     e.preventDefault()
     const f = new FormData(e.currentTarget)
     const meteo = { viento: f.get('viento'), visibilidad: f.get('visibilidad'), nubes: f.get('nubes'), temperatura: f.get('temperatura'), condicion: f.get('condicion') }
-    setVueloFormData({ tipo: 'vuelo', droneId: f.get('droneId'), pilotoId: f.get('pilotoId'), fecha: f.get('fecha'), horaInicio: f.get('horaInicio'), tipoOperacion: f.get('tipoOperacion'), municipio: f.get('municipio') || 'Bormujos', descripcionZona: f.get('descripcionZona'), latitudInicio: f.get('latitudInicio'), longitudInicio: f.get('longitudInicio'), alturaMaxima: f.get('alturaMaxima'), condicionesMeteo: meteo, notamConsultado: f.get('notamConsultado') === 'on', notamReferencia: f.get('notamReferencia'), observaciones: f.get('observaciones'), estado: 'planificado' })
+    setVueloFormData({ tipo: 'vuelo', droneId: f.get('droneId'), pilotoId: f.get('pilotoId'), fecha: f.get('fecha'), horaInicio: f.get('horaInicio'), horaFin: f.get('horaFin'), duracionMinutos: f.get('duracionMinutos') ? parseInt(f.get('duracionMinutos') as string) : null, tipoOperacion: f.get('tipoOperacion'), categoriaAESA: f.get('categoriaAESA'), municipio: f.get('municipio') || 'Bormujos', lugarDespegue: f.get('lugarDespegue'), lugarAterrizaje: f.get('lugarAterrizaje'), descripcionZona: f.get('descripcionZona'), zonaAerea: f.get('zonaAerea'), latitudInicio: f.get('latitudInicio'), longitudInicio: f.get('longitudInicio'), alturaMaxima: f.get('alturaMaxima'), alturaMedia: f.get('alturaMedia'), condicionesMeteo: meteo, condicionesVuelo: f.get('condicionesVuelo'), notamConsultado: f.get('notamConsultado') === 'on', notamReferencia: f.get('notamReferencia'), objetivoMision: f.get('objetivoMision'), resultadoMision: f.get('resultadoMision'), personalApoyo: f.get('personalApoyo'), numeroVccOperador: f.get('numeroVccOperador'), incidencias: f.get('incidencias'), observaciones: f.get('observaciones'), estado: 'completado', bateriasUsadas: bateriasSeleccionadas })
     setChecklistNuevo({})
+    setBateriasSeleccionadas({})
     setPasoNuevoVuelo(2)
   }
 
@@ -288,6 +293,13 @@ export default function DronesPage() {
         itemsChecklist[s.id] = s.items.map(i => ({ id: i.id, label: i.label, ok: checklistNuevo[i.id] || false, naAplicable: false }))
       })
       await fetch('/api/drones', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'checklist', vueloId: dataVuelo.vuelo.id, items: itemsChecklist, completado: true, firmadoPor: vueloFormData.pilotoId, observaciones: '' }) })
+      // Actualizar ciclos y minutos de cada bateria usada
+      const batUsadas = vueloFormData.bateriasUsadas || {}
+      for (const [batId, minutos] of Object.entries(batUsadas)) {
+        if (minutos && Number(minutos) > 0) {
+          await fetch('/api/drones', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'bateria-uso', id: batId, minutosVuelo: Number(minutos), duracionVuelo: vueloFormData.duracionMinutos || Number(minutos) }) })
+        }
+      }
       setShowNuevoVuelo(false)
       setPasoNuevoVuelo(1)
       setVueloFormData(null)
@@ -650,33 +662,151 @@ export default function DronesPage() {
             </div>
             <button className="flex items-center gap-2 px-3 py-1.5 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50"><Download size={14} />Exportar libro vuelos</button>
           </div>
-          <div className="bg-white rounded-xl border border-slate-100 overflow-hidden">
-            <table className="w-full text-sm">
-              <thead className="bg-slate-50 border-b border-slate-100">
-                <tr>{['Nº Vuelo', 'Fecha', 'Drone', 'Piloto', 'Tipo', 'Duración', 'Estado', 'Checklist', ''].map(h => <th key={h} className="text-left px-4 py-3 text-xs font-bold text-slate-500 uppercase">{h}</th>)}</tr>
-              </thead>
-              <tbody>
-                {vuelosF.map(v => (
-                  <tr key={v.id} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
-                    <td className="px-4 py-3 font-mono text-xs font-bold text-teal-700">{v.numero}</td>
-                    <td className="px-4 py-3 text-xs text-slate-600">{formatFecha(v.fecha)}</td>
-                    <td className="px-4 py-3 text-xs font-medium text-slate-700">{v.drone?.codigo}</td>
-                    <td className="px-4 py-3 text-xs text-slate-600">{v.piloto?.nombre} {v.piloto?.apellidos}</td>
-                    <td className="px-4 py-3 text-xs text-slate-600">{TIPO_OPERACION[v.tipoOperacion]}</td>
-                    <td className="px-4 py-3 text-xs text-slate-600">{v.duracionMinutos ? formatHoras(v.duracionMinutos) : '-'}</td>
-                    <td className="px-4 py-3"><span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${ESTADO_VUELO[v.estado]?.color}`}>{ESTADO_VUELO[v.estado]?.label}</span></td>
-                    <td className="px-4 py-3">{v.checklist?.completado ? <CheckCircle2 size={14} className="text-green-500" /> : <AlertTriangle size={14} className="text-yellow-500" />}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex gap-1">
-                        <button onClick={() => { setVueloSeleccionado(v); setShowDetalleVuelo(true) }} className="p-1.5 hover:bg-slate-100 rounded text-slate-400"><Eye size={13} /></button>
-                        <button onClick={() => { setVueloSeleccionado(v); setChecklistData(v.checklist || { items: {}, firmadoPor: '', observaciones: '' }); setShowChecklist(true) }} className="p-1.5 hover:bg-teal-50 rounded text-teal-400" title="Checklist pre-vuelo"><CheckCircle2 size={13} /></button>
+          <div className="space-y-2">
+            {vuelosF.length === 0 && (
+              <div className="text-center py-12 text-slate-400 bg-white rounded-xl border border-slate-100">
+                <p className="text-sm">No hay vuelos registrados</p>
+              </div>
+            )}
+            {vuelosF.map(v => {
+              const isOpen = vueloExpandido === v.id
+              const meteo = v.condicionesMeteo || {}
+              return (
+                <div key={v.id} className={`bg-white rounded-xl border overflow-hidden transition-all shadow-sm ${v.incidencias ? 'border-l-4 border-l-red-400 border-slate-100' : 'border-slate-100'}`}>
+                  {/* Cabecera siempre visible */}
+                  <button onClick={() => setVueloExpandido(isOpen ? null : v.id)} className="w-full text-left px-5 py-3.5 hover:bg-slate-50 transition-colors">
+                    <div className="flex items-center gap-4">
+                      {/* Numero */}
+                      <span className="font-mono text-sm font-black text-teal-700 bg-teal-50 px-2.5 py-1 rounded-lg shrink-0">{v.numero}</span>
+                      {/* Info principal */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-sm font-bold text-slate-800">{v.piloto?.nombre} {v.piloto?.apellidos}</span>
+                          <span className="text-slate-300">·</span>
+                          <span className="text-xs text-slate-500">{v.drone?.codigo} — {v.drone?.marca} {v.drone?.modelo}</span>
+                          <span className="text-slate-300">·</span>
+                          <span className="text-xs text-slate-500">{formatFecha(v.fecha)}</span>
+                          {v.horaInicio && <span className="text-xs text-slate-400">{v.horaInicio}{v.horaFin ? ` → ${v.horaFin}` : ''}</span>}
+                        </div>
+                        <div className="flex items-center gap-2 mt-1 flex-wrap">
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${ESTADO_VUELO[v.estado]?.color}`}>{ESTADO_VUELO[v.estado]?.label}</span>
+                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">{TIPO_OPERACION[v.tipoOperacion]}</span>
+                          {v.categoriaAESA && <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-100">{v.categoriaAESA.replace('_', ' ')}</span>}
+                          {v.duracionMinutos && <span className="text-[10px] text-slate-500">{formatHoras(v.duracionMinutos)}</span>}
+                          {v.alturaMaxima && <span className="text-[10px] text-slate-500">Alt. max: {v.alturaMaxima}m</span>}
+                          {v.municipio && <span className="text-[10px] text-slate-400">{v.municipio}</span>}
+                        </div>
                       </div>
-                    </td>
-                  </tr>
-                ))}
-                {vuelosF.length === 0 && <tr><td colSpan={9} className="text-center py-10 text-slate-400">No hay vuelos registrados</td></tr>}
-              </tbody>
-            </table>
+                      {/* Indicadores */}
+                      <div className="flex items-center gap-2 shrink-0">
+                        {v.checklist?.completado
+                          ? <span className="flex items-center gap-1 text-[10px] font-bold text-green-700 bg-green-50 px-2 py-0.5 rounded-full border border-green-100"><CheckCircle2 size={10} />Checklist OK</span>
+                          : <span className="flex items-center gap-1 text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-100"><AlertTriangle size={10} />Sin checklist</span>
+                        }
+                        {v.notamConsultado && <span className="text-[10px] font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-100">NOTAMs OK</span>}
+                        {v.incidencias && <span className="text-[10px] font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded-full border border-red-100">Incidencia</span>}
+                        <ChevronDown size={14} className={`text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                      </div>
+                    </div>
+                  </button>
+                  {/* Detalle expandible */}
+                  {isOpen && (
+                    <div className="border-t border-slate-100 bg-slate-50/50">
+                      <div className="px-5 py-4 space-y-4">
+                        {/* Grid principal */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                          {/* Aeronave y piloto */}
+                          <div className="bg-white rounded-lg p-3 border border-slate-100">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-2">Aeronave</p>
+                            <p className="text-sm font-bold text-teal-700">{v.drone?.codigo}</p>
+                            <p className="text-xs text-slate-600">{v.drone?.marca} {v.drone?.modelo}</p>
+                            {v.drone?.matriculaAESA && <p className="text-[10px] text-slate-400 mt-1">Mat: {v.drone.matriculaAESA}</p>}
+                          </div>
+                          <div className="bg-white rounded-lg p-3 border border-slate-100">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-2">Piloto al mando</p>
+                            <p className="text-sm font-bold text-slate-800">{v.piloto?.nombre} {v.piloto?.apellidos}</p>
+                            {v.numeroVccOperador && <p className="text-[10px] text-slate-500 mt-1">Operador: {v.numeroVccOperador}</p>}
+                            {v.personalApoyo && <p className="text-[10px] text-slate-400 mt-0.5">Apoyo: {v.personalApoyo}</p>}
+                          </div>
+                          <div className="bg-white rounded-lg p-3 border border-slate-100">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-2">Tiempos</p>
+                            <p className="text-sm font-bold text-slate-800">{formatFecha(v.fecha)}</p>
+                            <p className="text-xs text-slate-600">{v.horaInicio || '—'} → {v.horaFin || '—'}</p>
+                            {v.duracionMinutos && <p className="text-[10px] text-teal-600 font-bold mt-1">{formatHoras(v.duracionMinutos)} de vuelo</p>}
+                          </div>
+                          <div className="bg-white rounded-lg p-3 border border-slate-100">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-2">Alturas</p>
+                            <div className="flex items-end gap-3">
+                              <div><p className="text-[10px] text-slate-400">Max</p><p className="text-sm font-bold text-slate-800">{v.alturaMaxima ? `${v.alturaMaxima}m` : '—'}</p></div>
+                              <div><p className="text-[10px] text-slate-400">Media</p><p className="text-sm font-bold text-slate-600">{v.alturaMedia ? `${v.alturaMedia}m` : '—'}</p></div>
+                            </div>
+                            <p className="text-[10px] text-slate-400 mt-1">{v.condicionesVuelo?.replace('_', ' ') || '—'}</p>
+                          </div>
+                        </div>
+                        {/* Zona de operacion */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div className="bg-white rounded-lg p-3 border border-slate-100">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-2">Zona de operacion</p>
+                            <div className="space-y-1">
+                              {v.lugarDespegue && <p className="text-xs text-slate-600"><span className="text-slate-400">Despegue:</span> {v.lugarDespegue}</p>}
+                              {v.lugarAterrizaje && <p className="text-xs text-slate-600"><span className="text-slate-400">Aterrizaje:</span> {v.lugarAterrizaje}</p>}
+                              {v.zonaAerea && <p className="text-xs text-slate-600"><span className="text-slate-400">Zona aerea:</span> {v.zonaAerea}</p>}
+                              {v.municipio && <p className="text-xs text-slate-600"><span className="text-slate-400">Municipio:</span> {v.municipio}</p>}
+                              {v.descripcionZona && <p className="text-xs text-slate-500 mt-1 italic">{v.descripcionZona}</p>}
+                            </div>
+                          </div>
+                          <div className="bg-white rounded-lg p-3 border border-slate-100">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-2">Meteorologia</p>
+                            <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                              {meteo.viento && <p className="text-xs text-slate-600"><span className="text-slate-400">Viento:</span> {meteo.viento} km/h</p>}
+                              {meteo.visibilidad && <p className="text-xs text-slate-600"><span className="text-slate-400">Visib:</span> {meteo.visibilidad}m</p>}
+                              {meteo.temperatura && <p className="text-xs text-slate-600"><span className="text-slate-400">Temp:</span> {meteo.temperatura}°C</p>}
+                              {meteo.condicion && <p className="text-xs text-slate-600 capitalize">{meteo.condicion?.replace('_', ' ')}</p>}
+                            </div>
+                          </div>
+                        </div>
+                        {/* Mision */}
+                        {(v.objetivoMision || v.resultadoMision) && (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {v.objetivoMision && <div className="bg-white rounded-lg p-3 border border-slate-100"><p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1">Objetivo</p><p className="text-xs text-slate-600">{v.objetivoMision}</p></div>}
+                            {v.resultadoMision && <div className="bg-white rounded-lg p-3 border border-slate-100"><p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1">Resultado</p><p className="text-xs text-slate-600">{v.resultadoMision}</p></div>}
+                          </div>
+                        )}
+                        {/* NOTAMs + Incidencias */}
+                        <div className="flex flex-wrap gap-3">
+                          <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-medium ${v.notamConsultado ? 'bg-green-50 border-green-100 text-green-700' : 'bg-red-50 border-red-100 text-red-600'}`}>
+                            {v.notamConsultado ? <CheckCircle2 size={12} /> : <AlertTriangle size={12} />}
+                            NOTAMs {v.notamConsultado ? 'consultados' : 'NO consultados'}
+                            {v.notamReferencia && <span className="font-mono">{v.notamReferencia}</span>}
+                          </div>
+                          <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-medium ${v.checklist?.completado ? 'bg-green-50 border-green-100 text-green-700' : 'bg-amber-50 border-amber-100 text-amber-700'}`}>
+                            <CheckCircle2 size={12} />
+                            Checklist pre-vuelo {v.checklist?.completado ? 'completada' : 'pendiente'}
+                          </div>
+                        </div>
+                        {v.incidencias && (
+                          <div className="bg-red-50 border border-red-100 rounded-lg p-3">
+                            <p className="text-[10px] font-bold text-red-600 uppercase tracking-wide mb-1">Incidencias registradas</p>
+                            <p className="text-xs text-red-700">{v.incidencias}</p>
+                          </div>
+                        )}
+                        {v.observaciones && (
+                          <div className="bg-amber-50 border border-amber-100 rounded-lg p-3">
+                            <p className="text-[10px] font-bold text-amber-700 uppercase tracking-wide mb-1">Observaciones</p>
+                            <p className="text-xs text-slate-600">{v.observaciones}</p>
+                          </div>
+                        )}
+                        {/* Acciones */}
+                        <div className="flex justify-end gap-2 pt-1">
+                          <button onClick={() => { setVueloSeleccionado(v); setChecklistData(v.checklist || { items: {}, firmadoPor: '', observaciones: '' }); setShowChecklist(true) }} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-slate-200 rounded-lg hover:bg-slate-100 text-slate-600"><CheckCircle2 size={12} />Ver checklist</button>
+                          <button onClick={() => { setVueloSeleccionado(v); setShowDetalleVuelo(true) }} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-teal-600 text-white rounded-lg hover:bg-teal-700"><Eye size={12} />Detalle completo</button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
           </div>
         </div>
       )}
@@ -1328,7 +1458,7 @@ export default function DronesPage() {
                 <p className="text-xs font-bold text-slate-500 uppercase mb-3 flex items-center gap-2"><DroneIcon size={12} />Aeronave y piloto</p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div><label className={labelCls}>Drone *</label>
-                    <select name="droneId" required className={inputCls}>
+                    <select name="droneId" required className={inputCls} value={droneSeleccionadoWizard} onChange={e => { setDroneSeleccionadoWizard(e.target.value); setBateriasSeleccionadas({}) }}>
                       <option value="">— Seleccionar —</option>
                       {drones.filter(d => d.estado === 'operativo').map(d => <option key={d.id} value={d.id}>{d.codigo} — {d.marca} {d.modelo}</option>)}
                     </select>
@@ -1340,39 +1470,151 @@ export default function DronesPage() {
                     </select>
                   </div>
                 </div>
+                {/* Selector de baterias */}
+                {droneSeleccionadoWizard && (() => {
+                  const droneActual = drones.find(d => d.id === droneSeleccionadoWizard)
+                  const batsDisponibles = (droneActual?.baterias || []).filter((b: Bateria) => b.estado === 'operativa')
+                  if (batsDisponibles.length === 0) return null
+                  return (
+                    <div className="mt-3 border border-slate-100 rounded-xl overflow-hidden">
+                      <div className="bg-slate-50 px-4 py-2.5 border-b border-slate-100 flex items-center justify-between">
+                        <p className="text-xs font-bold text-slate-600 uppercase tracking-wide">Baterias a usar en este vuelo</p>
+                        <p className="text-[10px] text-slate-400">Marca las baterias y registra los minutos de uso</p>
+                      </div>
+                      <div className="divide-y divide-slate-50">
+                        {batsDisponibles.map((b: Bateria) => {
+                          const pct = Math.round((b.ciclosActuales / b.ciclosMaximos) * 100)
+                          const isSelected = bateriasSeleccionadas[b.id] !== undefined
+                          return (
+                            <div key={b.id} className={`flex items-center gap-3 px-4 py-3 transition-colors ${isSelected ? 'bg-teal-50' : 'hover:bg-slate-50'}`}>
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={e => {
+                                  if (e.target.checked) {
+                                    setBateriasSeleccionadas(prev => ({ ...prev, [b.id]: 0 }))
+                                  } else {
+                                    setBateriasSeleccionadas(prev => { const n = { ...prev }; delete n[b.id]; return n })
+                                  }
+                                }}
+                                className="w-4 h-4 accent-teal-600 shrink-0"
+                              />
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-sm font-bold text-slate-800">{b.codigo}</span>
+                                  <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${pct < 70 ? 'bg-green-100 text-green-700' : pct < 90 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-600'}`}>
+                                    {b.ciclosActuales}/{b.ciclosMaximos} ciclos ({pct}%)
+                                  </span>
+                                  {b.minutosVuelo !== undefined && <span className="text-[10px] text-slate-400">{Math.round((b.minutosVuelo || 0) / 60)}h {(b.minutosVuelo || 0) % 60}min totales</span>}
+                                  {b.capacidadMah && <span className="text-[10px] text-slate-400">{b.capacidadMah} mAh</span>}
+                                </div>
+                                <div className="mt-1 h-1 bg-slate-100 rounded-full w-32">
+                                  <div className={`h-full rounded-full ${pct < 70 ? 'bg-green-400' : pct < 90 ? 'bg-amber-400' : 'bg-red-400'}`} style={{ width: `${pct}%` }} />
+                                </div>
+                              </div>
+                              {isSelected && (
+                                <div className="flex items-center gap-2 shrink-0">
+                                  <label className="text-xs text-slate-500">Minutos usados:</label>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    max="180"
+                                    placeholder="30"
+                                    value={bateriasSeleccionadas[b.id] || ''}
+                                    onChange={e => setBateriasSeleccionadas(prev => ({ ...prev, [b.id]: parseInt(e.target.value) || 0 }))}
+                                    className="w-20 border border-teal-200 rounded-lg px-2 py-1 text-sm text-center font-bold text-teal-700 bg-white"
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
+                      {Object.keys(bateriasSeleccionadas).length > 0 && (
+                        <div className="bg-teal-50 px-4 py-2 border-t border-teal-100">
+                          <p className="text-xs text-teal-700 font-medium">
+                            {Object.keys(bateriasSeleccionadas).length} bateria/s seleccionada/s · Total: {Object.values(bateriasSeleccionadas).reduce((a, b) => a + b, 0)} min
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })()}
+              </div>
+              {/* Identificacion AESA */}
+              <div className="bg-teal-50 border border-teal-100 rounded-xl p-4">
+                <p className="text-xs font-bold text-teal-700 uppercase mb-3 flex items-center gap-2"><Shield size={12} />Identificacion AESA / Operador</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div><label className={labelCls}>Categoria AESA *</label>
+                    <select name="categoriaAESA" required className={inputCls}>
+                      <option value="">— Seleccionar —</option>
+                      <option value="OPEN_A1">OPEN A1 — Sobre personas no implicadas</option>
+                      <option value="OPEN_A2">OPEN A2 — Cerca de personas</option>
+                      <option value="OPEN_A3">OPEN A3 — Lejos de personas</option>
+                      <option value="SPECIFIC_STS01">SPECIFIC STS-01</option>
+                      <option value="SPECIFIC_STS02">SPECIFIC STS-02</option>
+                      <option value="SPECIFIC_PDRA">SPECIFIC PDRA</option>
+                    </select>
+                  </div>
+                  <div><label className={labelCls}>Nº Operador UAS / VCC</label><input name="numeroVccOperador" placeholder="ESP-OP-XXXXXXXX" className={inputCls} /></div>
+                </div>
               </div>
               {/* Fecha y hora */}
               <div>
-                <p className="text-xs font-bold text-slate-500 uppercase mb-3 flex items-center gap-2"><Calendar size={12} />Fecha y hora</p>
-                <div className="grid grid-cols-3 gap-4">
-                  <div><label className={labelCls}>Fecha *</label><input name="fecha" type="date" required defaultValue={new Date().toISOString().slice(0,10)} className={inputCls} /></div>
+                <p className="text-xs font-bold text-slate-500 uppercase mb-3 flex items-center gap-2"><Calendar size={12} />Fecha y horas de vuelo</p>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div><label className={labelCls}>Fecha *</label><input name="fecha" type="date" required defaultValue={new Date().toLocaleDateString('en-CA', {timeZone: 'Europe/Madrid'})} className={inputCls} /></div>
                   <div><label className={labelCls}>Hora inicio</label><input name="horaInicio" type="time" className={inputCls} /></div>
-                  <div><label className={labelCls}>Tipo operación *</label>
+                  <div><label className={labelCls}>Hora fin</label><input name="horaFin" type="time" className={inputCls} /></div>
+                  <div><label className={labelCls}>Duracion (min)</label><input name="duracionMinutos" type="number" placeholder="30" className={inputCls} /></div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
+                  <div><label className={labelCls}>Tipo operacion *</label>
                     <select name="tipoOperacion" required className={inputCls}>
                       {Object.entries(TIPO_OPERACION).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                    </select>
+                  </div>
+                  <div><label className={labelCls}>Condiciones de vuelo</label>
+                    <select name="condicionesVuelo" className={inputCls}>
+                      <option value="VLOS_DIA">VLOS diurno</option>
+                      <option value="VLOS_NOCHE">VLOS nocturno</option>
+                      <option value="EVLOS">EVLOS</option>
+                      <option value="BVLOS">BVLOS (requiere autorizacion)</option>
                     </select>
                   </div>
                 </div>
               </div>
               {/* Zona de vuelo */}
               <div>
-                <p className="text-xs font-bold text-slate-500 uppercase mb-3 flex items-center gap-2"><MapPin size={12} />Zona de vuelo</p>
+                <p className="text-xs font-bold text-slate-500 uppercase mb-3 flex items-center gap-2"><MapPin size={12} />Zona de operacion</p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div><label className={labelCls}>Lugar de despegue</label><input name="lugarDespegue" placeholder="Ej: Parque Municipal Bormujos" className={inputCls} /></div>
+                  <div><label className={labelCls}>Lugar de aterrizaje</label><input name="lugarAterrizaje" placeholder="Ej: Mismo punto de despegue" className={inputCls} /></div>
                   <div><label className={labelCls}>Municipio</label><input name="municipio" defaultValue="Bormujos" className={inputCls} /></div>
-                  <div><label className={labelCls}>Altura máxima (m)</label><input name="alturaMaxima" type="number" placeholder="120" className={inputCls} /></div>
-                  <div><label className={labelCls}>Latitud inicio</label><input name="latitudInicio" type="number" step="0.000001" defaultValue="37.3710" className={inputCls} /></div>
-                  <div><label className={labelCls}>Longitud inicio</label><input name="longitudInicio" type="number" step="0.000001" defaultValue="-6.0719" className={inputCls} /></div>
+                  <div><label className={labelCls}>Zona aerea (ENAIRE)</label><input name="zonaAerea" placeholder="Ej: U-SPACE, CTR Sevilla, TMA..." className={inputCls} /></div>
+                  <div><label className={labelCls}>Altura maxima (m)</label><input name="alturaMaxima" type="number" placeholder="120" className={inputCls} /></div>
+                  <div><label className={labelCls}>Altura media (m)</label><input name="alturaMedia" type="number" placeholder="60" className={inputCls} /></div>
+                  <div><label className={labelCls}>Latitud despegue</label><input name="latitudInicio" type="number" step="0.000001" defaultValue="37.3710" className={inputCls} /></div>
+                  <div><label className={labelCls}>Longitud despegue</label><input name="longitudInicio" type="number" step="0.000001" defaultValue="-6.0719" className={inputCls} /></div>
                 </div>
-                <div className="mt-3"><label className={labelCls}>Descripción zona</label><textarea name="descripcionZona" rows={2} placeholder="Descripción detallada del área de operación..." className={inputCls} /></div>
+                <div className="mt-3"><label className={labelCls}>Descripcion de la zona / area de operacion</label><textarea name="descripcionZona" rows={2} placeholder="Descripcion detallada del area de operacion, puntos de referencia..." className={inputCls} /></div>
               </div>
-              {/* Condiciones meteorológicas */}
+              {/* Mision */}
               <div>
-                <p className="text-xs font-bold text-slate-500 uppercase mb-3 flex items-center gap-2"><Wind size={12} />Condiciones meteorológicas</p>
+                <p className="text-xs font-bold text-slate-500 uppercase mb-3 flex items-center gap-2"><ClipboardList size={12} />Mision</p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div><label className={labelCls}>Objetivo de la mision</label><textarea name="objetivoMision" rows={2} placeholder="Describe el objetivo operativo de este vuelo..." className={inputCls} /></div>
+                  <div><label className={labelCls}>Personal de apoyo en tierra</label><input name="personalApoyo" placeholder="Nombres del personal de apoyo" className={inputCls} /></div>
+                </div>
+              </div>
+              {/* Condiciones meteorologicas */}
+              <div>
+                <p className="text-xs font-bold text-slate-500 uppercase mb-3 flex items-center gap-2"><Wind size={12} />Condiciones meteorologicas</p>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div><label className={labelCls}>Viento (km/h)</label><input name="viento" type="number" placeholder="15" className={inputCls} /></div>
                   <div><label className={labelCls}>Visibilidad (m)</label><input name="visibilidad" type="number" placeholder="5000" className={inputCls} /></div>
-                  <div><label className={labelCls}>Temperatura (°C)</label><input name="temperatura" type="number" className={inputCls} /></div>
-                  <div><label className={labelCls}>Condición</label>
+                  <div><label className={labelCls}>Temperatura (C)</label><input name="temperatura" type="number" className={inputCls} /></div>
+                  <div><label className={labelCls}>Condicion</label>
                     <select name="condicion" className={inputCls}>
                       <option value="despejado">Despejado</option>
                       <option value="nublado_parcial">Nublado parcial</option>
@@ -1384,14 +1626,18 @@ export default function DronesPage() {
               </div>
               {/* NOTAMs */}
               <div>
-                <p className="text-xs font-bold text-slate-500 uppercase mb-3 flex items-center gap-2"><Bell size={12} />NOTAMs</p>
-                <div className="flex items-center gap-3 mb-3">
-                  <input type="checkbox" name="notamConsultado" id="notamCons" className="w-4 h-4 accent-teal-600" />
-                  <label htmlFor="notamCons" className="text-sm text-slate-700">Confirmo que he consultado los NOTAMs vigentes para esta operación</label>
+                <p className="text-xs font-bold text-slate-500 uppercase mb-3 flex items-center gap-2"><Bell size={12} />NOTAMs y espacio aereo</p>
+                <div className="flex items-center gap-3 mb-3 p-3 bg-amber-50 border border-amber-100 rounded-lg">
+                  <input type="checkbox" name="notamConsultado" id="notamCons" className="w-4 h-4 accent-teal-600" required />
+                  <label htmlFor="notamCons" className="text-sm text-slate-700 font-medium">Confirmo que he consultado los NOTAMs vigentes en ENAIRE para esta operacion</label>
                 </div>
                 <div><label className={labelCls}>Referencia NOTAM (si aplica)</label><input name="notamReferencia" placeholder="A1234/26, B5678/26..." className={inputCls} /></div>
               </div>
-              <div><label className={labelCls}>Observaciones previas</label><textarea name="observaciones" rows={2} className={inputCls} /></div>
+              {/* Incidencias y observaciones */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div><label className={labelCls}>Incidencias durante el vuelo</label><textarea name="incidencias" rows={2} placeholder="Ninguna / descripcion de incidencias..." className={inputCls} /></div>
+                <div><label className={labelCls}>Observaciones</label><textarea name="observaciones" rows={2} className={inputCls} /></div>
+              </div>
               <div className="flex justify-end gap-3">
                 <button type="button" onClick={() => { setShowNuevoVuelo(false); setPasoNuevoVuelo(1) }} className="px-4 py-2 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50">Cancelar</button>
                 <button type="submit" className="px-6 py-2 bg-teal-600 text-white text-sm font-bold rounded-lg hover:bg-teal-700">Continuar a Checklist</button>

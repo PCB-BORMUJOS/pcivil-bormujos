@@ -276,6 +276,19 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ vuelo })
     }
 
+    if (tipo === 'bateria-uso') {
+      const batActual = await prisma.bateriaDrone.findUnique({ where: { id } })
+      if (!batActual) return NextResponse.json({ error: 'Bateria no encontrada' }, { status: 404 })
+      const bateria = await prisma.bateriaDrone.update({
+        where: { id },
+        data: {
+          ciclosUso: batActual.ciclosUso + 1,
+          minutosVuelo: (batActual.minutosVuelo || 0) + (body.minutosVuelo || 0),
+          estado: (batActual.ciclosUso + 1) >= Math.floor(batActual.ciclosMaximos * 0.9) ? 'degradada' : batActual.estado
+        }
+      })
+      return NextResponse.json({ bateria })
+    }
     return NextResponse.json({ error: 'Tipo no válido' }, { status: 400 })
   } catch (error) {
     console.error('Error API drones PUT:', error)
