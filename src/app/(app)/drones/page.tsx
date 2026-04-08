@@ -1900,11 +1900,12 @@ export default function DronesPage() {
               <div className="border-t pt-4">
                 <p className="text-xs font-bold text-slate-500 uppercase mb-3">Certificaciones AESA</p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {[['A1A3','a1a3'],['A2','a2'],['STS-01','sts01'],['STS-02','sts02']].map(([label,key]) => {
-                    const d = pilotoSeleccionado.certificaciones?.[label] || {}
+                  {[['A1A3','a1a3'],['A2','a2'],['STS01','sts01'],['STS02','sts02']].map(([label,key]) => {
+                    const certs = typeof pilotoSeleccionado.certificaciones === 'string' ? JSON.parse(pilotoSeleccionado.certificaciones) : (pilotoSeleccionado.certificaciones || {})
+                    const d = certs[label] || {}
                     return (
                       <div key={key} className="bg-slate-50 rounded-lg p-3 space-y-2">
-                        <p className="text-xs font-bold text-teal-700">{label}</p>
+                        <p className="text-xs font-bold text-teal-700">{label.replace('STS01','STS-01').replace('STS02','STS-02')}</p>
                         <input name={key+'Num'} placeholder="Nº certificado" defaultValue={d.numero} className={inputCls} />
                         <input name={key+'Cad'} type="date" placeholder="Caducidad" defaultValue={d.caducidad?.slice(0,10)} className={inputCls} />
                       </div>
