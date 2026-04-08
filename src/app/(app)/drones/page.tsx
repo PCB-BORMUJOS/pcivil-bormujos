@@ -105,6 +105,9 @@ export default function DronesPage() {
   const [showEditarPiloto, setShowEditarPiloto] = useState(false)
   const [pilotoSeleccionado, setPilotoSeleccionado] = useState<any>(null)
   const [showNuevoVuelo, setShowNuevoVuelo] = useState(false)
+  const [pasoNuevoVuelo, setPasoNuevoVuelo] = useState<1|2>(1)
+  const [vueloFormData, setVueloFormData] = useState<any>(null)
+  const [checklistNuevo, setChecklistNuevo] = useState<Record<string,boolean>>({})
   const [showChecklist, setShowChecklist] = useState(false)
   const [showDetalleVuelo, setShowDetalleVuelo] = useState(false)
   const [showNuevoMant, setShowNuevoMant] = useState(false)
@@ -225,14 +228,71 @@ export default function DronesPage() {
     } finally { setSaving(false) }
   }
 
-  const handleNuevoVuelo = async (e: React.FormEvent<HTMLFormElement>) => {
+  const CHECKLIST_SECCIONES_NUEVO = [
+    { id: 'aeronave', label: 'Aeronave', items: [
+      { id: 'bat_carga', label: 'Bateria principal >= 80% de carga' },
+      { id: 'bat_estado', label: 'Estado fisico de baterias: sin hinchazón, golpes ni corrosión' },
+      { id: 'helices', label: 'Helices integras: sin fisuras, grietas ni deformaciones' },
+      { id: 'estructura', label: 'Estructura del fuselaje sin daños visibles' },
+      { id: 'gps', label: 'Señal GPS estable (>= 8 satelites)' },
+      { id: 'imu', label: 'Calibracion IMU correcta, sin alertas' },
+      { id: 'luces', label: 'Luces de navegacion operativas' },
+    ]},
+    { id: 'control', label: 'Mando y Comunicaciones', items: [
+      { id: 'rc_carga', label: 'Bateria del mando >= 80%' },
+      { id: 'rc_enlace', label: 'Enlace RC establecido y estable' },
+      { id: 'rth', label: 'RTH configurado y punto de inicio correcto' },
+      { id: 'telemetria', label: 'Telemetria operativa en app de vuelo' },
+    ]},
+    { id: 'espacio_aereo', label: 'Espacio Aereo', items: [
+      { id: 'notam_ok', label: 'NOTAMs consultados y sin restricciones activas en la zona' },
+      { id: 'zona_ok', label: 'Zona verificada en Drones ENAIRE: categoria U-Space' },
+      { id: 'altura_ok', label: 'Altura maxima de vuelo <= 120 m (o autorizacion expresa)' },
+      { id: 'vlos', label: 'Vuelo dentro de linea visual (VLOS) garantizado' },
+      { id: 'distancias', label: 'Distancias de seguridad a personas/infraestructuras respetadas' },
+    ]},
+    { id: 'piloto', label: 'Piloto y Documentacion', items: [
+      { id: 'licencia', label: 'Licencia AESA vigente y categoria adecuada a la operacion' },
+      { id: 'seguro', label: 'Seguro de responsabilidad civil en vigor' },
+      { id: 'matricula', label: 'Matricula AESA visible en la aeronave' },
+      { id: 'apto_fisico', label: 'Piloto en condiciones fisicas y psiquicas aptas para el vuelo' },
+    ]},
+    { id: 'meteorologia', label: 'Meteorologia', items: [
+      { id: 'viento_ok', label: 'Viento dentro de limites del fabricante' },
+      { id: 'visib_ok', label: 'Visibilidad suficiente para operacion VLOS' },
+      { id: 'lluvia_ok', label: 'Sin precipitaciones ni riesgo de lluvia' },
+    ]},
+  ]
+
+  const handlePaso1Vuelo = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const f = new FormData(e.currentTarget)
+    const meteo = { viento: f.get('viento'), visibilidad: f.get('visibilidad'), nubes: f.get('nubes'), temperatura: f.get('temperatura'), condicion: f.get('condicion') }
+    setVueloFormData({ tipo: 'vuelo', droneId: f.get('droneId'), pilotoId: f.get('pilotoId'), fecha: f.get('fecha'), horaInicio: f.get('horaInicio'), tipoOperacion: f.get('tipoOperacion'), municipio: f.get('municipio') || 'Bormujos', descripcionZona: f.get('descripcionZona'), latitudInicio: f.get('latitudInicio'), longitudInicio: f.get('longitudInicio'), alturaMaxima: f.get('alturaMaxima'), condicionesMeteo: meteo, notamConsultado: f.get('notamConsultado') === 'on', notamReferencia: f.get('notamReferencia'), observaciones: f.get('observaciones'), estado: 'planificado' })
+    setChecklistNuevo({})
+    setPasoNuevoVuelo(2)
+  }
+
+  const handleNuevoVuelo = async () => {
+    if (!vueloFormData) return
+    const todosItems = CHECKLIST_SECCIONES_NUEVO.flatMap(s => s.items.map(i => i.id))
+    const todosOk = todosItems.every(id => checklistNuevo[id])
+    if (!todosOk) { alert('Debes completar todos los items del checklist antes de registrar el vuelo.'); return }
     try {
       setSaving(true)
-      const meteo = { viento: f.get('viento'), visibilidad: f.get('visibilidad'), nubes: f.get('nubes'), temperatura: f.get('temperatura'), condicion: f.get('condicion') }
-      const r = await fetch('/api/drones', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'vuelo', droneId: f.get('droneId'), pilotoId: f.get('pilotoId'), fecha: f.get('fecha'), horaInicio: f.get('horaInicio'), tipoOperacion: f.get('tipoOperacion'), municipio: f.get('municipio') || 'Bormujos', descripcionZona: f.get('descripcionZona'), latitudInicio: f.get('latitudInicio'), longitudInicio: f.get('longitudInicio'), alturaMaxima: f.get('alturaMaxima'), condicionesMeteo: meteo, notamConsultado: f.get('notamConsultado') === 'on', notamReferencia: f.get('notamReferencia'), observaciones: f.get('observaciones'), estado: 'planificado' }) })
-      if (r.ok) { setShowNuevoVuelo(false); cargarDatos() }
+      const rVuelo = await fetch('/api/drones', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(vueloFormData) })
+      if (!rVuelo.ok) { alert('Error al crear el vuelo'); return }
+      const dataVuelo = await rVuelo.json()
+      const itemsChecklist: Record<string, any[]> = {}
+      CHECKLIST_SECCIONES_NUEVO.forEach(s => {
+        itemsChecklist[s.id] = s.items.map(i => ({ id: i.id, label: i.label, ok: checklistNuevo[i.id] || false, naAplicable: false }))
+      })
+      await fetch('/api/drones', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'checklist', vueloId: dataVuelo.vuelo.id, items: itemsChecklist, completado: true, firmadoPor: vueloFormData.pilotoId, observaciones: '' }) })
+      setShowNuevoVuelo(false)
+      setPasoNuevoVuelo(1)
+      setVueloFormData(null)
+      setChecklistNuevo({})
+      cargarDatos()
     } finally { setSaving(false) }
   }
 
@@ -1246,10 +1306,23 @@ export default function DronesPage() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000] p-4">
           <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl">
             <div className="flex items-center justify-between p-6 border-b">
-              <div><h3 className="text-lg font-bold text-slate-900">Registrar vuelo — Parte AESA</h3><p className="text-xs text-slate-500">Se generará checklist pre-vuelo automáticamente</p></div>
-              <button onClick={() => setShowNuevoVuelo(false)}><X size={20} className="text-slate-400" /></button>
+              <div>
+                <h3 className="text-lg font-bold text-slate-900">Registrar vuelo — Parte AESA</h3>
+                <div className="flex items-center gap-2 mt-1.5">
+                  <div className={`flex items-center gap-1.5 text-xs font-semibold ${pasoNuevoVuelo === 1 ? 'text-teal-600' : 'text-gray-400'}`}>
+                    <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${pasoNuevoVuelo === 1 ? 'bg-teal-600 text-white' : 'bg-green-500 text-white'}`}>1</span>
+                    Datos del vuelo
+                  </div>
+                  <div className="w-8 h-0.5 bg-gray-200" />
+                  <div className={`flex items-center gap-1.5 text-xs font-semibold ${pasoNuevoVuelo === 2 ? 'text-teal-600' : 'text-gray-400'}`}>
+                    <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${pasoNuevoVuelo === 2 ? 'bg-teal-600 text-white' : 'bg-gray-200 text-gray-500'}`}>2</span>
+                    Checklist pre-vuelo
+                  </div>
+                </div>
+              </div>
+              <button type="button" onClick={() => { setShowNuevoVuelo(false); setPasoNuevoVuelo(1); setVueloFormData(null); setChecklistNuevo({}) }}><X size={20} className="text-slate-400" /></button>
             </div>
-            <form onSubmit={handleNuevoVuelo} className="p-6 space-y-5">
+            {pasoNuevoVuelo === 1 && <form onSubmit={handlePaso1Vuelo} className="p-6 space-y-5">
               {/* Aeronave y piloto */}
               <div>
                 <p className="text-xs font-bold text-slate-500 uppercase mb-3 flex items-center gap-2"><DroneIcon size={12} />Aeronave y piloto</p>
@@ -1320,10 +1393,52 @@ export default function DronesPage() {
               </div>
               <div><label className={labelCls}>Observaciones previas</label><textarea name="observaciones" rows={2} className={inputCls} /></div>
               <div className="flex justify-end gap-3">
-                <button type="button" onClick={() => setShowNuevoVuelo(false)} className="px-4 py-2 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50">Cancelar</button>
-                <button type="submit" disabled={saving} className="px-6 py-2 bg-teal-600 text-white text-sm font-bold rounded-lg hover:bg-teal-700 disabled:opacity-50">{saving ? 'Registrando...' : 'Registrar vuelo'}</button>
+                <button type="button" onClick={() => { setShowNuevoVuelo(false); setPasoNuevoVuelo(1) }} className="px-4 py-2 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50">Cancelar</button>
+                <button type="submit" className="px-6 py-2 bg-teal-600 text-white text-sm font-bold rounded-lg hover:bg-teal-700">Continuar a Checklist</button>
               </div>
-            </form>
+            </form>}
+            {pasoNuevoVuelo === 2 && vueloFormData && (() => {
+              const todosItems = CHECKLIST_SECCIONES_NUEVO.flatMap((s: any) => s.items.map((i: any) => i.id))
+              const completados = todosItems.filter((id: string) => checklistNuevo[id]).length
+              const total = todosItems.length
+              const todoOk = completados === total
+              return (
+                <div className="p-6 space-y-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-sm text-slate-600">Completa todos los items antes de registrar el vuelo</p>
+                    <span className={`text-sm font-bold px-3 py-1 rounded-full ${todoOk ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>{completados}/{total} items</span>
+                  </div>
+                  {!todoOk && (
+                    <div className="flex items-center gap-2 px-3 py-2 bg-red-50 border border-red-200 rounded-lg">
+                      <span className="text-red-600 text-xs font-semibold">Todos los items son obligatorios para poder registrar el vuelo</span>
+                    </div>
+                  )}
+                  <div className="space-y-3 max-h-[50vh] overflow-y-auto pr-1">
+                    {CHECKLIST_SECCIONES_NUEVO.map((seccion: any) => (
+                      <div key={seccion.id} className="border border-slate-100 rounded-xl overflow-hidden">
+                        <div className="bg-slate-50 px-4 py-2.5 border-b border-slate-100">
+                          <p className="text-xs font-bold text-slate-700 uppercase tracking-wide">{seccion.label}</p>
+                        </div>
+                        <div className="divide-y divide-slate-50">
+                          {seccion.items.map((item: any) => (
+                            <label key={item.id} className={`flex items-start gap-3 px-4 py-2.5 cursor-pointer transition-colors ${checklistNuevo[item.id] ? 'bg-green-50' : 'hover:bg-slate-50'}`}>
+                              <input type="checkbox" checked={checklistNuevo[item.id] || false} onChange={e => setChecklistNuevo(prev => ({ ...prev, [item.id]: e.target.checked }))} className="mt-0.5 w-4 h-4 accent-teal-600 shrink-0" />
+                              <span className={`text-sm ${checklistNuevo[item.id] ? 'text-green-700 line-through opacity-70' : 'text-slate-700'}`}>{item.label}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+                    <button type="button" onClick={() => setPasoNuevoVuelo(1)} className="px-4 py-2 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50">Volver a datos</button>
+                    <button type="button" onClick={handleNuevoVuelo} disabled={saving || !todoOk} className={`px-6 py-2 text-sm font-bold rounded-lg transition-all ${todoOk ? 'bg-teal-600 text-white hover:bg-teal-700' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}>
+                      {saving ? 'Registrando...' : todoOk ? 'Registrar vuelo' : `Faltan ${total - completados} items`}
+                    </button>
+                  </div>
+                </div>
+              )
+            })()}
           </div>
         </div>
       )}
