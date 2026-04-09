@@ -1785,7 +1785,7 @@ model Vuelo {
   numeroVccOperador  String?
   zonaAerea          String?
   condicionesVuelo   String?
-  bateriasUsadas     Json?
+  bateriasUsadas     Json?    @map("baterias_usadas")
   createdAt       DateTime        @default(now())
   checklist       ChecklistVuelo?
   @@map("vuelos")
