@@ -877,6 +877,16 @@ export default function PracticasPage() {
                               <span className="font-mono text-xs font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded shrink-0">{p.numero}</span>
                               <p className="font-semibold text-slate-800 text-sm truncate">{p.titulo}</p>
                               {p.subfamilia && <span className="text-[10px] text-slate-400 bg-slate-50 px-2 py-0.5 rounded shrink-0">{p.subfamilia}</span>}
+                              {p.youtubeUrl && (
+                                <span title="Tiene vídeo YouTube" className="shrink-0">
+                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="#ef4444"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+                                </span>
+                              )}
+                              {(p.imagenes || []).length > 0 && (
+                                <span className="text-[10px] bg-blue-50 text-blue-600 border border-blue-100 px-1.5 py-0.5 rounded font-medium shrink-0">
+                                  {(p.imagenes || []).length} img
+                                </span>
+                              )}
                             </div>
                             <div className="flex items-center gap-2 shrink-0">
                               <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${nivelInfo?.color}`}>{nivelInfo?.label}</span>
