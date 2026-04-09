@@ -41,11 +41,56 @@ export async function POST(request: NextRequest) {
         responsableId: body.responsableId,
         participantes: body.participantes || [],
         observaciones: body.observaciones || null,
-        resultado: body.resultado || 'completado',
+        resultado: body.firmaJefe ? 'completado' : 'pendiente_jefe',
         firmaResponsable: body.firmaResponsable || null,
         firmaJefe: body.firmaJefe || null,
         firmadoResponsableNombre: body.firmadoResponsableNombre || null,
         firmadoJefeNombre: body.firmadoJefeNombre || null,
+      }
+    })
+    // Notificar a jefes de servicio si falta firma
+    if (!body.firmaJefe) {
+      const jefes = await prisma.usuario.findMany({
+        where: {
+          activo: true,
+          rol: { nombre: { in: ['superadmin', 'superadministrador', 'admin', 'coordinador'] } }
+        },
+        select: { id: true }
+      })
+      if (jefes.length > 0) {
+        await prisma.notificacion.createMany({
+          data: jefes.map(j => ({
+            usuarioId: j.id,
+            titulo: 'Práctica pendiente de firma',
+            mensaje: `La práctica ${body.practicaId} realizada en el turno ${body.turno} está pendiente de tu firma como jefe de servicio.`,
+            tipo: 'info',
+            leida: false,
+          }))
+        })
+      }
+    }
+    return NextResponse.json({ registro })
+  } catch (error) {
+    console.error(error)
+    return NextResponse.json({ error: 'Error interno' }, { status: 500 })
+  }
+}
+
+export async function PUT(request: NextRequest) {
+  const session = await getServerSession(authOptions)
+  if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  try {
+    const body = await request.json()
+    const { id, firmaJefe, firmadoJefeNombre } = body
+    const registro = await prisma.registroPractica.update({
+      where: { id },
+      data: {
+        firmaJefe,
+        firmadoJefeNombre,
+        resultado: 'completado'
+      },
+      include: {
+        practica: { select: { titulo: true, numero: true } }
       }
     })
     return NextResponse.json({ registro })

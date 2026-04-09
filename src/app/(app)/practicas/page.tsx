@@ -82,6 +82,8 @@ export default function PracticasPage() {
   const [firmaResp, setFirmaResp] = useState<string>('')
   const [firmaJefe, setFirmaJefe] = useState<string>('')
   const [pasoRegistro, setPasoRegistro] = useState<1|2|3>(1)
+  const [showFirmaJefe, setShowFirmaJefe] = useState(false)
+  const [registroParaFirma, setRegistroParaFirma] = useState<RegistroPractica | null>(null)
   const [practicaEditando, setPracticaEditando] = useState<Practica | null>(null)
 
   const cargarDatos = async () => {
@@ -775,6 +777,42 @@ export default function PracticasPage() {
                             {p.conclusiones && <div className="bg-green-50 rounded-lg p-3.5 border border-green-100"><p className="text-[10px] font-bold text-green-700 uppercase tracking-wide mb-1.5">Conclusiones</p><p className="text-sm text-slate-700">{p.conclusiones}</p></div>}
                             {p.riesgoIntervencion && <div className="bg-slate-100 rounded-lg p-3 border border-slate-200 flex items-start gap-2"><AlertTriangle size={14} className="text-slate-500 shrink-0 mt-0.5" /><div><p className="text-[10px] font-bold text-slate-500 uppercase mb-0.5">Riesgo de intervención (no se tendrá en cuenta)</p><p className="text-xs text-slate-600">{p.riesgoIntervencion}</p></div></div>}
                             {p.prerequisitos && <div className="flex items-center gap-2 text-xs text-slate-500"><CheckCircle2 size={12} /><span>Prerequisito: <span className="font-medium">{p.prerequisitos}</span></span></div>}
+                            {/* Historial registros */}
+                            {practicaExpandida === p.id && registros.filter(r => r.practicaId === p.id).length > 0 && (
+                              <div className="bg-white rounded-lg border border-slate-100">
+                                <div className="px-3.5 py-2.5 border-b border-slate-50 flex items-center justify-between">
+                                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Historial de realizaciones</p>
+                                  <span className="text-[10px] text-slate-400">{registros.filter(r => r.practicaId === p.id).length} registro/s</span>
+                                </div>
+                                <div className="divide-y divide-slate-50 max-h-48 overflow-y-auto">
+                                  {registros.filter(r => r.practicaId === p.id).map(reg => (
+                                    <div key={reg.id} className="px-3.5 py-2.5 flex items-center justify-between gap-3">
+                                      <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                          <span className="text-xs font-medium text-slate-700">{new Date(reg.fecha).toLocaleDateString('es-ES')}</span>
+                                          <span className="text-[10px] text-slate-400">{reg.turno === 'manana' ? 'Mañana' : reg.turno === 'tarde' ? 'Tarde' : 'Noche'}</span>
+                                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${reg.resultado === 'completado' ? 'bg-green-100 text-green-700' : reg.resultado === 'pendiente_jefe' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>
+                                            {reg.resultado === 'pendiente_jefe' ? 'Pendiente firma jefe' : reg.resultado}
+                                          </span>
+                                          <span className="text-[10px] text-slate-400">{reg.participantes?.length || 0} participantes</span>
+                                        </div>
+                                        {reg.firmadoResponsableNombre && <p className="text-[10px] text-slate-400 mt-0.5">Resp: {reg.firmadoResponsableNombre}</p>}
+                                      </div>
+                                      <div className="flex gap-1.5 shrink-0">
+                                        {reg.resultado === 'pendiente_jefe' && isAdmin && (
+                                          <button onClick={() => { setRegistroParaFirma(reg); setShowFirmaJefe(true) }} className="flex items-center gap-1 px-2.5 py-1 text-[10px] font-bold bg-amber-500 text-white rounded-lg hover:bg-amber-600">
+                                            Firmar VB
+                                          </button>
+                                        )}
+                                        <button onClick={() => generarPDFPractica(p, reg)} className="flex items-center gap-1 px-2.5 py-1 text-[10px] font-medium border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50">
+                                          PDF
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
                             <div className="flex justify-end gap-2 pt-1 border-t border-slate-100">
                               <button type="button" onClick={() => generarPDFPractica(p)} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50"><BookOpen size={12} />PDF plantilla</button>
                               <button onClick={() => { setPracticaParaRegistro(p); setShowRegistro(true); cargarRegistrosPractica(p.id) }} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-green-600 text-white rounded-lg hover:bg-green-700"><ClipboardList size={12} />Registrar realización</button>
@@ -795,6 +833,64 @@ export default function PracticasPage() {
               </div>
             )
           })}
+        </div>
+      )}
+
+
+      {showFirmaJefe && registroParaFirma && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000] p-4">
+          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl">
+            <div className="flex items-center justify-between p-5 border-b">
+              <div>
+                <h3 className="text-base font-bold text-slate-900">VB Jefe de Servicio</h3>
+                <p className="text-xs text-slate-500">Firma de conformidad — {registroParaFirma.practica?.numero} {registroParaFirma.practica?.titulo}</p>
+              </div>
+              <button onClick={() => { setShowFirmaJefe(false); setRegistroParaFirma(null); setFirmaJefe('') }}><X size={18} className="text-slate-400" /></button>
+            </div>
+            <div className="p-5 space-y-4">
+              <div className="bg-slate-50 rounded-xl p-4 space-y-2 text-sm">
+                <div className="flex justify-between"><span className="text-slate-500">Fecha:</span><span className="font-medium">{new Date(registroParaFirma.fecha).toLocaleDateString('es-ES')}</span></div>
+                <div className="flex justify-between"><span className="text-slate-500">Turno:</span><span className="font-medium">{registroParaFirma.turno === 'manana' ? 'Mañana' : registroParaFirma.turno === 'tarde' ? 'Tarde' : 'Noche'}</span></div>
+                <div className="flex justify-between"><span className="text-slate-500">Responsable:</span><span className="font-medium">{registroParaFirma.firmadoResponsableNombre || '-'}</span></div>
+                <div className="flex justify-between"><span className="text-slate-500">Participantes:</span><span className="font-medium">{registroParaFirma.participantes?.length || 0}</span></div>
+              </div>
+              <div>
+                <label className={labelCls}>Nombre del Jefe de Servicio</label>
+                <input id="jefeNombreInput" placeholder="Nombre completo" className={inputCls} />
+              </div>
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className={labelCls}>Firma VB *</label>
+                  <button type="button" onClick={() => limpiarFirma('firmaJefeModalCanvas', setFirmaJefe)} className="text-[10px] text-red-500 hover:underline">Limpiar</button>
+                </div>
+                <div className="border-2 border-dashed border-slate-200 rounded-xl bg-slate-50 overflow-hidden">
+                  <canvas id="firmaJefeModalCanvas" width={480} height={150} className="w-full touch-none cursor-crosshair"
+                    ref={el => { if (el) iniciarFirma('firmaJefeModalCanvas', setFirmaJefe) }} />
+                </div>
+                {firmaJefe && <p className="text-[10px] text-green-600 mt-1 flex items-center gap-1"><CheckCircle2 size={10} />Firma capturada</p>}
+              </div>
+              <div className="flex justify-between pt-2 border-t border-slate-100">
+                <button onClick={() => { setShowFirmaJefe(false); setRegistroParaFirma(null); setFirmaJefe('') }} className="px-4 py-2 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50">Cancelar</button>
+                <button disabled={!firmaJefe || saving} onClick={async () => {
+                  if (!firmaJefe || !registroParaFirma) return
+                  setSaving(true)
+                  const nombre = (document.getElementById('jefeNombreInput') as HTMLInputElement)?.value || ''
+                  await fetch('/api/practicas/registros', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: registroParaFirma.id, firmaJefe, firmadoJefeNombre: nombre })
+                  })
+                  setSaving(false)
+                  setShowFirmaJefe(false)
+                  setRegistroParaFirma(null)
+                  setFirmaJefe('')
+                  if (practicaExpandida) cargarRegistrosPractica(practicaExpandida)
+                }} className={`px-6 py-2 text-sm font-bold rounded-lg transition-all ${firmaJefe ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}>
+                  {saving ? 'Firmando...' : 'Firmar y completar'}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
