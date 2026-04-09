@@ -568,19 +568,69 @@ export default function DronesPage() {
                   <div className="bg-slate-50 rounded-lg p-2"><p className="text-lg font-black text-slate-800">{d.categoria}</p><p className="text-[10px] text-slate-500">Categoría</p></div>
                 </div>
                 {d.matriculaAESA && <p className="text-xs text-slate-500">Matrícula AESA: <span className="font-bold text-slate-700">{d.matriculaAESA}</span></p>}
-                {/* Baterías */}
+                {/* Baterías — Panel de seguimiento */}
                 {(d.baterias || []).length > 0 && (
                   <div>
-                    <p className="text-xs font-bold text-slate-500 uppercase mb-2">Baterías</p>
-                    <div className="space-y-1.5">
-                      {(d.baterias || []).map(b => (
-                        <div key={b.id} className="flex items-center gap-2">
-                          <Battery size={12} className={b.estado === 'ok' ? 'text-green-500' : b.estado === 'degradada' ? 'text-yellow-500' : 'text-red-500'} />
-                          <span className="text-xs font-medium text-slate-700">{b.codigo}</span>
-                          <div className="flex-1 h-1.5 bg-slate-100 rounded-full"><div className={`h-full rounded-full ${100 - pctBateria(b) < 50 ? 'bg-green-400' : 'bg-yellow-400'}`} style={{ width: `${100 - pctBateria(b)}%` }} /></div>
-                          <span className="text-[10px] text-slate-500">{b.ciclosActuales}/{b.ciclosMaximos}</span>
-                        </div>
-                      ))}
+                    <p className="text-xs font-bold text-slate-500 uppercase mb-2 flex items-center gap-1.5">
+                      <Battery size={11} />Baterías ({d.baterias!.length})
+                    </p>
+                    <div className="space-y-2">
+                      {(d.baterias || []).map((b: Bateria) => {
+                        const pctCiclos = Math.round((b.ciclosActuales / b.ciclosMaximos) * 100)
+                        const vidaRestante = 100 - pctCiclos
+                        const horas = Math.floor((b.minutosVuelo || 0) / 60)
+                        const mins = (b.minutosVuelo || 0) % 60
+                        const estadoColor = b.estado === 'operativa' ? 'text-green-600 bg-green-50 border-green-100'
+                          : b.estado === 'degradada' ? 'text-amber-600 bg-amber-50 border-amber-100'
+                          : 'text-red-600 bg-red-50 border-red-100'
+                        const barColor = vidaRestante > 50 ? 'bg-green-400' : vidaRestante > 20 ? 'bg-amber-400' : 'bg-red-400'
+                        return (
+                          <div key={b.id} className={`rounded-lg border p-2.5 ${estadoColor}`}>
+                            <div className="flex items-center justify-between mb-1.5">
+                              <div className="flex items-center gap-2">
+                                <Battery size={13} />
+                                <span className="text-xs font-bold">{b.codigo}</span>
+                                {b.capacidadMah && <span className="text-[10px] opacity-70">{b.capacidadMah}mAh</span>}
+                              </div>
+                              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                                b.estado === 'operativa' ? 'bg-green-100 text-green-700'
+                                : b.estado === 'degradada' ? 'bg-amber-100 text-amber-700'
+                                : 'bg-red-100 text-red-700'
+                              }`}>{b.estado?.toUpperCase()}</span>
+                            </div>
+                            {/* Barra de vida útil */}
+                            <div className="mb-1">
+                              <div className="flex justify-between text-[10px] mb-0.5">
+                                <span className="opacity-70">Vida útil restante</span>
+                                <span className="font-bold">{vidaRestante}%</span>
+                              </div>
+                              <div className="h-1.5 bg-white/50 rounded-full overflow-hidden">
+                                <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: `${vidaRestante}%` }} />
+                              </div>
+                            </div>
+                            {/* Stats */}
+                            <div className="grid grid-cols-3 gap-1 mt-1.5">
+                              <div className="text-center">
+                                <p className="text-[10px] opacity-60">Ciclos usados</p>
+                                <p className="text-xs font-bold">{b.ciclosActuales}<span className="opacity-50">/{b.ciclosMaximos}</span></p>
+                              </div>
+                              <div className="text-center border-x border-current/10">
+                                <p className="text-[10px] opacity-60">Tiempo vuelo</p>
+                                <p className="text-xs font-bold">{horas}h {mins}m</p>
+                              </div>
+                              <div className="text-center">
+                                <p className="text-[10px] opacity-60">Ciclos restantes</p>
+                                <p className="text-xs font-bold">{b.ciclosMaximos - b.ciclosActuales}</p>
+                              </div>
+                            </div>
+                            {pctCiclos >= 90 && (
+                              <div className="mt-1.5 flex items-center gap-1 text-[10px] font-semibold text-red-600">
+                                <AlertTriangle size={10} />Proxima a limite — revisar o retirar
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
                     </div>
                   </div>
                 )}
