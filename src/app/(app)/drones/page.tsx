@@ -20,6 +20,7 @@ const MapContainer = dynamic(() => import('react-leaflet').then(m => m.MapContai
 const TileLayer = dynamic(() => import('react-leaflet').then(m => m.TileLayer), { ssr: false })
 const Marker = dynamic(() => import('react-leaflet').then(m => m.Marker), { ssr: false })
 const Popup = dynamic(() => import('react-leaflet').then(m => m.Popup), { ssr: false })
+const DivIcon = dynamic(() => import('react-leaflet').then(m => m.Marker), { ssr: false })
 const Circle = dynamic(() => import('react-leaflet').then(m => m.Circle), { ssr: false })
 const Polygon = dynamic(() => import('react-leaflet').then(m => m.Polygon), { ssr: false })
 
@@ -58,6 +59,19 @@ const ZONA_COLOR: Record<string, string> = {
   restringida: '#ef4444',
   peligro: '#f97316',
   informacion: '#8b5cf6'
+}
+
+function getVueloIcon(estado: string) {
+  if (typeof window === 'undefined') return undefined
+  const L = require('leaflet')
+  const color = estado === 'completado' ? '#10b981' : estado === 'incidencia' ? '#ef4444' : estado === 'en_curso' ? '#3b82f6' : '#6b7280'
+  return L.divIcon({
+    className: '',
+    html: `<div style="width:32px;height:32px;background:${color};border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.3)"><div style="transform:rotate(45deg);color:white;font-size:14px;text-align:center;line-height:28px">✈</div></div>`,
+    iconSize: [32, 32],
+    iconAnchor: [16, 32],
+    popupAnchor: [0, -32]
+  })
 }
 
 export default function DronesPage() {
@@ -1024,7 +1038,7 @@ export default function DronesPage() {
                 })}
                 {/* Vuelos registrados */}
                 {vuelos.filter(v => v.latitudInicio && v.longitudInicio).map(v => (
-                  <Marker key={v.id} position={[v.latitudInicio!, v.longitudInicio!] as [number, number]}>
+                  <Marker key={v.id} position={[v.latitudInicio!, v.longitudInicio!] as [number, number]} icon={getVueloIcon(v.estado)}>
                     <Popup>
                       <strong>{v.numero}</strong><br />
                       <span style={{fontSize:'11px',color:'#6b7280'}}>{TIPO_OPERACION[v.tipoOperacion]}</span><br />
