@@ -1729,7 +1729,7 @@ export default function DronesPage() {
                   <input type="checkbox" name="notamConsultado" id="notamCons" className="w-4 h-4 accent-teal-600" required />
                   <label htmlFor="notamCons" className="text-sm text-slate-700 font-medium">Confirmo que he consultado los NOTAMs vigentes en ENAIRE para esta operacion</label>
                 </div>
-                <div><label className={labelCls}>Referencia NOTAM (si aplica)</label><input name="notamReferencia" placeholder="A1234/26, B5678/26..." className={inputCls} /></div>
+                <div><label className={labelCls}>Referencia NOTAM (si aplica)</label><input name="notamReferencia" id="notamReferenciaInput" placeholder="Se rellenará automáticamente al usar GPS..." className={inputCls} /></div>
               </div>
               {/* Incidencias y observaciones */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
