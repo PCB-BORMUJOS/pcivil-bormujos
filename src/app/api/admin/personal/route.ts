@@ -224,6 +224,7 @@ export async function PUT(request: NextRequest) {
         dni: dni !== undefined ? dni : usuarioExistente.dni,
         numeroVoluntario: numeroVoluntario !== undefined ? numeroVoluntario : usuarioExistente.numeroVoluntario,
         email: email || usuarioExistente.email,
+        ...(body.permisosExtra !== undefined && { permisosExtra: body.permisosExtra }),
       }
 
       const usuario = await prisma.usuario.update({
