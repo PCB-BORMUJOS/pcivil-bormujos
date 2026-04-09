@@ -435,7 +435,7 @@ export default function PracticasPage() {
     }
 
     const filename = registro
-      ? 'LDP-' + practica.numero + '-' + new Date(registro.fecha).toLocaleDateString('es-ES').replace(/\/g,'') + '.pdf'
+      ? 'LDP-' + practica.numero + '-' + new Date(registro.fecha).toLocaleDateString('es-ES').split('/').join('-') + '.pdf'
       : 'LDP-' + practica.numero + '.pdf'
     doc.save(filename)
   }
