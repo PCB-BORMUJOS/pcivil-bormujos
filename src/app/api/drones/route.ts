@@ -67,6 +67,12 @@ export async function GET(request: NextRequest) {
     if (tipo === 'zonas') {
       return NextResponse.json({ zonas: [] })
     }
+    if (tipo === 'baterias-todas') {
+      const baterias = await prisma.bateriaDrone.findMany({
+        orderBy: { codigo: 'asc' }
+      })
+      return NextResponse.json({ baterias })
+    }
 
     return NextResponse.json({ error: 'Tipo no válido' }, { status: 400 })
   } catch (error) {

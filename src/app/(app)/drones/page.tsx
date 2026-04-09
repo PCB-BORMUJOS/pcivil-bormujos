@@ -25,7 +25,7 @@ const Polygon = dynamic(() => import('react-leaflet').then(m => m.Polygon), { ss
 
 // ─── Interfaces ───────────────────────────────────────────────
 interface Drone { id: string; codigo: string; nombre: string; marca: string; modelo: string; numeroSerie?: string; matriculaAESA?: string; categoria: string; pesoMaxDespegue?: number; estado: string; horasVuelo: number; fechaCompra?: string; fechaUltimaRevision?: string; observaciones?: string; baterias?: Bateria[]; mantenimientos?: Mantenimiento[]; _count?: { vuelos: number } }
-interface Bateria { id: string; droneId: string; codigo: string; capacidadMah?: number; ciclosActuales: number; ciclosMaximos: number; estado: string; observaciones?: string; minutosVuelo?: number }
+interface Bateria { id: string; droneId?: string; codigo: string; marca?: string; modelo?: string; compatibilidad: string; capacidadMah?: number; ciclosActuales: number; ciclosMaximos: number; estado: string; observaciones?: string; minutosVuelo?: number }
 interface Piloto { id: string; usuarioId?: string; nombre: string; apellidos: string; email?: string; telefono?: string; externo: boolean; certificaciones: any; seguroRCNumero?: string; seguroRCVigencia?: string; activo: boolean; observaciones?: string }
 interface Vuelo { id: string; numero: string; droneId: string; pilotoId: string; fecha: string; horaInicio?: string; horaFin?: string; duracionMinutos?: number; tipoOperacion: string; municipio: string; descripcionZona?: string; latitudInicio?: number; longitudInicio?: number; alturaMaxima?: number; alturaMedia?: number; condicionesMeteo: any; notamConsultado: boolean; notamReferencia?: string; incidencias?: string; observaciones?: string; estado: string; drone?: any; piloto?: any; checklist?: any; categoriaAESA?: string; lugarDespegue?: string; lugarAterrizaje?: string; bateriaId?: string; objetivoMision?: string; resultadoMision?: string; personalApoyo?: string; numeroVccOperador?: string; zonaAerea?: string; condicionesVuelo?: string; bateriasUsadas?: any }
 interface Mantenimiento { id: string; droneId: string; tipo: string; descripcion: string; fecha: string; horasEnElMomento?: number; realizadoPor?: string; coste?: number; piezasSustituidas?: string; proximoMantenimiento?: string; observaciones?: string; drone?: any }
@@ -132,20 +132,22 @@ export default function DronesPage() {
   const cargarDatos = useCallback(async () => {
     try {
       setLoading(true)
-      const [statsR, dronesR, pilotosR, vuelosR, mantR, notamsR, zonasR] = await Promise.all([
+      const [statsR, dronesR, pilotosR, vuelosR, mantR, notamsR, zonasR, bateriasR] = await Promise.all([
         fetch('/api/drones?tipo=stats'),
         fetch('/api/drones?tipo=drones'),
         fetch('/api/drones?tipo=pilotos'),
         fetch('/api/drones?tipo=vuelos'),
         fetch('/api/drones?tipo=mantenimientos'),
         fetch('/api/drones?tipo=notams'),
-        fetch('/api/drones?tipo=zonas')
+        fetch('/api/drones?tipo=zonas'),
+        fetch('/api/drones?tipo=baterias-todas')
       ])
-      const [sd, dd, pd, vd, md, nd, zd] = await Promise.all([
-        statsR.json(), dronesR.json(), pilotosR.json(), vuelosR.json(), mantR.json(), notamsR.json(), zonasR.json()
+      const [sd, dd, pd, vd, md, nd, zd, bd] = await Promise.all([
+        statsR.json(), dronesR.json(), pilotosR.json(), vuelosR.json(), mantR.json(), notamsR.json(), zonasR.json(), bateriasR.json()
       ])
       setStats(sd)
       setDrones(dd.drones || [])
+      setTodasBaterias(bd.baterias || [])
       const pilotosData = pd.pilotos || []
       setPilotos(pilotosData)
       // Comprobar si el usuario actual es piloto registrado
@@ -1567,7 +1569,12 @@ export default function DronesPage() {
                 {/* Selector de baterias */}
                 {droneSeleccionadoWizard && (() => {
                   const droneActual = drones.find(d => d.id === droneSeleccionadoWizard)
-                  const batsDisponibles = (droneActual?.baterias || []).filter((b: Bateria) => b.estado === 'operativa')
+                  const droneCompat = droneActual?.modelo?.toLowerCase().includes('mini') ? 'mini'
+                    : droneActual?.modelo?.toLowerCase().includes('pro') ? 'pro' : 'universal'
+                  const batsDisponibles = todasBaterias.filter((b: Bateria) =>
+                    b.estado === 'operativa' &&
+                    (b.compatibilidad === 'universal' || b.compatibilidad === droneCompat || b.compatibilidad === droneActual?.modelo)
+                  )
                   if (batsDisponibles.length === 0) return null
                   return (
                     <div className="mt-3 border border-slate-100 rounded-xl overflow-hidden">

@@ -1717,17 +1717,20 @@ model Drone {
 }
 
 model BateriaDrone {
-  id            String   @id @default(cuid())
-  droneId       String
-  drone         Drone    @relation(fields: [droneId], references: [id])
-  codigo        String
-  capacidadMah  Int?
-  ciclosUso     Int      @default(0)
-  ciclosMaximos Int      @default(300)
-  minutosVuelo  Int      @default(0)
-  estado        String   @default("operativa")
-  observaciones String?
-  createdAt     DateTime @default(now())
+  id             String   @id @default(cuid())
+  droneId        String?
+  drone          Drone?   @relation(fields: [droneId], references: [id])
+  codigo         String
+  marca          String?
+  modelo         String?
+  compatibilidad String   @default("universal")
+  capacidadMah   Int?
+  ciclosUso      Int      @default(0)
+  ciclosMaximos  Int      @default(300)
+  minutosVuelo   Int      @default(0)
+  estado         String   @default("operativa")
+  observaciones  String?
+  createdAt      DateTime @default(now())
   @@map("baterias_drone")
 }
 
