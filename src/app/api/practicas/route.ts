@@ -53,6 +53,10 @@ export async function POST(request: NextRequest) {
         duracionEstimada: body.duracionEstimada ? parseInt(body.duracionEstimada) : 30,
         nivel: body.nivel || 'basico',
         prerequisitos: body.prerequisitos || null,
+        grupo: body.grupo || null,
+        definicion: body.definicion || null,
+        lugarDesarrollo: body.lugarDesarrollo || null,
+        youtubeUrl: body.youtubeUrl || null,
       }
     })
     return NextResponse.json({ practica })
@@ -82,6 +86,10 @@ export async function PUT(request: NextRequest) {
         duracionEstimada: data.duracionEstimada ? parseInt(data.duracionEstimada) : 30,
         nivel: data.nivel || 'basico',
         prerequisitos: data.prerequisitos || null,
+        grupo: data.grupo || null,
+        definicion: data.definicion || null,
+        lugarDesarrollo: data.lugarDesarrollo || null,
+        youtubeUrl: data.youtubeUrl || null,
         activa: data.activa ?? true,
       }
     })

@@ -1875,6 +1875,9 @@ model Practica {
   duracionEstimada    Int      @default(30)
   nivel               String   @default("basico")
   prerequisitos       String?
+  grupo               String?
+  definicion          String?
+  lugarDesarrollo     String?
   youtubeUrl          String?
   imagenes            Json?
   activa              Boolean  @default(true)

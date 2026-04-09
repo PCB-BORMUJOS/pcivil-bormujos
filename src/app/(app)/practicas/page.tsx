@@ -39,6 +39,7 @@ interface Practica {
   duracionEstimada: number; nivel: string; prerequisitos?: string
   activa: boolean; createdAt: string
   youtubeUrl?: string; imagenes?: string[]
+  grupo?: string; definicion?: string; lugarDesarrollo?: string
 }
 
 
@@ -155,6 +156,10 @@ export default function PracticasPage() {
       duracionEstimada: f.get('duracionEstimada'),
       nivel: f.get('nivel'),
       prerequisitos: f.get('prerequisitos'),
+      grupo: f.get('grupo'),
+      definicion: f.get('definicion'),
+      lugarDesarrollo: f.get('lugarDesarrollo'),
+      youtubeUrl: f.get('youtubeUrl'),
     }
     const method = practicaEditando ? 'PUT' : 'POST'
     await fetch('/api/practicas', { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
@@ -545,10 +550,18 @@ export default function PracticasPage() {
                 <input name="subfamilia" defaultValue={practicaEditando?.subfamilia || ''} placeholder="Ej: RCP, Inmovilización..." className={inputCls} />
               </div>
               <div>
+                <label className={labelCls}>Grupo</label>
+                <input name="grupo" defaultValue={practicaEditando?.grupo || ''} placeholder="Ej: Soporte Vital Básico, Rescate..." className={inputCls} />
+              </div>
+              <div>
                 <label className={labelCls}>Nivel</label>
                 <select name="nivel" defaultValue={practicaEditando?.nivel || 'basico'} className={inputCls}>
                   {NIVELES.map(n => <option key={n.id} value={n.id}>{n.label}</option>)}
                 </select>
+              </div>
+              <div>
+                <label className={labelCls}>Lugar de desarrollo</label>
+                <input name="lugarDesarrollo" defaultValue={practicaEditando?.lugarDesarrollo || ''} placeholder="Ej: Parque, Exterior, Gimnasio..." className={inputCls} />
               </div>
             </div>
           </div>
@@ -564,6 +577,11 @@ export default function PracticasPage() {
                   placeholder="¿Qué se pretende conseguir?" className={inputCls} />
               </div>
               <div>
+                <label className={labelCls}>Definición</label>
+                <textarea name="definicion" rows={2} defaultValue={practicaEditando?.definicion || ''}
+                  placeholder="Definición técnica de la práctica..." className={inputCls} />
+              </div>
+              <div>
                 <label className={labelCls}>Descripción</label>
                 <textarea name="descripcion" rows={3} defaultValue={practicaEditando?.descripcion || ''}
                   placeholder="Descripción general..." className={inputCls} />
@@ -577,6 +595,20 @@ export default function PracticasPage() {
                 <label className={labelCls}>Conclusiones</label>
                 <textarea name="conclusiones" rows={3} defaultValue={practicaEditando?.conclusiones || ''}
                   placeholder="Puntos clave a reforzar..." className={inputCls} />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-slate-50 rounded-xl p-4">
+            <p className="text-xs font-bold text-slate-600 uppercase tracking-wide mb-3 flex items-center gap-2">
+              <BookOpen size={12} />Multimedia
+            </p>
+            <div className="space-y-3">
+              <div>
+                <label className={labelCls}>URL Vídeo YouTube</label>
+                <input name="youtubeUrl" type="url" defaultValue={practicaEditando?.youtubeUrl || ''}
+                  placeholder="https://www.youtube.com/watch?v=..." className={inputCls} />
+                <p className="text-[10px] text-slate-400 mt-1">Enlace al vídeo de demostración en el canal privado de YouTube</p>
               </div>
             </div>
           </div>
@@ -856,7 +888,20 @@ export default function PracticasPage() {
                             {p.materialNecesario && <div className="bg-amber-50 rounded-lg p-3.5 border border-amber-100"><p className="text-[10px] font-bold text-amber-700 uppercase tracking-wide mb-1.5">Material necesario</p><p className="text-sm text-slate-700">{p.materialNecesario}</p></div>}
                             {p.conclusiones && <div className="bg-green-50 rounded-lg p-3.5 border border-green-100"><p className="text-[10px] font-bold text-green-700 uppercase tracking-wide mb-1.5">Conclusiones</p><p className="text-sm text-slate-700">{p.conclusiones}</p></div>}
                             {p.riesgoIntervencion && <div className="bg-slate-100 rounded-lg p-3 border border-slate-200 flex items-start gap-2"><AlertTriangle size={14} className="text-slate-500 shrink-0 mt-0.5" /><div><p className="text-[10px] font-bold text-slate-500 uppercase mb-0.5">Riesgo de intervención (no se tendrá en cuenta)</p><p className="text-xs text-slate-600">{p.riesgoIntervencion}</p></div></div>}
+                            {p.lugarDesarrollo && (
+                              <div className="flex items-center gap-2 text-xs text-slate-500">
+                                <span className="font-medium text-slate-400">Lugar:</span>
+                                <span>{p.lugarDesarrollo}</span>
+                              </div>
+                            )}
                             {p.prerequisitos && <div className="flex items-center gap-2 text-xs text-slate-500"><CheckCircle2 size={12} /><span>Prerequisito: <span className="font-medium">{p.prerequisitos}</span></span></div>}
+                            {p.youtubeUrl && (
+                              <a href={p.youtubeUrl} target="_blank" rel="noopener noreferrer"
+                                className="flex items-center gap-2 px-3 py-2 bg-red-50 border border-red-100 rounded-lg text-xs font-medium text-red-600 hover:bg-red-100 transition-colors">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+                                Ver vídeo en YouTube
+                              </a>
+                            )}
                             {/* Historial registros */}
                             {practicaExpandida === p.id && registros.filter(r => r.practicaId === p.id).length > 0 && (
                               <div className="bg-white rounded-lg border border-slate-100">
