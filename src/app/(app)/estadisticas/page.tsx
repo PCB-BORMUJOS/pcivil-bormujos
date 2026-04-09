@@ -170,6 +170,18 @@ export default function EstadisticasPage() {
 
   useEffect(() => { fetchData() }, [fetchData])
 
+  useEffect(()=>{
+    if (tab !== 'practicas') return
+    const cargarPracticas = async () => {
+      try {
+        const res = await fetch('/api/estadisticas/practicas')
+        const data = await res.json()
+        setStatsPracticas(data)
+      } catch(e) { console.error(e) }
+    }
+    cargarPracticas()
+  },[tab])
+
   const resumen          = data.resumen              || {}
   const guardiasPorMes   = (data.guardiasPorMes      || []).map((g:any,i:number)=>({...g,mes:MESES[i]??g.mes}))
   const dietasPorMes     = (data.dietasPorMes        || []).map((d:any,i:number)=>({...d,mes:MESES[i]??d.mes}))
