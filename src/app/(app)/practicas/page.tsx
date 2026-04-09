@@ -183,6 +183,261 @@ export default function PracticasPage() {
     setParticipantesSeleccionados([])
     setPasoRegistro(1)
     alert('Registro guardado correctamente')
+    // Ofrecer PDF automáticamente tras guardar
+  }
+
+
+  const generarPDFPractica = async (practica: Practica, registro?: RegistroPractica) => {
+    const jsPDFModule = await import('jspdf')
+    const jsPDF = jsPDFModule.default
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+    const W = 210
+    const margin = 15
+    let y = 15
+
+    const familiaLabel = FAMILIAS.find(f => f.id === practica.familia)?.label || practica.familia
+    const nivelLabel = NIVELES.find(n => n.id === practica.nivel)?.label || practica.nivel
+    const riesgoLabel = RIESGOS.find(r => r.id === practica.riesgoPractica)?.label || practica.riesgoPractica
+
+    // ── CABECERA ──────────────────────────────────────────────────────────
+    doc.setFillColor(30, 41, 59)
+    doc.rect(0, 0, W, 28, 'F')
+    doc.setTextColor(255, 255, 255)
+    doc.setFontSize(14)
+    doc.setFont('helvetica', 'bold')
+    doc.text('LIBRO DE PRÁCTICAS', margin, 10)
+    doc.setFontSize(9)
+    doc.setFont('helvetica', 'normal')
+    doc.text('Protección Civil Bormujos', margin, 16)
+    doc.text('Servicio de Protección Civil · Ayuntamiento de Bormujos (Sevilla)', margin, 21)
+    // Número práctica
+    doc.setFontSize(18)
+    doc.setFont('helvetica', 'bold')
+    doc.text(practica.numero, W - margin - 30, 16, { align: 'right' })
+    y = 35
+
+    // ── IDENTIFICACIÓN ────────────────────────────────────────────────────
+    doc.setFillColor(248, 250, 252)
+    doc.rect(margin, y, W - margin * 2, 8, 'F')
+    doc.setTextColor(30, 41, 59)
+    doc.setFontSize(11)
+    doc.setFont('helvetica', 'bold')
+    doc.text(practica.titulo, margin + 3, y + 5.5)
+    y += 12
+
+    // Chips familia / nivel / riesgo
+    const chips = [
+      { label: familiaLabel, bg: [236, 253, 245], fg: [6, 95, 70] },
+      { label: nivelLabel, bg: [254, 252, 232], fg: [133, 77, 14] },
+      { label: 'Riesgo: ' + riesgoLabel, bg: [254, 242, 242], fg: [153, 27, 27] },
+      { label: 'Personal min: ' + practica.personalMinimo, bg: [239, 246, 255], fg: [29, 78, 216] },
+      { label: 'Duracion: ' + practica.duracionEstimada + ' min', bg: [245, 243, 255], fg: [109, 40, 217] },
+    ]
+    let cx = margin
+    chips.forEach(chip => {
+      const tw = doc.getTextWidth(chip.label) + 6
+      doc.setFillColor(chip.bg[0], chip.bg[1], chip.bg[2])
+      doc.roundedRect(cx, y, tw, 6, 1.5, 1.5, 'F')
+      doc.setTextColor(chip.fg[0], chip.fg[1], chip.fg[2])
+      doc.setFontSize(7)
+      doc.setFont('helvetica', 'bold')
+      doc.text(chip.label, cx + 3, y + 4.2)
+      cx += tw + 3
+    })
+    y += 10
+
+    const seccion = (titulo: string) => {
+      doc.setFillColor(226, 232, 240)
+      doc.rect(margin, y, W - margin * 2, 6, 'F')
+      doc.setTextColor(30, 41, 59)
+      doc.setFontSize(8)
+      doc.setFont('helvetica', 'bold')
+      doc.text(titulo.toUpperCase(), margin + 3, y + 4.2)
+      y += 8
+    }
+
+    const bloque = (texto: string) => {
+      doc.setTextColor(51, 65, 85)
+      doc.setFontSize(9)
+      doc.setFont('helvetica', 'normal')
+      const lines = doc.splitTextToSize(texto, W - margin * 2 - 4)
+      lines.forEach((line: string) => {
+        if (y > 265) { doc.addPage(); y = 20 }
+        doc.text(line, margin + 3, y)
+        y += 5
+      })
+      y += 3
+    }
+
+    // ── OBJETIVO ──────────────────────────────────────────────────────────
+    seccion('Objetivo')
+    bloque(practica.objetivo)
+
+    // ── DESCRIPCIÓN ───────────────────────────────────────────────────────
+    if (practica.descripcion) {
+      seccion('Descripción')
+      bloque(practica.descripcion)
+    }
+
+    // ── DESARROLLO ────────────────────────────────────────────────────────
+    if (practica.desarrollo) {
+      seccion('Desarrollo de la práctica')
+      bloque(practica.desarrollo)
+    }
+
+    // ── MATERIAL ──────────────────────────────────────────────────────────
+    if (practica.materialNecesario) {
+      seccion('Material necesario')
+      bloque(practica.materialNecesario)
+    }
+
+    // ── CONCLUSIONES ──────────────────────────────────────────────────────
+    if (practica.conclusiones) {
+      seccion('Conclusiones')
+      bloque(practica.conclusiones)
+    }
+
+    // ── RIESGO INTERVENCIÓN ───────────────────────────────────────────────
+    if (practica.riesgoIntervencion) {
+      seccion('Riesgo de la intervención (no se tendrá en cuenta)')
+      bloque(practica.riesgoIntervencion)
+    }
+
+    // ── REGISTRO DE REALIZACIÓN ───────────────────────────────────────────
+    if (registro) {
+      if (y > 200) { doc.addPage(); y = 20 }
+      y += 5
+      doc.setFillColor(20, 83, 45)
+      doc.rect(margin, y, W - margin * 2, 7, 'F')
+      doc.setTextColor(255, 255, 255)
+      doc.setFontSize(9)
+      doc.setFont('helvetica', 'bold')
+      doc.text('REGISTRO DE REALIZACIÓN', margin + 3, y + 4.8)
+      y += 10
+
+      // Datos registro
+      const turnoLabel = registro.turno === 'manana' ? 'Mañana' : registro.turno === 'tarde' ? 'Tarde' : 'Noche'
+      const fecha = new Date(registro.fecha).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })
+      const hora = new Date(registro.fecha).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
+
+      const datosReg = [
+        ['Fecha', fecha],
+        ['Hora', hora],
+        ['Turno', turnoLabel],
+        ['Duración real', registro.duracionReal ? registro.duracionReal + ' min' : 'No registrada'],
+        ['Resultado', registro.resultado.toUpperCase()],
+        ['Responsable', registro.firmadoResponsableNombre || (registro.responsable ? registro.responsable.nombre + ' ' + registro.responsable.apellidos : '-')],
+      ]
+      datosReg.forEach(([key, val]) => {
+        doc.setFontSize(8)
+        doc.setFont('helvetica', 'bold')
+        doc.setTextColor(71, 85, 105)
+        doc.text(key + ':', margin + 3, y)
+        doc.setFont('helvetica', 'normal')
+        doc.setTextColor(30, 41, 59)
+        doc.text(val, margin + 45, y)
+        y += 5.5
+      })
+
+      // Observaciones
+      if (registro.observaciones) {
+        y += 2
+        doc.setFontSize(8)
+        doc.setFont('helvetica', 'bold')
+        doc.setTextColor(71, 85, 105)
+        doc.text('Observaciones:', margin + 3, y)
+        y += 5
+        bloque(registro.observaciones)
+      }
+
+      // Participantes
+      if (registro.participantes && registro.participantes.length > 0) {
+        y += 3
+        doc.setFontSize(8)
+        doc.setFont('helvetica', 'bold')
+        doc.setTextColor(71, 85, 105)
+        doc.text('Participantes (' + registro.participantes.length + '):', margin + 3, y)
+        y += 5
+        // Buscar nombres de participantes
+        const nombresPartic = registro.participantes.map((id: string) => {
+          const v = voluntarios.find(vol => vol.id === id)
+          return v ? v.numeroVoluntario + ' — ' + v.nombre + ' ' + v.apellidos : id
+        })
+        nombresPartic.forEach((nombre: string) => {
+          doc.setFontSize(8)
+          doc.setFont('helvetica', 'normal')
+          doc.setTextColor(30, 41, 59)
+          doc.text('• ' + nombre, margin + 6, y)
+          y += 5
+          if (y > 265) { doc.addPage(); y = 20 }
+        })
+      }
+
+      // ── FIRMAS ────────────────────────────────────────────────────────
+      if (registro.firmaResponsable || registro.firmaJefe) {
+        if (y > 220) { doc.addPage(); y = 20 }
+        y += 5
+        doc.setFillColor(226, 232, 240)
+        doc.rect(margin, y, W - margin * 2, 6, 'F')
+        doc.setTextColor(30, 41, 59)
+        doc.setFontSize(8)
+        doc.setFont('helvetica', 'bold')
+        doc.text('FIRMAS', margin + 3, y + 4.2)
+        y += 10
+
+        const firmaW = (W - margin * 2 - 10) / 2
+        // Firma responsable
+        if (registro.firmaResponsable) {
+          doc.setFontSize(7)
+          doc.setFont('helvetica', 'bold')
+          doc.setTextColor(71, 85, 105)
+          doc.text('Responsable del turno:', margin + 3, y)
+          if (registro.firmadoResponsableNombre) {
+            doc.setFont('helvetica', 'normal')
+            doc.text(registro.firmadoResponsableNombre, margin + 3, y + 4)
+          }
+          try {
+            doc.addImage(registro.firmaResponsable, 'PNG', margin + 3, y + 6, firmaW - 6, 25)
+          } catch(e) {}
+          doc.rect(margin + 3, y + 6, firmaW - 6, 25)
+        }
+        // Firma jefe
+        if (registro.firmaJefe) {
+          const x2 = margin + firmaW + 10
+          doc.setFontSize(7)
+          doc.setFont('helvetica', 'bold')
+          doc.setTextColor(71, 85, 105)
+          doc.text('VB Jefe de Servicio:', x2, y)
+          if (registro.firmadoJefeNombre) {
+            doc.setFont('helvetica', 'normal')
+            doc.text(registro.firmadoJefeNombre, x2, y + 4)
+          }
+          try {
+            doc.addImage(registro.firmaJefe, 'PNG', x2, y + 6, firmaW - 6, 25)
+          } catch(e) {}
+          doc.rect(x2, y + 6, firmaW - 6, 25)
+        }
+        y += 35
+      }
+    }
+
+    // ── PIE DE PÁGINA ─────────────────────────────────────────────────────
+    const totalPages = doc.getNumberOfPages()
+    for (let i = 1; i <= totalPages; i++) {
+      doc.setPage(i)
+      doc.setFillColor(241, 245, 249)
+      doc.rect(0, 284, W, 13, 'F')
+      doc.setTextColor(100, 116, 139)
+      doc.setFontSize(7)
+      doc.setFont('helvetica', 'normal')
+      doc.text('Protección Civil Bormujos · info.pcivil@bormujos.net · www.proteccioncivilbormujos.es', margin, 290)
+      doc.text('LDP ' + practica.numero + ' — Pag. ' + i + '/' + totalPages, W - margin, 290, { align: 'right' })
+    }
+
+    const filename = registro
+      ? 'LDP-' + practica.numero + '-' + new Date(registro.fecha).toLocaleDateString('es-ES').replace(/\/g,'') + '.pdf'
+      : 'LDP-' + practica.numero + '.pdf'
+    doc.save(filename)
   }
 
   const iniciarFirma = (canvasId: string, setter: (v: string) => void) => {
@@ -521,6 +776,7 @@ export default function PracticasPage() {
                             {p.riesgoIntervencion && <div className="bg-slate-100 rounded-lg p-3 border border-slate-200 flex items-start gap-2"><AlertTriangle size={14} className="text-slate-500 shrink-0 mt-0.5" /><div><p className="text-[10px] font-bold text-slate-500 uppercase mb-0.5">Riesgo de intervención (no se tendrá en cuenta)</p><p className="text-xs text-slate-600">{p.riesgoIntervencion}</p></div></div>}
                             {p.prerequisitos && <div className="flex items-center gap-2 text-xs text-slate-500"><CheckCircle2 size={12} /><span>Prerequisito: <span className="font-medium">{p.prerequisitos}</span></span></div>}
                             <div className="flex justify-end gap-2 pt-1 border-t border-slate-100">
+                              <button type="button" onClick={() => generarPDFPractica(p)} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50"><BookOpen size={12} />PDF plantilla</button>
                               <button onClick={() => { setPracticaParaRegistro(p); setShowRegistro(true); cargarRegistrosPractica(p.id) }} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-green-600 text-white rounded-lg hover:bg-green-700"><ClipboardList size={12} />Registrar realización</button>
                             </div>
                             {isAdmin && (
