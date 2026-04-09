@@ -41,6 +41,7 @@ model Usuario {
   incidenciasAsignadas   Incidencia[]          @relation("IncidenciaAsignado")
   incidenciasCreadas     Incidencia[]          @relation("IncidenciaCreador")
   megacodeParticipaciones MegacodeParticipacion[]
+  registrosPracticaResponsable RegistroPractica[] @relation("RegistroResponsable")
   mensajesRecibidos      Mensaje[]             @relation("MensajesRecibidos")
   mensajesEnviados       Mensaje[]             @relation("MensajesEnviados")
   movimientosStock       MovimientoStock[]
@@ -1874,10 +1875,13 @@ model Practica {
   duracionEstimada    Int      @default(30)
   nivel               String   @default("basico")
   prerequisitos       String?
+  youtubeUrl          String?
+  imagenes            Json?
   activa              Boolean  @default(true)
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
   megacodePracticas   MegacodePractica[]
+  registros           RegistroPractica[]
   @@map("practicas")
 }
 
@@ -1919,4 +1923,25 @@ model MegacodeParticipacion {
   megacode    Megacode @relation(fields: [megacodeId], references: [id])
   usuario     Usuario  @relation(fields: [usuarioId], references: [id])
   @@map("megacode_participaciones")
+}
+
+model RegistroPractica {
+  id                       String   @id @default(cuid())
+  practicaId               String
+  megacodeId               String?
+  fecha                    DateTime @default(now())
+  turno                    String
+  duracionReal             Int?
+  responsableId            String
+  participantes            Json     @default("[]")
+  observaciones            String?
+  resultado                String   @default("completado")
+  firmaResponsable         String?
+  firmaJefe                String?
+  firmadoResponsableNombre String?
+  firmadoJefeNombre        String?
+  createdAt                DateTime @default(now())
+  practica                 Practica @relation(fields: [practicaId], references: [id])
+  responsable              Usuario  @relation("RegistroResponsable", fields: [responsableId], references: [id])
+  @@map("registros_practica")
 }

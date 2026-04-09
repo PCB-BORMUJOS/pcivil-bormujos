@@ -38,6 +38,22 @@ interface Practica {
   riesgoPractica: string; riesgoIntervencion?: string
   duracionEstimada: number; nivel: string; prerequisitos?: string
   activa: boolean; createdAt: string
+  youtubeUrl?: string; imagenes?: string[]
+}
+
+
+interface RegistroPractica {
+  id: string; practicaId: string; fecha: string; turno: string
+  duracionReal?: number; responsableId: string; participantes: string[]
+  observaciones?: string; resultado: string
+  firmaResponsable?: string; firmaJefe?: string
+  firmadoResponsableNombre?: string; firmadoJefeNombre?: string
+  practica?: { titulo: string; numero: string; familia: string }
+  responsable?: { nombre: string; apellidos: string; numeroVoluntario: string }
+}
+
+interface Voluntario {
+  id: string; nombre: string; apellidos: string; numeroVoluntario: string; email: string
 }
 
 const inputCls = "w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400/20 focus:border-orange-400"
@@ -58,6 +74,14 @@ export default function PracticasPage() {
   const [filtroNivel, setFiltroNivel] = useState('all')
   const [practicaExpandida, setPracticaExpandida] = useState<string | null>(null)
   const [showNueva, setShowNueva] = useState(false)
+  const [showRegistro, setShowRegistro] = useState(false)
+  const [practicaParaRegistro, setPracticaParaRegistro] = useState<Practica | null>(null)
+  const [registros, setRegistros] = useState<RegistroPractica[]>([])
+  const [voluntarios, setVoluntarios] = useState<Voluntario[]>([])
+  const [participantesSeleccionados, setParticipantesSeleccionados] = useState<string[]>([])
+  const [firmaResp, setFirmaResp] = useState<string>('')
+  const [firmaJefe, setFirmaJefe] = useState<string>('')
+  const [pasoRegistro, setPasoRegistro] = useState<1|2|3>(1)
   const [practicaEditando, setPracticaEditando] = useState<Practica | null>(null)
 
   const cargarDatos = async () => {
@@ -75,7 +99,23 @@ export default function PracticasPage() {
     finally { setLoading(false) }
   }
 
-  useEffect(() => { cargarDatos() }, [filtroFamilia, filtroNivel])
+  const cargarVoluntarios = async () => {
+    try {
+      const res = await fetch('/api/admin/personal?roles=true')
+      const data = await res.json()
+      setVoluntarios(data.voluntarios || [])
+    } catch (e) { console.error(e) }
+  }
+
+  const cargarRegistrosPractica = async (practicaId: string) => {
+    try {
+      const res = await fetch(`/api/practicas/registros?practicaId=${practicaId}`)
+      const data = await res.json()
+      setRegistros(data.registros || [])
+    } catch (e) { console.error(e) }
+  }
+
+  useEffect(() => { cargarDatos(); cargarVoluntarios() }, [filtroFamilia, filtroNivel])
   useEffect(() => {
     const t = setTimeout(() => cargarDatos(), 300)
     return () => clearTimeout(t)
@@ -109,6 +149,71 @@ export default function PracticasPage() {
     setShowNueva(false)
     setPracticaEditando(null)
     cargarDatos()
+  }
+
+  const handleGuardarRegistro = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    if (!practicaParaRegistro) return
+    const f = new FormData(e.currentTarget)
+    if (!firmaResp) { alert('La firma del responsable es obligatoria'); return }
+    setSaving(true)
+    const userId = (session?.user as any)?.id
+    await fetch('/api/practicas/registros', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        practicaId: practicaParaRegistro.id,
+        turno: f.get('turno'),
+        duracionReal: f.get('duracionReal'),
+        responsableId: f.get('responsableId') || userId,
+        participantes: participantesSeleccionados,
+        observaciones: f.get('observaciones'),
+        resultado: f.get('resultado'),
+        firmaResponsable: firmaResp,
+        firmaJefe: firmaJefe || null,
+        firmadoResponsableNombre: f.get('firmadoResponsableNombre'),
+        firmadoJefeNombre: f.get('firmadoJefeNombre') || null,
+      })
+    })
+    setSaving(false)
+    setShowRegistro(false)
+    setPracticaParaRegistro(null)
+    setFirmaResp('')
+    setFirmaJefe('')
+    setParticipantesSeleccionados([])
+    setPasoRegistro(1)
+    alert('Registro guardado correctamente')
+  }
+
+  const iniciarFirma = (canvasId: string, setter: (v: string) => void) => {
+    const canvas = document.getElementById(canvasId) as HTMLCanvasElement
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')!
+    let drawing = false
+    ctx.strokeStyle = '#1e293b'
+    ctx.lineWidth = 2
+    ctx.lineCap = 'round'
+    const getPos = (e: MouseEvent | TouchEvent) => {
+      const rect = canvas.getBoundingClientRect()
+      if ('touches' in e) return { x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top }
+      return { x: (e as MouseEvent).clientX - rect.left, y: (e as MouseEvent).clientY - rect.top }
+    }
+    const down = (e: MouseEvent | TouchEvent) => { drawing = true; const p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); e.preventDefault() }
+    const move = (e: MouseEvent | TouchEvent) => { if (!drawing) return; const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); e.preventDefault() }
+    const up = () => { drawing = false; setter(canvas.toDataURL()) }
+    canvas.addEventListener('mousedown', down as EventListener)
+    canvas.addEventListener('touchstart', down as EventListener, { passive: false })
+    canvas.addEventListener('mousemove', move as EventListener)
+    canvas.addEventListener('touchmove', move as EventListener, { passive: false })
+    canvas.addEventListener('mouseup', up)
+    canvas.addEventListener('touchend', up)
+  }
+
+  const limpiarFirma = (canvasId: string, setter: (v: string) => void) => {
+    const canvas = document.getElementById(canvasId) as HTMLCanvasElement
+    if (!canvas) return
+    canvas.getContext('2d')!.clearRect(0, 0, canvas.width, canvas.height)
+    setter('')
   }
 
   const handleEliminar = async (id: string) => {
@@ -415,10 +520,14 @@ export default function PracticasPage() {
                             {p.conclusiones && <div className="bg-green-50 rounded-lg p-3.5 border border-green-100"><p className="text-[10px] font-bold text-green-700 uppercase tracking-wide mb-1.5">Conclusiones</p><p className="text-sm text-slate-700">{p.conclusiones}</p></div>}
                             {p.riesgoIntervencion && <div className="bg-slate-100 rounded-lg p-3 border border-slate-200 flex items-start gap-2"><AlertTriangle size={14} className="text-slate-500 shrink-0 mt-0.5" /><div><p className="text-[10px] font-bold text-slate-500 uppercase mb-0.5">Riesgo de intervención (no se tendrá en cuenta)</p><p className="text-xs text-slate-600">{p.riesgoIntervencion}</p></div></div>}
                             {p.prerequisitos && <div className="flex items-center gap-2 text-xs text-slate-500"><CheckCircle2 size={12} /><span>Prerequisito: <span className="font-medium">{p.prerequisitos}</span></span></div>}
+                            <div className="flex justify-end gap-2 pt-1 border-t border-slate-100">
+                              <button onClick={() => { setPracticaParaRegistro(p); setShowRegistro(true); cargarRegistrosPractica(p.id) }} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-green-600 text-white rounded-lg hover:bg-green-700"><ClipboardList size={12} />Registrar realización</button>
+                            </div>
                             {isAdmin && (
                               <div className="flex justify-end gap-2 pt-1 border-t border-slate-100">
                                 <button onClick={() => handleEliminar(p.id)} className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-red-500 border border-red-100 rounded-lg hover:bg-red-50"><Trash2 size={12} />Desactivar</button>
-                                <button onClick={() => setPracticaEditando(p)} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-orange-500 text-white rounded-lg hover:bg-orange-600"><Edit size={12} />Editar</button>
+                                <button onClick={() => setPracticaEditando(p)} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-orange-200 text-orange-600 rounded-lg hover:bg-orange-50"><Edit size={12} />Editar</button>
+                                <button onClick={() => { setPracticaParaRegistro(p); setShowRegistro(true); cargarRegistrosPractica(p.id) }} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-green-600 text-white rounded-lg hover:bg-green-700"><ClipboardList size={12} />Registrar práctica</button>
                               </div>
                             )}
                           </div>
@@ -430,6 +539,135 @@ export default function PracticasPage() {
               </div>
             )
           })}
+        </div>
+      )}
+
+      {showRegistro && practicaParaRegistro && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000] p-4">
+          <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[95vh] overflow-y-auto shadow-2xl">
+            <div className="flex items-center justify-between p-5 border-b sticky top-0 bg-white z-10">
+              <div>
+                <h3 className="text-base font-bold text-slate-900">Registrar realización</h3>
+                <p className="text-xs text-slate-500">{practicaParaRegistro.numero} — {practicaParaRegistro.titulo}</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="flex gap-1">
+                  {[1,2,3].map(p => (
+                    <div key={p} className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${pasoRegistro === p ? 'bg-green-600 text-white' : pasoRegistro > p ? 'bg-green-200 text-green-700' : 'bg-slate-100 text-slate-400'}`}>{p}</div>
+                  ))}
+                </div>
+                <button onClick={() => { setShowRegistro(false); setPracticaParaRegistro(null); setFirmaResp(''); setFirmaJefe(''); setParticipantesSeleccionados([]); setPasoRegistro(1) }}><X size={18} className="text-slate-400" /></button>
+              </div>
+            </div>
+            <form onSubmit={handleGuardarRegistro} className="p-5 space-y-4">
+              {pasoRegistro === 1 && (
+                <div className="space-y-4">
+                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wide">Paso 1 — Datos de la sesión</p>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className={labelCls}>Turno *</label>
+                      <select name="turno" required className={inputCls}>
+                        <option value="manana">Mañana</option>
+                        <option value="tarde">Tarde</option>
+                        <option value="noche">Noche</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className={labelCls}>Duración real (min)</label>
+                      <input name="duracionReal" type="number" defaultValue={practicaParaRegistro.duracionEstimada} className={inputCls} />
+                    </div>
+                    <div>
+                      <label className={labelCls}>Resultado</label>
+                      <select name="resultado" className={inputCls}>
+                        <option value="completado">Completado</option>
+                        <option value="parcial">Parcial</option>
+                        <option value="cancelado">Cancelado</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className={labelCls}>Responsable del turno</label>
+                      <select name="responsableId" className={inputCls}>
+                        {voluntarios.map(v => (
+                          <option key={v.id} value={v.id}>{v.numeroVoluntario} — {v.nombre} {v.apellidos}</option>
+                        ))}
+                      </select>
+                      <input name="firmadoResponsableNombre" placeholder="Nombre responsable" className={inputCls + ' mt-2'} />
+                    </div>
+                  </div>
+                  <div>
+                    <label className={labelCls}>Observaciones</label>
+                    <textarea name="observaciones" rows={3} placeholder="Observaciones sobre el desarrollo de la práctica..." className={inputCls} />
+                  </div>
+                  <div className="flex justify-end">
+                    <button type="button" onClick={() => setPasoRegistro(2)} className="px-6 py-2 bg-green-600 text-white text-sm font-bold rounded-lg hover:bg-green-700">Siguiente → Participantes</button>
+                  </div>
+                </div>
+              )}
+              {pasoRegistro === 2 && (
+                <div className="space-y-4">
+                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wide">Paso 2 — Participantes</p>
+                  <p className="text-xs text-slate-400">Selecciona los voluntarios que han participado en esta práctica</p>
+                  <div className="border border-slate-100 rounded-xl overflow-hidden max-h-64 overflow-y-auto">
+                    {voluntarios.map(v => (
+                      <label key={v.id} className={`flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-colors border-b border-slate-50 last:border-0 ${participantesSeleccionados.includes(v.id) ? 'bg-green-50' : 'hover:bg-slate-50'}`}>
+                        <input type="checkbox" checked={participantesSeleccionados.includes(v.id)}
+                          onChange={e => {
+                            if (e.target.checked) setParticipantesSeleccionados(prev => [...prev, v.id])
+                            else setParticipantesSeleccionados(prev => prev.filter(id => id !== v.id))
+                          }} className="w-4 h-4 accent-green-600" />
+                        <span className="font-mono text-xs text-slate-400 w-12">{v.numeroVoluntario}</span>
+                        <span className="text-sm text-slate-700">{v.nombre} {v.apellidos}</span>
+                        {participantesSeleccionados.includes(v.id) && <CheckCircle2 size={14} className="text-green-500 ml-auto" />}
+                      </label>
+                    ))}
+                  </div>
+                  <div className="bg-green-50 rounded-lg px-4 py-2 text-xs text-green-700 font-medium">
+                    {participantesSeleccionados.length} voluntario/s seleccionado/s
+                  </div>
+                  <div className="flex justify-between">
+                    <button type="button" onClick={() => setPasoRegistro(1)} className="px-4 py-2 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50">← Volver</button>
+                    <button type="button" onClick={() => setPasoRegistro(3)} className="px-6 py-2 bg-green-600 text-white text-sm font-bold rounded-lg hover:bg-green-700">Siguiente → Firmas</button>
+                  </div>
+                </div>
+              )}
+              {pasoRegistro === 3 && (
+                <div className="space-y-5">
+                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wide">Paso 3 — Firmas biométricas</p>
+                  <div className="space-y-4">
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <label className={labelCls}>Firma responsable del turno *</label>
+                        <button type="button" onClick={() => limpiarFirma('firmaRespCanvas', setFirmaResp)} className="text-[10px] text-red-500 hover:underline">Limpiar</button>
+                      </div>
+                      <div className="border-2 border-dashed border-slate-200 rounded-xl bg-slate-50 overflow-hidden">
+                        <canvas id="firmaRespCanvas" width={560} height={160} className="w-full touch-none cursor-crosshair"
+                          ref={el => { if (el) iniciarFirma('firmaRespCanvas', setFirmaResp) }} />
+                      </div>
+                      {firmaResp && <p className="text-[10px] text-green-600 mt-1 flex items-center gap-1"><CheckCircle2 size={10} />Firma capturada</p>}
+                    </div>
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <label className={labelCls}>Firma jefe de servicio (VB)</label>
+                        <button type="button" onClick={() => limpiarFirma('firmaJefeCanvas', setFirmaJefe)} className="text-[10px] text-red-500 hover:underline">Limpiar</button>
+                      </div>
+                      <input name="firmadoJefeNombre" placeholder="Nombre del jefe de servicio" className={inputCls + ' mb-2'} />
+                      <div className="border-2 border-dashed border-slate-200 rounded-xl bg-slate-50 overflow-hidden">
+                        <canvas id="firmaJefeCanvas" width={560} height={160} className="w-full touch-none cursor-crosshair"
+                          ref={el => { if (el) iniciarFirma('firmaJefeCanvas', setFirmaJefe) }} />
+                      </div>
+                      {firmaJefe && <p className="text-[10px] text-green-600 mt-1 flex items-center gap-1"><CheckCircle2 size={10} />Firma capturada</p>}
+                    </div>
+                  </div>
+                  <div className="flex justify-between pt-2 border-t border-slate-100">
+                    <button type="button" onClick={() => setPasoRegistro(2)} className="px-4 py-2 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50">← Volver</button>
+                    <button type="submit" disabled={saving || !firmaResp} className={`px-6 py-2 text-sm font-bold rounded-lg transition-all ${firmaResp ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}>
+                      {saving ? 'Guardando...' : 'Guardar registro'}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </form>
+          </div>
         </div>
       )}
       {(showNueva || practicaEditando) && <FormularioPractica />}
