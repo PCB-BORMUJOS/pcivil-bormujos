@@ -10,7 +10,7 @@ import {
   Package, FileText, RefreshCw, AlertTriangle, Activity, Truck,
   ShoppingCart, ArrowUpDown, DollarSign, Target, CheckCircle2,
   MapPin, Gauge, Wrench, GraduationCap
-} from 'lucide-react'
+, ClipboardList } from 'lucide-react'
 
 const TABS = [
   { id: 'personal',  label: 'Personal',    icon: Users },
@@ -19,6 +19,7 @@ const TABS = [
   { id: 'logistica', label: 'Logística',   icon: Package },
   { id: 'vehiculos', label: 'Vehículos',   icon: Truck },
   { id: 'economico', label: 'Económico',   icon: DollarSign },
+  { id: 'practicas', label: 'Prácticas',   icon: ClipboardList },
 ]
 const PALETTE = {
   indigo:'#4f46e5', blue:'#2563eb', teal:'#0d9488', green:'#16a34a',
@@ -151,6 +152,7 @@ function ProgressBar({ label, value, max }: any) {
 
 export default function EstadisticasPage() {
   const [tab, setTab]   = useState('personal')
+  const [statsPracticas, setStatsPracticas] = useState<any>(null)
   const [year, setYear] = useState(currentYear)
   const [mes, setMes]   = useState<number|'all'>('all')
   const [loading, setLoading] = useState(false)
@@ -675,6 +677,69 @@ export default function EstadisticasPage() {
                     empty="Sin movimientos de caja en este período"
                   />
                 </Panel>
+              </div>
+            )}
+
+            {tab==='practicas' && (
+              <div className="space-y-6">
+                {!statsPracticas ? (
+                  <div className="text-center py-12 text-slate-400">Cargando estadísticas...</div>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                      <KpiCard label="Total prácticas" value={statsPracticas.totalPracticas} icon={ClipboardList} color="orange"/>
+                      <KpiCard label="Realizaciones registradas" value={statsPracticas.totalRegistros} icon={CheckCircle2} color="green"/>
+                      <KpiCard label="Pendientes firma jefe" value={statsPracticas.registrosPendientes} icon={Clock} color="amber"/>
+                      <KpiCard label="Cobertura global" value={statsPracticas.coberturaGlobal + '%'} icon={Target} color="teal"/>
+                    </div>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                      <Panel title="Cobertura por familia">
+                        <div className="space-y-3">
+                          {(statsPracticas.coberturaFamilia || []).map((f: any) => (
+                            <div key={f.familia}>
+                              <div className="flex justify-between text-xs mb-1">
+                                <span className="font-medium text-slate-700 capitalize">{f.familia}</span>
+                                <span className="text-slate-500">{f.realizadas}/{f.total} — {f.pct}%</span>
+                              </div>
+                              <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                                <div className="h-full bg-orange-500 rounded-full transition-all" style={{ width: f.pct + '%' }} />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </Panel>
+                      <Panel title="Prácticas sin realizar">
+                        {(statsPracticas.practicasSinRealizarLista || []).length === 0 ? (
+                          <p className="text-sm text-slate-400 text-center py-4">¡Todas las prácticas se han realizado!</p>
+                        ) : (
+                          <div className="space-y-2">
+                            {(statsPracticas.practicasSinRealizarLista || []).map((p: any) => (
+                              <div key={p.id} className="flex items-center gap-2 py-1.5 border-b border-slate-50 last:border-0">
+                                <span className="font-mono text-xs text-slate-400 w-20 shrink-0">{p.numero}</span>
+                                <span className="text-xs text-slate-700 flex-1 truncate">{p.titulo}</span>
+                                <span className="text-[10px] text-slate-400 capitalize shrink-0">{p.familia}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </Panel>
+                    </div>
+                    <Panel title="Últimas realizaciones">
+                      <DataTable
+                        heads={['Práctica','Familia','Fecha','Turno','Responsable','Estado']}
+                        rows={(statsPracticas.registrosRecientes || []).map((r: any) => [
+                          <span key="t" className="font-medium text-slate-800">{r.practica?.numero} — {r.practica?.titulo}</span>,
+                          <Badge key="f" label={r.practica?.familia || '-'} variant="indigo"/>,
+                          fmtDate(r.fecha),
+                          r.turno === 'manana' ? 'Mañana' : r.turno === 'tarde' ? 'Tarde' : 'Noche',
+                          <span key="r">{r.responsable?.nombre} {r.responsable?.apellidos}</span>,
+                          <Badge key="s" label={r.resultado === 'pendiente_jefe' ? 'Pendiente VB' : r.resultado} variant={r.resultado === 'completado' ? 'green' : 'amber'}/>,
+                        ])}
+                        empty="No hay registros de prácticas"
+                      />
+                    </Panel>
+                  </>
+                )}
               </div>
             )}
           </>
