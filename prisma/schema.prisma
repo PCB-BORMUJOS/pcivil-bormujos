@@ -40,6 +40,7 @@ model Usuario {
   historialPeticiones    HistorialPeticion[]
   incidenciasAsignadas   Incidencia[]          @relation("IncidenciaAsignado")
   incidenciasCreadas     Incidencia[]          @relation("IncidenciaCreador")
+  megacodeParticipaciones MegacodeParticipacion[]
   mensajesRecibidos      Mensaje[]             @relation("MensajesRecibidos")
   mensajesEnviados       Mensaje[]             @relation("MensajesEnviados")
   movimientosStock       MovimientoStock[]
@@ -1854,4 +1855,68 @@ model NotamRegistro {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   @@map("notams_registro")
+}
+
+model Practica {
+  id                  String   @id @default(cuid())
+  numero              String   @unique
+  titulo              String
+  familia             String
+  subfamilia          String?
+  objetivo            String
+  descripcion         String?
+  desarrollo          String?
+  conclusiones        String?
+  personalMinimo      Int      @default(2)
+  materialNecesario   String?
+  riesgoPractica      String   @default("bajo")
+  riesgoIntervencion  String?
+  duracionEstimada    Int      @default(30)
+  nivel               String   @default("basico")
+  prerequisitos       String?
+  activa              Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  megacodePracticas   MegacodePractica[]
+  @@map("practicas")
+}
+
+model Megacode {
+  id             String   @id @default(cuid())
+  numero         String   @unique
+  fecha          DateTime
+  turno          String
+  estado         String   @default("pendiente")
+  generadoAuto   Boolean  @default(false)
+  responsableId  String?
+  observaciones  String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  practicas      MegacodePractica[]
+  participaciones MegacodeParticipacion[]
+  @@map("megacodes")
+}
+
+model MegacodePractica {
+  id          String   @id @default(cuid())
+  megacodeId  String
+  practicaId  String
+  orden       Int
+  completada  Boolean  @default(false)
+  tiempoReal  Int?
+  observaciones String?
+  megacode    Megacode  @relation(fields: [megacodeId], references: [id])
+  practica    Practica  @relation(fields: [practicaId], references: [id])
+  @@map("megacode_practicas")
+}
+
+model MegacodeParticipacion {
+  id          String   @id @default(cuid())
+  megacodeId  String
+  usuarioId   String
+  resultado   String   @default("pendiente")
+  observaciones String?
+  megacode    Megacode @relation(fields: [megacodeId], references: [id])
+  usuario     Usuario  @relation(fields: [usuarioId], references: [id])
+  @@map("megacode_participaciones")
 }
