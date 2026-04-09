@@ -261,12 +261,15 @@ export default function MiAreaPage() {
         .finally(() => setLoadingFormacion(false))
     }
     if (activeTab === 'practicas') {
-      try {
-        const userId = (session?.user as any)?.id
-        const res = await fetch(`/api/practicas/registros?usuarioId=${userId}`)
-        const data = await res.json()
-        setMisRegistrosPracticas(data.registros || [])
-      } catch(e) { console.error(e) }
+      const cargarMisPracticas = async () => {
+        try {
+          const userId = (session?.user as any)?.id
+          const res = await fetch(`/api/practicas/registros?usuarioId=${userId}`)
+          const data = await res.json()
+          setMisRegistrosPracticas(data.registros || [])
+        } catch(e) { console.error(e) }
+      }
+      cargarMisPracticas()
     }
     if (activeTab === 'dietas') {
       cargarDietas();
