@@ -176,15 +176,15 @@ function Modal({ title, children, onClose, size = 'md' }: {
 // ============================================
 export default function MiAreaPage() {
   const { data: session } = useSession();
-  const [activeTab, setActiveTab] = useState<'datos' | 'formacion' | 'actividad' | 'documentos' | 'vestuario' | 'dietas' | 'notificaciones' | 'configuracion'>(() => {
+  const [activeTab, setActiveTab] = useState<'datos' | 'formacion' | 'actividad' | 'documentos' | 'vestuario' | 'dietas' | 'notificaciones' | 'configuracion' | 'practicas'>(() => {
     const tab = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('tab') : null;
-    const validos = ['datos','formacion','actividad','documentos','vestuario','dietas','notificaciones','configuracion'];
+    const validos = ['datos','formacion','actividad','documentos','vestuario','dietas','notificaciones','configuracion','practicas'];
     return (validos.includes(tab || '') ? tab : 'datos') as any;
   });
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const tab = params.get('tab');
-    const validos = ['datos','formacion','actividad','documentos','vestuario','dietas','notificaciones','configuracion'];
+    const validos = ['datos','formacion','actividad','documentos','vestuario','dietas','notificaciones','configuracion','practicas'];
     if (tab && validos.includes(tab)) setActiveTab(tab as any);
   }, []);
   const [loading, setLoading] = useState(true);
@@ -224,6 +224,7 @@ export default function MiAreaPage() {
     passwordConfirmar: ''
   });
   const [dietas, setDietas] = useState<any[]>([]);
+  const [misRegistrosPracticas, setMisRegistrosPracticas] = useState<any[]>([]);
   const [mesSeleccionado, setMesSeleccionado] = useState('');
   const [totalesPorMes, setTotalesPorMes] = useState<any>({});
 
@@ -258,6 +259,14 @@ export default function MiAreaPage() {
         })
         .catch(() => {})
         .finally(() => setLoadingFormacion(false))
+    }
+    if (activeTab === 'practicas') {
+      try {
+        const userId = (session?.user as any)?.id
+        const res = await fetch(`/api/practicas/registros?usuarioId=${userId}`)
+        const data = await res.json()
+        setMisRegistrosPracticas(data.registros || [])
+      } catch(e) { console.error(e) }
     }
     if (activeTab === 'dietas') {
       cargarDietas();
@@ -529,6 +538,7 @@ export default function MiAreaPage() {
             { id: 'documentos', label: 'Documentos', icon: FileText },
             { id: 'vestuario', label: 'Vestuario', icon: Shield },
             { id: 'dietas', label: 'Dietas', icon: Wallet },
+            { id: 'practicas', label: 'Mis Prácticas', icon: ClipboardList },
             { id: 'notificaciones', label: 'Notificaciones', icon: Bell },
             { id: 'configuracion', label: 'Configuración', icon: Settings },
           ].map(tab => (
@@ -1594,6 +1604,58 @@ export default function MiAreaPage() {
                           ))}
                         </div>
                       )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {activeTab === 'practicas' && (
+                <div className="p-6 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-base font-bold text-slate-800">Mis prácticas realizadas</h3>
+                    <span className="text-xs text-slate-500">{misRegistrosPracticas.length} registros</span>
+                  </div>
+                  {misRegistrosPracticas.length === 0 ? (
+                    <div className="text-center py-12 text-slate-400">
+                      <ClipboardList size={32} className="mx-auto mb-3 opacity-30" />
+                      <p className="text-sm font-medium">No hay prácticas registradas</p>
+                      <p className="text-xs mt-1">Las prácticas en las que participes aparecerán aquí</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {misRegistrosPracticas.map((reg: any) => (
+                        <div key={reg.id} className="bg-white rounded-xl border border-slate-100 p-4">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 flex-wrap mb-1">
+                                <span className="font-mono text-xs font-bold text-slate-400">{reg.practica?.numero}</span>
+                                <span className="text-sm font-semibold text-slate-800">{reg.practica?.titulo}</span>
+                              </div>
+                              <div className="flex items-center gap-3 text-xs text-slate-500 flex-wrap">
+                                <span>{new Date(reg.fecha).toLocaleDateString('es-ES')}</span>
+                                <span>{reg.turno === 'manana' ? 'Mañana' : reg.turno === 'tarde' ? 'Tarde' : 'Noche'}</span>
+                                {reg.duracionReal && <span>{reg.duracionReal} min</span>}
+                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                  reg.resultado === 'completado' ? 'bg-green-100 text-green-700'
+                                  : reg.resultado === 'pendiente_jefe' ? 'bg-amber-100 text-amber-700'
+                                  : 'bg-slate-100 text-slate-600'
+                                }`}>
+                                  {reg.resultado === 'pendiente_jefe' ? 'Pendiente firma jefe' : reg.resultado}
+                                </span>
+                              </div>
+                              {reg.observaciones && <p className="text-xs text-slate-400 mt-1 italic">{reg.observaciones}</p>}
+                            </div>
+                            <div className="flex flex-col items-end gap-1 shrink-0">
+                              <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
+                                reg.practica?.familia === 'socorrismo' ? 'bg-pink-100 text-pink-700'
+                                : reg.practica?.familia === 'incendios' ? 'bg-red-100 text-red-700'
+                                : reg.practica?.familia === 'rescate' ? 'bg-orange-100 text-orange-700'
+                                : 'bg-slate-100 text-slate-600'
+                              }`}>{reg.practica?.familia}</span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>

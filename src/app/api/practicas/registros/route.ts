@@ -8,8 +8,10 @@ export async function GET(request: NextRequest) {
   if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   const { searchParams } = new URL(request.url)
   const practicaId = searchParams.get('practicaId')
+  const usuarioId = searchParams.get('usuarioId')
   const where: any = {}
   if (practicaId) where.practicaId = practicaId
+  if (usuarioId) where.participantes = { path: '$', array_contains: usuarioId }
   try {
     const registros = await prisma.registroPractica.findMany({
       where,
