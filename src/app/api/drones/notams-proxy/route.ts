@@ -13,12 +13,18 @@ const UAS_BASE   = 'https://servais.enaire.es/insignia/rest/services/NSF_SRV/SRV
 const VIGOR_BASE = 'https://servais.enaire.es/insignia/rest/services/INSIGNIA_SRV/Aero_SRV_VIGOR_V1/MapServer'
 
 // BBox 30km alrededor de Bormujos en WGS84
-const BBOX = '-6.4319,37.0710,-5.7119,37.6710'
+const BBOX_DEFAULT = '-6.4319,37.0710,-5.7119,37.6710'
 
-function buildQuery(base: string, layer: number, extra: Record<string, string> = {}): string {
+function bboxFromCoords(lat: number, lon: number, kmRadius: number = 25): string {
+  const dLat = kmRadius / 111
+  const dLon = kmRadius / (111 * Math.cos(lat * Math.PI / 180))
+  return `${(lon - dLon).toFixed(4)},${(lat - dLat).toFixed(4)},${(lon + dLon).toFixed(4)},${(lat + dLat).toFixed(4)}`
+}
+
+function buildQuery(base: string, layer: number, extra: Record<string, string> = {}, bbox?: string): string {
   const p = new URLSearchParams({
     where: '1=1', outFields: '*',
-    geometry: BBOX, geometryType: 'esriGeometryEnvelope',
+    geometry: bbox || BBOX_DEFAULT, geometryType: 'esriGeometryEnvelope',
     inSR: '4326', spatialRel: 'esriSpatialRelIntersects',
     outSR: '4326', f: 'json', resultRecordCount: '100',
     ...extra
@@ -91,10 +97,14 @@ export async function GET(request: NextRequest) {
 
   // ── 1. NOTAMs activos (por defecto) ──────────────────────────────────────
   if (tipo === 'notams') {
+    const sp = new URL(request.url).searchParams
+    const lat = sp.get('lat') ? parseFloat(sp.get('lat')!) : null
+    const lon = sp.get('lon') ? parseFloat(sp.get('lon')!) : null
+    const bbox = lat && lon ? bboxFromCoords(lat, lon, 25) : undefined
     const notamsParsed: any[] = []
     for (const capa of [0, 1]) {
       try {
-        const res = await fetch(buildQuery(NOTAM_BASE, capa), {
+        const res = await fetch(buildQuery(NOTAM_BASE, capa, {}, bbox), {
           headers: { Accept: 'application/json' },
           signal: AbortSignal.timeout(10000)
         })
@@ -111,7 +121,8 @@ export async function GET(request: NextRequest) {
       notams: notamsParsed,
       total: notamsParsed.length,
       fuente: notamsParsed.length > 0 ? 'ENAIRE-LIVE' : 'SIN-DATOS',
-      consultadoEn: new Date().toISOString()
+      consultadoEn: new Date().toISOString(),
+      coordenadas: lat && lon ? { lat, lon, radioKm: 25, bbox: bbox || BBOX_DEFAULT } : null
     })
   }
 

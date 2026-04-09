@@ -114,6 +114,10 @@ export default function DronesPage() {
   const [droneSeleccionadoWizard, setDroneSeleccionadoWizard] = useState<string>('')
   const [showChecklist, setShowChecklist] = useState(false)
   const [showDetalleVuelo, setShowDetalleVuelo] = useState(false)
+  const [showEditarVuelo, setShowEditarVuelo] = useState(false)
+  const [notamsZona, setNotamsZona] = useState<any[]>([])
+  const [consultandoNotams, setConsultandoNotams] = useState(false)
+  const [geolocalizando, setGeolocalizando] = useState(false)
   const [showNuevoMant, setShowNuevoMant] = useState(false)
   const [showNuevaBateria, setShowNuevaBateria] = useState(false)
   const [showNotamManual, setShowNotamManual] = useState(false)
@@ -304,6 +308,46 @@ export default function DronesPage() {
       setPasoNuevoVuelo(1)
       setVueloFormData(null)
       setChecklistNuevo({})
+      cargarDatos()
+    } finally { setSaving(false) }
+  }
+
+  const consultarNotamsZona = async (lat: number, lon: number) => {
+    try {
+      setConsultandoNotams(true)
+      const r = await fetch(`/api/drones/notams-proxy?tipo=notams&lat=${lat}&lon=${lon}`)
+      const data = await r.json()
+      setNotamsZona(data.notams || [])
+      return data.notams || []
+    } catch (e) {
+      console.error('Error NOTAMs:', e)
+      return []
+    } finally {
+      setConsultandoNotams(false)
+    }
+  }
+
+  const handleGuardarVuelo = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    if (!vueloSeleccionado) return
+    const f = new FormData(e.currentTarget)
+    const horaFin = f.get('horaFin') as string
+    const incidencias = f.get('incidencias') as string
+    const duracion = f.get('duracionMinutos') ? parseInt(f.get('duracionMinutos') as string) : null
+    let nuevoEstado = vueloSeleccionado.estado
+    if (horaFin) nuevoEstado = 'completado'
+    if (incidencias?.trim()) nuevoEstado = 'incidencia'
+    try {
+      setSaving(true)
+      await fetch('/api/drones', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+        tipo: 'vuelo', id: vueloSeleccionado.id,
+        estado: nuevoEstado,
+        horaFin, duracionMinutos: duracion,
+        incidencias: incidencias || null,
+        observaciones: f.get('observaciones'),
+        resultadoMision: f.get('resultadoMision'),
+      })})
+      setShowEditarVuelo(false)
       cargarDatos()
     } finally { setSaving(false) }
   }
@@ -1594,8 +1638,37 @@ export default function DronesPage() {
                   <div><label className={labelCls}>Zona aerea (ENAIRE)</label><input name="zonaAerea" placeholder="Ej: U-SPACE, CTR Sevilla, TMA..." className={inputCls} /></div>
                   <div><label className={labelCls}>Altura maxima (m)</label><input name="alturaMaxima" type="number" placeholder="120" className={inputCls} /></div>
                   <div><label className={labelCls}>Altura media (m)</label><input name="alturaMedia" type="number" placeholder="60" className={inputCls} /></div>
-                  <div><label className={labelCls}>Latitud despegue</label><input name="latitudInicio" type="number" step="0.000001" defaultValue="37.3710" className={inputCls} /></div>
-                  <div><label className={labelCls}>Longitud despegue</label><input name="longitudInicio" type="number" step="0.000001" defaultValue="-6.0719" className={inputCls} /></div>
+                  <div>
+                    <label className={labelCls}>Latitud despegue</label>
+                    <input name="latitudInicio" type="number" step="0.000001" id="latitudInicio" defaultValue="37.3710" className={inputCls} />
+                  </div>
+                  <div>
+                    <label className={labelCls}>Longitud despegue</label>
+                    <input name="longitudInicio" type="number" step="0.000001" id="longitudInicio" defaultValue="-6.0719" className={inputCls} />
+                  </div>
+                  <div className="col-span-2">
+                    <button type="button" disabled={geolocalizando} onClick={() => {
+                      if (!navigator.geolocation) { alert('Geolocalización no disponible en este dispositivo'); return }
+                      setGeolocalizando(true)
+                      navigator.geolocation.getCurrentPosition(
+                        pos => {
+                          const lat = pos.coords.latitude
+                          const lon = pos.coords.longitude
+                          const latInput = document.getElementById('latitudInicio') as HTMLInputElement
+                          const lonInput = document.getElementById('longitudInicio') as HTMLInputElement
+                          if (latInput) latInput.value = lat.toFixed(6)
+                          if (lonInput) lonInput.value = lon.toFixed(6)
+                          setGeolocalizando(false)
+                          consultarNotamsZona(lat, lon)
+                        },
+                        err => { alert('No se pudo obtener la ubicación. Asegúrate de que la app tiene permisos de localización.'); setGeolocalizando(false) },
+                        { enableHighAccuracy: true, timeout: 10000 }
+                      )
+                    }} className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all ${geolocalizando ? 'bg-slate-100 text-slate-400' : 'bg-teal-600 text-white hover:bg-teal-700'}`}>
+                      <MapPin size={14} />
+                      {geolocalizando ? 'Obteniendo ubicación...' : 'Usar mi ubicación GPS'}
+                    </button>
+                  </div>
                 </div>
                 <div className="mt-3"><label className={labelCls}>Descripcion de la zona / area de operacion</label><textarea name="descripcionZona" rows={2} placeholder="Descripcion detallada del area de operacion, puntos de referencia..." className={inputCls} /></div>
               </div>
@@ -1627,6 +1700,31 @@ export default function DronesPage() {
               {/* NOTAMs */}
               <div>
                 <p className="text-xs font-bold text-slate-500 uppercase mb-3 flex items-center gap-2"><Bell size={12} />NOTAMs y espacio aereo</p>
+                {consultandoNotams && (
+                  <div className="flex items-center gap-2 px-4 py-3 bg-blue-50 border border-blue-100 rounded-lg mb-3">
+                    <span className="text-xs text-blue-600 font-medium animate-pulse">Consultando NOTAMs en ENAIRE...</span>
+                  </div>
+                )}
+                {notamsZona.length > 0 && (
+                  <div className="mb-3 border border-amber-200 rounded-xl overflow-hidden">
+                    <div className="bg-amber-50 px-4 py-2.5 border-b border-amber-100 flex items-center justify-between">
+                      <p className="text-xs font-bold text-amber-700 uppercase tracking-wide">{notamsZona.length} NOTAM{notamsZona.length > 1 ? 's' : ''} activo{notamsZona.length > 1 ? 's' : ''} en tu zona (25km)</p>
+                      <span className="text-[10px] text-amber-600 font-medium">Fuente: ENAIRE</span>
+                    </div>
+                    <div className="divide-y divide-amber-50 max-h-48 overflow-y-auto">
+                      {notamsZona.map((n: any, i: number) => (
+                        <div key={i} className="px-4 py-2.5 bg-white">
+                          <div className="flex items-center gap-2 mb-0.5">
+                            <span className="font-mono text-xs font-bold text-amber-700">{n.referencia}</span>
+                            <span className="text-[10px] text-slate-500">{n.tipo}</span>
+                            {n.fechaFin && <span className="text-[10px] text-slate-400">hasta {new Date(n.fechaFin).toLocaleDateString('es-ES')}</span>}
+                          </div>
+                          <p className="text-xs text-slate-600 truncate">{n.descripcion}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 <div className="flex items-center gap-3 mb-3 p-3 bg-amber-50 border border-amber-100 rounded-lg">
                   <input type="checkbox" name="notamConsultado" id="notamCons" className="w-4 h-4 accent-teal-600" required />
                   <label htmlFor="notamCons" className="text-sm text-slate-700 font-medium">Confirmo que he consultado los NOTAMs vigentes en ENAIRE para esta operacion</label>
@@ -1950,6 +2048,67 @@ export default function DronesPage() {
       )}
 
       {/* Modal Detalle Vuelo */}
+      {showEditarVuelo && vueloSeleccionado && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000] p-4">
+          <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl">
+            <div className="flex items-center justify-between p-6 border-b">
+              <div>
+                <h3 className="text-lg font-bold text-slate-900">Editar vuelo {vueloSeleccionado.numero}</h3>
+                <p className="text-xs text-slate-500">Actualiza los datos del vuelo. Si registras hora fin → estado Completado. Si hay incidencias → estado Incidencia.</p>
+              </div>
+              <button onClick={() => setShowEditarVuelo(false)}><X size={20} className="text-slate-400" /></button>
+            </div>
+            <form onSubmit={handleGuardarVuelo} className="p-6 space-y-5">
+              {/* Estado */}
+              <div>
+                <label className={labelCls}>Estado del vuelo</label>
+                <select name="estado" defaultValue={vueloSeleccionado.estado} className={inputCls}>
+                  <option value="planificado">Planificado</option>
+                  <option value="en_curso">En curso</option>
+                  <option value="completado">Completado</option>
+                  <option value="incidencia">Incidencia</option>
+                </select>
+                <p className="text-[10px] text-slate-400 mt-1">Se actualiza automaticamente: hora fin registrada → Completado · incidencias → Incidencia</p>
+              </div>
+              {/* Horas */}
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className={labelCls}>Hora inicio</label>
+                  <input name="horaInicio" type="time" defaultValue={vueloSeleccionado.horaInicio || ''} className={inputCls} />
+                </div>
+                <div>
+                  <label className={labelCls}>Hora fin</label>
+                  <input name="horaFin" type="time" defaultValue={vueloSeleccionado.horaFin || ''} className={inputCls} />
+                </div>
+                <div>
+                  <label className={labelCls}>Duracion (min)</label>
+                  <input name="duracionMinutos" type="number" defaultValue={vueloSeleccionado.duracionMinutos || ''} className={inputCls} />
+                </div>
+              </div>
+              {/* Resultado mision */}
+              <div>
+                <label className={labelCls}>Resultado de la mision</label>
+                <textarea name="resultadoMision" rows={2} defaultValue={vueloSeleccionado.resultadoMision || ''} placeholder="Describe el resultado operativo del vuelo..." className={inputCls} />
+              </div>
+              {/* Incidencias */}
+              <div>
+                <label className={labelCls}>Incidencias durante el vuelo</label>
+                <textarea name="incidencias" rows={2} defaultValue={vueloSeleccionado.incidencias || ''} placeholder="Si hubo incidencias describirlas aqui. El estado cambiara automaticamente a Incidencia." className={inputCls} />
+              </div>
+              {/* Observaciones */}
+              <div>
+                <label className={labelCls}>Observaciones</label>
+                <textarea name="observaciones" rows={2} defaultValue={vueloSeleccionado.observaciones || ''} className={inputCls} />
+              </div>
+              <div className="flex justify-between pt-2 border-t border-slate-100">
+                <button type="button" onClick={() => setShowEditarVuelo(false)} className="px-4 py-2 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50">Cancelar</button>
+                <button type="submit" disabled={saving} className="px-6 py-2 bg-teal-600 text-white text-sm font-bold rounded-lg hover:bg-teal-700 disabled:opacity-50">{saving ? 'Guardando...' : 'Guardar cambios'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {showDetalleVuelo && vueloSeleccionado && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000] p-4">
           <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl">
@@ -2007,7 +2166,8 @@ export default function DronesPage() {
                   <p className="text-red-800">{vueloSeleccionado.incidencias}</p>
                 </div>
               )}
-              <div className="flex justify-end">
+              <div className="flex justify-between">
+                <button onClick={() => { setShowDetalleVuelo(false); setShowEditarVuelo(true) }} className="px-6 py-2 bg-teal-600 text-white text-sm font-semibold rounded-lg hover:bg-teal-700">Editar vuelo</button>
                 <button onClick={() => setShowDetalleVuelo(false)} className="px-6 py-2 bg-slate-100 text-slate-700 text-sm font-semibold rounded-lg hover:bg-slate-200">Cerrar</button>
               </div>
             </div>

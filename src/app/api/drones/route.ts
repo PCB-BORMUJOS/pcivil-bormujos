@@ -271,7 +271,7 @@ export async function PUT(request: NextRequest) {
     if (tipo === 'vuelo') {
       const vuelo = await prisma.vuelo.update({
         where: { id },
-        data: { estado: data.estado, horaFin: data.horaFin, duracionMinutos: data.duracionMinutos ? parseInt(data.duracionMinutos) : null, incidencias: data.incidencias, observaciones: data.observaciones }
+        data: { estado: data.estado, horaInicio: data.horaInicio || undefined, horaFin: data.horaFin || undefined, duracionMinutos: data.duracionMinutos ? parseInt(data.duracionMinutos) : undefined, incidencias: data.incidencias ?? undefined, observaciones: data.observaciones ?? undefined, resultadoMision: data.resultadoMision ?? undefined }
       })
       return NextResponse.json({ vuelo })
     }
