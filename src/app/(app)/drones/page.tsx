@@ -637,7 +637,7 @@ export default function DronesPage() {
                     </div>
                   </div>
                 )}
-                <button onClick={() => { setDroneSeleccionado(d); setShowNuevaBateria(true) }} className="w-full text-xs text-teal-600 hover:text-teal-800 font-medium flex items-center justify-center gap-1 py-1.5 border border-dashed border-teal-200 rounded-lg hover:bg-teal-50">
+                <button onClick={() => setShowNuevaBateria(true)} className="w-full text-xs text-teal-600 hover:text-teal-800 font-medium flex items-center justify-center gap-1 py-1.5 border border-dashed border-teal-200 rounded-lg hover:bg-teal-50">
                   <Plus size={12} />Añadir batería
                 </button>
               </div>
@@ -2234,50 +2234,78 @@ export default function DronesPage() {
       )}
 
       {/* Modal Nueva Batería */}
-      {showNuevaBateria && droneSeleccionado && (
+      {showNuevaBateria && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000] p-4">
-          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
+          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl">
             <div className="flex items-center justify-between p-6 border-b">
-              <h3 className="text-lg font-bold text-slate-900">Nueva Batería — {droneSeleccionado.nombre}</h3>
+              <div>
+                <h3 className="text-lg font-bold text-slate-900">Registrar batería</h3>
+                <p className="text-xs text-slate-500">Las baterías son independientes y se asignan por compatibilidad al vuelo</p>
+              </div>
               <button onClick={() => setShowNuevaBateria(false)}><X size={20} className="text-slate-400" /></button>
             </div>
             <form onSubmit={async e => {
               e.preventDefault()
-              const form = e.currentTarget
-              const f = new FormData(form)
+              const f = new FormData(e.currentTarget)
               setSaving(true)
               const r = await fetch('/api/drones', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                   tipo: 'bateria',
-                  droneId: droneSeleccionado.id,
                   codigo: f.get('codigo'),
+                  marca: f.get('marca'),
+                  modelo: f.get('modelo'),
+                  compatibilidad: f.get('compatibilidad'),
                   capacidadMah: f.get('capacidadMah'),
                   ciclosMaximos: f.get('ciclosMaximos'),
-                  estado: f.get('estado'),
+                  estado: 'operativa',
                   observaciones: f.get('observaciones'),
                 })
               })
               setSaving(false)
-              if (r.ok) { setShowNuevaBateria(false); setDroneSeleccionado(null); cargarDatos() }
+              if (r.ok) { setShowNuevaBateria(false); cargarDatos() }
             }} className="p-6 space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2"><label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Código *</label><input name="codigo" required placeholder="BAT-001" className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-400" /></div>
-                <div><label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Capacidad (mAh)</label><input name="capacidadMah" type="number" placeholder="5000" className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-400" /></div>
-                <div><label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Ciclos máx.</label><input name="ciclosMaximos" type="number" defaultValue="200" className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-400" /></div>
-                <div className="col-span-2"><label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Estado</label>
-                  <select name="estado" className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20">
-                    <option value="buena">Buena</option>
-                    <option value="degradada">Degradada</option>
-                    <option value="baja">Baja</option>
-                  </select>
+                <div className="col-span-2">
+                  <label className={labelCls}>Código *</label>
+                  <input name="codigo" required placeholder="BAT-MINI-001" className={inputCls} />
                 </div>
-                <div className="col-span-2"><label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Observaciones</label><textarea name="observaciones" rows={2} className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20" /></div>
+                <div>
+                  <label className={labelCls}>Marca</label>
+                  <input name="marca" placeholder="DJI, Autel..." className={inputCls} />
+                </div>
+                <div>
+                  <label className={labelCls}>Modelo</label>
+                  <input name="modelo" placeholder="Intelligent Flight Battery..." className={inputCls} />
+                </div>
+                <div className="col-span-2">
+                  <label className={labelCls}>Compatibilidad *</label>
+                  <select name="compatibilidad" required className={inputCls}>
+                    <option value="universal">Universal (todos los drones)</option>
+                    <option value="mini">Mini (DJI Mini 2, Mini 3...)</option>
+                    <option value="pro">Pro (DJI Mavic Pro, Air...)</option>
+                    <option value="enterprise">Enterprise</option>
+                    {drones.map(d => <option key={d.id} value={d.modelo}>{d.codigo} — {d.marca} {d.modelo} (solo este)</option>)}
+                  </select>
+                  <p className="text-[10px] text-slate-400 mt-1">Selecciona qué drones pueden usar esta batería</p>
+                </div>
+                <div>
+                  <label className={labelCls}>Capacidad (mAh)</label>
+                  <input name="capacidadMah" type="number" placeholder="5000" className={inputCls} />
+                </div>
+                <div>
+                  <label className={labelCls}>Ciclos máximos</label>
+                  <input name="ciclosMaximos" type="number" defaultValue="200" className={inputCls} />
+                </div>
+                <div className="col-span-2">
+                  <label className={labelCls}>Observaciones</label>
+                  <textarea name="observaciones" rows={2} className={inputCls} />
+                </div>
               </div>
               <div className="flex justify-end gap-3 pt-2">
                 <button type="button" onClick={() => setShowNuevaBateria(false)} className="px-4 py-2 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50">Cancelar</button>
-                <button type="submit" disabled={saving} className="px-6 py-2 bg-teal-600 text-white text-sm font-bold rounded-lg hover:bg-teal-700 disabled:opacity-50">{saving ? 'Guardando...' : 'Añadir batería'}</button>
+                <button type="submit" disabled={saving} className="px-6 py-2 bg-teal-600 text-white text-sm font-bold rounded-lg hover:bg-teal-700 disabled:opacity-50">{saving ? 'Guardando...' : 'Registrar batería'}</button>
               </div>
             </form>
           </div>

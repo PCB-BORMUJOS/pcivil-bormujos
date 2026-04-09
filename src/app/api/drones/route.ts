@@ -208,13 +208,16 @@ export async function POST(request: NextRequest) {
     if (tipo === 'bateria') {
       const bateria = await prisma.bateriaDrone.create({
         data: {
-          droneId: data.droneId,
+          droneId: data.droneId || null,
           codigo: data.codigo,
+          marca: data.marca || null,
+          modelo: data.modelo || null,
+          compatibilidad: data.compatibilidad || 'universal',
           capacidadMah: data.capacidadMah ? parseInt(data.capacidadMah) : null,
           ciclosMaximos: data.ciclosMaximos ? parseInt(data.ciclosMaximos) : 200,
           ciclosUso: 0,
-          estado: data.estado || 'buena',
-          observaciones: data.observaciones,
+          estado: 'operativa',
+          observaciones: data.observaciones || null,
         }
       })
       return NextResponse.json({ bateria })
