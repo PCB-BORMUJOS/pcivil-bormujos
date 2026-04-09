@@ -111,6 +111,7 @@ export default function DronesPage() {
   const [vueloFormData, setVueloFormData] = useState<any>(null)
   const [checklistNuevo, setChecklistNuevo] = useState<Record<string,boolean>>({})
   const [bateriasSeleccionadas, setBateriasSeleccionadas] = useState<Record<string,number>>({})
+  const [todasBaterias, setTodasBaterias] = useState<Bateria[]>([])
   const [droneSeleccionadoWizard, setDroneSeleccionadoWizard] = useState<string>('')
   const [showChecklist, setShowChecklist] = useState(false)
   const [showDetalleVuelo, setShowDetalleVuelo] = useState(false)
