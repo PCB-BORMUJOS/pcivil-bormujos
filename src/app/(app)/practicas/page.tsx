@@ -84,6 +84,7 @@ export default function PracticasPage() {
   const [firmaJefe, setFirmaJefe] = useState<string>('')
   const [pasoRegistro, setPasoRegistro] = useState<1|2|3>(1)
   const [showFirmaJefe, setShowFirmaJefe] = useState(false)
+  const [subiendoImagen, setSubiendoImagen] = useState(false)
   const [registroParaFirma, setRegistroParaFirma] = useState<RegistroPractica | null>(null)
   const [practicaEditando, setPracticaEditando] = useState<Practica | null>(null)
 
@@ -204,6 +205,32 @@ export default function PracticasPage() {
     // Ofrecer PDF automáticamente tras guardar
   }
 
+
+  const subirImagenPractica = async (practicaId: string, file: File) => {
+    setSubiendoImagen(true)
+    const fd = new FormData()
+    fd.append('file', file)
+    fd.append('practicaId', practicaId)
+    const res = await fetch('/api/practicas/imagenes', { method: 'POST', body: fd })
+    const data = await res.json()
+    if (data.imagenes) {
+      setPracticas(prev => prev.map(p => p.id === practicaId ? { ...p, imagenes: data.imagenes } : p))
+    }
+    setSubiendoImagen(false)
+  }
+
+  const eliminarImagenPractica = async (practicaId: string, url: string) => {
+    if (!confirm('¿Eliminar esta imagen?')) return
+    const res = await fetch('/api/practicas/imagenes', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ practicaId, url })
+    })
+    const data = await res.json()
+    if (data.imagenes) {
+      setPracticas(prev => prev.map(p => p.id === practicaId ? { ...p, imagenes: data.imagenes } : p))
+    }
+  }
 
   const generarPDFPractica = async (practica: Practica, registro?: RegistroPractica) => {
     const jsPDFModule = await import('jspdf')
@@ -895,6 +922,46 @@ export default function PracticasPage() {
                               </div>
                             )}
                             {p.prerequisitos && <div className="flex items-center gap-2 text-xs text-slate-500"><CheckCircle2 size={12} /><span>Prerequisito: <span className="font-medium">{p.prerequisitos}</span></span></div>}
+                            {/* Imágenes */}
+                            {isAdmin && (
+                              <div className="bg-white rounded-lg border border-slate-100 p-3.5">
+                                <div className="flex items-center justify-between mb-2">
+                                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Imágenes de la práctica</p>
+                                  <label className={`flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-bold rounded-lg cursor-pointer transition-colors ${subiendoImagen ? 'bg-slate-100 text-slate-400' : 'bg-orange-500 text-white hover:bg-orange-600'}`}>
+                                    {subiendoImagen ? 'Subiendo...' : '+ Añadir imagen'}
+                                    <input type="file" accept="image/*" className="hidden" disabled={subiendoImagen}
+                                      onChange={e => { const f = e.target.files?.[0]; if (f) subirImagenPractica(p.id, f) }} />
+                                  </label>
+                                </div>
+                                {(p.imagenes || []).length === 0 ? (
+                                  <p className="text-[10px] text-slate-400 text-center py-3">Sin imágenes. Añade fotos o diagramas de la práctica.</p>
+                                ) : (
+                                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                    {(p.imagenes || []).map((img, idx) => (
+                                      <div key={idx} className="relative group rounded-lg overflow-hidden border border-slate-100">
+                                        <img src={img} alt={`Imagen ${idx+1}`} className="w-full h-28 object-cover" />
+                                        <button onClick={() => eliminarImagenPractica(p.id, img)}
+                                          className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 text-[10px] font-bold flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                          ×
+                                        </button>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                            {!isAdmin && (p.imagenes || []).length > 0 && (
+                              <div className="bg-white rounded-lg border border-slate-100 p-3.5">
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-2">Imágenes</p>
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                  {(p.imagenes || []).map((img, idx) => (
+                                    <div key={idx} className="rounded-lg overflow-hidden border border-slate-100">
+                                      <img src={img} alt={`Imagen ${idx+1}`} className="w-full h-28 object-cover" />
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
                             {p.youtubeUrl && (
                               <a href={p.youtubeUrl} target="_blank" rel="noopener noreferrer"
                                 className="flex items-center gap-2 px-3 py-2 bg-red-50 border border-red-100 rounded-lg text-xs font-medium text-red-600 hover:bg-red-100 transition-colors">
