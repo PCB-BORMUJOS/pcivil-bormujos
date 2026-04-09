@@ -117,7 +117,18 @@ export default function PracticasPage() {
     } catch (e) { console.error(e) }
   }
 
-  useEffect(() => { cargarDatos(); cargarVoluntarios() }, [filtroFamilia, filtroNivel])
+  useEffect(() => {
+    cargarDatos()
+    cargarVoluntarios()
+    const cargarTodosRegistros = async () => {
+      try {
+        const res = await fetch('/api/practicas/registros')
+        const data = await res.json()
+        setRegistros(data.registros || [])
+      } catch(e) { console.error(e) }
+    }
+    cargarTodosRegistros()
+  }, [filtroFamilia, filtroNivel])
   useEffect(() => {
     const t = setTimeout(() => cargarDatos(), 300)
     return () => clearTimeout(t)
@@ -623,7 +634,7 @@ export default function PracticasPage() {
   )
 
   return (
-    <div className="p-4 sm:p-6 max-w-6xl mx-auto space-y-6">
+    <div className="p-4 sm:p-6 space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
@@ -644,22 +655,91 @@ export default function PracticasPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="bg-white rounded-xl border border-slate-100 p-4">
-          <p className="text-xs text-slate-500 font-medium">Total prácticas</p>
-          <p className="text-2xl font-bold text-slate-800 mt-1">{practicas.length}</p>
+      {/* Dashboard visual */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
+        <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl p-4 text-white">
+          <p className="text-xs font-medium opacity-80">Total prácticas</p>
+          <p className="text-3xl font-black mt-1">{practicas.length}</p>
+          <p className="text-xs opacity-70 mt-1">{familias.length} familias</p>
         </div>
-        <div className="bg-white rounded-xl border border-slate-100 p-4">
-          <p className="text-xs text-slate-500 font-medium">Familias</p>
-          <p className="text-2xl font-bold text-slate-800 mt-1">{familias.length}</p>
+        <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-2xl p-4 text-white">
+          <p className="text-xs font-medium opacity-80">Nivel básico</p>
+          <p className="text-3xl font-black mt-1">{practicas.filter(p => p.nivel === 'basico').length}</p>
+          <p className="text-xs opacity-70 mt-1">prácticas</p>
         </div>
-        <div className="bg-white rounded-xl border border-slate-100 p-4">
-          <p className="text-xs text-slate-500 font-medium">Nivel básico</p>
-          <p className="text-2xl font-bold text-green-600 mt-1">{practicas.filter(p => p.nivel === 'basico').length}</p>
+        <div className="bg-gradient-to-br from-amber-500 to-amber-600 rounded-2xl p-4 text-white">
+          <p className="text-xs font-medium opacity-80">Nivel intermedio</p>
+          <p className="text-3xl font-black mt-1">{practicas.filter(p => p.nivel === 'intermedio').length}</p>
+          <p className="text-xs opacity-70 mt-1">prácticas</p>
         </div>
-        <div className="bg-white rounded-xl border border-slate-100 p-4">
-          <p className="text-xs text-slate-500 font-medium">Nivel avanzado</p>
-          <p className="text-2xl font-bold text-red-600 mt-1">{practicas.filter(p => p.nivel === 'avanzado').length}</p>
+        <div className="bg-gradient-to-br from-red-500 to-red-600 rounded-2xl p-4 text-white">
+          <p className="text-xs font-medium opacity-80">Nivel avanzado</p>
+          <p className="text-3xl font-black mt-1">{practicas.filter(p => p.nivel === 'avanzado').length}</p>
+          <p className="text-xs opacity-70 mt-1">prácticas</p>
+        </div>
+        <div className="bg-gradient-to-br from-pink-500 to-pink-600 rounded-2xl p-4 text-white">
+          <p className="text-xs font-medium opacity-80">Registros totales</p>
+          <p className="text-3xl font-black mt-1">{registros.length}</p>
+          <p className="text-xs opacity-70 mt-1">realizaciones</p>
+        </div>
+        <div className="bg-gradient-to-br from-slate-700 to-slate-800 rounded-2xl p-4 text-white">
+          <p className="text-xs font-medium opacity-80">Pendientes VB</p>
+          <p className="text-3xl font-black mt-1">{registros.filter(r => r.resultado === 'pendiente_jefe').length}</p>
+          <p className="text-xs opacity-70 mt-1">sin firmar</p>
+        </div>
+      </div>
+
+      {/* Cobertura por familia */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-100 p-5">
+          <p className="text-sm font-bold text-slate-700 mb-4">Cobertura por familia</p>
+          <div className="space-y-3">
+            {FAMILIAS.map(fam => {
+              const total = practicas.filter(p => p.familia === fam.id).length
+              if (total === 0) return null
+              const realizadas = new Set(registros.filter(r => {
+                const prac = practicas.find(p => p.id === r.practicaId)
+                return prac?.familia === fam.id
+              }).map(r => r.practicaId)).size
+              const pct = total > 0 ? Math.round((realizadas / total) * 100) : 0
+              return (
+                <div key={fam.id}>
+                  <div className="flex justify-between text-xs mb-1.5">
+                    <span className={`px-2 py-0.5 rounded-full font-bold border text-[10px] ${fam.color}`}>{fam.label}</span>
+                    <span className="text-slate-500 font-medium">{realizadas}/{total} realizadas — <span className="font-bold text-slate-700">{pct}%</span></span>
+                  </div>
+                  <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                    <div className="h-full bg-gradient-to-r from-orange-400 to-orange-600 rounded-full transition-all duration-500" style={{ width: pct + '%' }} />
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl border border-slate-100 p-5">
+          <p className="text-sm font-bold text-slate-700 mb-4">Últimas realizaciones</p>
+          {registros.length === 0 ? (
+            <p className="text-xs text-slate-400 text-center py-6">Sin registros aún</p>
+          ) : (
+            <div className="space-y-2.5 max-h-64 overflow-y-auto">
+              {registros.slice(0, 8).map((reg: any) => {
+                const prac = practicas.find(p => p.id === reg.practicaId)
+                return (
+                  <div key={reg.id} className="flex items-start gap-2.5">
+                    <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${reg.resultado === 'completado' ? 'bg-green-500' : reg.resultado === 'pendiente_jefe' ? 'bg-amber-500' : 'bg-slate-300'}`} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-slate-800 truncate">{prac?.titulo || reg.practicaId}</p>
+                      <p className="text-[10px] text-slate-400">{new Date(reg.fecha).toLocaleDateString('es-ES')} · {reg.turno === 'manana' ? 'Mañana' : reg.turno === 'tarde' ? 'Tarde' : 'Noche'}</p>
+                    </div>
+                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ${reg.resultado === 'completado' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+                      {reg.resultado === 'completado' ? 'OK' : 'VB'}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </div>
       </div>
 
