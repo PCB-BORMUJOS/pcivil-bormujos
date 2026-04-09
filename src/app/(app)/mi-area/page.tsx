@@ -9,8 +9,7 @@ import {
   User, GraduationCap, Clock, FileText, Bell, Save, Edit, Upload,
   Calendar, Award, CheckCircle, XCircle, AlertTriangle, Plus,
   Download, Eye, Trash2, X, ChevronRight, MapPin, Phone, Mail,
-  Shield, Settings, Lock, Send, FileCheck, Car, CreditCard, Heart, Wallet
-} from 'lucide-react';
+  Shield, Settings, Lock, Send, FileCheck, Car, CreditCard, Heart, Wallet, ClipboardList} from 'lucide-react';
 
 // ============================================
 // TIPOS
