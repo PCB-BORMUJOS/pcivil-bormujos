@@ -189,8 +189,10 @@ export default function PracticasPage() {
         participantes: participantesSeleccionados,
         observaciones: f.get('observaciones'),
         resultado: f.get('resultado'),
-        firmaResponsable: firmaResp,
-        firmaJefe: firmaJefe || null,
+        firmaResponsable: getFirmaImagen(firmaResp),
+        firmaJefe: firmaJefe ? getFirmaImagen(firmaJefe) : null,
+        firmaBiometricaResp: firmaResp.includes('||META:') ? firmaResp.split('||META:')[1] : null,
+        firmaBiometricaJefe: firmaJefe && firmaJefe.includes('||META:') ? firmaJefe.split('||META:')[1] : null,
         firmadoResponsableNombre: f.get('firmadoResponsableNombre'),
         firmadoJefeNombre: f.get('firmadoJefeNombre') || null,
       })
@@ -506,30 +508,100 @@ export default function PracticasPage() {
     if (!canvas) return
     const ctx = canvas.getContext('2d')!
     let drawing = false
-    ctx.strokeStyle = '#1e293b'
-    ctx.lineWidth = 2
+    let lastX = 0, lastY = 0
+    // Datos biométricos del Apple Pencil
+    const biometricData: Array<{x:number,y:number,pressure:number,tiltX:number,tiltY:number,t:number}> = []
+
     ctx.lineCap = 'round'
-    const getPos = (e: MouseEvent | TouchEvent) => {
+    ctx.lineJoin = 'round'
+
+    const getPos = (e: PointerEvent | MouseEvent | TouchEvent) => {
       const rect = canvas.getBoundingClientRect()
-      if ('touches' in e) return { x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top }
-      return { x: (e as MouseEvent).clientX - rect.left, y: (e as MouseEvent).clientY - rect.top }
+      const scaleX = canvas.width / rect.width
+      const scaleY = canvas.height / rect.height
+      if ('touches' in e && !('pointerId' in e)) {
+        return { x: (e.touches[0].clientX - rect.left) * scaleX, y: (e.touches[0].clientY - rect.top) * scaleY, pressure: 0.5, tiltX: 0, tiltY: 0 }
+      }
+      const pe = e as PointerEvent
+      return {
+        x: (pe.clientX - rect.left) * scaleX,
+        y: (pe.clientY - rect.top) * scaleY,
+        pressure: pe.pressure > 0 ? pe.pressure : 0.5,
+        tiltX: pe.tiltX || 0,
+        tiltY: pe.tiltY || 0
+      }
     }
-    const down = (e: MouseEvent | TouchEvent) => { drawing = true; const p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); e.preventDefault() }
-    const move = (e: MouseEvent | TouchEvent) => { if (!drawing) return; const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); e.preventDefault() }
-    const up = () => { drawing = false; setter(canvas.toDataURL()) }
-    canvas.addEventListener('mousedown', down as EventListener)
-    canvas.addEventListener('touchstart', down as EventListener, { passive: false })
-    canvas.addEventListener('mousemove', move as EventListener)
-    canvas.addEventListener('touchmove', move as EventListener, { passive: false })
-    canvas.addEventListener('mouseup', up)
-    canvas.addEventListener('touchend', up)
+
+    const down = (e: PointerEvent) => {
+      drawing = true
+      const p = getPos(e)
+      lastX = p.x; lastY = p.y
+      ctx.beginPath()
+      ctx.moveTo(p.x, p.y)
+      biometricData.push({ x: p.x, y: p.y, pressure: p.pressure, tiltX: p.tiltX, tiltY: p.tiltY, t: Date.now() })
+      e.preventDefault()
+    }
+
+    const move = (e: PointerEvent) => {
+      if (!drawing) return
+      const p = getPos(e)
+      // Grosor variable según presión del Apple Pencil
+      const lineWidth = Math.max(0.8, Math.min(4, p.pressure * 5))
+      ctx.strokeStyle = `rgba(30,41,59,${0.7 + p.pressure * 0.3})`
+      ctx.lineWidth = lineWidth
+      // Curva suave entre puntos
+      ctx.beginPath()
+      ctx.moveTo(lastX, lastY)
+      const midX = (lastX + p.x) / 2
+      const midY = (lastY + p.y) / 2
+      ctx.quadraticCurveTo(lastX, lastY, midX, midY)
+      ctx.stroke()
+      lastX = p.x; lastY = p.y
+      biometricData.push({ x: p.x, y: p.y, pressure: p.pressure, tiltX: p.tiltX, tiltY: p.tiltY, t: Date.now() })
+      e.preventDefault()
+    }
+
+    const up = (e: PointerEvent) => {
+      if (!drawing) return
+      drawing = false
+      const dataUrl = canvas.toDataURL('image/png', 0.95)
+      // Guardar imagen + metadata biométrica en base64
+      const meta = JSON.stringify({
+        puntos: biometricData.length,
+        presionMedia: biometricData.length > 0 ? (biometricData.reduce((a,b) => a + b.pressure, 0) / biometricData.length).toFixed(3) : 0,
+        duracionMs: biometricData.length > 1 ? biometricData[biometricData.length-1].t - biometricData[0].t : 0,
+        dispositivo: navigator.userAgent.includes('iPad') ? 'iPad' : 'otro',
+        timestamp: new Date().toISOString()
+      })
+      setter(dataUrl + '||META:' + btoa(meta))
+      e.preventDefault()
+    }
+
+    canvas.addEventListener('pointerdown', down)
+    canvas.addEventListener('pointermove', move)
+    canvas.addEventListener('pointerup', up)
+    canvas.addEventListener('pointercancel', up)
+    canvas.setPointerCapture && canvas.addEventListener('pointerdown', (e: Event) => {
+      canvas.setPointerCapture((e as PointerEvent).pointerId)
+    })
   }
 
   const limpiarFirma = (canvasId: string, setter: (v: string) => void) => {
     const canvas = document.getElementById(canvasId) as HTMLCanvasElement
     if (!canvas) return
-    canvas.getContext('2d')!.clearRect(0, 0, canvas.width, canvas.height)
+    const ctx = canvas.getContext('2d')!
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
     setter('')
+  }
+
+  // Extraer solo la imagen base64 de la firma (sin metadata biométrica)
+  const getFirmaImagen = (firma: string) => firma.split('||META:')[0]
+
+  // Extraer metadata biométrica
+  const getFirmaMetadata = (firma: string) => {
+    const parts = firma.split('||META:')
+    if (parts.length < 2) return null
+    try { return JSON.parse(atob(parts[1])) } catch { return null }
   }
 
   const handleEliminar = async (id: string) => {
@@ -1096,7 +1168,7 @@ export default function PracticasPage() {
                   await fetch('/api/practicas/registros', {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ id: registroParaFirma.id, firmaJefe, firmadoJefeNombre: nombre })
+                    body: JSON.stringify({ id: registroParaFirma.id, firmaJefe: getFirmaImagen(firmaJefe), firmadoJefeNombre: nombre })
                   })
                   setSaving(false)
                   setShowFirmaJefe(false)
