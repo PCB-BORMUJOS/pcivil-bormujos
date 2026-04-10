@@ -28,7 +28,7 @@ import {
   Users,
   FileText,
   BookOpen,
-  FlaskConical,
+  FlaskConical, Zap,
   BarChart2,
   Wallet,
 } from 'lucide-react'
@@ -76,6 +76,7 @@ const navigation: NavItem[] = [
   },
   { name: 'Manuales', href: '/manuales', icon: BookOpen },
   { name: 'Prácticas', href: '/practicas', icon: FlaskConical },
+  { name: 'Megacode', href: '/megacode', icon: Zap },
   { name: 'Estadísticas', href: '/estadisticas', icon: BarChart2, adminOnly: true },
 ]
 
