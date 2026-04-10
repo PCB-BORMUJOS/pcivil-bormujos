@@ -49,6 +49,7 @@ interface RegistroPractica {
   observaciones?: string; resultado: string
   firmaResponsable?: string; firmaJefe?: string
   firmadoResponsableNombre?: string; firmadoJefeNombre?: string
+  firmaJefeTimestamp?: string; firmaJefeIp?: string
   practica?: { titulo: string; numero: string; familia: string }
   responsable?: { nombre: string; apellidos: string; numeroVoluntario: string }
 }
@@ -461,6 +462,21 @@ export default function PracticasPage() {
             doc.addImage(registro.firmaJefe, 'PNG', x2, y + 6, firmaW - 6, 25)
           } catch(e) {}
           doc.rect(x2, y + 6, firmaW - 6, 25)
+          // Sello de tiempo
+          if (registro.firmaJefeTimestamp) {
+            const ts = new Date(registro.firmaJefeTimestamp)
+            const tsStr = ts.toLocaleDateString('es-ES') + ' ' + ts.toLocaleTimeString('es-ES', {hour:'2-digit',minute:'2-digit'})
+            doc.setFillColor(240, 253, 244)
+            doc.rect(x2, y + 32, firmaW - 6, 10, 'F')
+            doc.setFontSize(6)
+            doc.setFont('helvetica', 'bold')
+            doc.setTextColor(22, 163, 74)
+            doc.text('FIRMADO DIGITALMENTE', x2 + 2, y + 37)
+            doc.setFont('helvetica', 'normal')
+            doc.setTextColor(71, 85, 105)
+            doc.text(tsStr, x2 + 2, y + 41)
+            if (registro.firmaJefeIp) doc.text('IP: ' + registro.firmaJefeIp, x2 + 2, y + 45)
+          }
         }
         y += 35
       }

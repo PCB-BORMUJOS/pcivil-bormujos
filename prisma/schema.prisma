@@ -1943,6 +1943,9 @@ model RegistroPractica {
   firmaJefe                String?
   firmadoResponsableNombre String?
   firmadoJefeNombre        String?
+  firmaJefeTimestamp       DateTime?
+  firmaJefeIp              String?
+  firmaJefeUserId          String?
   createdAt                DateTime @default(now())
   practica                 Practica @relation(fields: [practicaId], references: [id])
   responsable              Usuario  @relation("RegistroResponsable", fields: [responsableId], references: [id])

@@ -84,11 +84,17 @@ export async function PUT(request: NextRequest) {
   try {
     const body = await request.json()
     const { id, firmaJefe, firmadoJefeNombre } = body
+    const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'desconocida'
+    const jefeSession = await getServerSession(authOptions)
+    const jefeUserId = (jefeSession?.user as any)?.id || null
     const registro = await prisma.registroPractica.update({
       where: { id },
       data: {
         firmaJefe,
         firmadoJefeNombre,
+        firmaJefeTimestamp: new Date(),
+        firmaJefeIp: ip,
+        firmaJefeUserId: jefeUserId,
         resultado: 'completado'
       },
       include: {
