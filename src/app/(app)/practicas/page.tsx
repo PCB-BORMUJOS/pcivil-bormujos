@@ -881,7 +881,7 @@ export default function PracticasPage() {
                         <p className="text-xs font-semibold text-slate-800 truncate">{prac.titulo}</p>
                         <p className="text-[10px] text-slate-400">{new Date(reg.fecha).toLocaleDateString('es-ES')} · {reg.turno === 'manana' ? 'Mañana' : reg.turno === 'tarde' ? 'Tarde' : 'Noche'}</p>
                       </div>
-                      <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-md ${famColor?.color || 'bg-slate-100 text-slate-500'}`}>{fam?.label?.substring(0,3).toUpperCase()}</span>
+                      <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-md ${famColor?.color || 'bg-slate-100 text-slate-500'}`}>{famColor?.label?.substring(0,3).toUpperCase()}</span>
                     </div>
                   )
                 })}
