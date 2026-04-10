@@ -518,7 +518,32 @@ function CalendarView({ eventos, guardias, resumenDisponibilidad, onEventClick, 
                   </div>
                 ))}
                 {eventosDelDia.length > 2 && (
-                  <div className="text-[10px] text-slate-500 pl-1">+{eventosDelDia.length - 2} más</div>
+                  <div className="relative group">
+                    <button
+                      onClick={e => { e.stopPropagation(); }}
+                      className="text-[10px] text-indigo-600 font-bold pl-1 hover:text-indigo-800 hover:underline"
+                    >
+                      +{eventosDelDia.length - 2} más
+                    </button>
+                    <div className="absolute left-0 top-5 z-[500] hidden group-hover:block bg-white rounded-xl shadow-2xl border border-slate-100 p-2 w-56 space-y-1">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide px-1 pb-1 border-b border-slate-50">Todos los eventos</p>
+                      {eventosDelDia.map((evento, i) => (
+                        <div
+                          key={evento.id || i}
+                          onClick={e => { e.stopPropagation(); onEventClick(evento); }}
+                          className="text-[10px] p-1.5 rounded-md cursor-pointer hover:opacity-80 truncate flex items-center gap-1"
+                          style={{
+                            backgroundColor: `${getEventColor(evento.tipo, evento.color)}15`,
+                            borderLeft: `3px solid ${getEventColor(evento.tipo, evento.color)}`,
+                            color: getEventColor(evento.tipo, evento.color)
+                          }}
+                        >
+                          {evento.privado && <Lock size={10} />}
+                          <span className="font-bold">{evento.horaInicio}</span> {evento.titulo}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 )}
               </div>
             </div>
