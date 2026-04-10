@@ -781,351 +781,476 @@ export default function PracticasPage() {
   )
 
   return (
-    <div className="p-4 sm:p-6 space-y-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-            <BookOpen className="text-orange-500" size={24} />Libro de Prácticas
-          </h1>
-          <p className="text-sm text-slate-500 mt-0.5">Catálogo de prácticas operativas — Protección Civil Bormujos</p>
-        </div>
-        <div className="flex gap-2">
-          <button onClick={cargarDatos} className="p-2.5 border border-slate-200 rounded-lg hover:bg-slate-50">
-            <RefreshCw size={16} className="text-slate-500" />
-          </button>
-          {isAdmin && (
-            <button onClick={() => setShowNueva(true)}
-              className="flex items-center gap-2 px-4 py-2.5 bg-orange-500 text-white rounded-lg hover:bg-orange-600 font-medium text-sm">
-              <Plus size={16} />Nueva práctica
+    <div className="min-h-screen bg-slate-50">
+      {/* Header operacional */}
+      <div className="bg-slate-900 text-white px-6 py-5">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 rounded-xl bg-orange-500 flex items-center justify-center shrink-0">
+              <BookOpen size={20} className="text-white" />
+            </div>
+            <div>
+              <h1 className="text-xl font-black tracking-tight">LIBRO DE PRÁCTICAS</h1>
+              <p className="text-xs text-slate-400 mt-0.5">Protección Civil Bormujos — Catálogo operativo</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={cargarDatos} className="p-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 transition-colors">
+              <RefreshCw size={15} className="text-slate-400" />
             </button>
-          )}
+            {isAdmin && (
+              <button onClick={() => setShowNueva(true)}
+                className="flex items-center gap-2 px-4 py-2.5 bg-orange-500 hover:bg-orange-400 text-white rounded-lg font-bold text-sm transition-colors">
+                <Plus size={15} />Nueva práctica
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* KPIs en header */}
+        <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 mt-5">
+          {[
+            { label: 'Total', value: practicas.length, sub: `${familias.length} familias`, accent: '#f97316' },
+            { label: 'Básico', value: practicas.filter(p => p.nivel === 'basico').length, sub: 'prácticas', accent: '#22c55e' },
+            { label: 'Intermedio', value: practicas.filter(p => p.nivel === 'intermedio').length, sub: 'prácticas', accent: '#f59e0b' },
+            { label: 'Avanzado', value: practicas.filter(p => p.nivel === 'avanzado').length, sub: 'prácticas', accent: '#ef4444' },
+            { label: 'Realizaciones', value: registros.length, sub: 'registradas', accent: '#a855f7' },
+            { label: 'Pend. VB', value: registros.filter(r => r.resultado === 'pendiente_jefe').length, sub: 'sin firmar', accent: '#64748b' },
+          ].map(k => (
+            <div key={k.label} className="bg-slate-800/60 rounded-xl p-3 border border-slate-700/50">
+              <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">{k.label}</p>
+              <p className="text-2xl font-black mt-1" style={{ color: k.accent }}>{k.value}</p>
+              <p className="text-[10px] text-slate-500 mt-0.5">{k.sub}</p>
+            </div>
+          ))}
         </div>
       </div>
 
-      {/* Dashboard visual */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
-        <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl p-4 text-white">
-          <p className="text-xs font-medium opacity-80">Total prácticas</p>
-          <p className="text-3xl font-black mt-1">{practicas.length}</p>
-          <p className="text-xs opacity-70 mt-1">{familias.length} familias</p>
-        </div>
-        <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-2xl p-4 text-white">
-          <p className="text-xs font-medium opacity-80">Nivel básico</p>
-          <p className="text-3xl font-black mt-1">{practicas.filter(p => p.nivel === 'basico').length}</p>
-          <p className="text-xs opacity-70 mt-1">prácticas</p>
-        </div>
-        <div className="bg-gradient-to-br from-amber-500 to-amber-600 rounded-2xl p-4 text-white">
-          <p className="text-xs font-medium opacity-80">Nivel intermedio</p>
-          <p className="text-3xl font-black mt-1">{practicas.filter(p => p.nivel === 'intermedio').length}</p>
-          <p className="text-xs opacity-70 mt-1">prácticas</p>
-        </div>
-        <div className="bg-gradient-to-br from-red-500 to-red-600 rounded-2xl p-4 text-white">
-          <p className="text-xs font-medium opacity-80">Nivel avanzado</p>
-          <p className="text-3xl font-black mt-1">{practicas.filter(p => p.nivel === 'avanzado').length}</p>
-          <p className="text-xs opacity-70 mt-1">prácticas</p>
-        </div>
-        <div className="bg-gradient-to-br from-pink-500 to-pink-600 rounded-2xl p-4 text-white">
-          <p className="text-xs font-medium opacity-80">Registros totales</p>
-          <p className="text-3xl font-black mt-1">{registros.length}</p>
-          <p className="text-xs opacity-70 mt-1">realizaciones</p>
-        </div>
-        <div className="bg-gradient-to-br from-slate-700 to-slate-800 rounded-2xl p-4 text-white">
-          <p className="text-xs font-medium opacity-80">Pendientes VB</p>
-          <p className="text-3xl font-black mt-1">{registros.filter(r => r.resultado === 'pendiente_jefe').length}</p>
-          <p className="text-xs opacity-70 mt-1">sin firmar</p>
-        </div>
-      </div>
-
-      {/* Cobertura por familia */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-100 p-5">
-          <p className="text-sm font-bold text-slate-700 mb-4">Cobertura por familia</p>
-          <div className="space-y-3">
-            {FAMILIAS.map(fam => {
-              const total = practicas.filter(p => p.familia === fam.id).length
-              if (total === 0) return null
-              const realizadas = new Set(registros.filter(r => {
-                const prac = practicas.find(p => p.id === r.practicaId)
-                return prac?.familia === fam.id
-              }).map(r => r.practicaId)).size
-              const pct = total > 0 ? Math.round((realizadas / total) * 100) : 0
-              return (
-                <div key={fam.id}>
-                  <div className="flex justify-between text-xs mb-1.5">
-                    <span className={`px-2 py-0.5 rounded-full font-bold border text-[10px] ${fam.color}`}>{fam.label}</span>
-                    <span className="text-slate-500 font-medium">{realizadas}/{total} realizadas — <span className="font-bold text-slate-700">{pct}%</span></span>
+      <div className="px-6 py-5 space-y-5">
+        {/* Cobertura por familia */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-sm font-black text-slate-800 uppercase tracking-wide">Cobertura por familia</p>
+              <span className="text-xs text-slate-400">{new Set(practicas.map(p => p.familia)).size} familias activas</span>
+            </div>
+            <div className="space-y-2.5">
+              {FAMILIAS.map(fam => {
+                const total = practicas.filter(p => p.familia === fam.id).length
+                if (total === 0) return null
+                const realizadas = new Set(registros.filter(r => {
+                  const prac = practicas.find(p => p.id === r.practicaId)
+                  return prac?.familia === fam.id
+                }).map(r => r.practicaId)).size
+                const pct = total > 0 ? Math.round((realizadas / total) * 100) : 0
+                return (
+                  <div key={fam.id} className="flex items-center gap-3">
+                    <button onClick={() => setFiltroFamilia(filtroFamilia === fam.id ? 'all' : fam.id)}
+                      className={`text-[10px] font-black px-2.5 py-1 rounded-lg border w-24 text-left shrink-0 transition-all ${filtroFamilia === fam.id ? fam.color : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300'}`}>
+                      {fam.label.toUpperCase()}
+                    </button>
+                    <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+                      <div className="h-full rounded-full transition-all duration-700"
+                        style={{ width: pct + '%', background: pct === 100 ? '#22c55e' : pct > 50 ? '#f97316' : '#94a3b8' }} />
+                    </div>
+                    <span className="text-xs font-bold text-slate-600 w-10 text-right">{pct}%</span>
+                    <span className="text-[10px] text-slate-400 w-16 text-right">{realizadas}/{total}</span>
                   </div>
-                  <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
-                    <div className="h-full bg-gradient-to-r from-orange-400 to-orange-600 rounded-full transition-all duration-500" style={{ width: pct + '%' }} />
+                )
+              })}
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+            <p className="text-sm font-black text-slate-800 uppercase tracking-wide mb-4">Últimas realizaciones</p>
+            {registros.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-32 text-slate-300">
+                <ClipboardList size={28} className="mb-2" />
+                <p className="text-xs">Sin registros aún</p>
+              </div>
+            ) : (
+              <div className="space-y-2 max-h-48 overflow-y-auto">
+                {registros.slice(0,8).map((reg: any) => {
+                  const prac = practicas.find(p => p.id === reg.practicaId)
+                  if (!prac) return null
+                  const famColor = FAMILIAS.find(f => f.id === prac.familia)
+                  return (
+                    <div key={reg.id} className="flex items-center gap-2.5 py-1.5 border-b border-slate-50 last:border-0">
+                      <div className={`w-1.5 h-8 rounded-full shrink-0 ${reg.resultado === 'completado' ? 'bg-green-400' : 'bg-amber-400'}`} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-slate-800 truncate">{prac.titulo}</p>
+                        <p className="text-[10px] text-slate-400">{new Date(reg.fecha).toLocaleDateString('es-ES')} · {reg.turno === 'manana' ? 'Mañana' : reg.turno === 'tarde' ? 'Tarde' : 'Noche'}</p>
+                      </div>
+                      <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-md ${famColor?.color || 'bg-slate-100 text-slate-500'}`}>{fam?.label?.substring(0,3).toUpperCase()}</span>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Buscador y filtros */}
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="px-5 py-3.5 border-b border-slate-100 flex items-center gap-3">
+            <Search size={16} className="text-slate-400 shrink-0" />
+            <input value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
+              placeholder="Buscar práctica por título, número o objetivo..."
+              className="flex-1 text-sm bg-transparent focus:outline-none text-slate-700 placeholder:text-slate-400" />
+            {searchTerm && (
+              <button onClick={() => setSearchTerm('')} className="text-slate-400 hover:text-slate-600">
+                <X size={14} />
+              </button>
+            )}
+          </div>
+          <div className="px-5 py-3 flex gap-2 flex-wrap border-b border-slate-100">
+            <button onClick={() => setFiltroFamilia('all')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${filtroFamilia === 'all' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+              TODAS
+            </button>
+            {FAMILIAS.filter(f => practicas.some(p => p.familia === f.id)).map(f => (
+              <button key={f.id} onClick={() => setFiltroFamilia(filtroFamilia === f.id ? 'all' : f.id)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${filtroFamilia === f.id ? f.color : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'}`}>
+                {f.label.toUpperCase()}
+                <span className="ml-1.5 opacity-60">{practicas.filter(p => p.familia === f.id).length}</span>
+              </button>
+            ))}
+          </div>
+          <div className="px-5 py-2.5 flex gap-2">
+            {[{id:'all',label:'TODOS'},{id:'basico',label:'BÁSICO'},{id:'intermedio',label:'INTERMEDIO'},{id:'avanzado',label:'AVANZADO'}].map(n => (
+              <button key={n.id} onClick={() => setFiltroNivel(n.id)}
+                className={`px-3 py-1 rounded-lg text-[10px] font-black transition-all ${filtroNivel === n.id ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>
+                {n.label}
+              </button>
+            ))}
+            <span className="ml-auto text-[10px] text-slate-400 self-center">{practicasFiltradas.length} resultado/s</span>
+          </div>
+        </div>
+
+        {/* Catálogo */}
+        {loading ? (
+          <div className="flex items-center justify-center py-20">
+            <div className="flex flex-col items-center gap-3 text-slate-400">
+              <RefreshCw size={24} className="animate-spin" />
+              <p className="text-sm">Cargando prácticas...</p>
+            </div>
+          </div>
+        ) : practicasFiltradas.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 bg-white rounded-2xl border border-slate-200">
+            <BookOpen size={40} className="text-slate-200 mb-3" />
+            <p className="text-slate-500 font-bold">No hay prácticas</p>
+            <p className="text-slate-400 text-sm mt-1">Prueba con otros filtros o crea la primera práctica</p>
+            {isAdmin && (
+              <button onClick={() => setShowNueva(true)} className="mt-4 px-4 py-2 bg-orange-500 text-white text-sm font-bold rounded-lg hover:bg-orange-600">
+                + Nueva práctica
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-8">
+            {Object.entries(porFamilia).map(([familia, pracs]) => {
+              const familiaInfo = FAMILIAS.find(f => f.id === familia)
+              const famRealizadas = new Set(registros.filter(r => pracs.some(p => p.id === r.practicaId)).map(r => r.practicaId)).size
+              const famPct = pracs.length > 0 ? Math.round((famRealizadas / pracs.length) * 100) : 0
+              return (
+                <div key={familia}>
+                  {/* Cabecera de familia */}
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className={`h-px flex-1`} style={{ background: `linear-gradient(to right, ${familia === 'socorrismo' ? '#f472b6' : familia === 'incendios' ? '#f87171' : familia === 'rescate' ? '#fb923c' : familia === 'transmisiones' ? '#60a5fa' : familia === 'drones' ? '#2dd4bf' : familia === 'pma' ? '#fbbf24' : familia === 'vehiculos' ? '#818cf8' : '#94a3b8'}, transparent)` }} />
+                    <span className={`px-4 py-1.5 rounded-full text-xs font-black border ${familiaInfo?.color || 'bg-slate-100 text-slate-600 border-slate-200'}`}>
+                      {familiaInfo?.label?.toUpperCase() || familia.toUpperCase()}
+                    </span>
+                    <span className="text-xs text-slate-400">{pracs.length} práctica{pracs.length !== 1 ? 's' : ''}</span>
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-16 h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                        <div className="h-full rounded-full" style={{ width: famPct + '%', background: famPct === 100 ? '#22c55e' : '#f97316' }} />
+                      </div>
+                      <span className="text-[10px] text-slate-400 font-bold">{famPct}%</span>
+                    </div>
+                  </div>
+
+                  {/* Prácticas */}
+                  <div className="space-y-2">
+                    {pracs.map(p => {
+                      const isOpen = practicaExpandida === p.id
+                      const nivelInfo = NIVELES.find(n => n.id === p.nivel)
+                      const riesgoInfo = RIESGOS.find(r => r.id === p.riesgoPractica)
+                      const nRegs = registros.filter(r => r.practicaId === p.id).length
+                      const borderColor = familia === 'socorrismo' ? '#f472b6' : familia === 'incendios' ? '#f87171' : familia === 'rescate' ? '#fb923c' : familia === 'transmisiones' ? '#60a5fa' : familia === 'drones' ? '#2dd4bf' : familia === 'pma' ? '#fbbf24' : familia === 'vehiculos' ? '#818cf8' : '#94a3b8'
+                      return (
+                        <div key={p.id} className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-100 hover:border-slate-200 transition-all"
+                          style={{ borderLeft: `3px solid ${borderColor}` }}>
+                          <button onClick={() => { setPracticaExpandida(isOpen ? null : p.id); if (!isOpen) cargarRegistrosPractica(p.id) }}
+                            className="w-full text-left px-5 py-3.5 hover:bg-slate-50/80 transition-colors">
+                            <div className="flex items-center gap-4">
+                              <div className="flex items-center gap-3 flex-1 min-w-0">
+                                <span className="font-mono text-[10px] font-black text-slate-400 bg-slate-100 px-2 py-1 rounded-md shrink-0 tracking-wider">{p.numero}</span>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <p className="text-sm font-bold text-slate-800">{p.titulo}</p>
+                                    {p.subfamilia && <span className="text-[10px] text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md">{p.subfamilia}</span>}
+                                    {p.grupo && <span className="text-[10px] text-slate-400 italic">{p.grupo}</span>}
+                                  </div>
+                                  <p className="text-xs text-slate-500 mt-0.5 truncate">{p.objetivo}</p>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2 shrink-0">
+                                {p.youtubeUrl && (
+                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="#ef4444"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+                                )}
+                                {(p.imagenes || []).length > 0 && (
+                                  <span className="text-[9px] bg-blue-50 text-blue-500 border border-blue-100 px-1.5 py-0.5 rounded font-bold">{(p.imagenes||[]).length} img</span>
+                                )}
+                                {nRegs > 0 && (
+                                  <span className="text-[9px] bg-green-50 text-green-600 border border-green-100 px-1.5 py-0.5 rounded font-bold">{nRegs}x</span>
+                                )}
+                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${nivelInfo?.color || ''}`}>{nivelInfo?.label}</span>
+                                <span className="text-[10px] text-slate-400 flex items-center gap-0.5"><Clock size={9} />{p.duracionEstimada}m</span>
+                                <span className="text-[10px] text-slate-400 flex items-center gap-0.5"><Users size={9} />≥{p.personalMinimo}</span>
+                                <div className={`w-4 h-4 rounded-full flex items-center justify-center transition-transform ${isOpen ? 'rotate-180' : ''}`}>
+                                  <ChevronDown size={12} className="text-slate-400" />
+                                </div>
+                              </div>
+                            </div>
+                          </button>
+
+                          {isOpen && (
+                            <div className="border-t border-slate-100 bg-slate-50/30">
+                              {/* Info rápida */}
+                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-0 border-b border-slate-100">
+                                {[
+                                  { label: 'Personal mínimo', value: '≥ ' + p.personalMinimo, icon: Users },
+                                  { label: 'Duración estimada', value: p.duracionEstimada + ' min', icon: Clock },
+                                  { label: 'Riesgo práctica', value: riesgoInfo?.label || '-', cls: riesgoInfo?.color },
+                                  { label: 'Nivel', value: nivelInfo?.label || '-', cls: nivelInfo?.color.replace('bg-','text-').replace('-100','-700') || '' },
+                                ].map((item, i) => (
+                                  <div key={i} className="px-5 py-3 border-r border-slate-100 last:border-0">
+                                    <p className="text-[10px] text-slate-400 uppercase tracking-wide font-bold">{item.label}</p>
+                                    <p className={`text-sm font-bold mt-0.5 ${item.cls || 'text-slate-800'}`}>{item.value}</p>
+                                  </div>
+                                ))}
+                              </div>
+
+                              <div className="p-5 space-y-4">
+                                {/* Objetivo */}
+                                <div className="bg-white rounded-xl p-4 border border-slate-100">
+                                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Objetivo</p>
+                                  <p className="text-sm text-slate-700 leading-relaxed">{p.objetivo}</p>
+                                </div>
+
+                                {/* Definición + Lugar */}
+                                {(p.definicion || p.lugarDesarrollo) && (
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    {p.definicion && (
+                                      <div className="bg-white rounded-xl p-4 border border-slate-100">
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Definición</p>
+                                        <p className="text-sm text-slate-700 leading-relaxed">{p.definicion}</p>
+                                      </div>
+                                    )}
+                                    {p.lugarDesarrollo && (
+                                      <div className="bg-white rounded-xl p-4 border border-slate-100">
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Lugar de desarrollo</p>
+                                        <p className="text-sm text-slate-700">{p.lugarDesarrollo}</p>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+
+                                {/* Descripción */}
+                                {p.descripcion && (
+                                  <div className="bg-white rounded-xl p-4 border border-slate-100">
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Descripción</p>
+                                    <p className="text-sm text-slate-600 whitespace-pre-line leading-relaxed">{p.descripcion}</p>
+                                  </div>
+                                )}
+
+                                {/* Desarrollo */}
+                                {p.desarrollo && (
+                                  <div className="bg-slate-900 rounded-xl p-4">
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Desarrollo de la práctica</p>
+                                    <p className="text-sm text-slate-300 whitespace-pre-line leading-relaxed">{p.desarrollo}</p>
+                                  </div>
+                                )}
+
+                                {/* Material */}
+                                {p.materialNecesario && (
+                                  <div className="bg-amber-50 rounded-xl p-4 border border-amber-100">
+                                    <p className="text-[10px] font-black text-amber-700 uppercase tracking-widest mb-2">Material necesario</p>
+                                    <p className="text-sm text-slate-700 whitespace-pre-line leading-relaxed">{p.materialNecesario}</p>
+                                  </div>
+                                )}
+
+                                {/* Conclusiones */}
+                                {p.conclusiones && (
+                                  <div className="bg-green-50 rounded-xl p-4 border border-green-100">
+                                    <p className="text-[10px] font-black text-green-700 uppercase tracking-widest mb-2">Conclusiones</p>
+                                    <p className="text-sm text-slate-700 whitespace-pre-line leading-relaxed">{p.conclusiones}</p>
+                                  </div>
+                                )}
+
+                                {/* Riesgo intervención */}
+                                {p.riesgoIntervencion && (
+                                  <div className="bg-slate-100 rounded-xl p-3.5 flex items-start gap-2.5">
+                                    <AlertTriangle size={14} className="text-slate-500 shrink-0 mt-0.5" />
+                                    <div>
+                                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-wide">Riesgo de intervención — no se tendrá en cuenta</p>
+                                      <p className="text-xs text-slate-600 mt-1">{p.riesgoIntervencion}</p>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Prerequisitos */}
+                                {p.prerequisitos && (
+                                  <div className="flex items-center gap-2 text-xs text-slate-500">
+                                    <CheckCircle2 size={12} className="text-orange-500" />
+                                    <span>Prerequisito: <span className="font-bold text-slate-700">{p.prerequisitos}</span></span>
+                                  </div>
+                                )}
+
+                                {/* Imágenes */}
+                                {isAdmin && (
+                                  <div className="bg-white rounded-xl border border-slate-100 p-4">
+                                    <div className="flex items-center justify-between mb-3">
+                                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Imágenes de la práctica</p>
+                                      <label className={`flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-bold rounded-lg cursor-pointer transition-colors ${subiendoImagen ? 'bg-slate-100 text-slate-400' : 'bg-orange-500 text-white hover:bg-orange-600'}`}>
+                                        {subiendoImagen ? 'Subiendo...' : '+ Imagen'}
+                                        <input type="file" accept="image/*" className="hidden" disabled={subiendoImagen}
+                                          onChange={e => { const f = e.target.files?.[0]; if (f) subirImagenPractica(p.id, f) }} />
+                                      </label>
+                                    </div>
+                                    {(p.imagenes || []).length === 0 ? (
+                                      <p className="text-[10px] text-slate-400 text-center py-4">Sin imágenes. Añade fotos o diagramas.</p>
+                                    ) : (
+                                      <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                                        {(p.imagenes || []).map((img, idx) => (
+                                          <div key={idx} className="relative group rounded-lg overflow-hidden border border-slate-100 aspect-video">
+                                            <img src={img} alt={`img ${idx+1}`} className="w-full h-full object-cover" />
+                                            <button onClick={() => eliminarImagenPractica(p.id, img)}
+                                              className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 text-xs font-bold flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">×</button>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                                {!isAdmin && (p.imagenes || []).length > 0 && (
+                                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                                    {(p.imagenes || []).map((img, idx) => (
+                                      <div key={idx} className="rounded-lg overflow-hidden border border-slate-100 aspect-video">
+                                        <img src={img} alt={`img ${idx+1}`} className="w-full h-full object-cover" />
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+
+                                {/* YouTube */}
+                                {p.youtubeUrl && (
+                                  <a href={p.youtubeUrl} target="_blank" rel="noopener noreferrer"
+                                    className="flex items-center gap-3 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold text-sm transition-colors">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+                                    Ver vídeo demostrativo en YouTube
+                                  </a>
+                                )}
+
+                                {/* Historial */}
+                                {practicaExpandida === p.id && registros.filter(r => r.practicaId === p.id).length > 0 && (
+                                  <div className="bg-white rounded-xl border border-slate-100 overflow-hidden">
+                                    <div className="px-4 py-3 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+                                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Historial de realizaciones</p>
+                                      <span className="text-[10px] text-slate-400 font-bold">{registros.filter(r => r.practicaId === p.id).length} registros</span>
+                                    </div>
+                                    <div className="divide-y divide-slate-50 max-h-56 overflow-y-auto">
+                                      {registros.filter(r => r.practicaId === p.id).map(reg => (
+                                        <div key={reg.id} className="px-4 py-3 flex items-start justify-between gap-3">
+                                          <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                              <span className="text-xs font-bold text-slate-700">{new Date(reg.fecha).toLocaleDateString('es-ES')}</span>
+                                              <span className="text-[10px] text-slate-400">{reg.turno === 'manana' ? 'Mañana' : reg.turno === 'tarde' ? 'Tarde' : 'Noche'}</span>
+                                              <span className={`text-[9px] font-black px-2 py-0.5 rounded-full ${reg.resultado === 'completado' ? 'bg-green-100 text-green-700' : reg.resultado === 'pendiente_jefe' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>
+                                                {reg.resultado === 'pendiente_jefe' ? 'PENDIENTE VB' : reg.resultado.toUpperCase()}
+                                              </span>
+                                              <span className="text-[10px] text-slate-400">{reg.participantes?.length || 0} part.</span>
+                                            </div>
+                                            {reg.firmadoResponsableNombre && (
+                                              <p className="text-[10px] text-slate-500 mt-1 flex items-center gap-1">
+                                                <CheckCircle2 size={9} className="text-blue-400" />Resp: <span className="font-bold">{reg.firmadoResponsableNombre}</span>
+                                              </p>
+                                            )}
+                                            {reg.resultado === 'completado' && reg.firmadoJefeNombre && (
+                                              <div className="mt-1.5 bg-green-50 border border-green-100 rounded-lg px-2.5 py-1.5">
+                                                <div className="flex items-center gap-1">
+                                                  <CheckCircle2 size={9} className="text-green-600" />
+                                                  <span className="text-[9px] font-black text-green-700">VB JEFE — {reg.firmadoJefeNombre}</span>
+                                                </div>
+                                                {reg.firmaJefeTimestamp && (
+                                                  <p className="text-[9px] text-green-600 mt-0.5">
+                                                    {new Date(reg.firmaJefeTimestamp).toLocaleDateString('es-ES')} {new Date(reg.firmaJefeTimestamp).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})}
+                                                    {reg.firmaJefeIp && <span className="ml-2 text-green-500">IP: {reg.firmaJefeIp}</span>}
+                                                  </p>
+                                                )}
+                                              </div>
+                                            )}
+                                            {reg.resultado === 'pendiente_jefe' && (
+                                              <div className="mt-1.5 bg-amber-50 border border-amber-100 rounded-lg px-2.5 py-1.5 flex items-center gap-1.5">
+                                                <AlertTriangle size={9} className="text-amber-500" />
+                                                <span className="text-[9px] text-amber-700 font-bold">Pendiente firma Jefe de Servicio</span>
+                                              </div>
+                                            )}
+                                          </div>
+                                          <div className="flex gap-1.5 shrink-0">
+                                            {reg.resultado === 'pendiente_jefe' && isAdmin && (
+                                              <button onClick={() => { setRegistroParaFirma(reg); setShowFirmaJefe(true) }}
+                                                className="flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-black bg-amber-500 text-white rounded-lg hover:bg-amber-600">
+                                                Firmar VB
+                                              </button>
+                                            )}
+                                            <button onClick={() => generarPDFPractica(p, reg)}
+                                              className="flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-bold border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50">
+                                              PDF
+                                            </button>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Acciones */}
+                                <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
+                                  <button onClick={() => generarPDFPractica(p)}
+                                    className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50">
+                                    <BookOpen size={12} />PDF Ficha
+                                  </button>
+                                  <button onClick={() => { setPracticaParaRegistro(p); setShowRegistro(true); cargarRegistrosPractica(p.id) }}
+                                    className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold bg-slate-900 text-white rounded-lg hover:bg-slate-800">
+                                    <ClipboardList size={12} />Registrar realización
+                                  </button>
+                                  {isAdmin && (
+                                    <>
+                                      <button onClick={() => setPracticaEditando(p)}
+                                        className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-orange-600 border border-orange-200 rounded-lg hover:bg-orange-50 ml-auto">
+                                        <Edit size={12} />Editar
+                                      </button>
+                                      <button onClick={() => handleEliminar(p.id)}
+                                        className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-red-500 border border-red-100 rounded-lg hover:bg-red-50">
+                                        <Trash2 size={12} />Desactivar
+                                      </button>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
                   </div>
                 </div>
               )
             })}
           </div>
-        </div>
-
-        <div className="bg-white rounded-2xl border border-slate-100 p-5">
-          <p className="text-sm font-bold text-slate-700 mb-4">Últimas realizaciones</p>
-          {registros.length === 0 ? (
-            <p className="text-xs text-slate-400 text-center py-6">Sin registros aún</p>
-          ) : (
-            <div className="space-y-2.5 max-h-64 overflow-y-auto">
-              {registros.slice(0, 8).map((reg: any) => {
-                const prac = practicas.find(p => p.id === reg.practicaId)
-                return (
-                  <div key={reg.id} className="flex items-start gap-2.5">
-                    <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${reg.resultado === 'completado' ? 'bg-green-500' : reg.resultado === 'pendiente_jefe' ? 'bg-amber-500' : 'bg-slate-300'}`} />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold text-slate-800 truncate">{prac?.titulo || reg.practicaId}</p>
-                      <p className="text-[10px] text-slate-400">{new Date(reg.fecha).toLocaleDateString('es-ES')} · {reg.turno === 'manana' ? 'Mañana' : reg.turno === 'tarde' ? 'Tarde' : 'Noche'}</p>
-                    </div>
-                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ${reg.resultado === 'completado' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
-                      {reg.resultado === 'completado' ? 'OK' : 'VB'}
-                    </span>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-        </div>
+        )}
       </div>
-
-      <div className="bg-white rounded-xl border border-slate-100 p-4 space-y-3">
-        <div className="relative">
-          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
-            placeholder="Buscar por título, número u objetivo..."
-            className="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-200" />
-        </div>
-        <div className="flex gap-2 flex-wrap">
-          <button onClick={() => setFiltroFamilia('all')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${filtroFamilia === 'all' ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-600 border-slate-200'}`}>
-            Todas
-          </button>
-          {FAMILIAS.map(f => (
-            <button key={f.id} onClick={() => setFiltroFamilia(f.id)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${filtroFamilia === f.id ? f.color : 'bg-white text-slate-600 border-slate-200'}`}>
-              {f.label}
-              {familias.find((x: any) => x.familia === f.id) && (
-                <span className="ml-1.5 opacity-70">{familias.find((x: any) => x.familia === f.id)?._count.id}</span>
-              )}
-            </button>
-          ))}
-        </div>
-        <div className="flex gap-2">
-          <button onClick={() => setFiltroNivel('all')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${filtroNivel === 'all' ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-600 border-slate-200'}`}>
-            Todos los niveles
-          </button>
-          {NIVELES.map(n => (
-            <button key={n.id} onClick={() => setFiltroNivel(n.id)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${filtroNivel === n.id ? n.color + ' border-transparent' : 'bg-white text-slate-600 border-slate-200'}`}>
-              {n.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {loading ? (
-        <div className="text-center py-12 text-slate-400">Cargando prácticas...</div>
-      ) : practicasFiltradas.length === 0 ? (
-        <div className="text-center py-12 bg-white rounded-xl border border-slate-100">
-          <BookOpen size={32} className="mx-auto mb-3 text-slate-300" />
-          <p className="text-slate-500 font-medium">No hay prácticas registradas</p>
-          {isAdmin && (
-            <button onClick={() => setShowNueva(true)} className="mt-3 text-orange-500 text-sm font-medium hover:underline">
-              + Crear la primera práctica
-            </button>
-          )}
-        </div>
-      ) : (
-        <div className="space-y-6">
-          {Object.entries(porFamilia).map(([familia, pracs]) => {
-            const familiaInfo = FAMILIAS.find(f => f.id === familia)
-            return (
-              <div key={familia}>
-                <div className="flex items-center gap-3 mb-3">
-                  <span className={`px-3 py-1 rounded-full text-xs font-bold border ${getFamiliaStyle(familia)}`}>
-                    {familiaInfo?.label || familia.toUpperCase()}
-                  </span>
-                  <span className="text-xs text-slate-400">{pracs.length} práctica{pracs.length !== 1 ? 's' : ''}</span>
-                  <div className="flex-1 h-px bg-slate-100" />
-                </div>
-                <div className="space-y-2">
-                  {pracs.map(p => {
-                    const isOpen = practicaExpandida === p.id
-                    const nivelInfo = NIVELES.find(n => n.id === p.nivel)
-                    const riesgoInfo = RIESGOS.find(r => r.id === p.riesgoPractica)
-                    return (
-                      <div key={p.id} className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
-                        <button onClick={() => setPracticaExpandida(isOpen ? null : p.id)}
-                          className="w-full text-left px-5 py-3.5 hover:bg-slate-50 transition-colors">
-                          <div className="flex items-center justify-between gap-3">
-                            <div className="flex items-center gap-3 flex-1 min-w-0">
-                              <span className="font-mono text-xs font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded shrink-0">{p.numero}</span>
-                              <p className="font-semibold text-slate-800 text-sm truncate">{p.titulo}</p>
-                              {p.subfamilia && <span className="text-[10px] text-slate-400 bg-slate-50 px-2 py-0.5 rounded shrink-0">{p.subfamilia}</span>}
-                              {p.youtubeUrl && (
-                                <span title="Tiene vídeo YouTube" className="shrink-0">
-                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="#ef4444"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
-                                </span>
-                              )}
-                              {(p.imagenes || []).length > 0 && (
-                                <span className="text-[10px] bg-blue-50 text-blue-600 border border-blue-100 px-1.5 py-0.5 rounded font-medium shrink-0">
-                                  {(p.imagenes || []).length} img
-                                </span>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-2 shrink-0">
-                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${nivelInfo?.color}`}>{nivelInfo?.label}</span>
-                              <span className="flex items-center gap-1 text-[10px] text-slate-400"><Clock size={10} />{p.duracionEstimada}min</span>
-                              <span className="flex items-center gap-1 text-[10px] text-slate-400"><Users size={10} />≥{p.personalMinimo}</span>
-                              <ChevronDown size={14} className={`text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-                            </div>
-                          </div>
-                        </button>
-                        {isOpen && (
-                          <div className="border-t border-slate-100 bg-slate-50/50 px-5 py-4 space-y-4">
-                            <div className="bg-white rounded-lg p-3.5 border border-slate-100">
-                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1.5">Objetivo</p>
-                              <p className="text-sm text-slate-700">{p.objetivo}</p>
-                            </div>
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                              <div className="bg-white rounded-lg p-3 border border-slate-100 text-center">
-                                <p className="text-[10px] text-slate-400 mb-1">Personal</p>
-                                <p className="text-sm font-bold text-slate-800">≥ {p.personalMinimo}</p>
-                              </div>
-                              <div className="bg-white rounded-lg p-3 border border-slate-100 text-center">
-                                <p className="text-[10px] text-slate-400 mb-1">Duración</p>
-                                <p className="text-sm font-bold text-slate-800">{p.duracionEstimada} min</p>
-                              </div>
-                              <div className="bg-white rounded-lg p-3 border border-slate-100 text-center">
-                                <p className="text-[10px] text-slate-400 mb-1">Riesgo</p>
-                                <p className={`text-sm font-bold ${riesgoInfo?.color}`}>{riesgoInfo?.label}</p>
-                              </div>
-                              <div className="bg-white rounded-lg p-3 border border-slate-100 text-center">
-                                <p className="text-[10px] text-slate-400 mb-1">Nivel</p>
-                                <p className={`text-xs font-bold px-2 py-0.5 rounded-full inline-block ${nivelInfo?.color}`}>{nivelInfo?.label}</p>
-                              </div>
-                            </div>
-                            {p.descripcion && <div className="bg-white rounded-lg p-3.5 border border-slate-100"><p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1.5">Descripción</p><p className="text-sm text-slate-600 whitespace-pre-line">{p.descripcion}</p></div>}
-                            {p.desarrollo && <div className="bg-white rounded-lg p-3.5 border border-slate-100"><p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1.5">Desarrollo</p><p className="text-sm text-slate-600 whitespace-pre-line">{p.desarrollo}</p></div>}
-                            {p.materialNecesario && <div className="bg-amber-50 rounded-lg p-3.5 border border-amber-100"><p className="text-[10px] font-bold text-amber-700 uppercase tracking-wide mb-1.5">Material necesario</p><p className="text-sm text-slate-700">{p.materialNecesario}</p></div>}
-                            {p.conclusiones && <div className="bg-green-50 rounded-lg p-3.5 border border-green-100"><p className="text-[10px] font-bold text-green-700 uppercase tracking-wide mb-1.5">Conclusiones</p><p className="text-sm text-slate-700">{p.conclusiones}</p></div>}
-                            {p.riesgoIntervencion && <div className="bg-slate-100 rounded-lg p-3 border border-slate-200 flex items-start gap-2"><AlertTriangle size={14} className="text-slate-500 shrink-0 mt-0.5" /><div><p className="text-[10px] font-bold text-slate-500 uppercase mb-0.5">Riesgo de intervención (no se tendrá en cuenta)</p><p className="text-xs text-slate-600">{p.riesgoIntervencion}</p></div></div>}
-                            {p.lugarDesarrollo && (
-                              <div className="flex items-center gap-2 text-xs text-slate-500">
-                                <span className="font-medium text-slate-400">Lugar:</span>
-                                <span>{p.lugarDesarrollo}</span>
-                              </div>
-                            )}
-                            {p.prerequisitos && <div className="flex items-center gap-2 text-xs text-slate-500"><CheckCircle2 size={12} /><span>Prerequisito: <span className="font-medium">{p.prerequisitos}</span></span></div>}
-                            {/* Imágenes */}
-                            {isAdmin && (
-                              <div className="bg-white rounded-lg border border-slate-100 p-3.5">
-                                <div className="flex items-center justify-between mb-2">
-                                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Imágenes de la práctica</p>
-                                  <label className={`flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-bold rounded-lg cursor-pointer transition-colors ${subiendoImagen ? 'bg-slate-100 text-slate-400' : 'bg-orange-500 text-white hover:bg-orange-600'}`}>
-                                    {subiendoImagen ? 'Subiendo...' : '+ Añadir imagen'}
-                                    <input type="file" accept="image/*" className="hidden" disabled={subiendoImagen}
-                                      onChange={e => { const f = e.target.files?.[0]; if (f) subirImagenPractica(p.id, f) }} />
-                                  </label>
-                                </div>
-                                {(p.imagenes || []).length === 0 ? (
-                                  <p className="text-[10px] text-slate-400 text-center py-3">Sin imágenes. Añade fotos o diagramas de la práctica.</p>
-                                ) : (
-                                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                                    {(p.imagenes || []).map((img, idx) => (
-                                      <div key={idx} className="relative group rounded-lg overflow-hidden border border-slate-100">
-                                        <img src={img} alt={`Imagen ${idx+1}`} className="w-full h-28 object-cover" />
-                                        <button onClick={() => eliminarImagenPractica(p.id, img)}
-                                          className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 text-[10px] font-bold flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                          ×
-                                        </button>
-                                      </div>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                            {!isAdmin && (p.imagenes || []).length > 0 && (
-                              <div className="bg-white rounded-lg border border-slate-100 p-3.5">
-                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-2">Imágenes</p>
-                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                                  {(p.imagenes || []).map((img, idx) => (
-                                    <div key={idx} className="rounded-lg overflow-hidden border border-slate-100">
-                                      <img src={img} alt={`Imagen ${idx+1}`} className="w-full h-28 object-cover" />
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-                            {p.youtubeUrl && (
-                              <a href={p.youtubeUrl} target="_blank" rel="noopener noreferrer"
-                                className="flex items-center gap-2 px-3 py-2 bg-red-50 border border-red-100 rounded-lg text-xs font-medium text-red-600 hover:bg-red-100 transition-colors">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
-                                Ver vídeo en YouTube
-                              </a>
-                            )}
-                            {/* Historial registros */}
-                            {practicaExpandida === p.id && registros.filter(r => r.practicaId === p.id).length > 0 && (
-                              <div className="bg-white rounded-lg border border-slate-100">
-                                <div className="px-3.5 py-2.5 border-b border-slate-50 flex items-center justify-between">
-                                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Historial de realizaciones</p>
-                                  <span className="text-[10px] text-slate-400">{registros.filter(r => r.practicaId === p.id).length} registro/s</span>
-                                </div>
-                                <div className="divide-y divide-slate-50 max-h-48 overflow-y-auto">
-                                  {registros.filter(r => r.practicaId === p.id).map(reg => (
-                                    <div key={reg.id} className="px-3.5 py-2.5 flex items-center justify-between gap-3">
-                                      <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2 flex-wrap">
-                                          <span className="text-xs font-medium text-slate-700">{new Date(reg.fecha).toLocaleDateString('es-ES')}</span>
-                                          <span className="text-[10px] text-slate-400">{reg.turno === 'manana' ? 'Mañana' : reg.turno === 'tarde' ? 'Tarde' : 'Noche'}</span>
-                                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${reg.resultado === 'completado' ? 'bg-green-100 text-green-700' : reg.resultado === 'pendiente_jefe' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>
-                                            {reg.resultado === 'pendiente_jefe' ? 'Pendiente firma jefe' : reg.resultado}
-                                          </span>
-                                          <span className="text-[10px] text-slate-400">{reg.participantes?.length || 0} participantes</span>
-                                        </div>
-                                        {reg.firmadoResponsableNombre && <p className="text-[10px] text-slate-400 mt-0.5">Resp: {reg.firmadoResponsableNombre}</p>}
-                                      </div>
-                                      <div className="flex gap-1.5 shrink-0">
-                                        {reg.resultado === 'pendiente_jefe' && isAdmin && (
-                                          <button onClick={() => { setRegistroParaFirma(reg); setShowFirmaJefe(true) }} className="flex items-center gap-1 px-2.5 py-1 text-[10px] font-bold bg-amber-500 text-white rounded-lg hover:bg-amber-600">
-                                            Firmar VB
-                                          </button>
-                                        )}
-                                        <button onClick={() => generarPDFPractica(p, reg)} className="flex items-center gap-1 px-2.5 py-1 text-[10px] font-medium border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50">
-                                          PDF
-                                        </button>
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-                            <div className="flex justify-end gap-2 pt-1 border-t border-slate-100">
-                              <button type="button" onClick={() => generarPDFPractica(p)} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50"><BookOpen size={12} />PDF plantilla</button>
-                              <button onClick={() => { setPracticaParaRegistro(p); setShowRegistro(true); cargarRegistrosPractica(p.id) }} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-green-600 text-white rounded-lg hover:bg-green-700"><ClipboardList size={12} />Registrar realización</button>
-                            </div>
-                            {isAdmin && (
-                              <div className="flex justify-end gap-2 pt-1 border-t border-slate-100">
-                                <button onClick={() => handleEliminar(p.id)} className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-red-500 border border-red-100 rounded-lg hover:bg-red-50"><Trash2 size={12} />Desactivar</button>
-                                <button onClick={() => setPracticaEditando(p)} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-orange-200 text-orange-600 rounded-lg hover:bg-orange-50"><Edit size={12} />Editar</button>
-                                <button onClick={() => { setPracticaParaRegistro(p); setShowRegistro(true); cargarRegistrosPractica(p.id) }} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-green-600 text-white rounded-lg hover:bg-green-700"><ClipboardList size={12} />Registrar práctica</button>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      )}
-
 
       {showFirmaJefe && registroParaFirma && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000] p-4">
