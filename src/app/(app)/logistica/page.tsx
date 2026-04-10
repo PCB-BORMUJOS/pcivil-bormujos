@@ -262,6 +262,7 @@ export default function LogisticaPage() {
   const [paginaPeticiones, setPaginaPeticiones] = useState(1);
   const PETICIONES_POR_PAGINA = 10;
   const [articuloMovimiento, setArticuloMovimiento] = useState<Articulo | null>(null);
+  const [articuloEditando, setArticuloEditando] = useState<any>(null);
   // Familias
   const [showGestionFamilias, setShowGestionFamilias] = useState(false);
   const [familiaEditando, setFamiliaEditando] = useState<{id: string, nombre: string} | null>(null);
