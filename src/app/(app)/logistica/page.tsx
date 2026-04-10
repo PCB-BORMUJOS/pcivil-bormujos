@@ -955,6 +955,7 @@ export default function LogisticaPage() {
                             <td className="py-3 px-4">
                               <div className="flex items-center justify-end gap-1">
                                 <button onClick={() => { setArticuloMovimiento(articulo); setShowMovimiento(true); }} className="p-2 text-green-600 hover:bg-green-50 rounded-lg" title="Movimiento"><ArrowUpDown size={16} /></button>
+                                <button onClick={() => setArticuloEditando(articulo)} className="p-2 text-orange-500 hover:bg-orange-50 rounded-lg" title="Editar artículo"><Pencil size={16} /></button>
                                 <button onClick={() => { setNuevaPeticion({ ...nuevaPeticion, articuloId: articulo.id, nombreArticulo: articulo.nombre, unidad: articulo.unidad, areaOrigen: articulo.familia.categoria.slug }); setShowNuevaPeticion(true); }} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg" title="Solicitar"><Send size={16} /></button>
                                 <button onClick={() => handleEliminarArticulo(articulo.id)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg" title="Eliminar"><Trash2 size={16} /></button>
                               </div>
@@ -1445,6 +1446,72 @@ export default function LogisticaPage() {
               <button onClick={handleGuardarArticulo} className="flex-1 py-2.5 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700">Guardar</button>
             </div>
           </div>
+        </Modal>
+      )}
+
+
+      {/* Modal: Editar Artículo */}
+      {articuloEditando && (
+        <Modal title={`Editar artículo — ${articuloEditando.nombre}`} onClose={() => setArticuloEditando(null)}>
+          <form onSubmit={async e => {
+            e.preventDefault()
+            const f = new FormData(e.currentTarget)
+            const res = await fetch('/api/logistica', {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                tipo: 'articulo',
+                id: articuloEditando.id,
+                codigo: f.get('codigo'),
+                nombre: f.get('nombre'),
+                descripcion: f.get('descripcion'),
+                stockActual: parseInt(f.get('stockActual') as string),
+                stockMinimo: parseInt(f.get('stockMinimo') as string),
+                unidad: f.get('unidad'),
+                ubicacion: f.get('ubicacion'),
+              })
+            })
+            if (res.ok) {
+              setArticuloEditando(null)
+              cargarDatos()
+            }
+          }} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">Código</label>
+                <input name="codigo" defaultValue={articuloEditando.codigo || ''} className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400/20 focus:border-purple-400" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">Unidad</label>
+                <input name="unidad" defaultValue={articuloEditando.unidad || 'ud'} className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400/20 focus:border-purple-400" />
+              </div>
+              <div className="col-span-2">
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">Nombre *</label>
+                <input name="nombre" required defaultValue={articuloEditando.nombre} className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400/20 focus:border-purple-400" />
+              </div>
+              <div className="col-span-2">
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">Descripción</label>
+                <textarea name="descripcion" rows={2} defaultValue={articuloEditando.descripcion || ''} className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400/20 focus:border-purple-400" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">Stock actual</label>
+                <input name="stockActual" type="number" min="0" defaultValue={articuloEditando.stockActual} className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400/20 focus:border-purple-400" />
+                <p className="text-[10px] text-slate-400 mt-1">Puede ponerse a 0 para reflejar inventario real</p>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">Stock mínimo</label>
+                <input name="stockMinimo" type="number" min="0" defaultValue={articuloEditando.stockMinimo} className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400/20 focus:border-purple-400" />
+              </div>
+              <div className="col-span-2">
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">Ubicación</label>
+                <input name="ubicacion" defaultValue={articuloEditando.ubicacion || ''} placeholder="Ej: Armario 3, Estantería B..." className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400/20 focus:border-purple-400" />
+              </div>
+            </div>
+            <div className="flex justify-between pt-2 border-t border-slate-100">
+              <button type="button" onClick={() => setArticuloEditando(null)} className="px-4 py-2 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50">Cancelar</button>
+              <button type="submit" className="px-6 py-2 bg-purple-600 text-white text-sm font-bold rounded-lg hover:bg-purple-700">Guardar cambios</button>
+            </div>
+          </form>
         </Modal>
       )}
 
