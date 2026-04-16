@@ -1,4 +1,5 @@
 'use client';
+import EditorPlano from '@/components/EditorPlano';
 import { usePermisos } from '@/lib/permisos'
 import React, { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
@@ -222,6 +223,7 @@ export default function IncendiosPage() {
   })
   const [mapReady, setMapReady] = useState(false);
   const [subiendoPlano, setSubiendoPlano] = useState(false);
+  const [showEditorPlano, setShowEditorPlano] = useState(false);
   const [peticiones, setPeticiones] = useState<any[]>([]);
   const [filtroPeticiones, setFiltroPeticiones] = useState("all");
   const [peticionStats, setPeticionStats] = useState({ total: 0, pendientes: 0, aprobadas: 0, enCompra: 0, recibidas: 0, rechazadas: 0 });
@@ -532,6 +534,7 @@ export default function IncendiosPage() {
   });
 
   return (
+    <>
     <div className="space-y-6">
       {/* HEADER */}
       <div>
@@ -944,6 +947,7 @@ export default function IncendiosPage() {
                         <p className="text-xs text-slate-500 truncate" title={selectedEdificio.planoNombre || ''}>{selectedEdificio.planoNombre || 'plano.pdf'}</p>
                         <div className="flex gap-1">
                           <a href={selectedEdificio.planoUrl} target="_blank" rel="noopener noreferrer" className="flex-1 text-center text-xs bg-blue-600 text-white rounded px-2 py-1 hover:bg-blue-700 transition-colors">Ver</a>
+                          <button onClick={e => { e.stopPropagation(); setShowEditorPlano(true); }} className="flex-1 text-center text-xs bg-red-600 text-white rounded px-2 py-1 hover:bg-red-700 transition-colors">Editor</button>
                           <label className={`flex-1 text-center text-xs border rounded px-2 py-1 cursor-pointer transition-colors ${subiendoPlano ? 'bg-slate-100 text-slate-400 border-slate-200' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'}`}>
                             {subiendoPlano ? '...' : 'Cambiar'}
                             <input type="file" accept=".pdf" className="hidden" disabled={subiendoPlano} onChange={e => { const f = e.target.files?.[0]; if (f) subirPlano(selectedEdificio.id, f); e.target.value = ''; }} />
@@ -2045,5 +2049,16 @@ export default function IncendiosPage() {
       )}
 
     </div>
+      {showEditorPlano && selectedEdificio?.planoUrl && (
+        <EditorPlano
+          edificioId={selectedEdificio.id}
+          edificioNombre={selectedEdificio.nombre}
+          planoUrl={selectedEdificio.planoUrl}
+          equiposECI={equiposECI}
+          onCerrar={() => setShowEditorPlano(false)}
+        />
+      )}
+    </>
+
   );
 }
