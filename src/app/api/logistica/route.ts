@@ -1102,14 +1102,20 @@ export async function PUT(request: NextRequest) {
 
     // ===== EQUIPO ECI =====
     if (tipo === 'equipo-eci') {
-      const { tipo: tipoEquipo, subtipo, ubicacion, numeroSerie, estado } = body
-
+      const { tipoEquipo, subtipo, ubicacion, numeroSerie, estado, fechaInstalacion, proximaRevision } = body
       const equipo = await prisma.equipoECI.update({
         where: { id },
-        data: { tipo: tipoEquipo, subtipo, ubicacion, numeroSerie, estado },
+        data: {
+          tipo: tipoEquipo,
+          subtipo: subtipo || null,
+          ubicacion,
+          numeroSerie: numeroSerie || null,
+          estado,
+          fechaInstalacion: fechaInstalacion ? new Date(fechaInstalacion) : null,
+          proximaRevision: proximaRevision ? new Date(proximaRevision) : null,
+        },
         include: { edificio: true }
       })
-
       return NextResponse.json({ success: true, equipo })
     }
 

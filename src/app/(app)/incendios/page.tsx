@@ -131,7 +131,7 @@ interface Articulo {
   familia: { nombre: string; id: string };
 }
 interface Familia { id: string; nombre: string; slug: string; _count?: { articulos: number } }
-interface Edificio { id: string; nombre: string; direccion: string | null; responsable?: string | null; telefono?: string | null; _count?: { equiposECI: number }; }
+interface Edificio { id: string; nombre: string; direccion: string | null; responsable?: string | null; telefono?: string | null; planoUrl?: string | null; planoNombre?: string | null; _count?: { equiposECI: number }; }
 interface EquipoECI {
   id: string; tipo: string; subtipo: string | null; ubicacion: string; numeroSerie: string | null;
   estado: string; fechaInstalacion: string | null; proximaRevision: string | null;
@@ -221,6 +221,7 @@ export default function IncendiosPage() {
     estado: 'operativo'
   })
   const [mapReady, setMapReady] = useState(false);
+  const [subiendoPlano, setSubiendoPlano] = useState(false);
   const [peticiones, setPeticiones] = useState<any[]>([]);
   const [filtroPeticiones, setFiltroPeticiones] = useState("all");
   const [peticionStats, setPeticionStats] = useState({ total: 0, pendientes: 0, aprobadas: 0, enCompra: 0, recibidas: 0, rechazadas: 0 });
@@ -466,6 +467,34 @@ export default function IncendiosPage() {
     }
   }
 
+  const subirPlano = async (edificioId: string, archivo: File) => {
+    setSubiendoPlano(true)
+    try {
+      const formData = new FormData()
+      formData.append('edificioId', edificioId)
+      formData.append('archivo', archivo)
+      const res = await fetch('/api/incendios/plano', { method: 'POST', body: formData })
+      if (!res.ok) { const err = await res.json(); throw new Error(err.error || 'Error subiendo plano') }
+      const data = await res.json()
+      setEdificioSeleccionado((prev: Edificio | null) => prev ? { ...prev, planoUrl: data.planoUrl, planoNombre: data.planoNombre } : prev)
+      setEdificios((prev: Edificio[]) => prev.map(e => e.id === edificioId ? { ...e, planoUrl: data.planoUrl, planoNombre: data.planoNombre } : e))
+    } catch (err: any) {
+      alert(err.message || 'Error subiendo el plano')
+    } finally {
+      setSubiendoPlano(false)
+    }
+  }
+  const eliminarPlano = async (edificioId: string) => {
+    if (!confirm('¿Eliminar el plano de este edificio?')) return
+    try {
+      const res = await fetch(`/api/incendios/plano?edificioId=${edificioId}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error('Error eliminando plano')
+      setEdificioSeleccionado((prev: Edificio | null) => prev ? { ...prev, planoUrl: null, planoNombre: null } : prev)
+      setEdificios((prev: Edificio[]) => prev.map(e => e.id === edificioId ? { ...e, planoUrl: null, planoNombre: null } : e))
+    } catch (err: any) {
+      alert(err.message || 'Error eliminando el plano')
+    }
+  }
   const eliminarItem = async (tipo: string, id: string) => {
     try {
       const res = await fetch(`/api/logistica?tipo=${tipo}&id=${id}`, { method: 'DELETE' })
@@ -885,7 +914,7 @@ export default function IncendiosPage() {
                   </button>
                 </div>
 
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
                   <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
                     <p className="text-xs text-slate-500 font-medium">Total Equipos</p>
                     <p className="text-2xl font-bold text-slate-800 mt-1">{equiposECI.length}</p>
@@ -907,6 +936,27 @@ export default function IncendiosPage() {
                     <p className="text-2xl font-bold text-red-700 mt-1">
                       {equiposECI.filter(e => e.estado === 'fuera_servicio').length}
                     </p>
+                  </div>
+                  <div className="bg-blue-50 p-4 rounded-lg border border-blue-200 flex flex-col justify-between">
+                    <p className="text-xs text-blue-600 font-medium mb-2">Plano del Edificio</p>
+                    {selectedEdificio?.planoUrl ? (
+                      <div className="flex flex-col gap-1.5">
+                        <p className="text-xs text-slate-500 truncate" title={selectedEdificio.planoNombre || ''}>{selectedEdificio.planoNombre || 'plano.pdf'}</p>
+                        <div className="flex gap-1">
+                          <a href={selectedEdificio.planoUrl} target="_blank" rel="noopener noreferrer" className="flex-1 text-center text-xs bg-blue-600 text-white rounded px-2 py-1 hover:bg-blue-700 transition-colors">Ver</a>
+                          <label className={`flex-1 text-center text-xs border rounded px-2 py-1 cursor-pointer transition-colors ${subiendoPlano ? 'bg-slate-100 text-slate-400 border-slate-200' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'}`}>
+                            {subiendoPlano ? '...' : 'Cambiar'}
+                            <input type="file" accept=".pdf" className="hidden" disabled={subiendoPlano} onChange={e => { const f = e.target.files?.[0]; if (f) subirPlano(selectedEdificio.id, f); e.target.value = ''; }} />
+                          </label>
+                          <button onClick={() => eliminarPlano(selectedEdificio.id)} className="text-xs bg-white text-red-500 border border-red-200 rounded px-2 py-1 hover:bg-red-50 transition-colors" title="Eliminar plano">✕</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <label className={`text-xs text-center border rounded px-3 py-2 cursor-pointer transition-colors ${subiendoPlano ? 'bg-slate-100 text-slate-400 border-slate-200' : 'bg-white text-blue-600 border-blue-300 hover:bg-blue-50'}`}>
+                        {subiendoPlano ? 'Subiendo...' : '+ Adjuntar PDF'}
+                        <input type="file" accept=".pdf" className="hidden" disabled={subiendoPlano} onChange={e => { const f = e.target.files?.[0]; if (f) subirPlano(selectedEdificio.id, f); e.target.value = ''; }} />
+                      </label>
+                    )}
                   </div>
                 </div>
 
@@ -1682,11 +1732,13 @@ export default function IncendiosPage() {
               e.preventDefault()
               const form = e.target as HTMLFormElement
               const formData = {
-                tipo: (form.elements.namedItem('tipo') as HTMLSelectElement).value,
+                tipoEquipo: (form.elements.namedItem('tipo') as HTMLSelectElement).value,
                 subtipo: (form.elements.namedItem('subtipo') as HTMLInputElement).value,
                 ubicacion: (form.elements.namedItem('ubicacion') as HTMLInputElement).value,
                 numeroSerie: (form.elements.namedItem('numeroSerie') as HTMLInputElement).value,
-                estado: (form.elements.namedItem('estado') as HTMLSelectElement).value
+                estado: (form.elements.namedItem('estado') as HTMLSelectElement).value,
+                fechaInstalacion: (form.elements.namedItem('fechaInstalacion') as HTMLInputElement).value || null,
+                proximaRevision: (form.elements.namedItem('proximaRevision') as HTMLInputElement).value || null,
               }
               const success = await editarEquipo(equipoSeleccionado.id, formData)
               if (success) setEquipoSeleccionado(null)
@@ -1724,6 +1776,16 @@ export default function IncendiosPage() {
                     <option value="revision_pendiente">Revisión Pendiente</option>
                     <option value="fuera_servicio">Fuera de Servicio</option>
                   </select>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Fecha Instalación</label>
+                  <input name="fechaInstalacion" type="date" defaultValue={equipoSeleccionado.fechaInstalacion ? new Date(equipoSeleccionado.fechaInstalacion).toISOString().split('T')[0] : ''} className="w-full border border-slate-300 rounded-lg p-2.5" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Próxima Revisión</label>
+                  <input name="proximaRevision" type="date" defaultValue={equipoSeleccionado.proximaRevision ? new Date(equipoSeleccionado.proximaRevision).toISOString().split('T')[0] : ''} className="w-full border border-slate-300 rounded-lg p-2.5" />
                 </div>
               </div>
               <div className="flex justify-end gap-3 pt-4 border-t">
