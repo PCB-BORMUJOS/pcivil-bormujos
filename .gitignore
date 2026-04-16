@@ -10,3 +10,6 @@ DS_Store
 *.log
 secrets/
 tsconfig.tsbuildinfo
+
+# Backups locales BD
+backups/
