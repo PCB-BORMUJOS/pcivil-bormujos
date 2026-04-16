@@ -60,13 +60,18 @@ export default function EditorPlano({ edificioId, edificioNombre, planoUrl, equi
       try {
         const pdfjsLib = await import('pdfjs-dist')
         pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`
-        const pdf = await pdfjsLib.getDocument(planoUrl).promise
+        // Fetch como ArrayBuffer para evitar CORS
+        const response = await fetch(planoUrl)
+        const arrayBuffer = await response.arrayBuffer()
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
         const page = await pdf.getPage(1)
         const container = containerRef.current
         if (!container) return
-        const containerW = container.clientWidth || 900
+        // Esperar un tick para que el DOM tenga dimensiones reales
+        await new Promise(r => setTimeout(r, 100))
+        const containerW = Math.max(container.clientWidth, 800)
         const viewport0 = page.getViewport({ scale: 1 })
-        const scale = containerW / viewport0.width
+        const scale = (containerW - 32) / viewport0.width
         const viewport = page.getViewport({ scale })
         const canvas = canvasRef.current!
         canvas.width = viewport.width
