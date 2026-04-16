@@ -7,7 +7,7 @@ import 'leaflet/dist/leaflet.css';
 import {
   Flame, Package, Search, AlertTriangle, Plus, RefreshCw, Building2, Shield, MapPin,
   Edit, Trash2, Eye, X, Save, ArrowLeft, ShoppingCart, Layers, Clock, Check, CheckCircle,
-  Ban, Filter, User, Building, Calendar, History, Send
+  Ban, Filter, User, Building, Calendar, History, Send, Download
 } from 'lucide-react';
 
 // Iconos centralizados
@@ -224,6 +224,7 @@ export default function IncendiosPage() {
   const [mapReady, setMapReady] = useState(false);
   const [subiendoPlano, setSubiendoPlano] = useState(false);
   const [showEditorPlano, setShowEditorPlano] = useState(false);
+  const [showVerPlano, setShowVerPlano] = useState(false);
   const [peticiones, setPeticiones] = useState<any[]>([]);
   const [filtroPeticiones, setFiltroPeticiones] = useState("all");
   const [peticionStats, setPeticionStats] = useState({ total: 0, pendientes: 0, aprobadas: 0, enCompra: 0, recibidas: 0, rechazadas: 0 });
@@ -946,7 +947,7 @@ export default function IncendiosPage() {
                       <div className="flex flex-col gap-1.5">
                         <p className="text-xs text-slate-500 truncate" title={selectedEdificio.planoNombre || ''}>{selectedEdificio.planoNombre || 'plano.pdf'}</p>
                         <div className="flex gap-1">
-                          <a href={selectedEdificio.planoUrl} target="_blank" rel="noopener noreferrer" className="flex-1 text-center text-xs bg-blue-600 text-white rounded px-2 py-1 hover:bg-blue-700 transition-colors">Ver</a>
+                          <button onClick={e => { e.stopPropagation(); setShowVerPlano(true); }} className="flex-1 text-center text-xs bg-blue-600 text-white rounded px-2 py-1 hover:bg-blue-700 transition-colors">Ver</button>
                           <button onClick={e => { e.stopPropagation(); setShowEditorPlano(true); }} className="flex-1 text-center text-xs bg-red-600 text-white rounded px-2 py-1 hover:bg-red-700 transition-colors">Editor</button>
                           <label className={`flex-1 text-center text-xs border rounded px-2 py-1 cursor-pointer transition-colors ${subiendoPlano ? 'bg-slate-100 text-slate-400 border-slate-200' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'}`}>
                             {subiendoPlano ? '...' : 'Cambiar'}
@@ -2049,6 +2050,28 @@ export default function IncendiosPage() {
       )}
 
     </div>
+      {showVerPlano && selectedEdificio?.planoUrl && (
+        <div className="fixed inset-0 z-[2000] bg-black/90 flex flex-col">
+          <div className="flex items-center justify-between px-4 py-3 bg-slate-900 border-b border-slate-700 flex-shrink-0">
+            <div className="flex items-center gap-3">
+              <button onClick={() => setShowVerPlano(false)} className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-700 rounded transition-colors">
+                <X size={18} />
+              </button>
+              <h2 className="text-white font-bold">Plano — {selectedEdificio.nombre}</h2>
+              <span className="text-slate-400 text-sm">{selectedEdificio.planoNombre || 'plano.pdf'}</span>
+            </div>
+            <a href={selectedEdificio.planoUrl} target="_blank" rel="noopener noreferrer"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">
+              <Download size={14} />
+              Descargar
+            </a>
+          </div>
+          <div className="flex-1 overflow-auto">
+            <iframe src={selectedEdificio.planoUrl} className="w-full h-full border-0" title="Plano del edificio" />
+          </div>
+        </div>
+      )}
+
       {showEditorPlano && selectedEdificio?.planoUrl && (
         <EditorPlano
           edificioId={selectedEdificio.id}

@@ -59,7 +59,7 @@ export default function EditorPlano({ edificioId, edificioNombre, planoUrl, equi
     const renderPDF = async () => {
       try {
         const pdfjsLib = await import('pdfjs-dist')
-        pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'
         // Fetch como ArrayBuffer para evitar CORS
         const response = await fetch(planoUrl)
         const arrayBuffer = await response.arrayBuffer()
@@ -67,9 +67,8 @@ export default function EditorPlano({ edificioId, edificioNombre, planoUrl, equi
         const page = await pdf.getPage(1)
         const container = containerRef.current
         if (!container) return
-        // Esperar un tick para que el DOM tenga dimensiones reales
-        await new Promise(r => setTimeout(r, 100))
-        const containerW = Math.max(container.clientWidth, 800)
+        // Usar ancho de ventana menos panel lateral como referencia fiable
+        const containerW = Math.max((typeof window !== 'undefined' ? window.innerWidth - 220 : 900), 600)
         const viewport0 = page.getViewport({ scale: 1 })
         const scale = (containerW - 32) / viewport0.width
         const viewport = page.getViewport({ scale })
@@ -77,7 +76,7 @@ export default function EditorPlano({ edificioId, edificioNombre, planoUrl, equi
         canvas.width = viewport.width
         canvas.height = viewport.height
         const ctx = canvas.getContext('2d')!
-        await page.render({ canvasContext: ctx, viewport, canvas: canvas }).promise
+        await page.render({ canvasContext: ctx, viewport }).promise
         setCargando(false)
       } catch (err) {
         console.error('Error renderizando PDF:', err)
