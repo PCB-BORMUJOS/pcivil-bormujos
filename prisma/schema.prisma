@@ -611,6 +611,7 @@ model Edificio {
   deas        DEA[]
   equiposECI      EquipoECI[]
   planoMarcadores PlanoMarcador[]
+  planos          PlanoEdificio[]
 
   @@map("edificios")
 }
@@ -1959,6 +1960,8 @@ model RegistroPractica {
 model PlanoMarcador {
   id          String     @id @default(cuid())
   edificioId  String     @map("edificio_id")
+  planoId     String?    @map("plano_id")
+  plano       PlanoEdificio? @relation(fields: [planoId], references: [id], onDelete: Cascade)
   equipoECIId String?    @map("equipo_eci_id")
   tipo        String
   etiqueta    String?
@@ -1971,4 +1974,20 @@ model PlanoMarcador {
 
   @@index([edificioId])
   @@map("plano_marcadores")
+}
+
+model PlanoEdificio {
+  id          String          @id @default(cuid())
+  edificioId  String          @map("edificio_id")
+  nombre      String
+  orden       Int             @default(0)
+  planoUrl    String?         @map("plano_url")
+  planoNombre String?         @map("plano_nombre")
+  createdAt   DateTime        @default(now()) @map("created_at")
+  updatedAt   DateTime        @updatedAt @map("updated_at")
+  edificio    Edificio        @relation(fields: [edificioId], references: [id], onDelete: Cascade)
+  marcadores  PlanoMarcador[]
+
+  @@index([edificioId])
+  @@map("planos_edificio")
 }

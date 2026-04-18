@@ -32,14 +32,13 @@ interface Marcador {
 
 interface Props {
   edificioId: string
-  planoId?: string
   edificioNombre: string
   planoUrl: string
   equiposECI: any[]
   onCerrar: () => void
 }
 
-export default function EditorPlano({ edificioId, planoId, edificioNombre, planoUrl, equiposECI, onCerrar }: Props) {
+export default function EditorPlano({ edificioId, edificioNombre, planoUrl, equiposECI, onCerrar }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const [marcadores, setMarcadores] = useState<Marcador[]>([])
@@ -88,7 +87,7 @@ export default function EditorPlano({ edificioId, planoId, edificioNombre, plano
   }, [planoUrl])
 
   useEffect(() => {
-    fetch(`/api/incendios/marcadores?${planoId ? 'planoId=' + planoId : 'edificioId=' + edificioId}`)
+    fetch(`/api/incendios/marcadores?edificioId=${edificioId}`)
       .then(r => r.json())
       .then(d => setMarcadores(d.marcadores || []))
       .catch(console.error)
@@ -115,7 +114,7 @@ export default function EditorPlano({ edificioId, planoId, edificioNombre, plano
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          edificioId, planoId: planoId || undefined, tipo: tipoSeleccionado,
+          edificioId, tipo: tipoSeleccionado,
           etiqueta: etiquetaInput || null,
           equipoECIId: equipoInput || null,
           x: pendingPos.x, y: pendingPos.y,

@@ -132,8 +132,7 @@ interface Articulo {
   familia: { nombre: string; id: string };
 }
 interface Familia { id: string; nombre: string; slug: string; _count?: { articulos: number } }
-interface PlanoEdificio { id: string; nombre: string; orden: number; planoUrl: string | null; planoNombre: string | null; }
-interface Edificio { id: string; nombre: string; direccion: string | null; responsable?: string | null; telefono?: string | null; planoUrl?: string | null; planoNombre?: string | null; planos?: PlanoEdificio[]; _count?: { equiposECI: number }; }
+interface Edificio { id: string; nombre: string; direccion: string | null; responsable?: string | null; telefono?: string | null; planoUrl?: string | null; planoNombre?: string | null; _count?: { equiposECI: number }; }
 interface EquipoECI {
   id: string; tipo: string; subtipo: string | null; ubicacion: string; numeroSerie: string | null;
   estado: string; fechaInstalacion: string | null; proximaRevision: string | null;
@@ -223,15 +222,9 @@ export default function IncendiosPage() {
     estado: 'operativo'
   })
   const [mapReady, setMapReady] = useState(false);
+  const [subiendoPlano, setSubiendoPlano] = useState(false);
   const [showEditorPlano, setShowEditorPlano] = useState(false);
   const [showVerPlano, setShowVerPlano] = useState(false);
-  const [planos, setPlanos] = useState<PlanoEdificio[]>([]);
-  const [planoSeleccionado, setPlanoSeleccionado] = useState<PlanoEdificio | null>(null);
-  const [subiendoPlanoId, setSubiendoPlanoId] = useState<string | null>(null);
-  const [showNuevoPlano, setShowNuevoPlano] = useState(false);
-  const [nuevoPlanoNombre, setNuevoPlanoNombre] = useState('');
-  const [nuevoPlanoArchivo, setNuevoPlanoArchivo] = useState<File | null>(null);
-  const [creandoPlano, setCreandoPlano] = useState(false);
   const [peticiones, setPeticiones] = useState<any[]>([]);
   const [filtroPeticiones, setFiltroPeticiones] = useState("all");
   const [peticionStats, setPeticionStats] = useState({ total: 0, pendientes: 0, aprobadas: 0, enCompra: 0, recibidas: 0, rechazadas: 0 });
@@ -477,56 +470,34 @@ export default function IncendiosPage() {
     }
   }
 
-  const cargarPlanos = async (eid: string) => {
+  const subirPlano = async (edificioId: string, archivo: File) => {
+    setSubiendoPlano(true)
     try {
-      const res = await fetch(`/api/incendios/plano?edificioId=${eid}`)
-      const data = await res.json()
-      setPlanos(data.planos || [])
-    } catch {}
-  }
-  const crearPlano = async () => {
-    if (!edificioSeleccionado || !nuevoPlanoNombre.trim()) return
-    try {
-      setCreandoPlano(true)
       const formData = new FormData()
-      formData.append('edificioId', edificioSeleccionado.id)
-      formData.append('nombre', nuevoPlanoNombre.trim())
-      if (nuevoPlanoArchivo) formData.append('archivo', nuevoPlanoArchivo)
-      const res = await fetch('/api/incendios/plano', { method: 'POST', body: formData })
-      if (!res.ok) throw new Error('Error creando plano')
-      const data = await res.json()
-      setPlanos(prev => [...prev, data.plano])
-      setShowNuevoPlano(false); setNuevoPlanoNombre(''); setNuevoPlanoArchivo(null)
-    } catch (err: any) { alert(err.message || 'Error creando el plano') }
-    finally { setCreandoPlano(false) }
-  }
-  const cambiarPdfPlano = async (planoId: string, archivo: File) => {
-    try {
-      setSubiendoPlanoId(planoId)
-      const formData = new FormData()
-      formData.append('planoId', planoId)
+      formData.append('edificioId', edificioId)
       formData.append('archivo', archivo)
-      const res = await fetch('/api/incendios/plano', { method: 'PUT', body: formData })
-      if (!res.ok) throw new Error('Error subiendo PDF')
+      const res = await fetch('/api/incendios/plano', { method: 'POST', body: formData })
+      if (!res.ok) { const err = await res.json(); throw new Error(err.error || 'Error subiendo plano') }
       const data = await res.json()
-      setPlanos(prev => prev.map(p => p.id === planoId ? data.plano : p))
-    } catch (err: any) { alert(err.message || 'Error subiendo el PDF') }
-    finally { setSubiendoPlanoId(null) }
+      setEdificioSeleccionado((prev: Edificio | null) => prev ? { ...prev, planoUrl: data.planoUrl, planoNombre: data.planoNombre } : prev)
+      setEdificios((prev: Edificio[]) => prev.map(e => e.id === edificioId ? { ...e, planoUrl: data.planoUrl, planoNombre: data.planoNombre } : e))
+    } catch (err: any) {
+      alert(err.message || 'Error subiendo el plano')
+    } finally {
+      setSubiendoPlano(false)
+    }
   }
-  const eliminarPlano = async (planoId: string) => {
-    if (!confirm('¿Eliminar este plano? Se perderán los marcadores asociados.')) return
+  const eliminarPlano = async (edificioId: string) => {
+    if (!confirm('¿Eliminar el plano de este edificio?')) return
     try {
-      const res = await fetch(`/api/incendios/plano?planoId=${planoId}`, { method: 'DELETE' })
+      const res = await fetch(`/api/incendios/plano?edificioId=${edificioId}`, { method: 'DELETE' })
       if (!res.ok) throw new Error('Error eliminando plano')
-      setPlanos(prev => prev.filter(p => p.id !== planoId))
-      if (planoSeleccionado?.id === planoId) setPlanoSeleccionado(null)
-    } catch (err: any) { alert(err.message || 'Error eliminando el plano') }
+      setEdificioSeleccionado((prev: Edificio | null) => prev ? { ...prev, planoUrl: null, planoNombre: null } : prev)
+      setEdificios((prev: Edificio[]) => prev.map(e => e.id === edificioId ? { ...e, planoUrl: null, planoNombre: null } : e))
+    } catch (err: any) {
+      alert(err.message || 'Error eliminando el plano')
+    }
   }
-  useEffect(() => {
-    if (edificioSeleccionado) { cargarPlanos(edificioSeleccionado.id) }
-    else { setPlanos([]); setPlanoSeleccionado(null) }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [edificioSeleccionado?.id])
   const eliminarItem = async (tipo: string, id: string) => {
     try {
       const res = await fetch(`/api/logistica?tipo=${tipo}&id=${id}`, { method: 'DELETE' })
@@ -970,37 +941,26 @@ export default function IncendiosPage() {
                       {equiposECI.filter(e => e.estado === 'fuera_servicio').length}
                     </p>
                   </div>
-                  <div className="bg-blue-50 p-4 rounded-lg border border-blue-200 flex flex-col">
-                    <div className="flex items-center justify-between mb-2">
-                      <p className="text-xs text-blue-600 font-medium">Planos del Edificio</p>
-                      <button onClick={e => { e.stopPropagation(); setShowNuevoPlano(true); }} className="text-xs text-blue-600 hover:text-blue-800 font-medium">+ Añadir</button>
-                    </div>
-                    {planos.length === 0 ? (
-                      <button onClick={e => { e.stopPropagation(); setShowNuevoPlano(true); }} className="text-xs text-center border border-dashed border-blue-300 rounded px-3 py-2 text-blue-600 hover:bg-blue-50 transition-colors">+ Adjuntar plano</button>
-                    ) : (
-                      <div className="space-y-1.5 max-h-32 overflow-y-auto">
-                        {planos.map((plano) => (
-                          <div key={plano.id} className="flex items-center gap-1">
-                            <span className="text-xs text-slate-600 flex-1 truncate min-w-0" title={plano.nombre}>{plano.nombre}</span>
-                            {plano.planoUrl ? (
-                              <>
-                                <button onClick={e => { e.stopPropagation(); setPlanoSeleccionado(plano); setShowVerPlano(true); }} className="text-xs bg-blue-600 text-white rounded px-1.5 py-0.5 hover:bg-blue-700 flex-shrink-0">Ver</button>
-                                <button onClick={e => { e.stopPropagation(); setPlanoSeleccionado(plano); setShowEditorPlano(true); }} className="text-xs bg-red-600 text-white rounded px-1.5 py-0.5 hover:bg-red-700 flex-shrink-0">Editor</button>
-                                <label className={`text-xs border rounded px-1.5 py-0.5 cursor-pointer flex-shrink-0 ${subiendoPlanoId === plano.id ? 'bg-slate-100 text-slate-400 border-slate-200' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'}`}>
-                                  {subiendoPlanoId === plano.id ? '...' : 'PDF'}
-                                  <input type="file" accept=".pdf" className="hidden" disabled={!!subiendoPlanoId} onChange={e => { const f = e.target.files?.[0]; if (f) cambiarPdfPlano(plano.id, f); e.target.value = ''; }} />
-                                </label>
-                              </>
-                            ) : (
-                              <label className="text-xs border border-blue-300 rounded px-1.5 py-0.5 cursor-pointer text-blue-600 hover:bg-blue-50 flex-shrink-0">
-                                + PDF
-                                <input type="file" accept=".pdf" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) cambiarPdfPlano(plano.id, f); e.target.value = ''; }} />
-                              </label>
-                            )}
-                            <button onClick={e => { e.stopPropagation(); eliminarPlano(plano.id); }} className="text-xs text-red-400 hover:text-red-600 flex-shrink-0 ml-0.5" title="Eliminar">✕</button>
-                          </div>
-                        ))}
+                  <div className="bg-blue-50 p-4 rounded-lg border border-blue-200 flex flex-col justify-between">
+                    <p className="text-xs text-blue-600 font-medium mb-2">Plano del Edificio</p>
+                    {selectedEdificio?.planoUrl ? (
+                      <div className="flex flex-col gap-1.5">
+                        <p className="text-xs text-slate-500 truncate" title={selectedEdificio.planoNombre || ''}>{selectedEdificio.planoNombre || 'plano.pdf'}</p>
+                        <div className="flex gap-1">
+                          <button onClick={e => { e.stopPropagation(); setShowVerPlano(true); }} className="flex-1 text-center text-xs bg-blue-600 text-white rounded px-2 py-1 hover:bg-blue-700 transition-colors">Ver</button>
+                          <button onClick={e => { e.stopPropagation(); setShowEditorPlano(true); }} className="flex-1 text-center text-xs bg-red-600 text-white rounded px-2 py-1 hover:bg-red-700 transition-colors">Editor</button>
+                          <label className={`flex-1 text-center text-xs border rounded px-2 py-1 cursor-pointer transition-colors ${subiendoPlano ? 'bg-slate-100 text-slate-400 border-slate-200' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'}`}>
+                            {subiendoPlano ? '...' : 'Cambiar'}
+                            <input type="file" accept=".pdf" className="hidden" disabled={subiendoPlano} onChange={e => { const f = e.target.files?.[0]; if (f) subirPlano(selectedEdificio.id, f); e.target.value = ''; }} />
+                          </label>
+                          <button onClick={() => eliminarPlano(selectedEdificio.id)} className="text-xs bg-white text-red-500 border border-red-200 rounded px-2 py-1 hover:bg-red-50 transition-colors" title="Eliminar plano">✕</button>
+                        </div>
                       </div>
+                    ) : (
+                      <label className={`text-xs text-center border rounded px-3 py-2 cursor-pointer transition-colors ${subiendoPlano ? 'bg-slate-100 text-slate-400 border-slate-200' : 'bg-white text-blue-600 border-blue-300 hover:bg-blue-50'}`}>
+                        {subiendoPlano ? 'Subiendo...' : '+ Adjuntar PDF'}
+                        <input type="file" accept=".pdf" className="hidden" disabled={subiendoPlano} onChange={e => { const f = e.target.files?.[0]; if (f) subirPlano(selectedEdificio.id, f); e.target.value = ''; }} />
+                      </label>
                     )}
                   </div>
                 </div>
@@ -2090,57 +2050,36 @@ export default function IncendiosPage() {
       )}
 
     </div>
-      {showVerPlano && planoSeleccionado?.planoUrl && (
+      {showVerPlano && selectedEdificio?.planoUrl && (
         <div className="fixed inset-0 z-[2000] bg-black/90 flex flex-col">
           <div className="flex items-center justify-between px-4 py-3 bg-slate-900 border-b border-slate-700 flex-shrink-0">
             <div className="flex items-center gap-3">
-              <button onClick={() => { setShowVerPlano(false); setPlanoSeleccionado(null); }} className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-700 rounded transition-colors">
+              <button onClick={() => setShowVerPlano(false)} className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-700 rounded transition-colors">
                 <X size={18} />
               </button>
-              <h2 className="text-white font-bold">{planoSeleccionado.nombre} — {selectedEdificio?.nombre}</h2>
-              <span className="text-slate-400 text-sm">{planoSeleccionado.planoNombre || 'plano.pdf'}</span>
+              <h2 className="text-white font-bold">Plano — {selectedEdificio.nombre}</h2>
+              <span className="text-slate-400 text-sm">{selectedEdificio.planoNombre || 'plano.pdf'}</span>
             </div>
-            <a href={planoSeleccionado.planoUrl} target="_blank" rel="noopener noreferrer"
+            <a href={selectedEdificio.planoUrl} target="_blank" rel="noopener noreferrer"
               className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">
               <Download size={14} />
               Descargar
             </a>
           </div>
           <div className="flex-1 overflow-auto">
-            <iframe src={planoSeleccionado.planoUrl} className="w-full h-full border-0" title="Plano del edificio" />
+            <iframe src={selectedEdificio.planoUrl} className="w-full h-full border-0" title="Plano del edificio" />
           </div>
         </div>
       )}
-      {showEditorPlano && planoSeleccionado?.planoUrl && selectedEdificio && (
+
+      {showEditorPlano && selectedEdificio?.planoUrl && (
         <EditorPlano
           edificioId={selectedEdificio.id}
           edificioNombre={selectedEdificio.nombre}
-          planoUrl={planoSeleccionado.planoUrl}
-          planoId={planoSeleccionado.id}
+          planoUrl={selectedEdificio.planoUrl}
           equiposECI={equiposECI}
-          onCerrar={() => { setShowEditorPlano(false); setPlanoSeleccionado(null); }}
+          onCerrar={() => setShowEditorPlano(false)}
         />
-      )}
-      {showNuevoPlano && selectedEdificio && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000] p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6">
-            <h3 className="font-bold text-slate-800 mb-4">Añadir planta</h3>
-            <div className="space-y-3">
-              <div>
-                <label className="text-xs font-medium text-slate-600 block mb-1">Nombre de la planta</label>
-                <input type="text" value={nuevoPlanoNombre} onChange={e => setNuevoPlanoNombre(e.target.value)} placeholder="Ej: Planta Baja, Planta 1ª, Sótano..." className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" autoFocus />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-slate-600 block mb-1">PDF del plano (opcional)</label>
-                <input type="file" accept=".pdf" onChange={e => setNuevoPlanoArchivo(e.target.files?.[0] || null)} className="w-full text-sm text-slate-600 file:mr-2 file:py-1 file:px-3 file:rounded file:border-0 file:text-xs file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100" />
-              </div>
-            </div>
-            <div className="flex gap-2 mt-5">
-              <button onClick={() => { setShowNuevoPlano(false); setNuevoPlanoNombre(''); setNuevoPlanoArchivo(null); }} className="flex-1 px-4 py-2 border border-slate-300 text-slate-600 rounded-lg text-sm hover:bg-slate-50">Cancelar</button>
-              <button onClick={crearPlano} disabled={!nuevoPlanoNombre.trim() || creandoPlano} className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50">{creandoPlano ? 'Creando...' : 'Crear planta'}</button>
-            </div>
-          </div>
-        </div>
       )}
     </>
 

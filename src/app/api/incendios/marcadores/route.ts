@@ -8,10 +8,12 @@ export async function GET(request: NextRequest) {
     const session = await getServerSession(authOptions)
     if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     const { searchParams } = new URL(request.url)
+    const planoId = searchParams.get('planoId')
     const edificioId = searchParams.get('edificioId')
-    if (!edificioId) return NextResponse.json({ error: 'edificioId requerido' }, { status: 400 })
+    if (!planoId && !edificioId) return NextResponse.json({ error: 'planoId o edificioId requerido' }, { status: 400 })
+    const where = planoId ? { planoId } : { edificioId: edificioId! }
     const marcadores = await prisma.planoMarcador.findMany({
-      where: { edificioId },
+      where,
       include: { equipoECI: { select: { id: true, tipo: true, subtipo: true, ubicacion: true, estado: true } } },
       orderBy: { createdAt: 'asc' }
     })
@@ -27,11 +29,11 @@ export async function POST(request: NextRequest) {
     const session = await getServerSession(authOptions)
     if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     const body = await request.json()
-    const { edificioId, equipoECIId, tipo, etiqueta, x, y } = body
+    const { edificioId, planoId, equipoECIId, tipo, etiqueta, x, y } = body
     if (!edificioId || !tipo || x === undefined || y === undefined)
       return NextResponse.json({ error: 'Faltan campos requeridos' }, { status: 400 })
     const marcador = await prisma.planoMarcador.create({
-      data: { edificioId, equipoECIId: equipoECIId || null, tipo, etiqueta: etiqueta || null, x, y },
+      data: { edificioId, planoId: planoId || null, equipoECIId: equipoECIId || null, tipo, etiqueta: etiqueta || null, x, y },
       include: { equipoECI: { select: { id: true, tipo: true, subtipo: true, ubicacion: true, estado: true } } }
     })
     return NextResponse.json({ marcador })
