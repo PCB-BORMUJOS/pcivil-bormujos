@@ -1,23 +1,23 @@
 'use client'
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { Flame, Shield, Bell, AlertTriangle, Navigation, Package, DoorOpen, Wind, X, Download, Pencil, Check } from 'lucide-react'
+import { X, Download, Pencil, Check, Package } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
+import { getIconoEquipoECI, getColorEquipoECI } from '@/lib/iconos-config'
 
-const TIPOS_MARCADOR: {
-  valor: string
-  label: string
-  Icono: LucideIcon
-  bgColor: string
-  textColor: string
-}[] = [
-  { valor: 'extintor',          label: 'Extintor',           Icono: Flame,         bgColor: 'bg-red-500',    textColor: 'text-white' },
-  { valor: 'extintor_co2',      label: 'Extintor CO2',       Icono: Wind,          bgColor: 'bg-slate-500',  textColor: 'text-white' },
-  { valor: 'bie',               label: 'BIE',                Icono: Shield,        bgColor: 'bg-blue-500',   textColor: 'text-white' },
-  { valor: 'detector',          label: 'Detector',           Icono: AlertTriangle, bgColor: 'bg-yellow-500', textColor: 'text-white' },
-  { valor: 'pulsador',          label: 'Pulsador',           Icono: Bell,          bgColor: 'bg-orange-500', textColor: 'text-white' },
-  { valor: 'alarma',            label: 'Alarma/Sirena',      Icono: Bell,          bgColor: 'bg-purple-500', textColor: 'text-white' },
-  { valor: 'señalizacion',      label: 'Señalización',       Icono: Navigation,    bgColor: 'bg-green-500',  textColor: 'text-white' },
-  { valor: 'salida_emergencia', label: 'Salida Emergencia',  Icono: DoorOpen,      bgColor: 'bg-emerald-500',textColor: 'text-white' },
+const BG_COLOR_MAP: Record<string, string> = {
+  extintor: 'bg-red-500', extintor_co2: 'bg-slate-500', bie: 'bg-blue-500',
+  detector: 'bg-yellow-500', pulsador: 'bg-orange-500', alarma: 'bg-purple-500',
+  señalizacion: 'bg-green-500', salida_emergencia: 'bg-emerald-500',
+}
+const TIPOS_MARCADOR: { valor: string; label: string }[] = [
+  { valor: 'extintor',          label: 'Extintor' },
+  { valor: 'extintor_co2',      label: 'Extintor CO2' },
+  { valor: 'bie',               label: 'BIE' },
+  { valor: 'detector',          label: 'Detector' },
+  { valor: 'pulsador',          label: 'Pulsador' },
+  { valor: 'alarma',            label: 'Alarma/Sirena' },
+  { valor: 'señalizacion',      label: 'Señalización' },
+  { valor: 'salida_emergencia', label: 'Salida Emergencia' },
 ]
 
 interface Marcador {
@@ -94,7 +94,10 @@ export default function EditorPlano({ edificioId, planoId, edificioNombre, plano
       .catch(console.error)
   }, [edificioId])
 
-  const getTipoConfig = (tipo: string) => TIPOS_MARCADOR.find(t => t.valor === tipo) || TIPOS_MARCADOR[0]
+  const getTipoConfig = (tipo: string) => {
+    const base = TIPOS_MARCADOR.find(t => t.valor === tipo) || TIPOS_MARCADOR[0]
+    return { ...base, Icono: getIconoEquipoECI(base.valor), bgColor: BG_COLOR_MAP[base.valor] || 'bg-slate-500' }
+  }
 
   const handleCanvasClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (!modoEdicion) return
@@ -191,13 +194,14 @@ export default function EditorPlano({ edificioId, planoId, edificioNombre, plano
               <p className="text-xs text-slate-400 mb-2 font-medium uppercase tracking-wide">Tipo a colocar</p>
               <div className="space-y-0.5">
                 {TIPOS_MARCADOR.map(t => {
-                  const { Icono } = t
+                  const Icono = getIconoEquipoECI(t.valor)
+                  const bgColor = BG_COLOR_MAP[t.valor] || 'bg-slate-500'
                   return (
                     <button key={t.valor} onClick={() => setTipoSeleccionado(t.valor)}
                       className={`w-full text-left px-2 py-1.5 rounded text-sm flex items-center gap-2 transition-colors ${
                         tipoSeleccionado === t.valor ? 'bg-red-600 text-white' : 'hover:bg-slate-700 text-slate-300'
                       }`}>
-                      <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${t.bgColor}`}>
+                      <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${bgColor}`}>
                         <Icono size={11} className="text-white" />
                       </div>
                       <span className="text-xs">{t.label}</span>
@@ -215,7 +219,7 @@ export default function EditorPlano({ edificioId, planoId, edificioNombre, plano
               : <div className="space-y-0.5">
                   {marcadores.map(m => {
                     const cfg = getTipoConfig(m.tipo)
-                    const { Icono } = cfg
+                    const Icono = getIconoEquipoECI(cfg.valor)
                     return (
                       <button key={m.id}
                         onClick={() => setMarcadorActivo(marcadorActivo?.id === m.id ? null : m)}

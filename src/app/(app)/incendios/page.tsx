@@ -485,11 +485,11 @@ export default function IncendiosPage() {
     } catch {}
   }
   const crearPlano = async () => {
-    if (!edificioSeleccionado || !nuevoPlanoNombre.trim()) return
+    if (!selectedEdificio || !nuevoPlanoNombre.trim()) return
     try {
       setCreandoPlano(true)
       const formData = new FormData()
-      formData.append('edificioId', edificioSeleccionado.id)
+      formData.append('edificioId', selectedEdificio.id)
       formData.append('nombre', nuevoPlanoNombre.trim())
       if (nuevoPlanoArchivo) formData.append('archivo', nuevoPlanoArchivo)
       const res = await fetch('/api/incendios/plano', { method: 'POST', body: formData })
@@ -523,10 +523,10 @@ export default function IncendiosPage() {
     } catch (err: any) { alert(err.message || 'Error eliminando el plano') }
   }
   useEffect(() => {
-    if (edificioSeleccionado) { cargarPlanos(edificioSeleccionado.id) }
+    if (selectedEdificio) { cargarPlanos(selectedEdificio.id) }
     else { setPlanos([]); setPlanoSeleccionado(null) }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [edificioSeleccionado?.id])
+  }, [selectedEdificio?.id])
   const eliminarItem = async (tipo: string, id: string) => {
     try {
       const res = await fetch(`/api/logistica?tipo=${tipo}&id=${id}`, { method: 'DELETE' })
