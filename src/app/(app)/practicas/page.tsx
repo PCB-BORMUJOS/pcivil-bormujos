@@ -1015,17 +1015,17 @@ export default function PracticasPage() {
                         <div key={p.id} className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-100 hover:border-slate-200 transition-all"
                           style={{ borderLeft: `3px solid ${borderColor}` }}>
                           <button onClick={() => { setPracticaExpandida(isOpen ? null : p.id); if (!isOpen) cargarRegistrosPractica(p.id) }}
-                            className="w-full text-left px-5 py-3.5 hover:bg-slate-50/80 transition-colors">
+                            className="w-full text-left px-5 py-4 hover:bg-orange-50/30 transition-colors">
                             <div className="flex items-center gap-4">
                               <div className="flex items-center gap-3 flex-1 min-w-0">
-                                <span className="font-mono text-[10px] font-black text-slate-400 bg-slate-100 px-2 py-1 rounded-md shrink-0 tracking-wider">{p.numero}</span>
+                                <span className="font-mono text-xs font-black text-slate-600 bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-lg shrink-0 tracking-wider">{p.numero}</span>
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-2 flex-wrap">
-                                    <p className="text-sm font-bold text-slate-800">{p.titulo}</p>
-                                    {p.subfamilia && <span className="text-[10px] text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md">{p.subfamilia}</span>}
+                                    <p className="text-base font-black text-slate-900 leading-tight">{p.titulo}</p>
+                                    {p.subfamilia && <span className="text-xs text-slate-500 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-lg font-medium">{p.subfamilia}</span>}
                                     {p.grupo && <span className="text-[10px] text-slate-400 italic">{p.grupo}</span>}
                                   </div>
-                                  <p className="text-xs text-slate-500 mt-0.5 truncate">{p.objetivo}</p>
+                                  <p className="text-sm text-slate-600 mt-0.5 truncate leading-relaxed">{p.objetivo}</p>
                                 </div>
                               </div>
                               <div className="flex items-center gap-2 shrink-0">
@@ -1039,8 +1039,8 @@ export default function PracticasPage() {
                                   <span className="text-[9px] bg-green-50 text-green-600 border border-green-100 px-1.5 py-0.5 rounded font-bold">{nRegs}x</span>
                                 )}
                                 <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${nivelInfo?.color || ''}`}>{nivelInfo?.label}</span>
-                                <span className="text-[10px] text-slate-400 flex items-center gap-0.5"><Clock size={9} />{p.duracionEstimada}m</span>
-                                <span className="text-[10px] text-slate-400 flex items-center gap-0.5"><Users size={9} />≥{p.personalMinimo}</span>
+                                <span className="text-xs text-slate-500 font-medium flex items-center gap-1"><Clock size={13} />{p.duracionEstimada} min</span>
+                                <span className="text-xs text-slate-500 font-medium flex items-center gap-1"><Users size={13} />≥{p.personalMinimo}</span>
                                 <div className={`w-4 h-4 rounded-full flex items-center justify-center transition-transform ${isOpen ? 'rotate-180' : ''}`}>
                                   <ChevronDown size={12} className="text-slate-400" />
                                 </div>
@@ -1069,7 +1069,7 @@ export default function PracticasPage() {
                                 {/* Objetivo */}
                                 <div className="bg-white rounded-xl p-4 border border-slate-100">
                                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Objetivo</p>
-                                  <p className="text-sm text-slate-700 leading-relaxed">{p.objetivo}</p>
+                                  <p className="text-base text-slate-800 leading-relaxed font-medium">{p.objetivo}</p>
                                 </div>
 
                                 {/* Definición + Lugar */}
@@ -1480,6 +1480,105 @@ export default function PracticasPage() {
         </div>
       )}
       {(showNueva || practicaEditando) && <FormularioPractica />}
+
+      {/* ── MODAL GESTIÓN FAMILIAS ── */}
+      {showGestionFamilias && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[1100] p-4">
+          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl border border-slate-100">
+            <div className="flex items-center justify-between p-5 border-b bg-slate-900 rounded-t-2xl">
+              <div className="flex items-center gap-2">
+                <Settings size={18} className="text-orange-400" />
+                <h3 className="font-bold text-white text-base">Gestionar Familias de Prácticas</h3>
+              </div>
+              <button onClick={() => setShowGestionFamilias(false)}>
+                <X size={18} className="text-slate-400 hover:text-white" />
+              </button>
+            </div>
+            <div className="p-5 space-y-5">
+              {/* Familias existentes */}
+              <div>
+                <p className="text-xs font-black text-slate-500 uppercase tracking-widest mb-3">Familias activas ({familiasDinamicas.length})</p>
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {familiasDinamicas.length === 0 ? (
+                    <p className="text-sm text-slate-400 text-center py-4 bg-slate-50 rounded-xl">Sin familias dinámicas. Crea la primera abajo.</p>
+                  ) : familiasDinamicas.map(f => (
+                    <div key={f.id} className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200 hover:border-slate-300 transition-colors">
+                      <div className="w-9 h-9 rounded-xl flex items-center justify-center text-white text-sm font-black shadow-sm flex-shrink-0"
+                        style={{ backgroundColor: f.color }}>
+                        {f.nombre.substring(0,2).toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold text-slate-800">{f.nombre}</p>
+                        <p className="text-xs text-slate-400">{practicas.filter(p => p.familia === f.slug).length} prácticas</p>
+                      </div>
+                      <div className="w-4 h-4 rounded-full border-2 border-white shadow-sm" style={{ backgroundColor: f.color }} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+              {/* Crear nueva familia */}
+              <div className="border-t border-slate-100 pt-5">
+                <p className="text-xs font-black text-slate-500 uppercase tracking-widest mb-3">Nueva familia</p>
+                <div className="space-y-3">
+                  <input value={nuevaFamiliaNombre} onChange={e => setNuevaFamiliaNombre(e.target.value)}
+                    placeholder="Nombre de la familia (ej: Búsqueda y Rescate)"
+                    className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-orange-400/20 focus:border-orange-400 transition-colors"
+                    onKeyDown={e => e.key === 'Enter' && e.preventDefault()} />
+                  <div>
+                    <p className="text-xs text-slate-500 mb-2 font-medium">Color identificativo:</p>
+                    <div className="flex gap-2 flex-wrap">
+                      {['#ef4444','#f97316','#f59e0b','#eab308','#22c55e','#0d9488','#3b82f6','#6366f1','#ec4899','#8b5cf6','#64748b','#1e293b'].map(col => (
+                        <button key={col} type="button" onClick={() => setNuevaFamiliaColor(col)}
+                          className={`w-8 h-8 rounded-xl transition-all hover:scale-110 ${nuevaFamiliaColor === col ? 'ring-2 ring-offset-2 ring-slate-400 scale-110' : ''}`}
+                          style={{ backgroundColor: col }} />
+                      ))}
+                    </div>
+                  </div>
+                  <button onClick={async () => {
+                    if (!nuevaFamiliaNombre.trim()) return
+                    setGuardandoFamilia(true)
+                    const res = await fetch('/api/practicas', {
+                      method: 'POST',
+                      headers: {'Content-Type': 'application/json'},
+                      body: JSON.stringify({ tipo: 'familia', nombre: nuevaFamiliaNombre.trim(), color: nuevaFamiliaColor, icono: 'BookOpen' })
+                    })
+                    if (res.ok) {
+                      setNuevaFamiliaNombre('')
+                      setNuevaFamiliaColor('#f97316')
+                      await cargarDatos()
+                    }
+                    setGuardandoFamilia(false)
+                  }} disabled={!nuevaFamiliaNombre.trim() || guardandoFamilia}
+                    className="w-full py-3 bg-orange-500 text-white text-sm font-black rounded-xl hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-lg shadow-orange-200">
+                    {guardandoFamilia ? 'Creando...' : '+ Añadir familia'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── LIGHTBOX IMÁGENES ── */}
+      {lightboxUrl && (
+        <div className="fixed inset-0 z-[3000] bg-black/95 flex items-center justify-center p-4"
+          onClick={() => setLightboxUrl(null)}>
+          <button className="absolute top-5 right-5 text-white bg-white/10 hover:bg-white/25 rounded-full p-3 transition-colors z-10 border border-white/20">
+            <X size={22} />
+          </button>
+          <img
+            src={lightboxUrl}
+            alt="Imagen ampliada"
+            className="max-w-full max-h-[88vh] object-contain rounded-2xl shadow-2xl border border-white/10"
+            onClick={e => e.stopPropagation()}
+          />
+          <a href={lightboxUrl} download target="_blank" rel="noopener noreferrer"
+            className="absolute bottom-5 right-5 flex items-center gap-2 text-white bg-white/10 hover:bg-white/25 rounded-xl px-5 py-2.5 text-sm font-bold transition-colors border border-white/20 z-10"
+            onClick={e => e.stopPropagation()}>
+            ⬇ Descargar imagen
+          </a>
+        </div>
+      )}
     </div>
   )
 }
