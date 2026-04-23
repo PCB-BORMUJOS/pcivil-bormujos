@@ -10,7 +10,15 @@ export async function GET(request: NextRequest) {
   const familia = searchParams.get('familia')
   const nivel = searchParams.get('nivel')
   const busqueda = searchParams.get('busqueda')
+  const tipo = searchParams.get('tipo')
   try {
+    // Gestión de familias dinámicas
+    if (tipo === 'familias') {
+      const familias = await prisma.familiaPractica.findMany({
+        where: { activa: true }, orderBy: [{ orden: 'asc' }, { nombre: 'asc' }]
+      })
+      return NextResponse.json({ familias })
+    }
     const where: any = { activa: true }
     if (familia && familia !== 'all') where.familia = familia
     if (nivel && nivel !== 'all') where.nivel = nivel
@@ -19,13 +27,14 @@ export async function GET(request: NextRequest) {
       { numero: { contains: busqueda, mode: 'insensitive' } },
       { objetivo: { contains: busqueda, mode: 'insensitive' } },
     ]
-    const practicas = await prisma.practica.findMany({
-      where, orderBy: [{ familia: 'asc' }, { numero: 'asc' }]
-    })
+    const [practicas, familiasDinamicas] = await Promise.all([
+      prisma.practica.findMany({ where, orderBy: [{ familia: 'asc' }, { numero: 'asc' }] }),
+      prisma.familiaPractica.findMany({ where: { activa: true }, orderBy: [{ orden: 'asc' }, { nombre: 'asc' }] })
+    ])
     const familias = await prisma.practica.groupBy({
       by: ['familia'], _count: { id: true }, where: { activa: true }
     })
-    return NextResponse.json({ practicas, familias })
+    return NextResponse.json({ practicas, familias, familiasDinamicas })
   } catch (error) {
     console.error(error)
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
@@ -37,9 +46,22 @@ export async function POST(request: NextRequest) {
   if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   try {
     const body = await request.json()
+
+    // Crear familia dinámica
+    if (body.tipo === 'familia') {
+      const slug = body.nombre.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
+      const familia = await prisma.familiaPractica.create({
+        data: { nombre: body.nombre, slug, color: body.color || '#f97316', icono: body.icono || 'BookOpen', orden: body.orden || 0 }
+      })
+      return NextResponse.json({ familia })
+    }
+
     const count = await prisma.practica.count()
     const familia_prefix = body.familia?.substring(0,3).toUpperCase() || 'GEN'
-    const numero = body.numero || `${familia_prefix}-${String(count + 1).padStart(3, '0')}`
+    const numero = body.numero?.trim() || `${familia_prefix}-${String(count + 1).padStart(3, '0')}`
+    // Verificar número único
+    const existe = await prisma.practica.findUnique({ where: { numero } })
+    if (existe) return NextResponse.json({ error: `El número ${numero} ya existe` }, { status: 400 })
     const practica = await prisma.practica.create({
       data: {
         numero, titulo: body.titulo, familia: body.familia,
@@ -50,6 +72,7 @@ export async function POST(request: NextRequest) {
         materialNecesario: body.materialNecesario || null,
         riesgoPractica: body.riesgoPractica || 'bajo',
         riesgoIntervencion: body.riesgoIntervencion || null,
+        riesgoObservaciones: body.riesgoObservaciones || null,
         duracionEstimada: body.duracionEstimada ? parseInt(body.duracionEstimada) : 30,
         nivel: body.nivel || 'basico',
         prerequisitos: body.prerequisitos || null,
@@ -71,10 +94,26 @@ export async function PUT(request: NextRequest) {
   if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   try {
     const body = await request.json()
+
+    // Editar familia dinámica
+    if (body.tipo === 'familia') {
+      const familia = await prisma.familiaPractica.update({
+        where: { id: body.id },
+        data: { nombre: body.nombre, color: body.color, icono: body.icono, orden: body.orden }
+      })
+      return NextResponse.json({ familia })
+    }
+
     const { id, ...data } = body
+    // Verificar número único si cambia
+    if (data.numero) {
+      const existe = await prisma.practica.findFirst({ where: { numero: data.numero, NOT: { id } } })
+      if (existe) return NextResponse.json({ error: `El número ${data.numero} ya existe` }, { status: 400 })
+    }
     const practica = await prisma.practica.update({
       where: { id },
       data: {
+        ...(data.numero && { numero: data.numero }),
         titulo: data.titulo, familia: data.familia,
         subfamilia: data.subfamilia || null,
         objetivo: data.objetivo, descripcion: data.descripcion || null,
@@ -83,6 +122,7 @@ export async function PUT(request: NextRequest) {
         materialNecesario: data.materialNecesario || null,
         riesgoPractica: data.riesgoPractica || 'bajo',
         riesgoIntervencion: data.riesgoIntervencion || null,
+        riesgoObservaciones: data.riesgoObservaciones || null,
         duracionEstimada: data.duracionEstimada ? parseInt(data.duracionEstimada) : 30,
         nivel: data.nivel || 'basico',
         prerequisitos: data.prerequisitos || null,
@@ -105,9 +145,14 @@ export async function DELETE(request: NextRequest) {
   if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   const { searchParams } = new URL(request.url)
   const id = searchParams.get('id')
+  const tipo = searchParams.get('tipo')
   if (!id) return NextResponse.json({ error: 'ID requerido' }, { status: 400 })
   try {
-    await prisma.practica.update({ where: { id }, data: { activa: false } })
+    if (tipo === 'familia') {
+      await prisma.familiaPractica.update({ where: { id }, data: { activa: false } })
+    } else {
+      await prisma.practica.update({ where: { id }, data: { activa: false } })
+    }
     return NextResponse.json({ ok: true })
   } catch (error) {
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })

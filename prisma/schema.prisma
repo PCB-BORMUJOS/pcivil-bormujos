@@ -1877,6 +1877,7 @@ model Practica {
   materialNecesario   String?
   riesgoPractica      String   @default("bajo")
   riesgoIntervencion  String?
+  riesgoObservaciones String?
   duracionEstimada    Int      @default(30)
   nivel               String   @default("basico")
   prerequisitos       String?
@@ -1891,6 +1892,35 @@ model Practica {
   megacodePracticas   MegacodePractica[]
   registros           RegistroPractica[]
   @@map("practicas")
+}
+
+model PlanoEdificio {
+  id          String   @id @default(cuid())
+  edificioId  String   @map("edificio_id")
+  nombre      String
+  orden       Int      @default(0)
+  planoUrl    String   @map("plano_url")
+  planoNombre String   @map("plano_nombre")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  edificio    Edificio @relation(fields: [edificioId], references: [id], onDelete: Cascade)
+
+  @@index([edificioId])
+  @@map("planos_edificio")
+}
+
+model FamiliaPractica {
+  id        String   @id @default(cuid())
+  nombre    String   @unique
+  slug      String   @unique
+  color     String   @default("#f97316")
+  icono     String   @default("BookOpen")
+  activa    Boolean  @default(true)
+  orden     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("familias_practica")
 }
 
 model Megacode {

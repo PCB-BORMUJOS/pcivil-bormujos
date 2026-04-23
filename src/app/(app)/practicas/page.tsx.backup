@@ -4,7 +4,7 @@ import { useSession } from 'next-auth/react'
 import {
   Plus, Search, Edit, Trash2, X, ChevronDown,
   BookOpen, Users, Clock, AlertTriangle, Shield,
-  ClipboardList, CheckCircle2, RefreshCw, Settings, ZoomIn
+  ClipboardList, CheckCircle2, RefreshCw
 } from 'lucide-react'
 
 const FAMILIAS = [
@@ -35,7 +35,7 @@ interface Practica {
   subfamilia?: string; objetivo: string; descripcion?: string
   desarrollo?: string; conclusiones?: string
   personalMinimo: number; materialNecesario?: string
-  riesgoPractica: string; riesgoIntervencion?: string; riesgoObservaciones?: string
+  riesgoPractica: string; riesgoIntervencion?: string
   duracionEstimada: number; nivel: string; prerequisitos?: string
   activa: boolean; createdAt: string
   youtubeUrl?: string; imagenes?: string[]
@@ -43,9 +43,6 @@ interface Practica {
 }
 
 
-interface FamiliaPractica {
-  id: string; nombre: string; slug: string; color: string; icono: string; orden: number
-}
 interface RegistroPractica {
   id: string; practicaId: string; fecha: string; turno: string
   duracionReal?: number; responsableId: string; participantes: string[]
@@ -91,13 +88,6 @@ export default function PracticasPage() {
   const [subiendoImagen, setSubiendoImagen] = useState(false)
   const [registroParaFirma, setRegistroParaFirma] = useState<RegistroPractica | null>(null)
   const [practicaEditando, setPracticaEditando] = useState<Practica | null>(null)
-  const [familiasDinamicas, setFamiliasDinamicas] = useState<FamiliaPractica[]>([])
-  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null)
-  const [showGestionFamilias, setShowGestionFamilias] = useState(false)
-  const [nuevaFamiliaNombre, setNuevaFamiliaNombre] = useState('')
-  const [nuevaFamiliaColor, setNuevaFamiliaColor] = useState('#f97316')
-  const [guardandoFamilia, setGuardandoFamilia] = useState(false)
-  const [errorNumero, setErrorNumero] = useState('')
 
   const cargarDatos = async () => {
     try {
@@ -110,7 +100,6 @@ export default function PracticasPage() {
       const data = await res.json()
       setPracticas(data.practicas || [])
       setFamilias(data.familias || [])
-      setFamiliasDinamicas(data.familiasDinamicas || [])
     } catch (e) { console.error(e) }
     finally { setLoading(false) }
   }
@@ -166,7 +155,6 @@ export default function PracticasPage() {
       materialNecesario: f.get('materialNecesario'),
       riesgoPractica: f.get('riesgoPractica'),
       riesgoIntervencion: f.get('riesgoIntervencion'),
-      riesgoObservaciones: f.get('riesgoObservaciones'),
       duracionEstimada: f.get('duracionEstimada'),
       nivel: f.get('nivel'),
       prerequisitos: f.get('prerequisitos'),
@@ -176,13 +164,10 @@ export default function PracticasPage() {
       youtubeUrl: f.get('youtubeUrl'),
     }
     const method = practicaEditando ? 'PUT' : 'POST'
-    const res = await fetch('/api/practicas', { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
-    const data = await res.json()
+    await fetch('/api/practicas', { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
     setSaving(false)
-    if (data.error) { setErrorNumero(data.error); return }
     setShowNueva(false)
     setPracticaEditando(null)
-    setErrorNumero('')
     cargarDatos()
   }
 
@@ -661,26 +646,14 @@ export default function PracticasPage() {
             </p>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className={labelCls}>Número de práctica</label>
-                <input name="numero" defaultValue={practicaEditando?.numero || ''}
-                  placeholder="Ej: SOC-001, INC-005 (vacío = automático)"
-                  className={`${inputCls} font-mono font-bold ${errorNumero ? 'border-red-400' : ''}`} />
-                {errorNumero && <p className="text-xs text-red-600 mt-1">{errorNumero}</p>}
-                <p className="text-[10px] text-slate-400 mt-1">Dejar vacío para asignar automáticamente</p>
+                <label className={labelCls}>Número (ej: SOC-001)</label>
+                <input name="numero" defaultValue={practicaEditando?.numero || ''} placeholder="AUTO" className={inputCls} />
               </div>
               <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className={labelCls} style={{marginBottom:0}}>Familia *</label>
-                  <button type="button" onClick={() => setShowGestionFamilias(true)}
-                    className="text-[10px] text-orange-500 hover:text-orange-600 font-bold flex items-center gap-1">
-                    <Settings size={10} /> Gestionar familias
-                  </button>
-                </div>
+                <label className={labelCls}>Familia *</label>
                 <select name="familia" required defaultValue={practicaEditando?.familia || ''} className={inputCls}>
                   <option value="">— Seleccionar —</option>
-                  {(familiasDinamicas.length > 0 ? familiasDinamicas.map(f => ({id: f.slug, label: f.nombre})) : FAMILIAS).map(f => (
-                    <option key={f.id} value={f.id}>{f.label}</option>
-                  ))}
+                  {FAMILIAS.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
                 </select>
               </div>
               <div className="col-span-2">
@@ -780,16 +753,9 @@ export default function PracticasPage() {
                 </select>
               </div>
               <div>
-                <label className={labelCls}>Riesgo de intervención <span className="font-normal normal-case text-slate-400">(no se tendrá en cuenta)</span></label>
+                <label className={labelCls}>Riesgo de intervención</label>
                 <input name="riesgoIntervencion" defaultValue={practicaEditando?.riesgoIntervencion || ''}
-                  placeholder="Riesgos derivados de la intervención..." className={inputCls} />
-              </div>
-              <div className="col-span-2">
-                <label className={labelCls}>Observaciones sobre el riesgo</label>
-                <textarea name="riesgoObservaciones" rows={2}
-                  defaultValue={practicaEditando?.riesgoObservaciones || ''}
-                  placeholder="Describe factores de riesgo, medidas preventivas, condiciones de seguridad..."
-                  className={inputCls} />
+                  placeholder="No se tendrá en cuenta..." className={inputCls} />
               </div>
               <div className="col-span-2">
                 <label className={labelCls}>Prerequisitos</label>
@@ -1157,14 +1123,10 @@ export default function PracticasPage() {
                                     ) : (
                                       <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                                         {(p.imagenes || []).map((img, idx) => (
-                                          <div key={idx} className="relative group rounded-xl overflow-hidden border border-slate-200 aspect-video cursor-zoom-in">
-                                            <img src={img} alt={`img ${idx+1}`} className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-                                              onClick={() => setLightboxUrl(img)} />
-                                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center pointer-events-none">
-                                              <ZoomIn size={20} className="text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-lg" />
-                                            </div>
-                                            <button onClick={(e) => { e.stopPropagation(); eliminarImagenPractica(p.id, img); }}
-                                              className="absolute top-1.5 right-1.5 bg-red-500 text-white rounded-full w-6 h-6 text-xs font-bold flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-md z-10">×</button>
+                                          <div key={idx} className="relative group rounded-lg overflow-hidden border border-slate-100 aspect-video">
+                                            <img src={img} alt={`img ${idx+1}`} className="w-full h-full object-cover" />
+                                            <button onClick={() => eliminarImagenPractica(p.id, img)}
+                                              className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 text-xs font-bold flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">×</button>
                                           </div>
                                         ))}
                                       </div>
@@ -1174,12 +1136,8 @@ export default function PracticasPage() {
                                 {!isAdmin && (p.imagenes || []).length > 0 && (
                                   <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                                     {(p.imagenes || []).map((img, idx) => (
-                                      <div key={idx} className="relative group rounded-xl overflow-hidden border border-slate-200 aspect-video cursor-zoom-in"
-                                        onClick={() => setLightboxUrl(img)}>
-                                        <img src={img} alt={`img ${idx+1}`} className="w-full h-full object-cover hover:scale-105 transition-transform duration-300" />
-                                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center pointer-events-none">
-                                          <ZoomIn size={20} className="text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-lg" />
-                                        </div>
+                                      <div key={idx} className="rounded-lg overflow-hidden border border-slate-100 aspect-video">
+                                        <img src={img} alt={`img ${idx+1}`} className="w-full h-full object-cover" />
                                       </div>
                                     ))}
                                   </div>
