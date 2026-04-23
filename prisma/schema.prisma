@@ -1894,21 +1894,6 @@ model Practica {
   @@map("practicas")
 }
 
-model PlanoEdificio {
-  id          String   @id @default(cuid())
-  edificioId  String   @map("edificio_id")
-  nombre      String
-  orden       Int      @default(0)
-  planoUrl    String   @map("plano_url")
-  planoNombre String   @map("plano_nombre")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-  edificio    Edificio @relation(fields: [edificioId], references: [id], onDelete: Cascade)
-
-  @@index([edificioId])
-  @@map("planos_edificio")
-}
-
 model FamiliaPractica {
   id        String   @id @default(cuid())
   nombre    String   @unique
