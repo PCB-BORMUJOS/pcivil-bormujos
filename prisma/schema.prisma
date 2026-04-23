@@ -1909,18 +1909,29 @@ model FamiliaPractica {
 }
 
 model Megacode {
-  id             String   @id @default(cuid())
-  numero         String   @unique
-  fecha          DateTime
-  turno          String
-  estado         String   @default("pendiente")
-  generadoAuto   Boolean  @default(false)
-  responsableId  String?
-  observaciones  String?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  practicas      MegacodePractica[]
-  participaciones MegacodeParticipacion[]
+  id                 String   @id @default(cuid())
+  numero             String   @unique
+  titulo             String?
+  tipo               String   @default("auto")
+  fecha              DateTime
+  turno              String
+  estado             String   @default("pendiente")
+  generadoAuto       Boolean  @default(false)
+  responsableId      String?
+  observaciones      String?
+  escenario          String?
+  objetivos          String?
+  recursos           String?
+  leccionesAprendidas String?
+  nivelDificultad    String?
+  incidenteOrigen    String?
+  fechaIncidente     DateTime?
+  imagenes           Json?
+  duracionTotal      Int?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  practicas          MegacodePractica[]
+  participaciones    MegacodeParticipacion[]
   @@map("megacodes")
 }
 

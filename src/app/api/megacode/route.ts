@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
     if (tipo === 'lista') {
       const megacodes = await prisma.megacode.findMany({
         orderBy: { fecha: 'desc' },
-        take: 20,
+        take: 50,
         include: {
           practicas: {
             include: { practica: { select: { titulo: true, numero: true, familia: true, duracionEstimada: true } } },
@@ -30,7 +30,6 @@ export async function GET(request: NextRequest) {
       const fecha = searchParams.get('fecha') || new Date().toISOString().split('T')[0]
       const tiempoDisponible = parseInt(searchParams.get('tiempo') || '90')
       const participantesIds = searchParams.get('participantes')?.split(',').filter(Boolean) || []
-
       const todasPracticas = await prisma.practica.findMany({
         where: { activa: true },
         select: {
@@ -40,35 +39,20 @@ export async function GET(request: NextRequest) {
           registros: { select: { id: true, participantes: true } }
         }
       })
-
       const numParticipantes = participantesIds.length || 4
-
-      // Filtrar por personal mínimo
       const practicasValidas = todasPracticas.filter(p => p.personalMinimo <= numParticipantes)
-
-      // Contar realizaciones por práctica para este equipo
       const practicasConPeso = practicasValidas.map(p => {
         const vecesRealizadas = p.registros.length
         const vecesConEsteEquipo = p.registros.filter(r => {
           const parts = r.participantes as string[]
           return participantesIds.length === 0 || participantesIds.some(id => parts.includes(id))
         }).length
-        return {
-          ...p,
-          peso: vecesConEsteEquipo * 3 + vecesRealizadas,
-          vecesRealizadas,
-          vecesConEsteEquipo
-        }
+        return { ...p, peso: vecesConEsteEquipo * 3 + vecesRealizadas, vecesRealizadas, vecesConEsteEquipo }
       })
-
-      // Ordenar por menos realizadas primero
       practicasConPeso.sort((a, b) => a.peso - b.peso)
-
-      // Seleccionar prácticas balanceando familias
       const seleccionadas: typeof practicasConPeso = []
       const familiasUsadas: Record<string, number> = {}
       let tiempoAcumulado = 0
-
       for (const p of practicasConPeso) {
         if (seleccionadas.length >= 4) break
         if (tiempoAcumulado + p.duracionEstimada > tiempoDisponible) continue
@@ -78,8 +62,6 @@ export async function GET(request: NextRequest) {
         familiasUsadas[p.familia] = usosEsteFamilia + 1
         tiempoAcumulado += p.duracionEstimada
       }
-
-      // Si no llegamos a 3, relajar restricción de familia
       if (seleccionadas.length < 3) {
         for (const p of practicasConPeso) {
           if (seleccionadas.find(s => s.id === p.id)) continue
@@ -89,18 +71,23 @@ export async function GET(request: NextRequest) {
           tiempoAcumulado += p.duracionEstimada
         }
       }
-
       return NextResponse.json({
         practicas: seleccionadas.map((p, i) => ({
           orden: i + 1, practicaId: p.id, numero: p.numero,
           titulo: p.titulo, familia: p.familia,
           duracionEstimada: p.duracionEstimada, nivel: p.nivel,
-          vecesRealizadas: p.vecesRealizadas,
-          vecesConEsteEquipo: p.vecesConEsteEquipo
+          vecesRealizadas: p.vecesRealizadas, vecesConEsteEquipo: p.vecesConEsteEquipo
         })),
-        tiempoTotal: tiempoAcumulado,
-        fecha, turno
+        tiempoTotal: tiempoAcumulado, fecha, turno
       })
+    }
+    if (tipo === 'practicas') {
+      const practicas = await prisma.practica.findMany({
+        where: { activa: true },
+        select: { id: true, numero: true, titulo: true, familia: true, duracionEstimada: true, nivel: true },
+        orderBy: [{ familia: 'asc' }, { numero: 'asc' }]
+      })
+      return NextResponse.json({ practicas })
     }
     return NextResponse.json({ error: 'tipo requerido' }, { status: 400 })
   } catch (error) {
@@ -115,26 +102,36 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     const count = await prisma.megacode.count()
-    const numero = `MCG-${new Date().getFullYear()}-${String(count + 1).padStart(4, '0')}`
+    const prefijo = body.tipo === 'incidente' ? 'MCI' : body.tipo === 'manual' ? 'MCM' : 'MCG'
+    const numero = body.numero?.trim() || `${prefijo}-${new Date().getFullYear()}-${String(count + 1).padStart(4, '0')}`
+    const existente = await prisma.megacode.findUnique({ where: { numero } })
+    if (existente) return NextResponse.json({ error: `El número ${numero} ya existe` }, { status: 400 })
     const megacode = await prisma.megacode.create({
       data: {
         numero,
+        titulo: body.titulo || null,
+        tipo: body.tipo || 'auto',
         fecha: new Date(body.fecha),
         turno: body.turno,
         estado: 'pendiente',
         generadoAuto: body.generadoAuto || false,
         observaciones: body.observaciones || null,
+        escenario: body.escenario || null,
+        objetivos: body.objetivos || null,
+        recursos: body.recursos || null,
+        leccionesAprendidas: body.leccionesAprendidas || null,
+        nivelDificultad: body.nivelDificultad || null,
+        incidenteOrigen: body.incidenteOrigen || null,
+        fechaIncidente: body.fechaIncidente ? new Date(body.fechaIncidente) : null,
+        duracionTotal: body.duracionTotal ? parseInt(body.duracionTotal) : null,
         practicas: {
           create: (body.practicas || []).map((p: any) => ({
-            practicaId: p.practicaId,
-            orden: p.orden,
-            completada: false
+            practicaId: p.practicaId, orden: p.orden, completada: false
           }))
         },
         participaciones: {
           create: (body.participantes || []).map((uid: string) => ({
-            usuarioId: uid,
-            resultado: 'pendiente'
+            usuarioId: uid, resultado: 'pendiente'
           }))
         }
       },
@@ -165,6 +162,22 @@ export async function PUT(request: NextRequest) {
     if (estado) {
       await prisma.megacode.update({ where: { id }, data: { estado } })
     }
+    return NextResponse.json({ ok: true })
+  } catch (error) {
+    return NextResponse.json({ error: 'Error interno' }, { status: 500 })
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  const session = await getServerSession(authOptions)
+  if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  const { searchParams } = new URL(request.url)
+  const id = searchParams.get('id')
+  if (!id) return NextResponse.json({ error: 'ID requerido' }, { status: 400 })
+  try {
+    await prisma.megacodePractica.deleteMany({ where: { megacodeId: id } })
+    await prisma.megacodeParticipacion.deleteMany({ where: { megacodeId: id } })
+    await prisma.megacode.delete({ where: { id } })
     return NextResponse.json({ ok: true })
   } catch (error) {
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
