@@ -307,7 +307,8 @@ export async function GET(request: NextRequest) {
       include: {
         familia: { include: { categoria: true } },
         ubicacion: true,
-        servicio: { select: { nombre: true } }
+        servicio: { select: { nombre: true } },
+        botiquinItems: { select: { cantidadActual: true } }
       },
       orderBy: [
         { familia: { categoria: { orden: 'asc' } } },
@@ -321,10 +322,12 @@ export async function GET(request: NextRequest) {
       const tresMeses = new Date()
       tresMeses.setMonth(tresMeses.getMonth() + 3)
 
-      articulos = articulos.filter(a =>
-        a.stockActual < a.stockMinimo ||
-        (a.fechaCaducidad && new Date(a.fechaCaducidad) <= tresMeses)
-      )
+      articulos = articulos.filter(a => {
+        const enBotiquines = (a as any).botiquinItems?.reduce((s: number, i: any) => s + i.cantidadActual, 0) ?? 0
+        const stockTotal = a.stockActual + enBotiquines
+        return stockTotal < a.stockMinimo ||
+          (a.fechaCaducidad && new Date(a.fechaCaducidad) <= tresMeses)
+      })
     }
 
     // Obtener familias
@@ -343,7 +346,10 @@ export async function GET(request: NextRequest) {
         activo: true,
         familia: { categoriaId: { in: categoriasIds } }
       },
-      include: { familia: true }
+      include: {
+        familia: true,
+        botiquinItems: { select: { cantidadActual: true } }
+      }
     })
 
     const hoy = new Date()
@@ -352,7 +358,10 @@ export async function GET(request: NextRequest) {
 
     const stats = {
       totalArticulos: articulosParaStats.length,
-      stockBajo: articulosParaStats.filter(a => a.stockActual < a.stockMinimo).length,
+      stockBajo: articulosParaStats.filter(a => {
+        const enBotiquines = a.botiquinItems?.reduce((s: number, i: any) => s + i.cantidadActual, 0) ?? 0
+        return (a.stockActual + enBotiquines) < a.stockMinimo
+      }).length,
       porCaducar: articulosParaStats.filter(a =>
         a.fechaCaducidad && new Date(a.fechaCaducidad) <= tresMeses && new Date(a.fechaCaducidad) > hoy
       ).length,
@@ -373,7 +382,10 @@ export async function GET(request: NextRequest) {
           color: area.color,
           icono: area.icono,
           totalArticulos: articulosArea.length,
-          stockBajo: articulosArea.filter(a => a.stockActual < a.stockMinimo).length,
+          stockBajo: articulosArea.filter(a => {
+            const enBotiquines = (a as any).botiquinItems?.reduce((s: number, i: any) => s + i.cantidadActual, 0) ?? 0
+            return (a.stockActual + enBotiquines) < a.stockMinimo
+          }).length,
           subInventarios: todasCategorias.filter(c => c.padreId === area.id).map(sub => ({
             id: sub.id,
             slug: sub.slug,
