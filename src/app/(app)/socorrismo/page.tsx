@@ -165,6 +165,10 @@ export default function SocorrismoPage() {
   const [revisionesHistorial, setRevisionesHistorial] = useState<any[]>([])
   const [showEditarBotiquin, setShowEditarBotiquin] = useState(false)
   const [articuloSeleccionado, setArticuloSeleccionado] = useState<Articulo | null>(null)
+  const [modoModal, setModoModal] = useState<'ver' | 'editar'>('editar')
+  const [destinoStock, setDestinoStock] = useState<string>('almacen')
+  const [botiquinItemsModal, setBotiquinItemsModal] = useState<any[]>([])
+  const [loadingDestino, setLoadingDestino] = useState(false)
   const [deaSeleccionado, setDEASeleccionado] = useState<DEA | null>(null)
 
   // Stats
@@ -919,7 +923,7 @@ export default function SocorrismoPage() {
       {showNuevoArticulo && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60" onClick={() => setShowNuevoArticulo(false)}>
           <div className="bg-white rounded-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
-            <div className="bg-purple-600 p-5 text-white flex justify-between items-center">
+            <div className="bg-pink-500 p-5 text-white flex justify-between items-center">
               <h2 className="text-xl font-bold">Nuevo Artículo</h2>
               <button onClick={() => setShowNuevoArticulo(false)}>
                 <X size={24} />
@@ -1089,7 +1093,7 @@ export default function SocorrismoPage() {
                 <button type="button" onClick={() => setArticuloSeleccionado(null)} className="px-5 py-2.5 text-slate-600 hover:bg-slate-100 rounded-lg font-medium">
                   Cancelar
                 </button>
-                <button type="submit" className="px-5 py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium">
+                <button type="submit" className="px-5 py-2.5 bg-pink-500 text-white rounded-lg hover:bg-pink-600 font-medium">
                   Guardar Cambios
                 </button>
               </div>
