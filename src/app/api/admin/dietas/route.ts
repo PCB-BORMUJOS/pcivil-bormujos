@@ -166,7 +166,7 @@ export async function POST(request: NextRequest) {
         horasTrabajadas: horasTrabajadas || 7,
         importeDia,
         subtotalDietas,
-        kilometros: Number(kilometros || 0) * 2,
+        kilometros: Number(kilometros || 0),
         importeKm,
         subtotalKm,
         totalDieta,
