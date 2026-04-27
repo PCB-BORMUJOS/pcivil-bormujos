@@ -1,83 +1,80 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
-import { registrarAudit, getUsuarioAudit } from '@/lib/audit'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
-    }
+    if (!session?.user?.email) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
     const usuario = await prisma.usuario.findUnique({
       where: { email: session.user.email },
-      include: { rol: true, servicio: true }
+      include: { rol: true, fichaVoluntario: { select: { areaAsignada: true, areaSecundaria: true } } }
     })
-
-    if (!usuario) {
-      return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
-    }
+    if (!usuario) return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
 
     const { searchParams } = new URL(request.url)
-    const tipo = searchParams.get('tipo') || 'recibidos' // recibidos, enviados, todos
-    const soloNoLeidos = searchParams.get('noLeidos') === 'true'
+    const tipo = searchParams.get('tipo') || 'recibidos'
 
-    let where: any = {}
-
-    if (tipo === 'recibidos') {
-      where = {
-        OR: [
-          { destinatarioId: usuario.id },
-          { destinatarioGrupo: 'todos' },
-          { destinatarioGrupo: `area:${usuario.servicio?.nombre?.toLowerCase()}` },
-          { destinatarioGrupo: `rol:${usuario.rol.nombre}` }
-        ],
-        archivado: false
+    if (tipo === 'hilo') {
+      const mensajeId = searchParams.get('mensajeId')
+      if (!mensajeId) return NextResponse.json({ error: 'mensajeId requerido' }, { status: 400 })
+      let actual = await prisma.mensaje.findUnique({ where: { id: mensajeId } })
+      let safety = 0
+      while (actual?.mensajePadreId && safety < 10) {
+        actual = await prisma.mensaje.findUnique({ where: { id: actual.mensajePadreId } })
+        safety++
       }
-    } else if (tipo === 'enviados') {
-      where = { remitenteId: usuario.id }
+      const rootId = actual?.id || mensajeId
+      const hilo = await prisma.mensaje.findMany({
+        where: { OR: [{ id: rootId }, { mensajePadreId: rootId }] },
+        include: {
+          remitente: { select: { id: true, nombre: true, apellidos: true, avatar: true } },
+          destinatario: { select: { id: true, nombre: true, apellidos: true } }
+        },
+        orderBy: { createdAt: 'asc' }
+      })
+      return NextResponse.json({ hilo })
     }
 
-    if (soloNoLeidos) {
-      where.leido = false
+    const areaUsuario = usuario.fichaVoluntario?.areaAsignada?.toLowerCase()
+    const areaSecundaria = usuario.fichaVoluntario?.areaSecundaria?.toLowerCase()
+
+    const condicionesArea: any[] = [
+      { destinatarioGrupo: 'todos' },
+      { destinatarioGrupo: 'rol:' + usuario.rol.nombre },
+    ]
+    if (areaUsuario) condicionesArea.push({ destinatarioGrupo: 'area:' + areaUsuario })
+    if (areaSecundaria) condicionesArea.push({ destinatarioGrupo: 'area:' + areaSecundaria })
+
+    let where: any = {}
+    if (tipo === 'recibidos') {
+      where = { OR: [{ destinatarioId: usuario.id }, ...condicionesArea], archivado: false, mensajePadreId: null }
+    } else if (tipo === 'enviados') {
+      where = { remitenteId: usuario.id, archivado: false, mensajePadreId: null }
+    } else if (tipo === 'archivados') {
+      where = { OR: [{ destinatarioId: usuario.id }, { remitenteId: usuario.id }], archivado: true, mensajePadreId: null }
     }
 
     const mensajes = await prisma.mensaje.findMany({
       where,
       include: {
-        remitente: {
-          select: { id: true, nombre: true, apellidos: true, avatar: true }
-        },
-        destinatario: {
-          select: { id: true, nombre: true, apellidos: true }
-        },
-        respuestas: {
-          select: { id: true }
-        }
+        remitente: { select: { id: true, nombre: true, apellidos: true, avatar: true } },
+        destinatario: { select: { id: true, nombre: true, apellidos: true } },
+        respuestas: { select: { id: true } }
       },
       orderBy: { createdAt: 'desc' },
-      take: 50
+      take: 100
     })
 
-    // Contar no leídos
-    const noLeidos = await prisma.mensaje.count({
-      where: {
-        OR: [
-          { destinatarioId: usuario.id },
-          { destinatarioGrupo: 'todos' },
-          { destinatarioGrupo: `area:${usuario.servicio?.nombre?.toLowerCase()}` },
-          { destinatarioGrupo: `rol:${usuario.rol.nombre}` }
-        ],
-        leido: false,
-        archivado: false
-      }
-    })
+    const noLeidos = tipo === 'recibidos' ? await prisma.mensaje.count({
+      where: { OR: [{ destinatarioId: usuario.id }, ...condicionesArea], leido: false, archivado: false }
+    }) : 0
 
-    return NextResponse.json({ mensajes, noLeidos })
+    return NextResponse.json({ mensajes, noLeidos, usuarioActualId: usuario.id })
   } catch (error) {
-    console.error('Error en GET /api/mensajes:', error)
+    console.error('Error GET /api/mensajes:', error)
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
   }
 }
@@ -85,47 +82,29 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
-    }
+    if (!session?.user?.email) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
     const usuario = await prisma.usuario.findUnique({
       where: { email: session.user.email },
       include: { rol: true }
     })
-
-    if (!usuario) {
-      return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
-    }
+    if (!usuario) return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
 
     const body = await request.json()
     const { asunto, contenido, destinatarioId, destinatarioGrupo, tipo, prioridad, mensajePadreId } = body
 
-    if (!asunto || !contenido) {
-      return NextResponse.json({ error: 'Asunto y contenido son requeridos' }, { status: 400 })
-    }
+    if (!asunto || !contenido) return NextResponse.json({ error: 'Asunto y contenido requeridos' }, { status: 400 })
+    if (!destinatarioId && !destinatarioGrupo) return NextResponse.json({ error: 'Especifica destinatario' }, { status: 400 })
 
-    if (!destinatarioId && !destinatarioGrupo) {
-      return NextResponse.json({ error: 'Debe especificar un destinatario' }, { status: 400 })
-    }
-
-    // Verificar permisos para enviar a grupos
-    const rolesAdmin = ['superadmin', 'admin']
-    if (destinatarioGrupo && !rolesAdmin.includes(usuario.rol.nombre)) {
-      // Solo coordinadores pueden enviar a su área
-      if (usuario.rol.nombre === 'coordinador') {
-        if (!destinatarioGrupo.startsWith('area:')) {
-          return NextResponse.json({ error: 'Solo puedes enviar mensajes a tu área' }, { status: 403 })
-        }
-      } else {
-        return NextResponse.json({ error: 'No tienes permisos para enviar a grupos' }, { status: 403 })
-      }
+    const esAdmin = ['superadmin', 'admin'].includes(usuario.rol.nombre)
+    const esCoordinador = usuario.rol.nombre === 'coordinador'
+    if (destinatarioGrupo && !esAdmin && !esCoordinador) {
+      return NextResponse.json({ error: 'Sin permisos para enviar a grupos' }, { status: 403 })
     }
 
     const mensaje = await prisma.mensaje.create({
       data: {
-        asunto,
-        contenido,
+        asunto, contenido,
         tipo: tipo || 'mensaje',
         prioridad: prioridad || 'normal',
         remitenteId: usuario.id,
@@ -139,12 +118,11 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    // Si es mensaje individual, crear notificación
     if (destinatarioId) {
       await prisma.notificacion.create({
         data: {
           tipo: 'mensaje',
-          titulo: `Nuevo mensaje de ${usuario.nombre} ${usuario.apellidos}`,
+          titulo: 'Nuevo mensaje de ' + usuario.nombre + ' ' + usuario.apellidos,
           mensaje: asunto,
           enlace: '/mi-area?tab=notificaciones',
           usuarioId: destinatarioId
@@ -152,9 +130,47 @@ export async function POST(request: NextRequest) {
       })
     }
 
+    if (destinatarioGrupo) {
+      let usuariosDestino: { id: string }[] = []
+      if (destinatarioGrupo === 'todos') {
+        usuariosDestino = await prisma.usuario.findMany({ where: { activo: true, NOT: { id: usuario.id } }, select: { id: true } })
+      } else if (destinatarioGrupo.startsWith('rol:')) {
+        const rolNombre = destinatarioGrupo.replace('rol:', '')
+        usuariosDestino = await prisma.usuario.findMany({
+          where: { activo: true, NOT: { id: usuario.id }, rol: { nombre: rolNombre } },
+          select: { id: true }
+        })
+      } else if (destinatarioGrupo.startsWith('area:')) {
+        const areaNombre = destinatarioGrupo.replace('area:', '')
+        usuariosDestino = await prisma.usuario.findMany({
+          where: {
+            activo: true, NOT: { id: usuario.id },
+            fichaVoluntario: {
+              OR: [
+                { areaAsignada: { equals: areaNombre, mode: 'insensitive' } },
+                { areaSecundaria: { equals: areaNombre, mode: 'insensitive' } }
+              ]
+            }
+          },
+          select: { id: true }
+        })
+      }
+      if (usuariosDestino.length > 0) {
+        await prisma.notificacion.createMany({
+          data: usuariosDestino.map(u => ({
+            tipo: 'mensaje',
+            titulo: 'Mensaje de ' + usuario.nombre + ' ' + usuario.apellidos,
+            mensaje: asunto,
+            enlace: '/mi-area?tab=notificaciones',
+            usuarioId: u.id
+          }))
+        })
+      }
+    }
+
     return NextResponse.json({ success: true, mensaje })
   } catch (error) {
-    console.error('Error en POST /api/mensajes:', error)
+    console.error('Error POST /api/mensajes:', error)
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
   }
 }
@@ -162,47 +178,30 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
-    }
+    if (!session?.user?.email) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
-    const usuario = await prisma.usuario.findUnique({
-      where: { email: session.user.email }
-    })
-
-    if (!usuario) {
-      return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
-    }
+    const usuario = await prisma.usuario.findUnique({ where: { email: session.user.email } })
+    if (!usuario) return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
 
     const body = await request.json()
-    const { mensajeId, accion } = body // accion: marcarLeido, archivar
+    const { mensajeId, accion } = body
 
     if (accion === 'marcarLeido') {
-      await prisma.mensaje.update({
-        where: { id: mensajeId },
-        data: { leido: true, leidoEn: new Date() }
-      })
+      await prisma.mensaje.update({ where: { id: mensajeId }, data: { leido: true, leidoEn: new Date() } })
+    } else if (accion === 'archivar') {
+      await prisma.mensaje.update({ where: { id: mensajeId }, data: { archivado: true } })
+    } else if (accion === 'desarchivar') {
+      await prisma.mensaje.update({ where: { id: mensajeId }, data: { archivado: false } })
     } else if (accion === 'marcarTodosLeidos') {
       await prisma.mensaje.updateMany({
-        where: {
-          OR: [
-            { destinatarioId: usuario.id },
-            { destinatarioGrupo: 'todos' }
-          ],
-          leido: false
-        },
+        where: { OR: [{ destinatarioId: usuario.id }, { destinatarioGrupo: 'todos' }], leido: false },
         data: { leido: true }
-      })
-    } else if (accion === 'archivar') {
-      await prisma.mensaje.update({
-        where: { id: mensajeId },
-        data: { archivado: true }
       })
     }
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('Error en PUT /api/mensajes:', error)
+    console.error('Error PUT /api/mensajes:', error)
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
   }
 }
