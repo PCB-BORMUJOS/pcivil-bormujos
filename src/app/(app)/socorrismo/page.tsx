@@ -501,15 +501,15 @@ export default function SocorrismoPage() {
                                 <td className="p-3">
                                   <div className="flex justify-center gap-2">
                                     <button
-                                      onClick={() => setArticuloSeleccionado(art)}
-                                      className="p-1.5 text-slate-600 hover:bg-slate-100 rounded"
+                                      onClick={() => { setArticuloSeleccionado(art); setModoModal('ver') }}
+                                      className="p-1.5 text-blue-500 hover:bg-blue-50 rounded"
                                       title="Ver detalles"
                                     >
                                       <Eye size={16} />
                                     </button>
                                     <button
-                                      onClick={() => setArticuloSeleccionado(art)}
-                                      className="p-1.5 text-slate-600 hover:bg-slate-100 rounded"
+                                      onClick={() => { setArticuloSeleccionado(art); setModoModal('editar'); setDestinoStock('almacen'); setBotiquinItemsModal([]) }}
+                                      className="p-1.5 text-pink-500 hover:bg-pink-50 rounded"
                                       title="Editar"
                                     >
                                       <Edit size={16} />
