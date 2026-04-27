@@ -199,6 +199,7 @@ export default function IncendiosPage() {
   const [loading, setLoading] = useState(true);
   const [showNuevoArticulo, setShowNuevoArticulo] = useState(false);
   const [showEditarArticulo, setShowEditarArticulo] = useState(false);
+  const [showVerArticulo, setShowVerArticulo] = useState(false);
   const [showNuevaPeticion, setShowNuevaPeticion] = useState(false);
   const [showGestionFamilias, setShowGestionFamilias] = useState(false);
   const [familiaEditando, setFamiliaEditando] = useState<{id: string, nombre: string} | null>(null);
@@ -779,10 +780,10 @@ export default function IncendiosPage() {
                                 </td>
                                 <td className="p-3">
                                   <div className="flex justify-center gap-2">
-                                    <button onClick={() => { setArticuloSeleccionado(art); setShowEditarArticulo(false); }} className="p-1.5 text-slate-600 hover:bg-slate-100 rounded" title="Ver detalles">
+                                    <button onClick={() => { setArticuloSeleccionado(art); setShowVerArticulo(true); }} className="p-1.5 text-blue-500 hover:bg-blue-50 rounded" title="Ver detalles">
                                       <Eye size={16} />
                                     </button>
-                                    <button disabled={!canEdit} onClick={() => { setArticuloSeleccionado(art); setShowEditarArticulo(true); }} className="p-1.5 text-slate-600 hover:bg-slate-100 rounded disabled:opacity-40 disabled:cursor-not-allowed" title="Editar">
+                                    <button disabled={!canEdit} onClick={() => { setArticuloSeleccionado(art); setShowEditarArticulo(true); }} className="p-1.5 text-red-500 hover:bg-red-50 rounded disabled:opacity-40 disabled:cursor-not-allowed" title="Editar">
                                       <Edit size={16} />
                                     </button>
                                     <button disabled={!canDelete} onClick={async () => { if (confirm(`¿Eliminar "${art.nombre}"?`)) { await eliminarItem('articulo', art.id); } }} className="p-1.5 text-red-600 hover:bg-red-50 rounded disabled:opacity-40 disabled:cursor-not-allowed" title="Eliminar">
@@ -1496,12 +1497,87 @@ export default function IncendiosPage() {
         </div>
       )}
 
+      {/* Modal Ver Artículo */}
+      {showVerArticulo && articuloSeleccionado && (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/60" onClick={() => { setShowVerArticulo(false); setArticuloSeleccionado(null); }}>
+          <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="bg-red-600 p-5 text-white flex justify-between items-center flex-shrink-0">
+              <div className="flex items-center gap-3">
+                <Eye size={22} />
+                <h2 className="text-xl font-bold">Detalle Artículo</h2>
+              </div>
+              <button onClick={() => { setShowVerArticulo(false); setArticuloSeleccionado(null); }} className="hover:bg-red-700 rounded-lg p-1 transition-colors">
+                <X size={24} />
+              </button>
+            </div>
+            <div className="p-6 space-y-5 overflow-y-auto">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Código</p>
+                  <p className="text-slate-800 font-medium">{articuloSeleccionado.codigo || '—'}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Familia</p>
+                  <p className="text-slate-800 font-medium">{articuloSeleccionado.familia?.nombre || '—'}</p>
+                </div>
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Nombre</p>
+                <p className="text-slate-800 font-semibold text-lg">{articuloSeleccionado.nombre}</p>
+              </div>
+              {articuloSeleccionado.descripcion && (
+                <div>
+                  <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Descripción</p>
+                  <p className="text-slate-600">{articuloSeleccionado.descripcion}</p>
+                </div>
+              )}
+              <div className="grid grid-cols-3 gap-4">
+                <div className={`rounded-xl p-4 text-center border-2 ${articuloSeleccionado.stockActual <= articuloSeleccionado.stockMinimo ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'}`}>
+                  <p className="text-xs text-slate-500 mb-1 font-medium">Stock Actual</p>
+                  <p className={`text-3xl font-bold ${articuloSeleccionado.stockActual <= articuloSeleccionado.stockMinimo ? 'text-red-600' : 'text-green-700'}`}>
+                    {articuloSeleccionado.stockActual}
+                  </p>
+                  {articuloSeleccionado.stockActual <= articuloSeleccionado.stockMinimo && (
+                    <p className="text-xs text-red-500 mt-1 font-medium">Stock bajo</p>
+                  )}
+                </div>
+                <div className="bg-slate-50 rounded-xl p-4 text-center border-2 border-slate-200">
+                  <p className="text-xs text-slate-500 mb-1 font-medium">Stock Mínimo</p>
+                  <p className="text-3xl font-bold text-slate-600">{articuloSeleccionado.stockMinimo}</p>
+                </div>
+                <div className="bg-slate-50 rounded-xl p-4 text-center border-2 border-slate-200">
+                  <p className="text-xs text-slate-500 mb-1 font-medium">Unidad</p>
+                  <p className="text-xl font-bold text-slate-700">{articuloSeleccionado.unidad}</p>
+                </div>
+              </div>
+              <div className="flex justify-end gap-3 pt-2 border-t">
+                <button type="button" onClick={() => { setShowVerArticulo(false); setArticuloSeleccionado(null); }} className="px-5 py-2.5 text-slate-600 hover:bg-slate-100 rounded-lg font-medium">
+                  Cerrar
+                </button>
+                {canEdit && (
+                  <button
+                    type="button"
+                    onClick={() => { setShowVerArticulo(false); setShowEditarArticulo(true); }}
+                    className="px-5 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium flex items-center gap-2"
+                  >
+                    <Edit size={16} /> Editar
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showEditarArticulo && articuloSeleccionado && (
         <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/60" onClick={() => { setShowEditarArticulo(false); setArticuloSeleccionado(null); }}>
           <div className="bg-white rounded-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
-            <div className="bg-purple-600 p-5 text-white flex justify-between items-center">
-              <h2 className="text-xl font-bold">Editar Artículo</h2>
-              <button onClick={() => { setShowEditarArticulo(false); setArticuloSeleccionado(null); }}><X size={24} /></button>
+            <div className="bg-red-600 p-5 text-white flex justify-between items-center">
+              <div className="flex items-center gap-3">
+                <Edit size={22} />
+                <h2 className="text-xl font-bold">Editar Artículo</h2>
+              </div>
+              <button onClick={() => { setShowEditarArticulo(false); setArticuloSeleccionado(null); }} className="hover:bg-red-700 rounded-lg p-1 transition-colors"><X size={24} /></button>
             </div>
             <form onSubmit={async (e) => {
               e.preventDefault()
@@ -1562,7 +1638,7 @@ export default function IncendiosPage() {
               </div>
               <div className="flex justify-end gap-3 pt-4 border-t">
                 <button type="button" onClick={() => { setShowEditarArticulo(false); setArticuloSeleccionado(null); }} className="px-5 py-2.5 text-slate-600 hover:bg-slate-100 rounded-lg font-medium">Cancelar</button>
-                <button type="submit" className="px-5 py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium">Guardar Cambios</button>
+                <button type="submit" className="px-5 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium">Guardar Cambios</button>
               </div>
             </form>
           </div>
