@@ -1011,93 +1011,274 @@ export default function SocorrismoPage() {
         </div>
       )}
 
-      {/* Modal Editar Artículo */}
+      {/* Modal Ver / Editar Artículo */}
       {articuloSeleccionado && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60" onClick={() => setArticuloSeleccionado(null)}>
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/60" onClick={() => setArticuloSeleccionado(null)}>
           <div className="bg-white rounded-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
-            <div className="bg-purple-600 p-5 text-white flex justify-between items-center">
-              <h2 className="text-xl font-bold">Editar Artículo</h2>
-              <button onClick={() => setArticuloSeleccionado(null)}>
+            <div className="bg-pink-500 p-5 text-white flex justify-between items-center flex-shrink-0">
+              <div className="flex items-center gap-3">
+                {modoModal === 'ver' ? <Eye size={22} /> : <Edit size={22} />}
+                <h2 className="text-xl font-bold">
+                  {modoModal === 'ver' ? 'Detalle Artículo' : 'Editar Artículo'}
+                </h2>
+              </div>
+              <button onClick={() => setArticuloSeleccionado(null)} className="hover:bg-pink-600 rounded-lg p-1 transition-colors">
                 <X size={24} />
               </button>
             </div>
-            <form onSubmit={async (e) => {
-              e.preventDefault()
-              const form = e.target as HTMLFormElement
-              const formData = {
-                codigo: (form.elements.namedItem('codigo') as HTMLInputElement).value,
-                nombre: (form.elements.namedItem('nombre') as HTMLInputElement).value,
-                descripcion: (form.elements.namedItem('descripcion') as HTMLTextAreaElement).value,
-                stockActual: parseInt((form.elements.namedItem('stockActual') as HTMLInputElement).value),
-                stockMinimo: parseInt((form.elements.namedItem('stockMinimo') as HTMLInputElement).value),
-                unidad: (form.elements.namedItem('unidad') as HTMLSelectElement).value,
-                familiaId: (form.elements.namedItem('familiaId') as HTMLSelectElement).value
-              }
-              try {
-                const res = await fetch('/api/logistica', {
-                  method: 'PUT',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ tipo: 'articulo', id: articuloSeleccionado.id, ...formData })
-                })
-                if (res.ok) {
-                  await cargarDatos()
-                  setArticuloSeleccionado(null)
-                }
-              } catch (error) {
-                /* error silenciado */
-              }
-            }} className="p-6 overflow-y-auto space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Código</label>
-                  <input name="codigo" type="text" defaultValue={articuloSeleccionado.codigo} className="w-full border border-slate-300 rounded-lg p-2.5" />
+
+            {modoModal === 'ver' ? (
+              <div className="p-6 space-y-5 overflow-y-auto">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Código</p>
+                    <p className="text-slate-800 font-medium">{articuloSeleccionado.codigo || '—'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Familia</p>
+                    <p className="text-slate-800 font-medium">{articuloSeleccionado.familia?.nombre || '—'}</p>
+                  </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Familia *</label>
-                  <select name="familiaId" defaultValue={articuloSeleccionado.familia.id} className="w-full border border-slate-300 rounded-lg p-2.5" required>
-                    <option value="">Seleccionar familia...</option>
-                    {familias.map(f => (
-                      <option key={f.id} value={f.id}>{f.nombre}</option>
-                    ))}
-                  </select>
+                  <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Nombre</p>
+                  <p className="text-slate-800 font-semibold text-lg">{articuloSeleccionado.nombre}</p>
+                </div>
+                {articuloSeleccionado.descripcion && (
+                  <div>
+                    <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Descripción</p>
+                    <p className="text-slate-600">{articuloSeleccionado.descripcion}</p>
+                  </div>
+                )}
+                <div className="grid grid-cols-3 gap-4">
+                  <div className={`rounded-xl p-4 text-center border-2 ${articuloSeleccionado.stockActual <= articuloSeleccionado.stockMinimo ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'}`}>
+                    <p className="text-xs text-slate-500 mb-1 font-medium">Stock Actual</p>
+                    <p className={`text-3xl font-bold ${articuloSeleccionado.stockActual <= articuloSeleccionado.stockMinimo ? 'text-red-600' : 'text-green-700'}`}>
+                      {articuloSeleccionado.stockActual}
+                    </p>
+                    {articuloSeleccionado.stockActual <= articuloSeleccionado.stockMinimo && (
+                      <p className="text-xs text-red-500 mt-1 font-medium flex items-center justify-center gap-1">
+                        <AlertTriangle size={11} /> Stock bajo
+                      </p>
+                    )}
+                  </div>
+                  <div className="bg-slate-50 rounded-xl p-4 text-center border-2 border-slate-200">
+                    <p className="text-xs text-slate-500 mb-1 font-medium">Stock Mínimo</p>
+                    <p className="text-3xl font-bold text-slate-600">{articuloSeleccionado.stockMinimo}</p>
+                  </div>
+                  <div className="bg-slate-50 rounded-xl p-4 text-center border-2 border-slate-200">
+                    <p className="text-xs text-slate-500 mb-1 font-medium">Unidad</p>
+                    <p className="text-xl font-bold text-slate-700">{articuloSeleccionado.unidad}</p>
+                  </div>
+                </div>
+                <div className="flex justify-end gap-3 pt-2 border-t">
+                  <button type="button" onClick={() => setArticuloSeleccionado(null)} className="px-5 py-2.5 text-slate-600 hover:bg-slate-100 rounded-lg font-medium">
+                    Cerrar
+                  </button>
+                  {canEdit && (
+                    <button
+                      type="button"
+                      onClick={() => { setModoModal('editar'); setDestinoStock('almacen'); setBotiquinItemsModal([]) }}
+                      className="px-5 py-2.5 bg-pink-500 text-white rounded-lg hover:bg-pink-600 font-medium flex items-center gap-2"
+                    >
+                      <Edit size={16} /> Editar
+                    </button>
+                  )}
                 </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Nombre *</label>
-                <input name="nombre" type="text" defaultValue={articuloSeleccionado.nombre} className="w-full border border-slate-300 rounded-lg p-2.5" required />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Descripción</label>
-                <textarea name="descripcion" defaultValue={articuloSeleccionado.descripcion || ''} className="w-full border border-slate-300 rounded-lg p-2.5" rows={3}></textarea>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Stock Actual</label>
-                  <input name="stockActual" type="number" defaultValue={articuloSeleccionado.stockActual} className="w-full border border-slate-300 rounded-lg p-2.5" />
+            ) : (
+              <form key={destinoStock} onSubmit={async (e) => {
+                e.preventDefault()
+                const form = e.target as HTMLFormElement
+                try {
+                  if (destinoStock === 'almacen') {
+                    const formData = {
+                      codigo: (form.elements.namedItem('codigo') as HTMLInputElement).value,
+                      nombre: (form.elements.namedItem('nombre') as HTMLInputElement).value,
+                      descripcion: (form.elements.namedItem('descripcion') as HTMLTextAreaElement).value,
+                      stockActual: parseInt((form.elements.namedItem('stockActual') as HTMLInputElement).value),
+                      stockMinimo: parseInt((form.elements.namedItem('stockMinimo') as HTMLInputElement).value),
+                      unidad: (form.elements.namedItem('unidad') as HTMLSelectElement).value,
+                      familiaId: (form.elements.namedItem('familiaId') as HTMLSelectElement).value
+                    }
+                    const res = await fetch('/api/logistica', {
+                      method: 'PUT',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ tipo: 'articulo', id: articuloSeleccionado.id, ...formData })
+                    })
+                    if (res.ok) { await cargarDatos(); setArticuloSeleccionado(null) }
+                  } else {
+                    const item = botiquinItemsModal.find(i =>
+                      i.nombreItem.toLowerCase().trim() === articuloSeleccionado.nombre.toLowerCase().trim()
+                    )
+                    if (!item) return
+                    const cantidadActual = parseInt((form.elements.namedItem('cantidadBotiquin') as HTMLInputElement).value)
+                    const res = await fetch('/api/logistica', {
+                      method: 'PUT',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ tipo: 'botiquin-item', id: item.id, cantidadActual })
+                    })
+                    if (res.ok) { await cargarDatos(); setArticuloSeleccionado(null) }
+                  }
+                } catch (error) { /* error silenciado */ }
+              }} className="overflow-y-auto flex flex-col">
+                <div className="p-6 space-y-4 flex-1 overflow-y-auto">
+                  <div className="bg-pink-50 border border-pink-200 rounded-xl p-4">
+                    <p className="text-sm font-semibold text-pink-800 mb-3">Ubicación a modificar</p>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => { setDestinoStock('almacen'); setBotiquinItemsModal([]) }}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-lg border-2 text-sm font-medium transition-colors ${
+                          destinoStock === 'almacen'
+                            ? 'border-pink-500 bg-pink-500 text-white'
+                            : 'border-slate-300 bg-white text-slate-600 hover:border-pink-300'
+                        }`}
+                      >
+                        <Layers size={15} />
+                        Almacén General
+                      </button>
+                      {botiquines.map(b => (
+                        <button
+                          key={b.id}
+                          type="button"
+                          onClick={async () => {
+                            setDestinoStock(b.id)
+                            setLoadingDestino(true)
+                            try {
+                              const res = await fetch(`/api/logistica?tipo=botiquines&id=${b.id}`)
+                              const data = await res.json()
+                              setBotiquinItemsModal(data.botiquin?.items || [])
+                            } catch { setBotiquinItemsModal([]) }
+                            finally { setLoadingDestino(false) }
+                          }}
+                          className={`flex items-center gap-2 px-3 py-2 rounded-lg border-2 text-sm font-medium transition-colors ${
+                            destinoStock === b.id
+                              ? 'border-pink-500 bg-pink-500 text-white'
+                              : 'border-slate-300 bg-white text-slate-600 hover:border-pink-300'
+                          }`}
+                        >
+                          <BriefcaseMedical size={15} />
+                          {b.nombre}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {destinoStock === 'almacen' ? (
+                    <>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-2">Código</label>
+                          <input name="codigo" type="text" defaultValue={articuloSeleccionado.codigo} className="w-full border border-slate-300 rounded-lg p-2.5" />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-2">Familia *</label>
+                          <select name="familiaId" defaultValue={articuloSeleccionado.familia.id} className="w-full border border-slate-300 rounded-lg p-2.5" required>
+                            <option value="">Seleccionar familia...</option>
+                            {familias.map(f => (
+                              <option key={f.id} value={f.id}>{f.nombre}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">Nombre *</label>
+                        <input name="nombre" type="text" defaultValue={articuloSeleccionado.nombre} className="w-full border border-slate-300 rounded-lg p-2.5" required />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">Descripción</label>
+                        <textarea name="descripcion" defaultValue={articuloSeleccionado.descripcion || ''} className="w-full border border-slate-300 rounded-lg p-2.5" rows={3}></textarea>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-2">Stock Actual</label>
+                          <input name="stockActual" type="number" defaultValue={articuloSeleccionado.stockActual} className="w-full border border-slate-300 rounded-lg p-2.5" />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-2">Stock Mínimo</label>
+                          <input name="stockMinimo" type="number" defaultValue={articuloSeleccionado.stockMinimo} className="w-full border border-slate-300 rounded-lg p-2.5" />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-2">Unidad</label>
+                          <select name="unidad" defaultValue={articuloSeleccionado.unidad} className="w-full border border-slate-300 rounded-lg p-2.5">
+                            <option>Unidad</option>
+                            <option>Pack</option>
+                            <option>Caja</option>
+                            <option>Botella</option>
+                          </select>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <div>
+                      {loadingDestino ? (
+                        <div className="flex items-center justify-center py-8 text-slate-500">
+                          <RefreshCw size={20} className="animate-spin mr-2" />
+                          Cargando items del botiquín...
+                        </div>
+                      ) : (() => {
+                        const item = botiquinItemsModal.find(i =>
+                          i.nombreItem.toLowerCase().trim() === articuloSeleccionado.nombre.toLowerCase().trim()
+                        )
+                        if (item) {
+                          return (
+                            <div className="space-y-4">
+                              <div className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-xl p-4">
+                                <div>
+                                  <p className="font-semibold text-slate-800">{item.nombreItem}</p>
+                                  <p className="text-sm text-slate-500 mt-0.5">
+                                    Cantidad requerida: <span className="font-medium">{item.cantidadRequerida} {item.unidad}</span>
+                                  </p>
+                                </div>
+                                <span className={`px-3 py-1.5 rounded-full text-sm font-semibold ${item.cantidadActual >= item.cantidadRequerida ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                  {item.cantidadActual} / {item.cantidadRequerida}
+                                </span>
+                              </div>
+                              <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-2">Nueva cantidad actual en botiquín</label>
+                                <input
+                                  name="cantidadBotiquin"
+                                  type="number"
+                                  min="0"
+                                  defaultValue={item.cantidadActual}
+                                  className="w-full border-2 border-pink-300 rounded-lg p-3 text-xl font-bold focus:ring-2 focus:ring-pink-300 focus:border-pink-400"
+                                  required
+                                />
+                              </div>
+                            </div>
+                          )
+                        } else {
+                          return (
+                            <div className="flex flex-col items-center justify-center py-10 bg-amber-50 border border-amber-200 rounded-xl text-center">
+                              <AlertCircle size={36} className="mb-3 text-amber-400" />
+                              <p className="font-semibold text-slate-700">Artículo no registrado en este botiquín</p>
+                              <p className="text-sm text-slate-500 mt-1 max-w-xs">
+                                Este artículo no está como item en el botiquín seleccionado. Añádelo desde la gestión del botiquín.
+                              </p>
+                            </div>
+                          )
+                        }
+                      })()}
+                    </div>
+                  )}
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Stock Mínimo</label>
-                  <input name="stockMinimo" type="number" defaultValue={articuloSeleccionado.stockMinimo} className="w-full border border-slate-300 rounded-lg p-2.5" />
+                <div className="flex justify-end gap-3 p-6 pt-4 border-t flex-shrink-0">
+                  <button type="button" onClick={() => setArticuloSeleccionado(null)} className="px-5 py-2.5 text-slate-600 hover:bg-slate-100 rounded-lg font-medium">
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={
+                      destinoStock !== 'almacen' &&
+                      !botiquinItemsModal.find(i => i.nombreItem.toLowerCase().trim() === articuloSeleccionado.nombre.toLowerCase().trim())
+                    }
+                    className="px-5 py-2.5 bg-pink-500 text-white rounded-lg hover:bg-pink-600 font-medium disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    Guardar Cambios
+                  </button>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Unidad</label>
-                  <select name="unidad" defaultValue={articuloSeleccionado.unidad} className="w-full border border-slate-300 rounded-lg p-2.5">
-                    <option>Unidad</option>
-                    <option>Pack</option>
-                    <option>Caja</option>
-                    <option>Botella</option>
-                  </select>
-                </div>
-              </div>
-              <div className="flex justify-end gap-3 pt-4 border-t">
-                <button type="button" onClick={() => setArticuloSeleccionado(null)} className="px-5 py-2.5 text-slate-600 hover:bg-slate-100 rounded-lg font-medium">
-                  Cancelar
-                </button>
-                <button type="submit" className="px-5 py-2.5 bg-pink-500 text-white rounded-lg hover:bg-pink-600 font-medium">
-                  Guardar Cambios
-                </button>
-              </div>
-            </form>
+              </form>
+            )}
           </div>
         </div>
       )}
