@@ -1,4 +1,5 @@
-'use client';
+'use client'
+import { isToday as isTodaySpain, getTodayParts, getTodaySpain } from '@/lib/date-utils';
 
 import React, { useState, useEffect } from 'react';
 import {
@@ -320,7 +321,11 @@ function CalendarView({ eventos, guardias, resumenDisponibilidad, onEventClick, 
   onMesChange: (fecha: Date) => void;
   userRole: string;
 }) {
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const [currentDate, setCurrentDate] = useState(() => {
+    const todaySpain = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' })
+    const [y, m, d] = todaySpain.split('-').map(Number)
+    return new Date(y, m - 1, d)
+  });
   const [draggedEvent, setDraggedEvent] = useState<any>(null);
   const [dragOverDate, setDragOverDate] = useState<string | null>(null);
   const daysOfWeek = ['LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB', 'DOM'];
@@ -344,7 +349,7 @@ function CalendarView({ eventos, guardias, resumenDisponibilidad, onEventClick, 
     setCurrentDate(newDate);
     onMesChange(newDate);
   };
-  const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' }); // YYYY-MM-DD
+  const todayStr = getTodaySpain(); // YYYY-MM-DD Spain timezone
   const isToday = (d: typeof days[0]) => d.current && d.date === todayStr;
 
   const getEventosDelDia = (date: string) => {
@@ -649,7 +654,7 @@ export default function DashboardPage() {
         setTodosVoluntarios(volData.voluntarios || []);  // guardar copia completa para el selector
         fetch('/api/accion-social?tipo=miembros-viogen').then(r => r.json()).then(d => setMiembrosViogen(d.miembros || [])).catch(() => {});
         // Cargar cuadrante VIOGEN de la semana actual
-        const hoyStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' });
+        const hoyStr = getTodaySpain();
         const hoyDate = new Date(hoyStr);
         const diaSemana = hoyDate.getDay(); // 0=dom, 1=lun...
         const diasHastaLunes = diaSemana === 0 ? -6 : 1 - diaSemana;
@@ -825,7 +830,7 @@ export default function DashboardPage() {
     const horaEs = parseInt(ahora.toLocaleString('es-ES', { timeZone: 'Europe/Madrid', hour: '2-digit', hour12: false }));
     const turnoActivo = horaEs >= 9 && horaEs < 15 ? 'mañana' : horaEs >= 17 && horaEs < 22 ? 'tarde' : null;
     const fechaEs = new Date(ahora.toLocaleString('en-US', { timeZone: 'Europe/Madrid' }));
-    const hoyStr = `${fechaEs.getFullYear()}-${String(fechaEs.getMonth()+1).padStart(2,'0')}-${String(fechaEs.getDate()).padStart(2,'0')}`;
+    const hoyStr = getTodaySpain();
     const guardiasHoy = todasGuardias.filter(g => {
       const fechaG = new Date(g.fecha).toISOString().slice(0,10);
       return fechaG === hoyStr && g.estado !== 'cancelada';
