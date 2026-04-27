@@ -3,7 +3,7 @@ import { usePermisos } from '@/lib/permisos'
 
 import dynamic from 'next/dynamic'
 import { useState, useEffect } from 'react'
-import { Plus, Search, Filter, AlertCircle, MapPin, Activity, Package, AlertTriangle, Building2, Eye, Edit, RefreshCw, ShoppingCart, Heart, HeartPulse, BriefcaseMedical, History, Droplet, Calendar, User, Layers, Trash2, X, ClipboardCheck, Clock, Check, Info, TrendingDown } from 'lucide-react'
+import { Plus, Search, Filter, AlertCircle, MapPin, Activity, Package, AlertTriangle, Building2, Eye, Edit, RefreshCw, ShoppingCart, Heart, HeartPulse, BriefcaseMedical, History, Droplet, Calendar, User, Layers, Trash2, X, ClipboardCheck, Clock, Check, Info, TrendingDown, ChevronRight } from 'lucide-react'
 import 'leaflet/dist/leaflet.css'
 
 // Imports dinámicos para Leaflet
@@ -31,6 +31,7 @@ interface Articulo {
   nombre: string
   descripcion?: string
   stockActual: number
+  botiquinItems?: { cantidadActual: number }[]
   stockMinimo: number
   stockAsignado?: number
   unidad: string
@@ -238,7 +239,10 @@ export default function SocorrismoPage() {
       // Calcular stats
       setStatsArticulos({
         totalArticulos: dataArticulos.articulos?.length || 0,
-        stockBajo: dataArticulos.articulos?.filter((a: Articulo) => a.stockActual <= a.stockMinimo).length || 0
+        stockBajo: dataArticulos.articulos?.filter((a: Articulo) => {
+          const enBotiquines = a.botiquinItems?.reduce((s, i) => s + i.cantidadActual, 0) ?? 0
+          return (a.stockActual + enBotiquines) <= a.stockMinimo
+        }).length || 0
       })
 
       setDeasStats({
@@ -483,20 +487,33 @@ export default function SocorrismoPage() {
                                 </td>
                                 <td className="p-3 text-sm text-slate-600 hidden sm:table-cell">{art.familia?.nombre || '-'}</td>
                                 <td className="p-3 text-center">
-                                  <div className="flex flex-col items-center">
-                                    <span className="font-bold text-slate-800">{art.stockActual - (art.stockAsignado || 0)} <span className="text-slate-400 font-normal text-xs">disp.</span></span>
-                                    {(art.stockAsignado || 0) > 0 && (
-                                      <span className="text-xs text-amber-600">{art.stockAsignado} en botiq.</span>
-                                    )}
-                                    <span className="text-slate-400 text-xs">{art.stockActual} total {art.unidad}</span>
-                                  </div>
+                                  {(() => {
+                                    const enBotiquines = art.botiquinItems?.reduce((s, i) => s + i.cantidadActual, 0) ?? 0
+                                    const stockTotal = art.stockActual + enBotiquines
+                                    return (
+                                      <div className="flex flex-col items-center gap-0.5">
+                                        <span className="font-bold text-slate-800 text-base">{stockTotal} <span className="text-slate-400 font-normal text-xs">{art.unidad}</span></span>
+                                        <div className="flex items-center gap-2 text-xs text-slate-400">
+                                          <span title="En almacén">{art.stockActual} almacén</span>
+                                          {enBotiquines > 0 && (
+                                            <span className="text-pink-500 font-medium" title="En botiquines">· {enBotiquines} botiq.</span>
+                                          )}
+                                        </div>
+                                        <span className="text-xs text-slate-300">mín. {art.stockMinimo}</span>
+                                      </div>
+                                    )
+                                  })()}
                                 </td>
                                 <td className="p-3 text-center">
-                                  {art.stockActual <= art.stockMinimo ? (
-                                    <span className="bg-red-100 text-red-700 px-2 py-1 rounded text-xs font-bold">⚠ Bajo</span>
-                                  ) : (
-                                    <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-bold">✓ OK</span>
-                                  )}
+                                  {(() => {
+                                    const enBotiquines = art.botiquinItems?.reduce((s, i) => s + i.cantidadActual, 0) ?? 0
+                                    const stockTotal = art.stockActual + enBotiquines
+                                    return stockTotal <= art.stockMinimo ? (
+                                      <span className="bg-red-100 text-red-700 px-2 py-1 rounded text-xs font-bold flex items-center gap-1 justify-center"><AlertTriangle size={11} /> Bajo</span>
+                                    ) : (
+                                      <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-bold flex items-center gap-1 justify-center"><Check size={11} /> OK</span>
+                                    )
+                                  })()}
                                 </td>
                                 <td className="p-3">
                                   <div className="flex justify-center gap-2">
@@ -922,7 +939,7 @@ export default function SocorrismoPage() {
       {/* Modal Nuevo Artículo */}
       {showNuevoArticulo && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60" onClick={() => setShowNuevoArticulo(false)}>
-          <div className="bg-white rounded-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+          <div className="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
             <div className="bg-pink-500 p-5 text-white flex justify-between items-center">
               <h2 className="text-xl font-bold">Nuevo Artículo</h2>
               <button onClick={() => setShowNuevoArticulo(false)}>
@@ -1014,7 +1031,7 @@ export default function SocorrismoPage() {
       {/* Modal Ver / Editar Artículo */}
       {articuloSeleccionado && (
         <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/60" onClick={() => setArticuloSeleccionado(null)}>
-          <div className="bg-white rounded-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+          <div className="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
             <div className="bg-pink-500 p-5 text-white flex justify-between items-center flex-shrink-0">
               <div className="flex items-center gap-3">
                 {modoModal === 'ver' ? <Eye size={22} /> : <Edit size={22} />}
@@ -1050,17 +1067,22 @@ export default function SocorrismoPage() {
                   </div>
                 )}
                 <div className="grid grid-cols-3 gap-4">
-                  <div className={`rounded-xl p-4 text-center border-2 ${articuloSeleccionado.stockActual <= articuloSeleccionado.stockMinimo ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'}`}>
-                    <p className="text-xs text-slate-500 mb-1 font-medium">Stock Actual</p>
-                    <p className={`text-3xl font-bold ${articuloSeleccionado.stockActual <= articuloSeleccionado.stockMinimo ? 'text-red-600' : 'text-green-700'}`}>
-                      {articuloSeleccionado.stockActual}
-                    </p>
-                    {articuloSeleccionado.stockActual <= articuloSeleccionado.stockMinimo && (
-                      <p className="text-xs text-red-500 mt-1 font-medium flex items-center justify-center gap-1">
-                        <AlertTriangle size={11} /> Stock bajo
-                      </p>
-                    )}
-                  </div>
+                  {(() => {
+                    const enBotiquines = articuloSeleccionado.botiquinItems?.reduce((s, i) => s + i.cantidadActual, 0) ?? 0
+                    const stockTotal = articuloSeleccionado.stockActual + enBotiquines
+                    const bajo = stockTotal <= articuloSeleccionado.stockMinimo
+                    return (
+                      <div className={`rounded-xl p-4 text-center border-2 ${bajo ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'}`}>
+                        <p className="text-xs text-slate-500 mb-1 font-medium">Stock Total Área</p>
+                        <p className={`text-3xl font-bold ${bajo ? 'text-red-600' : 'text-green-700'}`}>{stockTotal}</p>
+                        <div className="flex justify-center gap-3 mt-1 text-xs text-slate-400">
+                          <span>{articuloSeleccionado.stockActual} almacén</span>
+                          {enBotiquines > 0 && <span className="text-pink-500">{enBotiquines} botiq.</span>}
+                        </div>
+                        {bajo && <p className="text-xs text-red-500 mt-1 font-medium flex items-center justify-center gap-1"><AlertTriangle size={11} /> Stock bajo</p>}
+                      </div>
+                    )
+                  })()}
                   <div className="bg-slate-50 rounded-xl p-4 text-center border-2 border-slate-200">
                     <p className="text-xs text-slate-500 mb-1 font-medium">Stock Mínimo</p>
                     <p className="text-3xl font-bold text-slate-600">{articuloSeleccionado.stockMinimo}</p>
@@ -1120,162 +1142,193 @@ export default function SocorrismoPage() {
                     if (res.ok) { await cargarDatos(); setArticuloSeleccionado(null) }
                   }
                 } catch (error) { /* error silenciado */ }
-              }} className="overflow-y-auto flex flex-col">
-                <div className="p-6 space-y-4 flex-1 overflow-y-auto">
-                  <div className="bg-pink-50 border border-pink-200 rounded-xl p-4">
-                    <p className="text-sm font-semibold text-pink-800 mb-3">Ubicación a modificar</p>
-                    <div className="flex flex-wrap gap-2">
+              }} className="flex flex-1 overflow-hidden">
+
+                {/* ── Sidebar izquierdo: selector de ubicación ── */}
+                <div className="w-56 flex-shrink-0 bg-slate-50 border-r border-slate-200 flex flex-col">
+                  <div className="px-4 py-3 border-b border-slate-200">
+                    <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Ubicación</p>
+                  </div>
+                  <div className="flex-1 overflow-y-auto py-2">
+                    {/* Almacén General */}
+                    <button
+                      type="button"
+                      onClick={() => { setDestinoStock('almacen'); setBotiquinItemsModal([]) }}
+                      className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-colors text-left ${
+                        destinoStock === 'almacen'
+                          ? 'bg-pink-500 text-white'
+                          : 'text-slate-600 hover:bg-slate-100'
+                      }`}
+                    >
+                      <Layers size={15} className="flex-shrink-0" />
+                      <span>Almacén General</span>
+                      {destinoStock === 'almacen' && <ChevronRight size={14} className="ml-auto" />}
+                    </button>
+                    {/* Separador botiquines */}
+                    {botiquines.length > 0 && (
+                      <div className="px-4 pt-3 pb-1">
+                        <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Botiquines</p>
+                      </div>
+                    )}
+                    {botiquines.map(b => (
                       <button
+                        key={b.id}
                         type="button"
-                        onClick={() => { setDestinoStock('almacen'); setBotiquinItemsModal([]) }}
-                        className={`flex items-center gap-2 px-3 py-2 rounded-lg border-2 text-sm font-medium transition-colors ${
-                          destinoStock === 'almacen'
-                            ? 'border-pink-500 bg-pink-500 text-white'
-                            : 'border-slate-300 bg-white text-slate-600 hover:border-pink-300'
+                        onClick={async () => {
+                          setDestinoStock(b.id)
+                          setLoadingDestino(true)
+                          try {
+                            const res = await fetch(`/api/logistica?tipo=botiquines&id=${b.id}`)
+                            const data = await res.json()
+                            setBotiquinItemsModal(data.botiquin?.items || [])
+                          } catch { setBotiquinItemsModal([]) }
+                          finally { setLoadingDestino(false) }
+                        }}
+                        className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-colors text-left ${
+                          destinoStock === b.id
+                            ? 'bg-pink-500 text-white'
+                            : 'text-slate-600 hover:bg-slate-100'
                         }`}
                       >
-                        <Layers size={15} />
-                        Almacén General
+                        <BriefcaseMedical size={15} className="flex-shrink-0" />
+                        <span className="truncate">{b.nombre}</span>
+                        {destinoStock === b.id && <ChevronRight size={14} className="ml-auto flex-shrink-0" />}
                       </button>
-                      {botiquines.map(b => (
-                        <button
-                          key={b.id}
-                          type="button"
-                          onClick={async () => {
-                            setDestinoStock(b.id)
-                            setLoadingDestino(true)
-                            try {
-                              const res = await fetch(`/api/logistica?tipo=botiquines&id=${b.id}`)
-                              const data = await res.json()
-                              setBotiquinItemsModal(data.botiquin?.items || [])
-                            } catch { setBotiquinItemsModal([]) }
-                            finally { setLoadingDestino(false) }
-                          }}
-                          className={`flex items-center gap-2 px-3 py-2 rounded-lg border-2 text-sm font-medium transition-colors ${
-                            destinoStock === b.id
-                              ? 'border-pink-500 bg-pink-500 text-white'
-                              : 'border-slate-300 bg-white text-slate-600 hover:border-pink-300'
-                          }`}
-                        >
-                          <BriefcaseMedical size={15} />
-                          {b.nombre}
-                        </button>
-                      ))}
-                    </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* ── Panel derecho: formulario contextual ── */}
+                <div className="flex-1 flex flex-col overflow-hidden">
+                  <div className="flex-1 overflow-y-auto p-6 space-y-4">
+
+                    {destinoStock === 'almacen' ? (
+                      <>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Código</label>
+                            <input name="codigo" type="text" defaultValue={articuloSeleccionado.codigo} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-pink-200 focus:border-pink-400 outline-none" />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Familia *</label>
+                            <select name="familiaId" defaultValue={articuloSeleccionado.familia.id} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-pink-200 focus:border-pink-400 outline-none" required>
+                              <option value="">Seleccionar...</option>
+                              {familias.map(f => (
+                                <option key={f.id} value={f.id}>{f.nombre}</option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Nombre *</label>
+                          <input name="nombre" type="text" defaultValue={articuloSeleccionado.nombre} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-pink-200 focus:border-pink-400 outline-none" required />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Descripción</label>
+                          <textarea name="descripcion" defaultValue={articuloSeleccionado.descripcion || ''} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-pink-200 focus:border-pink-400 outline-none resize-none" rows={3}></textarea>
+                        </div>
+                        <div className="grid grid-cols-3 gap-4">
+                          <div>
+                            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Stock Actual</label>
+                            <input name="stockActual" type="number" defaultValue={articuloSeleccionado.stockActual} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-pink-200 focus:border-pink-400 outline-none" />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Stock Mínimo</label>
+                            <input name="stockMinimo" type="number" defaultValue={articuloSeleccionado.stockMinimo} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-pink-200 focus:border-pink-400 outline-none" />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Unidad</label>
+                            <select name="unidad" defaultValue={articuloSeleccionado.unidad} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-pink-200 focus:border-pink-400 outline-none">
+                              <option>Unidad</option>
+                              <option>Pack</option>
+                              <option>Caja</option>
+                              <option>Botella</option>
+                            </select>
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <div>
+                        {loadingDestino ? (
+                          <div className="flex items-center justify-center py-16 text-slate-400">
+                            <RefreshCw size={20} className="animate-spin mr-3" />
+                            <span className="text-sm">Cargando items...</span>
+                          </div>
+                        ) : (() => {
+                          const item = botiquinItemsModal.find(i =>
+                            i.nombreItem.toLowerCase().trim() === articuloSeleccionado.nombre.toLowerCase().trim()
+                          )
+                          if (item) {
+                            const completo = item.cantidadActual >= item.cantidadRequerida
+                            return (
+                              <div className="space-y-5">
+                                <div className="rounded-xl border border-slate-200 overflow-hidden">
+                                  <div className="bg-slate-50 px-4 py-2.5 border-b border-slate-200">
+                                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Estado actual</p>
+                                  </div>
+                                  <div className="p-4 flex items-center justify-between">
+                                    <div>
+                                      <p className="font-semibold text-slate-800">{item.nombreItem}</p>
+                                      <p className="text-xs text-slate-400 mt-0.5">Requerido: {item.cantidadRequerida} {item.unidad}</p>
+                                    </div>
+                                    <div className="text-right">
+                                      <p className={`text-2xl font-bold ${completo ? 'text-green-600' : 'text-red-500'}`}>
+                                        {item.cantidadActual}
+                                        <span className="text-sm font-normal text-slate-400"> / {item.cantidadRequerida}</span>
+                                      </p>
+                                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${completo ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>
+                                        {completo ? 'Completo' : 'Incompleto'}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                                <div>
+                                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Nueva cantidad</label>
+                                  <input
+                                    name="cantidadBotiquin"
+                                    type="number"
+                                    min="0"
+                                    defaultValue={item.cantidadActual}
+                                    className="w-full border-2 border-pink-300 rounded-lg p-3 text-2xl font-bold text-center focus:ring-2 focus:ring-pink-200 focus:border-pink-400 outline-none"
+                                    required
+                                  />
+                                  <p className="text-xs text-slate-400 mt-1.5 text-center">Requerido: {item.cantidadRequerida} {item.unidad}</p>
+                                </div>
+                              </div>
+                            )
+                          } else {
+                            return (
+                              <div className="flex flex-col items-center justify-center py-16 text-center">
+                                <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center mb-3">
+                                  <AlertCircle size={24} className="text-amber-500" />
+                                </div>
+                                <p className="font-semibold text-slate-700">No registrado en este botiquín</p>
+                                <p className="text-sm text-slate-400 mt-1 max-w-xs">
+                                  Añade este artículo desde la gestión del botiquín para poder modificar su cantidad aquí.
+                                </p>
+                              </div>
+                            )
+                          }
+                        })()}
+                      </div>
+                    )}
                   </div>
 
-                  {destinoStock === 'almacen' ? (
-                    <>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-slate-700 mb-2">Código</label>
-                          <input name="codigo" type="text" defaultValue={articuloSeleccionado.codigo} className="w-full border border-slate-300 rounded-lg p-2.5" />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-slate-700 mb-2">Familia *</label>
-                          <select name="familiaId" defaultValue={articuloSeleccionado.familia.id} className="w-full border border-slate-300 rounded-lg p-2.5" required>
-                            <option value="">Seleccionar familia...</option>
-                            {familias.map(f => (
-                              <option key={f.id} value={f.id}>{f.nombre}</option>
-                            ))}
-                          </select>
-                        </div>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-2">Nombre *</label>
-                        <input name="nombre" type="text" defaultValue={articuloSeleccionado.nombre} className="w-full border border-slate-300 rounded-lg p-2.5" required />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-2">Descripción</label>
-                        <textarea name="descripcion" defaultValue={articuloSeleccionado.descripcion || ''} className="w-full border border-slate-300 rounded-lg p-2.5" rows={3}></textarea>
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-slate-700 mb-2">Stock Actual</label>
-                          <input name="stockActual" type="number" defaultValue={articuloSeleccionado.stockActual} className="w-full border border-slate-300 rounded-lg p-2.5" />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-slate-700 mb-2">Stock Mínimo</label>
-                          <input name="stockMinimo" type="number" defaultValue={articuloSeleccionado.stockMinimo} className="w-full border border-slate-300 rounded-lg p-2.5" />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-slate-700 mb-2">Unidad</label>
-                          <select name="unidad" defaultValue={articuloSeleccionado.unidad} className="w-full border border-slate-300 rounded-lg p-2.5">
-                            <option>Unidad</option>
-                            <option>Pack</option>
-                            <option>Caja</option>
-                            <option>Botella</option>
-                          </select>
-                        </div>
-                      </div>
-                    </>
-                  ) : (
-                    <div>
-                      {loadingDestino ? (
-                        <div className="flex items-center justify-center py-8 text-slate-500">
-                          <RefreshCw size={20} className="animate-spin mr-2" />
-                          Cargando items del botiquín...
-                        </div>
-                      ) : (() => {
-                        const item = botiquinItemsModal.find(i =>
-                          i.nombreItem.toLowerCase().trim() === articuloSeleccionado.nombre.toLowerCase().trim()
-                        )
-                        if (item) {
-                          return (
-                            <div className="space-y-4">
-                              <div className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-xl p-4">
-                                <div>
-                                  <p className="font-semibold text-slate-800">{item.nombreItem}</p>
-                                  <p className="text-sm text-slate-500 mt-0.5">
-                                    Cantidad requerida: <span className="font-medium">{item.cantidadRequerida} {item.unidad}</span>
-                                  </p>
-                                </div>
-                                <span className={`px-3 py-1.5 rounded-full text-sm font-semibold ${item.cantidadActual >= item.cantidadRequerida ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                                  {item.cantidadActual} / {item.cantidadRequerida}
-                                </span>
-                              </div>
-                              <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-2">Nueva cantidad actual en botiquín</label>
-                                <input
-                                  name="cantidadBotiquin"
-                                  type="number"
-                                  min="0"
-                                  defaultValue={item.cantidadActual}
-                                  className="w-full border-2 border-pink-300 rounded-lg p-3 text-xl font-bold focus:ring-2 focus:ring-pink-300 focus:border-pink-400"
-                                  required
-                                />
-                              </div>
-                            </div>
-                          )
-                        } else {
-                          return (
-                            <div className="flex flex-col items-center justify-center py-10 bg-amber-50 border border-amber-200 rounded-xl text-center">
-                              <AlertCircle size={36} className="mb-3 text-amber-400" />
-                              <p className="font-semibold text-slate-700">Artículo no registrado en este botiquín</p>
-                              <p className="text-sm text-slate-500 mt-1 max-w-xs">
-                                Este artículo no está como item en el botiquín seleccionado. Añádelo desde la gestión del botiquín.
-                              </p>
-                            </div>
-                          )
-                        }
-                      })()}
-                    </div>
-                  )}
-                </div>
-                <div className="flex justify-end gap-3 p-6 pt-4 border-t flex-shrink-0">
-                  <button type="button" onClick={() => setArticuloSeleccionado(null)} className="px-5 py-2.5 text-slate-600 hover:bg-slate-100 rounded-lg font-medium">
-                    Cancelar
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={
-                      destinoStock !== 'almacen' &&
-                      !botiquinItemsModal.find(i => i.nombreItem.toLowerCase().trim() === articuloSeleccionado.nombre.toLowerCase().trim())
-                    }
-                    className="px-5 py-2.5 bg-pink-500 text-white rounded-lg hover:bg-pink-600 font-medium disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    Guardar Cambios
-                  </button>
+                  <div className="flex justify-end gap-3 px-6 py-4 border-t border-slate-200 flex-shrink-0">
+                    <button type="button" onClick={() => setArticuloSeleccionado(null)} className="px-5 py-2.5 text-slate-600 hover:bg-slate-100 rounded-lg font-medium text-sm">
+                      Cancelar
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={
+                        destinoStock !== 'almacen' &&
+                        !botiquinItemsModal.find(i => i.nombreItem.toLowerCase().trim() === articuloSeleccionado.nombre.toLowerCase().trim())
+                      }
+                      className="px-5 py-2.5 bg-pink-500 text-white rounded-lg hover:bg-pink-600 font-medium text-sm disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      Guardar Cambios
+                    </button>
+                  </div>
                 </div>
               </form>
             )}
@@ -1469,7 +1522,7 @@ export default function SocorrismoPage() {
       {/* Modal Nuevo DEA */}
       {showNuevoDEA && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60" onClick={() => setShowNuevoDEA(false)}>
-          <div className="bg-white rounded-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+          <div className="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
             <div className="bg-pink-500 p-5 text-white flex justify-between items-center">
               <h2 className="text-xl font-bold">Nuevo DEA</h2>
               <button onClick={() => setShowNuevoDEA(false)}>
@@ -1599,7 +1652,7 @@ export default function SocorrismoPage() {
       {/* Modal Editar DEA */}
       {deaSeleccionado && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60" onClick={() => setDEASeleccionado(null)}>
-          <div className="bg-white rounded-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+          <div className="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
             <div className="bg-pink-500 p-5 text-white flex justify-between items-center">
               <h2 className="text-xl font-bold">Editar DEA</h2>
               <button onClick={() => setDEASeleccionado(null)}>
