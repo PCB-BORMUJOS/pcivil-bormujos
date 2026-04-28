@@ -1,7 +1,7 @@
 'use client'
 import { usePermisos } from '@/lib/permisos'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import dynamic from 'next/dynamic'
 import { useSession } from 'next-auth/react'
 import {
@@ -93,6 +93,19 @@ export default function VehiculosPage() {
   const [familias, setFamilias] = useState<Familia[]>([])
   const [peticiones, setPeticiones] = useState<any[]>([])
   const [categoriaArea, setCategoriaArea] = useState<string | null>(null)
+  const nivelPorFluido = useMemo(() => {
+    const npr: Record<string, string> = {}
+    TIPOS_FLUIDO.forEach(fl => {
+      const regs = [...registrosFluidos]
+        .filter(r => r.tipoFluido === fl.value)
+        .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime())
+      const ult = regs[0]
+      npr[fl.value] = ult
+        ? (ult.accion === 'cambio_completo' ? 'lleno' : ult.accion === 'relleno' ? 'ok' : 'no_aplica')
+        : 'no_aplica'
+    })
+    return npr
+  }, [registrosFluidos])
   const [vehiculos, setVehiculos] = useState<Vehiculo[]>([])
   const [vehiculoSeleccionado, setVehiculoSeleccionado] = useState<Vehiculo | null>(null)
   const [documentos, setDocumentos] = useState<Documento[]>([])
@@ -508,17 +521,7 @@ export default function VehiculosPage() {
                 <div className="space-y-5">
                   <div className="border border-slate-200 rounded-xl p-4">
                     <div className="flex items-center justify-between mb-4"><h4 className="font-semibold text-slate-800 flex items-center gap-2 text-base"><Gauge className="w-4 h-4 text-blue-500" />Niveles Actuales</h4><button onClick={() => setShowNuevoFluido(true)} className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-xs font-medium"><Plus className="w-3 h-3" />Registrar</button></div>
-                    {(() => {
-                      const npr: Record<string, string> = {}
-                      TIPOS_FLUIDO.forEach(fl => {
-                        const regs = [...registrosFluidos].filter(r => r.tipoFluido === fl.value).sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime())
-                        const ult = regs[0]
-                        npr[fl.value] = ult ? (ult.accion === 'cambio_completo' ? 'lleno' : ult.accion === 'relleno' ? 'ok' : 'no_aplica') : 'no_aplica'
-                      })
-                      return (
-                        <div className="grid grid-cols-2 gap-3">{TIPOS_FLUIDO.map(fl => { const FI = fl.icon; return (<div key={fl.value} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-100"><div className="flex items-center gap-2"><FI className="w-4 h-4 text-slate-400" /><span className="text-sm text-slate-700">{fl.label}</span></div><NivelIndicador nivel={npr[fl.value]} /></div>)})}</div>
-                      )
-                    })()}
+                    <div className="grid grid-cols-2 gap-3">{TIPOS_FLUIDO.map(fl => { const FI = fl.icon; return (<div key={fl.value} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-100"><div className="flex items-center gap-2"><FI className="w-4 h-4 text-slate-400" /><span className="text-sm text-slate-700">{fl.label}</span></div><NivelIndicador nivel={nivelPorFluido[fl.value]} /></div>)})}</div>
                   </div>
                   <div className="border border-slate-200 rounded-xl p-4">
                     <h4 className="font-semibold text-slate-800 flex items-center gap-2 mb-4 text-base"><History className="w-4 h-4 text-blue-500" />Historial</h4>
