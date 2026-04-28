@@ -93,6 +93,12 @@ export default function VehiculosPage() {
   const [familias, setFamilias] = useState<Familia[]>([])
   const [peticiones, setPeticiones] = useState<any[]>([])
   const [categoriaArea, setCategoriaArea] = useState<string | null>(null)
+  const [vehiculos, setVehiculos] = useState<Vehiculo[]>([])
+  const [vehiculoSeleccionado, setVehiculoSeleccionado] = useState<Vehiculo | null>(null)
+  const [documentos, setDocumentos] = useState<Documento[]>([])
+  const [mantenimientos, setMantenimientos] = useState<Mantenimiento[]>([])
+  const [repostajes, setRepostajes] = useState<Repostaje[]>([])
+  const [registrosFluidos, setRegistrosFluidos] = useState<RegistroFluido[]>([])
   const nivelPorFluido = useMemo(() => {
     const npr: Record<string, string> = {}
     TIPOS_FLUIDO.forEach(fl => {
@@ -106,12 +112,6 @@ export default function VehiculosPage() {
     })
     return npr
   }, [registrosFluidos])
-  const [vehiculos, setVehiculos] = useState<Vehiculo[]>([])
-  const [vehiculoSeleccionado, setVehiculoSeleccionado] = useState<Vehiculo | null>(null)
-  const [documentos, setDocumentos] = useState<Documento[]>([])
-  const [mantenimientos, setMantenimientos] = useState<Mantenimiento[]>([])
-  const [repostajes, setRepostajes] = useState<Repostaje[]>([])
-  const [registrosFluidos, setRegistrosFluidos] = useState<RegistroFluido[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedFamiliaFilter, setSelectedFamiliaFilter] = useState('all')
   const [filtroPeticiones, setFiltroPeticiones] = useState('all')
