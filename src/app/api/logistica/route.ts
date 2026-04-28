@@ -659,7 +659,7 @@ export async function POST(request: NextRequest) {
 
     // ===== DEA =====
     if (tipo === 'dea') {
-      const { codigo, tipoDea, marca, modelo, numeroSerie, ubicacion, latitud, longitud, estado, accesible24h, caducidadBateria, caducidadParches, caducidadPilas } = body
+      const { codigo, tipoDea, marca, modelo, numeroSerie, ubicacion, latitud, longitud, estado, accesible24h, caducidadBateria, caducidadParches, caducidadParchesInfantiles, caducidadPilas } = body
 
       if (!codigo || !tipoDea || !ubicacion) {
         return NextResponse.json({ error: 'Código, tipo y ubicación son requeridos' }, { status: 400 })
@@ -679,6 +679,7 @@ export async function POST(request: NextRequest) {
           accesible24h: accesible24h === true,
           caducidadBateria: caducidadBateria ? new Date(caducidadBateria) : null,
           caducidadParches: caducidadParches ? new Date(caducidadParches) : null,
+          caducidadParchesInfantiles: caducidadParchesInfantiles ? new Date(caducidadParchesInfantiles) : null,
           caducidadPilas: caducidadPilas ? new Date(caducidadPilas) : null
         }
       })
@@ -1155,7 +1156,7 @@ export async function PUT(request: NextRequest) {
 
     // ===== DEA =====
     if (tipo === 'dea') {
-      const { codigo, tipoDea, marca, modelo, numeroSerie, ubicacion, latitud, longitud, estado, accesible24h, caducidadBateria, caducidadParches, caducidadPilas } = body
+      const { codigo, tipoDea, marca, modelo, numeroSerie, ubicacion, latitud, longitud, estado, accesible24h, caducidadBateria, caducidadParches, caducidadParchesInfantiles, caducidadPilas } = body
 
       if (!codigo || !tipoDea || !ubicacion) {
         return NextResponse.json({ error: 'Código, tipo y ubicación son requeridos' }, { status: 400 })
@@ -1176,6 +1177,7 @@ export async function PUT(request: NextRequest) {
           accesible24h: accesible24h === true,
           caducidadBateria: caducidadBateria ? new Date(caducidadBateria) : null,
           caducidadParches: caducidadParches ? new Date(caducidadParches) : null,
+          caducidadParchesInfantiles: caducidadParchesInfantiles ? new Date(caducidadParchesInfantiles) : null,
           caducidadPilas: caducidadPilas ? new Date(caducidadPilas) : null
         }
       })

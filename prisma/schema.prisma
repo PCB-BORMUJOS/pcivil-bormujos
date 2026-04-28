@@ -729,8 +729,9 @@ model DEA {
   createdAt        DateTime  @default(now()) @map("created_at")
   updatedAt        DateTime  @updatedAt @map("updated_at")
   caducidadBateria DateTime?
-  caducidadParches DateTime?
-  caducidadPilas   DateTime?
+  caducidadParches          DateTime?
+  caducidadParchesInfantiles DateTime? @map("caducidad_parches_infantiles")
+  caducidadPilas             DateTime?
   edificio         Edificio? @relation(fields: [edificioId], references: [id])
 
   @@map("deas")

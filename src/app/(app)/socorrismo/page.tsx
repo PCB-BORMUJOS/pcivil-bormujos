@@ -67,6 +67,7 @@ interface DEA {
   accesible24h: boolean
   caducidadBateria?: string
   caducidadParches?: string
+  caducidadParchesInfantiles?: string
   caducidadPilas?: string
 }
 
@@ -1548,6 +1549,7 @@ export default function SocorrismoPage() {
                 accesible24h: (form.elements.namedItem('accesible24h') as HTMLInputElement).checked,
                 caducidadBateria: (form.elements.namedItem('caducidadBateria') as HTMLInputElement).value || null,
                 caducidadParches: (form.elements.namedItem('caducidadParches') as HTMLInputElement).value || null,
+                caducidadParchesInfantiles: (form.elements.namedItem('caducidadParchesInfantiles') as HTMLInputElement).value || null,
                 caducidadPilas: (form.elements.namedItem('caducidadPilas') as HTMLInputElement).value || null
               }
               try {
@@ -1628,6 +1630,10 @@ export default function SocorrismoPage() {
                   <input name="caducidadParches" type="date" className="w-full border border-slate-300 rounded-lg p-2.5" />
                 </div>
                 <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Cad. Parches Infantiles</label>
+                  <input name="caducidadParchesInfantiles" type="date" className="w-full border border-slate-300 rounded-lg p-2.5" />
+                </div>
+                <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">Caducidad Pilas</label>
                   <input name="caducidadPilas" type="date" className="w-full border border-slate-300 rounded-lg p-2.5" />
                 </div>
@@ -1678,6 +1684,7 @@ export default function SocorrismoPage() {
                 accesible24h: (form.elements.namedItem('accesible24h') as HTMLInputElement).checked,
                 caducidadBateria: (form.elements.namedItem('caducidadBateria') as HTMLInputElement).value || null,
                 caducidadParches: (form.elements.namedItem('caducidadParches') as HTMLInputElement).value || null,
+                caducidadParchesInfantiles: (form.elements.namedItem('caducidadParchesInfantiles') as HTMLInputElement).value || null,
                 caducidadPilas: (form.elements.namedItem('caducidadPilas') as HTMLInputElement).value || null
               }
               try {
@@ -1755,6 +1762,10 @@ export default function SocorrismoPage() {
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">Caducidad Parches</label>
                   <input name="caducidadParches" type="date" defaultValue={deaSeleccionado.caducidadParches ? new Date(deaSeleccionado.caducidadParches).toISOString().split('T')[0] : ''} className="w-full border border-slate-300 rounded-lg p-2.5" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Cad. Parches Infantiles</label>
+                  <input name="caducidadParchesInfantiles" type="date" defaultValue={deaSeleccionado.caducidadParchesInfantiles ? new Date(deaSeleccionado.caducidadParchesInfantiles).toISOString().split('T')[0] : ''} className="w-full border border-slate-300 rounded-lg p-2.5" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">Caducidad Pilas</label>
