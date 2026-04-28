@@ -107,6 +107,7 @@ export default function VehiculosPage() {
   const [fechaDesde, setFechaDesde] = useState('')
   const [fechaHasta, setFechaHasta] = useState('')
   const [showDetalleVehiculo, setShowDetalleVehiculo] = useState(false)
+  const [showEditarFicha, setShowEditarFicha] = useState(false)
   const [showNuevoArticulo, setShowNuevoArticulo] = useState(false)
   const [showEditarArticulo, setShowEditarArticulo] = useState(false)
   const [showNuevaPeticion, setShowNuevaPeticion] = useState(false)
@@ -476,21 +477,30 @@ export default function VehiculosPage() {
             </div>
             <div className="flex-1 overflow-y-auto p-5">
               {vehicleDetailTab === 'ficha' && (
-                <div className="grid grid-cols-2 gap-5">
-                  <div className="border border-slate-200 rounded-xl p-4">
-                    <h4 className="font-semibold text-slate-800 flex items-center gap-2 mb-4 text-base"><Car className="w-4 h-4 text-blue-500" />Identificación</h4>
-                    <div className="space-y-2.5">
-                      {[{ l: 'Tipo', v: TIPOS_VEHICULO[vehiculoSeleccionado.tipo] || vehiculoSeleccionado.tipo },{ l: 'Marca', v: vehiculoSeleccionado.marca },{ l: 'Modelo', v: vehiculoSeleccionado.modelo },{ l: 'Año', v: vehiculoSeleccionado.anio || '-' },{ l: 'Color', v: vehiculoSeleccionado.color || '-' },{ l: 'Nº Chasis', v: vehiculoSeleccionado.numeroChasis || '-' },{ l: 'Bastidor', v: vehiculoSeleccionado.bastidor || '-' }].map(r => (<div key={r.l} className="flex justify-between items-center py-1.5 border-b border-slate-50 last:border-0"><span className="text-sm text-slate-500">{r.l}</span><span className="text-sm font-medium text-slate-800">{r.v}</span></div>))}
+                <div className="space-y-4">
+                  {canEdit && (
+                    <div className="flex justify-end">
+                      <button onClick={() => setShowEditarFicha(true)} className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium">
+                        <Edit className="w-4 h-4" /> Editar Ficha
+                      </button>
+                    </div>
+                  )}
+                  <div className="grid grid-cols-2 gap-5">
+                    <div className="border border-slate-200 rounded-xl p-4">
+                      <h4 className="font-semibold text-slate-800 flex items-center gap-2 mb-4 text-base"><Car className="w-4 h-4 text-blue-500" />Identificación</h4>
+                      <div className="divide-y divide-slate-100">
+                        {[{ l: 'Tipo', v: TIPOS_VEHICULO[vehiculoSeleccionado.tipo] || vehiculoSeleccionado.tipo },{ l: 'Marca', v: vehiculoSeleccionado.marca },{ l: 'Modelo', v: vehiculoSeleccionado.modelo },{ l: 'Año', v: vehiculoSeleccionado.anio || '—' },{ l: 'Color', v: vehiculoSeleccionado.color || '—' },{ l: 'Nº Chasis', v: vehiculoSeleccionado.numeroChasis || '—' },{ l: 'Bastidor', v: vehiculoSeleccionado.bastidor || '—' }].map(r => (<div key={r.l} className="flex justify-between items-center py-2.5"><span className="text-sm text-slate-400 font-medium">{r.l}</span><span className="text-sm font-semibold text-slate-800">{r.v}</span></div>))}
+                      </div>
+                    </div>
+                    <div className="border border-slate-200 rounded-xl p-4">
+                      <h4 className="font-semibold text-slate-800 flex items-center gap-2 mb-4 text-base"><BarChart3 className="w-4 h-4 text-blue-500" />Estado y Uso</h4>
+                      <div className="divide-y divide-slate-100">
+                        <div className="flex justify-between items-center py-2.5"><span className="text-sm text-slate-400 font-medium">Estado</span><span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${ESTADOS_VEHICULO[vehiculoSeleccionado.estado]?.bg || ''} ${ESTADOS_VEHICULO[vehiculoSeleccionado.estado]?.color || ''}`}>{ESTADOS_VEHICULO[vehiculoSeleccionado.estado]?.label || vehiculoSeleccionado.estado}</span></div>
+                        {[{ l: 'Kilometraje', v: vehiculoSeleccionado.kmActual ? `${vehiculoSeleccionado.kmActual.toLocaleString()} km` : '—' },{ l: 'Potencia', v: vehiculoSeleccionado.potencia ? `${vehiculoSeleccionado.potencia} CV` : '—' },{ l: 'Cilindrada', v: vehiculoSeleccionado.cilindrada ? `${vehiculoSeleccionado.cilindrada} cc` : '—' },{ l: 'Plazas', v: vehiculoSeleccionado.plazas || '—' },{ l: 'Cap. Combustible', v: vehiculoSeleccionado.capacidadCombustible ? `${vehiculoSeleccionado.capacidadCombustible} L` : '—' },{ l: 'Cap. Carga', v: vehiculoSeleccionado.capacidadCarga ? `${vehiculoSeleccionado.capacidadCarga} kg` : '—' }].map(r => (<div key={r.l} className="flex justify-between items-center py-2.5"><span className="text-sm text-slate-400 font-medium">{r.l}</span><span className="text-sm font-semibold text-slate-800">{r.v}</span></div>))}
+                      </div>
                     </div>
                   </div>
-                  <div className="border border-slate-200 rounded-xl p-4">
-                    <h4 className="font-semibold text-slate-800 flex items-center gap-2 mb-4 text-base"><BarChart3 className="w-4 h-4 text-blue-500" />Estado y Uso</h4>
-                    <div className="space-y-2.5">
-                      <div className="flex justify-between items-center py-1.5 border-b border-slate-50"><span className="text-sm text-slate-500">Estado</span><span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${ESTADOS_VEHICULO[vehiculoSeleccionado.estado]?.bg || ''} ${ESTADOS_VEHICULO[vehiculoSeleccionado.estado]?.color || ''}`}>{ESTADOS_VEHICULO[vehiculoSeleccionado.estado]?.label || vehiculoSeleccionado.estado}</span></div>
-                      {[{ l: 'Kilometraje', v: vehiculoSeleccionado.kmActual ? `${vehiculoSeleccionado.kmActual.toLocaleString()} km` : '-' },{ l: 'Potencia', v: vehiculoSeleccionado.potencia ? `${vehiculoSeleccionado.potencia} CV` : '-' },{ l: 'Cilindrada', v: vehiculoSeleccionado.cilindrada ? `${vehiculoSeleccionado.cilindrada} cc` : '-' },{ l: 'Plazas', v: vehiculoSeleccionado.plazas || '-' },{ l: 'Cap. Combustible', v: vehiculoSeleccionado.capacidadCombustible ? `${vehiculoSeleccionado.capacidadCombustible} L` : '-' },{ l: 'Cap. Carga', v: vehiculoSeleccionado.capacidadCarga ? `${vehiculoSeleccionado.capacidadCarga} kg` : '-' }].map(r => (<div key={r.l} className="flex justify-between items-center py-1.5 border-b border-slate-50 last:border-0"><span className="text-sm text-slate-500">{r.l}</span><span className="text-sm font-medium text-slate-800">{r.v}</span></div>))}
-                    </div>
-                  </div>
-                  {vehiculoSeleccionado.observaciones && (<div className="col-span-2 border border-slate-200 rounded-xl p-4"><h4 className="font-semibold text-slate-800 mb-2">Observaciones</h4><p className="text-sm text-slate-600">{vehiculoSeleccionado.observaciones}</p></div>)}
+                  {vehiculoSeleccionado.observaciones && (<div className="border border-slate-200 rounded-xl p-4"><h4 className="font-semibold text-slate-800 mb-2 text-sm uppercase tracking-wider text-slate-400">Observaciones</h4><p className="text-sm text-slate-700">{vehiculoSeleccionado.observaciones}</p></div>)}
                 </div>
               )}
 
@@ -498,7 +508,17 @@ export default function VehiculosPage() {
                 <div className="space-y-5">
                   <div className="border border-slate-200 rounded-xl p-4">
                     <div className="flex items-center justify-between mb-4"><h4 className="font-semibold text-slate-800 flex items-center gap-2 text-base"><Gauge className="w-4 h-4 text-blue-500" />Niveles Actuales</h4><button onClick={() => setShowNuevoFluido(true)} className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-xs font-medium"><Plus className="w-3 h-3" />Registrar</button></div>
-                    <div className="grid grid-cols-2 gap-3">{TIPOS_FLUIDO.map(fl => { const FI = fl.icon; return (<div key={fl.value} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg"><div className="flex items-center gap-2"><FI className="w-4 h-4 text-slate-400" /><span className="text-sm text-slate-700">{fl.label}</span></div><NivelIndicador /></div>)})}</div>
+                    {(() => {
+                      const npr: Record<string, string> = {}
+                      TIPOS_FLUIDO.forEach(fl => {
+                        const regs = [...registrosFluidos].filter(r => r.tipoFluido === fl.value).sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime())
+                        const ult = regs[0]
+                        npr[fl.value] = ult ? (ult.accion === 'cambio_completo' ? 'lleno' : ult.accion === 'relleno' ? 'ok' : 'no_aplica') : 'no_aplica'
+                      })
+                      return (
+                        <div className="grid grid-cols-2 gap-3">{TIPOS_FLUIDO.map(fl => { const FI = fl.icon; return (<div key={fl.value} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-100"><div className="flex items-center gap-2"><FI className="w-4 h-4 text-slate-400" /><span className="text-sm text-slate-700">{fl.label}</span></div><NivelIndicador nivel={npr[fl.value]} /></div>)})}</div>
+                      )
+                    })()}
                   </div>
                   <div className="border border-slate-200 rounded-xl p-4">
                     <h4 className="font-semibold text-slate-800 flex items-center gap-2 mb-4 text-base"><History className="w-4 h-4 text-blue-500" />Historial</h4>
@@ -536,13 +556,74 @@ export default function VehiculosPage() {
                   <div className="flex justify-end"><button onClick={() => setShowNuevoMantenimiento(true)} className="flex items-center gap-1 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-sm font-medium"><Plus className="w-4 h-4" />Registrar</button></div>
                   <div className="border border-slate-200 rounded-xl overflow-hidden">
                     <table className="w-full text-sm">
-                      <thead><tr className="border-b border-slate-100"><th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Fecha</th><th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Tipo</th><th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Descripción</th><th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Km</th><th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Coste</th><th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Realizado por</th></tr></thead>
-                      <tbody className="divide-y divide-slate-50">{mantenimientos.length === 0 ? (<tr><td colSpan={6} className="text-center py-8 text-slate-400"><Settings className="w-8 h-8 mx-auto mb-2 opacity-30" /><p className="text-sm">No hay registros</p></td></tr>) : mantenimientos.map(m => (<tr key={m.id} className="hover:bg-slate-50"><td className="px-4 py-3 text-slate-600">{new Date(m.fecha).toLocaleDateString('es-ES')}</td><td className="px-4 py-3"><span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">{m.tipo}</span></td><td className="px-4 py-3 text-slate-800">{m.descripcion}</td><td className="px-4 py-3 text-right text-slate-600">{m.kilometraje?.toLocaleString() || '-'}</td><td className="px-4 py-3 text-right font-medium">{m.coste ? `${m.coste.toFixed(2)} €` : '-'}</td><td className="px-4 py-3 text-slate-500">{m.realizadoPor || '-'}</td><td className="px-4 py-3 text-right"><button onClick={() => handleEliminarMantenimiento(m.id)} className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500"><Trash2 className="w-3.5 h-3.5" /></button></td></tr>))}</tbody>
+                      <thead><tr className="bg-slate-50 border-b border-slate-200"><th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Fecha</th><th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Tipo</th><th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Descripción</th><th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Km</th><th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Coste</th><th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Realizado por</th><th className="w-10 px-4 py-3"></th></tr></thead>
+                      <tbody className="divide-y divide-slate-100">{mantenimientos.length === 0 ? (<tr><td colSpan={7} className="text-center py-8 text-slate-400"><Settings className="w-8 h-8 mx-auto mb-2 opacity-30" /><p className="text-sm">No hay registros</p></td></tr>) : mantenimientos.map(m => (<tr key={m.id} className="hover:bg-slate-50"><td className="px-4 py-3 text-slate-600">{new Date(m.fecha).toLocaleDateString('es-ES')}</td><td className="px-4 py-3"><span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 whitespace-nowrap">{m.tipo}</span></td><td className="px-4 py-3 text-slate-800 max-w-[200px]"><p className="truncate text-sm" title={m.descripcion}>{m.descripcion}</p></td><td className="px-4 py-3 text-right text-slate-600">{m.kilometraje?.toLocaleString() || '-'}</td><td className="px-4 py-3 text-right font-medium">{m.coste ? `${m.coste.toFixed(2)} €` : '-'}</td><td className="px-4 py-3 text-slate-500 text-sm whitespace-nowrap">{m.realizadoPor || '—'}</td><td className="px-4 py-3 text-right"><button onClick={() => handleEliminarMantenimiento(m.id)} className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500"><Trash2 className="w-3.5 h-3.5" /></button></td></tr>))}</tbody>
                     </table>
                   </div>
                 </div>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: EDITAR FICHA TÉCNICA */}
+      {showEditarFicha && vehiculoSeleccionado && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1001] p-4" onClick={() => setShowEditarFicha(false)}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="bg-blue-600 p-5 text-white flex items-center justify-between flex-shrink-0">
+              <div className="flex items-center gap-3"><Edit className="w-5 h-5" /><h3 className="text-lg font-bold">Editar Ficha Técnica — {vehiculoSeleccionado.indicativo}</h3></div>
+              <button onClick={() => setShowEditarFicha(false)} className="hover:bg-blue-700 rounded-lg p-1 transition-colors"><X className="w-5 h-5" /></button>
+            </div>
+            <form onSubmit={async (e) => {
+              e.preventDefault()
+              const f = new FormData(e.currentTarget)
+              const body = {
+                id: vehiculoSeleccionado.id,
+                anio: f.get('anio') ? parseInt(f.get('anio') as string) : null,
+                color: f.get('color') || null,
+                numeroChasis: f.get('numeroChasis') || null,
+                bastidor: f.get('bastidor') || null,
+                potencia: f.get('potencia') ? parseInt(f.get('potencia') as string) : null,
+                cilindrada: f.get('cilindrada') ? parseInt(f.get('cilindrada') as string) : null,
+                plazas: f.get('plazas') ? parseInt(f.get('plazas') as string) : null,
+                capacidadCombustible: f.get('capacidadCombustible') ? parseFloat(f.get('capacidadCombustible') as string) : null,
+                capacidadCarga: f.get('capacidadCarga') ? parseFloat(f.get('capacidadCarga') as string) : null,
+                kilometraje: f.get('kmActual') ? parseInt(f.get('kmActual') as string) : null,
+                observaciones: f.get('observaciones') || null,
+              }
+              try {
+                setSaving(true)
+                const res = await fetch('/api/vehiculos?tipo=vehiculo', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+                if (res.ok) {
+                  const data = await res.json()
+                  setVehiculoSeleccionado({ ...vehiculoSeleccionado, ...data.vehiculo })
+                  setShowEditarFicha(false)
+                }
+              } catch (e) { /* error silenciado */ } finally { setSaving(false) }
+            }} className="overflow-y-auto flex-1 p-6 space-y-4">
+              <div className="grid grid-cols-3 gap-4">
+                <div><label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Año</label><input name="anio" type="number" defaultValue={vehiculoSeleccionado.anio || ''} placeholder="2020" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" /></div>
+                <div><label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Color</label><input name="color" type="text" defaultValue={vehiculoSeleccionado.color || ''} placeholder="Blanco" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" /></div>
+                <div><label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Kilometraje actual</label><input name="kmActual" type="number" defaultValue={vehiculoSeleccionado.kmActual || ''} placeholder="27000" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" /></div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div><label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Nº Chasis</label><input name="numeroChasis" type="text" defaultValue={vehiculoSeleccionado.numeroChasis || ''} className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" /></div>
+                <div><label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Bastidor (VIN)</label><input name="bastidor" type="text" defaultValue={vehiculoSeleccionado.bastidor || ''} className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" /></div>
+              </div>
+              <div className="grid grid-cols-4 gap-4">
+                <div><label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Potencia (CV)</label><input name="potencia" type="number" defaultValue={vehiculoSeleccionado.potencia || ''} placeholder="125" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" /></div>
+                <div><label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Cilindrada (cc)</label><input name="cilindrada" type="number" defaultValue={vehiculoSeleccionado.cilindrada || ''} placeholder="2000" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" /></div>
+                <div><label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Plazas</label><input name="plazas" type="number" defaultValue={vehiculoSeleccionado.plazas || ''} placeholder="5" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" /></div>
+                <div><label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Cap. Comb. (L)</label><input name="capacidadCombustible" type="number" step="0.1" defaultValue={vehiculoSeleccionado.capacidadCombustible || ''} placeholder="70" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" /></div>
+              </div>
+              <div><label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Cap. Carga (kg)</label><input name="capacidadCarga" type="number" defaultValue={vehiculoSeleccionado.capacidadCarga || ''} placeholder="1200" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" /></div>
+              <div><label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Observaciones</label><textarea name="observaciones" rows={3} defaultValue={vehiculoSeleccionado.observaciones || ''} className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" /></div>
+              <div className="flex justify-end gap-3 pt-2 border-t border-slate-100">
+                <button type="button" onClick={() => setShowEditarFicha(false)} className="px-5 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-xl">Cancelar</button>
+                <button type="submit" disabled={saving} className="px-5 py-2.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl disabled:opacity-50">{saving ? 'Guardando...' : 'Guardar Cambios'}</button>
+              </div>
+            </form>
           </div>
         </div>
       )}

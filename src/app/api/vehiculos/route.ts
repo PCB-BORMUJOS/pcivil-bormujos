@@ -293,7 +293,17 @@ export async function PUT(request: NextRequest) {
       const {
         id,
         estado,
-        kilometraje
+        kilometraje,
+        anio,
+        color,
+        numeroChasis,
+        bastidor,
+        potencia,
+        cilindrada,
+        plazas,
+        capacidadCombustible,
+        capacidadCarga,
+        observaciones
       } = body
 
       if (!id) {
@@ -306,7 +316,17 @@ export async function PUT(request: NextRequest) {
         where: { id },
         data: {
           estado: estado || undefined,
-          kmActual: kilometraje ? parseInt(kilometraje) : undefined,
+          kmActual: kilometraje ? parseInt(String(kilometraje)) : undefined,
+          anio: anio ? parseInt(String(anio)) : undefined,
+          color: color !== undefined ? (color || null) : undefined,
+          numeroChasis: numeroChasis !== undefined ? (numeroChasis || null) : undefined,
+          bastidor: bastidor !== undefined ? (bastidor || null) : undefined,
+          potencia: potencia ? parseInt(String(potencia)) : undefined,
+          cilindrada: cilindrada ? parseInt(String(cilindrada)) : undefined,
+          plazas: plazas ? parseInt(String(plazas)) : undefined,
+          capacidadCombustible: capacidadCombustible ? parseFloat(String(capacidadCombustible)) : undefined,
+          capacidadCarga: capacidadCarga ? parseFloat(String(capacidadCarga)) : undefined,
+          observaciones: observaciones !== undefined ? (observaciones || null) : undefined,
         }
       })
 

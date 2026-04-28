@@ -272,8 +272,17 @@ model Vehiculo {
   tipo         String
   marca        String?
   modelo       String?
-  anio         Int?                 @map("anio")
-  estado       String               @default("disponible")
+  anio                Int?     @map("anio")
+  color               String?
+  numeroChasis        String?  @map("numero_chasis")
+  bastidor            String?
+  potencia            Int?
+  cilindrada          Int?
+  plazas              Int?
+  capacidadCombustible Float?  @map("capacidad_combustible")
+  capacidadCarga      Float?   @map("capacidad_carga")
+  observaciones       String?
+  estado              String   @default("disponible")
   kmActual     Int?                 @map("km_actual")
   fechaItv     DateTime?            @map("fecha_itv")
   fechaSeguro  DateTime?            @map("fecha_seguro")
