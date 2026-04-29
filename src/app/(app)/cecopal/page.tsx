@@ -63,6 +63,7 @@ export default function CecopalPage() {
   const [modo, setModo] = useState<'turno' | 'nueva' | 'activa'>('turno')
   const [guardando, setGuardando] = useState(false)
   const [novedadTexto, setNovedadTexto] = useState('')
+  const [alertasExpanded, setAlertasExpanded] = useState(false)
   const [tipoSeleccionado, setTipoSeleccionado] = useState('')
   const [origenSeleccionado, setOrigenSeleccionado] = useState('')
   const [direccion, setDireccion] = useState('')
@@ -210,19 +211,37 @@ export default function CecopalPage() {
             {/* Alertas y accesos */}
             <div className="space-y-4">
               <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
-                <div className="px-4 py-3 border-b border-slate-700 flex items-center gap-2"><Bell size={14} className="text-amber-400" /><h3 className="text-white text-xs font-semibold uppercase tracking-wider">Alertas Operativas</h3>{totalAlertas > 0 && <span className="ml-auto text-xs px-2 py-0.5 bg-amber-900/40 text-amber-300 rounded-full border border-amber-700/40">{totalAlertas}</span>}</div>
-                <div className="p-4 space-y-2">
-                  {totalAlertas === 0 ? <div className="text-center py-8 text-emerald-400 flex flex-col items-center gap-2"><CheckCircle size={28} /><span className="text-sm font-medium">Todo operativo</span></div> : <>
-                    {alertas.botiquines?.map((b: any) => <div key={b.id} className="flex items-center gap-3 p-3 bg-amber-900/20 border border-amber-700/30 rounded-lg"><Package size={13} className="text-amber-400 flex-shrink-0" /><div className="min-w-0"><p className="text-white text-xs font-medium truncate">{b.nombre}</p><p className="text-amber-400 text-xs">Botiquín — Revisión pendiente</p></div></div>)}
-                    {alertas.deas?.map((d: any) => <div key={d.id} className="flex items-center gap-3 p-3 bg-red-900/20 border border-red-700/30 rounded-lg"><Heart size={13} className="text-red-400 flex-shrink-0" /><div className="min-w-0"><p className="text-white text-xs font-medium truncate">{d.codigo} — {d.ubicacion}</p><p className="text-red-400 text-xs">DEA — Caducidad próxima</p></div></div>)}
-                    {alertas.vehiculos?.map((v: any) => <div key={v.id} className="flex items-center gap-3 p-3 bg-orange-900/20 border border-orange-700/30 rounded-lg"><Truck size={13} className="text-orange-400 flex-shrink-0" /><div className="min-w-0"><p className="text-white text-xs font-medium">{v.indicativo} — {v.matricula}</p><p className="text-orange-400 text-xs">{v.fechaItv ? `ITV: ${new Date(v.fechaItv).toLocaleDateString('es-ES')}` : ''}{v.fechaSeguro ? ` · Seguro: ${new Date(v.fechaSeguro).toLocaleDateString('es-ES')}` : ''}</p></div></div>)}
-                  </>}
-                </div>
+                <button onClick={() => setAlertasExpanded(v => !v)} className="w-full px-4 py-3 flex items-center gap-2 hover:bg-slate-700/30 transition-colors">
+                  <Bell size={14} className="text-amber-400" />
+                  <h3 className="text-white text-xs font-semibold uppercase tracking-wider">Alertas Operativas</h3>
+                  {totalAlertas > 0
+                    ? <span className="ml-auto text-xs px-2 py-0.5 bg-amber-900/40 text-amber-300 rounded-full border border-amber-700/40 mr-2">{totalAlertas}</span>
+                    : <CheckCircle size={13} className="ml-auto text-emerald-400 mr-2" />
+                  }
+                  <ChevronRight size={14} className={`text-slate-500 transition-transform ${alertasExpanded ? 'rotate-90' : ''}`} />
+                </button>
+                {alertasExpanded && (
+                  <div className="border-t border-slate-700 p-3 space-y-2 max-h-64 overflow-y-auto">
+                    {totalAlertas === 0
+                      ? <div className="text-center py-4 text-emerald-400 flex items-center justify-center gap-2"><CheckCircle size={16} /><span className="text-sm font-medium">Todo operativo</span></div>
+                      : <>
+                        {alertas.botiquines?.map((b: any) => <div key={b.id} className="flex items-center gap-3 p-2.5 bg-amber-900/20 border border-amber-700/30 rounded-lg"><Package size={13} className="text-amber-400 flex-shrink-0" /><div className="min-w-0"><p className="text-white text-xs font-medium truncate">{b.nombre}</p><p className="text-amber-400 text-xs">Botiquín — Revisión pendiente</p></div></div>)}
+                        {alertas.deas?.map((d: any) => <div key={d.id} className="flex items-center gap-3 p-2.5 bg-red-900/20 border border-red-700/30 rounded-lg"><Heart size={13} className="text-red-400 flex-shrink-0" /><div className="min-w-0"><p className="text-white text-xs font-medium truncate">{d.codigo} — {d.ubicacion}</p><p className="text-red-400 text-xs">DEA — Caducidad próxima</p></div></div>)}
+                        {alertas.vehiculos?.map((v: any) => <div key={v.id} className="flex items-center gap-3 p-2.5 bg-orange-900/20 border border-orange-700/30 rounded-lg"><Truck size={13} className="text-orange-400 flex-shrink-0" /><div className="min-w-0"><p className="text-white text-xs font-medium">{v.indicativo} — {v.matricula}</p><p className="text-orange-400 text-xs">{v.fechaItv ? `ITV: ${new Date(v.fechaItv).toLocaleDateString('es-ES')}` : ''}{v.fechaSeguro ? ` · Seguro: ${new Date(v.fechaSeguro).toLocaleDateString('es-ES')}` : ''}</p></div></div>)}
+                      </>
+                    }
+                  </div>
+                )}
               </div>
+
+            </div>
+
+            {/* Accesos rápidos + Novedades */}
+            <div className="space-y-4">
               <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
                 <div className="px-4 py-3 border-b border-slate-700 flex items-center gap-2"><Zap size={14} className="text-purple-400" /><h3 className="text-white text-xs font-semibold uppercase tracking-wider">Acceso Rápido</h3></div>
-                <div className="p-3 grid grid-cols-2 gap-2">
-                  {[{ label: 'Nuevo Parte PSI', href: '/partes', icon: FileText, color: 'text-blue-400' }, { label: 'Cuadrante', href: '/cuadrantes', icon: Calendar, color: 'text-amber-400' }, { label: 'Vehículos', href: '/vehiculos', icon: Truck, color: 'text-emerald-400' }, { label: 'Manuales', href: '/manuales', icon: FileText, color: 'text-purple-400' }].map(item => (
+                <div className="p-3 space-y-2">
+                  {[{ label: 'Nuevo Parte PSI', href: '/partes', icon: FileText, color: 'text-blue-400' }, { label: 'Dashboard', href: '/dashboard', icon: Calendar, color: 'text-amber-400' }, { label: 'Vehículos', href: '/vehiculos', icon: Truck, color: 'text-emerald-400' }, { label: 'Manuales', href: '/manuales', icon: FileText, color: 'text-purple-400' }].map(item => (
                     <a key={item.label} href={item.href} className="flex items-center gap-2 px-3 py-2.5 bg-slate-700/50 hover:bg-slate-700 rounded-lg transition-colors border border-slate-600/50 group">
                       <item.icon size={13} className={item.color} />
                       <span className="text-slate-300 text-xs font-medium group-hover:text-white">{item.label}</span>
@@ -231,15 +250,12 @@ export default function CecopalPage() {
                   ))}
                 </div>
               </div>
-            </div>
-
-            {/* Novedades */}
-            <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden flex flex-col" style={{maxHeight:'520px'}}>
-              <div className="px-4 py-3 border-b border-slate-700 flex items-center gap-2"><Edit size={14} className="text-slate-400" /><h3 className="text-white text-xs font-semibold uppercase tracking-wider">Novedades del Turno</h3></div>
-              <div className="flex-1 overflow-y-auto p-4"><p className="text-slate-500 text-xs text-center mt-8">Las novedades aparecerán aquí.</p></div>
-              <div className="p-4 border-t border-slate-700">
-                <textarea value={novedadTexto} onChange={e => setNovedadTexto(e.target.value)} placeholder="Registrar novedad del turno..." rows={3} className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white text-sm placeholder-slate-500 focus:outline-none focus:border-blue-500 resize-none" />
-                <button onClick={async () => { if (!novedadTexto.trim()) return; await fetch('/api/cecopal', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'novedad-turno', texto: novedadTexto }) }); setNovedadTexto('') }} disabled={!novedadTexto.trim()} className="mt-2 w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition-colors"><Send size={13} /> Registrar</button>
+              <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden flex flex-col">
+                <div className="px-4 py-3 border-b border-slate-700 flex items-center gap-2"><Edit size={14} className="text-slate-400" /><h3 className="text-white text-xs font-semibold uppercase tracking-wider">Novedades del Turno</h3></div>
+                <div className="p-4 border-t border-slate-700">
+                  <textarea value={novedadTexto} onChange={e => setNovedadTexto(e.target.value)} placeholder="Registrar novedad del turno..." rows={3} className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white text-sm placeholder-slate-500 focus:outline-none focus:border-blue-500 resize-none" />
+                  <button onClick={async () => { if (!novedadTexto.trim()) return; await fetch('/api/cecopal', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'novedad-turno', texto: novedadTexto }) }); setNovedadTexto('') }} disabled={!novedadTexto.trim()} className="mt-2 w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition-colors"><Send size={13} /> Registrar</button>
+                </div>
               </div>
             </div>
           </div>
