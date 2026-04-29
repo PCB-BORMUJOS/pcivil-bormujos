@@ -109,7 +109,8 @@ export default function CecopalPage() {
       const res = await fetch('/api/cecopal', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'incidencia', tipoIncidencia: tipoSeleccionado, origenAviso: origenSeleccionado, direccion, descripcion, horaLlamada: getHoraActual(), vehiculosIds: vehiculosSeleccionados, voluntariosIds: voluntariosSeleccionados }) })
       const data = await res.json()
       if (data.incidencia) { setIncidenciaActiva(data.incidencia); setModo('activa') }
-    } catch (e) { /* error silenciado */ } finally { setGuardando(false) }
+      else { console.error('Error activar incidencia:', data); alert('Error: ' + (data.error || JSON.stringify(data))) }
+    } catch (e) { console.error('Excepcion activar incidencia:', e); alert('Error de red: ' + String(e)) } finally { setGuardando(false) }
   }
 
   const resolverIncidencia = async () => {
