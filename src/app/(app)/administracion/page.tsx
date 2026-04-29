@@ -2944,12 +2944,17 @@ export default function AdministracionPage() {
             </div>
             <div>
               <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Adjuntar Ticket</label>
-              <DocumentUploader
-                label="Ticket combustible"
-                apiEndpoint="/api/admin/caja/drive-upload"
-                onUpload={(url) => setNuevoTicket({ ...nuevoTicket, ticketUrl: url })}
-                currentUrl={nuevoTicket.ticketUrl}
-                folder="Tickets Combustible"
+              <TicketOCRUploader
+                onDatosExtraidos={(datos) => setNuevoTicket(prev => ({
+                  ...prev,
+                  fecha: datos.fecha || prev.fecha,
+                  hora: datos.hora || prev.hora,
+                  estacion: datos.estacion || prev.estacion,
+                  litros: datos.litros ?? prev.litros,
+                  precioLitro: datos.precioLitro ?? prev.precioLitro,
+                  importeFinal: datos.importeFinal ?? prev.importeFinal,
+                  concepto: datos.concepto || prev.concepto,
+                }))}
               />
             </div>
             <div className="flex gap-3 pt-2">
