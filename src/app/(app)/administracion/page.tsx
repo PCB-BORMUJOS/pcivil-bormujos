@@ -857,120 +857,119 @@ export default function AdministracionPage() {
     }
   };
 
-  const generarInformeTicket = (t: any) => {
+  const generarInformeTicket = (ticket: any) => {
     const hoy = new Date()
     const fechaHoy = hoy.toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' })
     const diaStr = hoy.getDate().toString().padStart(2, '0')
     const mesStr = (hoy.getMonth() + 1).toString().padStart(2, '0')
     const anioStr = hoy.getFullYear().toString()
-    const refNormal = `${anioStr}${mesStr}${diaStr}`
-    const refInvertida = refNormal.split('').reverse().join('')
+    const refInvertida = `${anioStr}${mesStr}${diaStr}`.split('').reverse().join('')
+    const fechaTicket = new Date(ticket.fecha).toLocaleDateString('es-ES')
 
-    import('jspdf').then(({ jsPDF }) => {
-      const doc = new (jsPDF as any)({ format: 'a4', unit: 'mm' })
-      const W = 210
-      const margin = 20
+    const html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Informe SOLRED</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: Arial, sans-serif; font-size: 9.5pt; color: #000; }
+  .page { width:210mm; min-height:297mm; padding:15mm 20mm 20mm 20mm; }
+  .header { display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #003366; padding-bottom:10px; margin-bottom:14px; }
+  .header img { height:52px; object-fit:contain; }
+  .header-right { text-align:right; }
+  .header-right img { height:52px; }
+  .header-right .sub { font-size:7pt; color:#555; margin-top:3px; }
+  .dest { margin-bottom:14px; line-height:1.8; }
+  .ref { margin-bottom:10px; line-height:1.8; font-weight:bold; font-size:9pt; }
+  hr { border:none; border-top:1px solid #bbb; margin:10px 0; }
+  p { margin-bottom:8px; line-height:1.6; text-align:justify; }
+  table { width:100%; border-collapse:collapse; margin:10px 0 14px; font-size:8.5pt; }
+  thead tr { background:#003366; color:#fff; }
+  thead th { padding:5px 8px; text-align:left; text-transform:uppercase; font-size:8pt; }
+  tbody tr:nth-child(even) { background:#f5f5f5; }
+  tbody td { padding:5px 8px; border-bottom:1px solid #e0e0e0; }
+  .ticket-img-section { margin-top:14px; }
+  .ticket-img-section h4 { font-size:9pt; color:#003366; border-bottom:1px solid #003366; padding-bottom:3px; margin-bottom:8px; }
+  .ticket-img-section img { max-width:160mm; max-height:130mm; display:block; margin:0 auto; border:1px solid #ccc; }
+  .firma { margin-top:20px; line-height:1.8; }
+  .firma .nombre { font-weight:bold; font-size:10pt; }
+  .footer { margin-top:20px; border-top:1px solid #ddd; padding-top:5px; text-align:center; font-size:7pt; color:#888; }
+  @media print { body { -webkit-print-color-adjust:exact; print-color-adjust:exact; } }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="header">
+    <img src="/images/logo-ayuntamiento-bormujos.png" alt="Ayuntamiento de Bormujos" />
+    <div class="header-right">
+      <img src="/images/logo-proteccion-civil-bormujos.png" alt="Protección Civil Bormujos" />
+      <div class="sub">Servicio Local de Protección Civil<br>Excmo. Ayto. De Bormujos (Sevilla)</div>
+    </div>
+  </div>
 
-      doc.setFillColor(0, 51, 102)
-      doc.rect(0, 0, W, 28, 'F')
-      doc.setTextColor(255, 255, 255)
-      doc.setFontSize(11)
-      doc.setFont('helvetica', 'bold')
-      doc.text('PROTECCION CIVIL BORMUJOS', W - margin, 12, { align: 'right' })
-      doc.setFontSize(8)
-      doc.setFont('helvetica', 'normal')
-      doc.text('Servicio Local de Proteccion Civil', W - margin, 18, { align: 'right' })
-      doc.text('Excmo. Ayto. De Bormujos (Sevilla)', W - margin, 23, { align: 'right' })
+  <div class="dest">
+    <div>A/A: D.Luis Alberto Paniagua López</div>
+    <div>Delegado de Economía y Hacienda</div>
+    <br>
+    <div>C/C: Maria Irene Martínez Criado</div>
+    <div>Dpto. de intervención</div>
+  </div>
 
-      doc.setTextColor(0, 0, 0)
-      doc.setFontSize(9)
-      doc.setFont('helvetica', 'normal')
-      let y = 38
-      doc.text('A/A: D.Luis Alberto Paniagua Lopez', margin, y)
-      doc.text('Delegado de Economia y Hacienda', margin, y + 5)
-      doc.text('C/C: Maria Irene Martinez Criado', margin, y + 12)
-      doc.text('Dpto. de intervencion', margin, y + 17)
+  <div class="ref">
+    <div>REF: ${refInvertida} Informe tarjeta SOLRED 9724990031420621</div>
+    <div>ASUNTO: Informe sobre el uso de la tarjeta SOLRED asignada al Servicio de Protección Civil.</div>
+  </div>
 
-      y = 66
-      doc.setFont('helvetica', 'bold')
-      doc.text('REF: ' + refInvertida + ' Informe tarjeta SOLRED 9724990031420621', margin, y)
-      doc.text('ASUNTO: Informe sobre el uso de la tarjeta SOLRED asignada al Servicio de Proteccion Civil.', margin, y + 7)
+  <hr>
 
-      y = 81
-      doc.setDrawColor(200, 200, 200)
-      doc.line(margin, y, W - margin, y)
+  <p>Por medio del presente Emilio Simón Gómez en calidad de Jefe de Protección Civil y Emergencias del Ayuntamiento de Bormujos informa para que surta los efectos oportunos.</p>
+  <p>Los vehículos no requieren del reportaje con esta tarjeta ya que todos son de Gasoil y su reportaje se realiza en la nave de obras y servicios con el correspondiente control por parte del personal de las propias instalaciones.</p>
+  <p>Los gastos cargados a esta tarjeta corresponden al gasto en gasolina que está destinada a las herramientas mecánicas como motosierras, motobombas del VIR y grupos electrógenos.</p>
+  <p>En relación al documento recibido aparecen los siguientes gastos de combustible (gasolina):</p>
+  <p><strong>SOLRED 9724990031420621 Maquinaria Protección Civil</strong></p>
 
-      y = 89
-      doc.setFont('helvetica', 'normal')
-      doc.setFontSize(9)
-      const t1 = 'Por medio del presente Emilio Simon Gomez en calidad de Jefe de Proteccion Civil y Emergencias del Ayuntamiento de Bormujos informa para que surta los efectos oportunos.'
-      const l1 = doc.splitTextToSize(t1, W - margin * 2)
-      doc.text(l1, margin, y); y += l1.length * 5 + 4
+  <table>
+    <thead><tr><th>DESTINO</th><th>FECHA</th><th>CONCEPTO</th><th>LITROS</th><th>IMPORTE SIN DESCUENTO</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>${ticket.destino || ''}</td>
+        <td>${fechaTicket}</td>
+        <td>${ticket.concepto || ''}</td>
+        <td>${Number(ticket.litros).toFixed(2)}</td>
+        <td>${Number(ticket.importeFinal).toFixed(2)} €</td>
+      </tr>
+    </tbody>
+  </table>
 
-      const t2 = 'Los vehiculos no requieren del reportaje con esta tarjeta ya que todos son de Gasoil y su reportaje se realiza en la nave de obras y servicios con el correspondiente control por parte del personal de las propias instalaciones.'
-      const l2 = doc.splitTextToSize(t2, W - margin * 2)
-      doc.text(l2, margin, y); y += l2.length * 5 + 4
+  <p>Se adjunta el ticket correspondiente al repostaje mencionado confirmando que es correcto en relación a la factura que nos ha remitido vía mail el Dpto. de Intervención.</p>
 
-      const t3 = 'Los gastos cargados a esta tarjeta corresponden al gasto en gasolina destinada a herramientas mecanicas como motosierras, motobombas del VIR y grupos electrogenos.'
-      const l3 = doc.splitTextToSize(t3, W - margin * 2)
-      doc.text(l3, margin, y); y += l3.length * 5 + 4
+  ${ticket.ticketUrl ? `<div class="ticket-img-section"><h4>Ticket de combustible adjunto</h4><img src="${ticket.ticketUrl}" alt="Ticket" /></div>` : ''}
 
-      doc.text('En relacion al documento recibido aparecen los siguientes gastos de combustible (gasolina):', margin, y)
-      y += 8
+  <div class="firma">
+    <p>Sin más que añadir se firma el presente para que surta los efectos que proceda.</p>
+    <p>En Bormujos a ${fechaHoy}</p>
+    <br>
+    <div class="nombre">Emilio Simón Gómez</div>
+    <div>Jefe de Protección Civil y Emergencias</div>
+    <div>Ayuntamiento de Bormujos</div>
+  </div>
 
-      doc.setFillColor(0, 51, 102)
-      doc.rect(margin, y, W - margin * 2, 8, 'F')
-      doc.setTextColor(255, 255, 255)
-      doc.setFont('helvetica', 'bold')
-      doc.setFontSize(8)
-      const cols = [40, 32, 42, 22, 34]
-      const hdrs = ['DESTINO', 'FECHA', 'CONCEPTO', 'LITROS', 'IMPORTE']
-      let x = margin + 2
-      hdrs.forEach((h, i) => { doc.text(h, x, y + 5); x += cols[i] })
-      y += 8
+  <div class="footer">
+    Calle Maestro D. Francisco Rodríguez esq. Avda. Universidad de Salamanca &nbsp;|&nbsp;
+    www.proteccioncivilbormujos.es | info.pcivil@bormujos.net
+  </div>
+</div>
+<script>window.onload = () => { window.print() }</script>
+</body>
+</html>`
 
-      doc.setTextColor(0, 0, 0)
-      doc.setFont('helvetica', 'normal')
-      doc.setFillColor(245, 245, 245)
-      doc.rect(margin, y, W - margin * 2, 7, 'F')
-      x = margin + 2
-      const row = [
-        t.destino || '',
-        new Date(t.fecha).toLocaleDateString('es-ES'),
-        t.concepto || '',
-        Number(t.litros).toFixed(2),
-        Number(t.importeFinal).toFixed(2) + ' EUR'
-      ]
-      row.forEach((val, i) => { doc.text(String(val), x, y + 5); x += cols[i] })
-      y += 14
-
-      doc.setFont('helvetica', 'normal')
-      const tadj = 'Se adjunta el ticket correspondiente al repostaje mencionado confirmando que es correcto en relacion a la factura remitida via mail por el Dpto. de Intervencion.'
-      const ladj = doc.splitTextToSize(tadj, W - margin * 2)
-      doc.text(ladj, margin, y); y += ladj.length * 5 + 10
-
-      doc.text('Sin mas que anadir se firma el presente para que surta los efectos que proceda.', margin, y)
-      y += 10
-      doc.text('En Bormujos a ' + fechaHoy, margin, y)
-      y += 16
-      doc.setFont('helvetica', 'bold')
-      doc.text('Emilio Simon Gomez', margin, y)
-      doc.setFont('helvetica', 'normal')
-      doc.text('Jefe de Proteccion Civil y Emergencias', margin, y + 5)
-      doc.text('Ayuntamiento de Bormujos', margin, y + 10)
-
-      doc.setFontSize(7)
-      doc.setTextColor(130, 130, 130)
-      doc.text('Calle Maestro D. Francisco Rodriguez esq. Avda. Universidad de Salamanca', W / 2, 285, { align: 'center' })
-      doc.text('www.proteccioncivilbormujos.es | info.pcivil@bormujos.net', W / 2, 289, { align: 'center' })
-
-      const fechaTicket = new Date(t.fecha).toISOString().slice(0, 10).replace(/-/g, '')
-      doc.save('Informe-SOLRED-' + fechaTicket + '.pdf')
-    })
+    const win = window.open('', '_blank', 'width=900,height=750')
+    if (win) { win.document.write(html); win.document.close() }
   }
 
   const generarInformeCombustible = () => {
-    const periodo = filtroCombustibleMes || new Date().toISOString().slice(0, 7)
+    const periodo = mesCombustible || new Date().toISOString().slice(0, 7)
     const [anio, mes] = periodo.split('-')
     const hoy = new Date()
     const fechaHoy = hoy.toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' })
@@ -2262,7 +2261,7 @@ export default function AdministracionPage() {
                           <td className="py-3 px-4 text-right font-bold text-slate-800">{Number(t.importeFinal).toFixed(2)} €</td>
                           <td className="py-3 px-4 text-center">
                             {t.ticketUrl ? (
-                              <button onClick={() => setTicketPreview(t.ticketUrl)} className="text-orange-500 hover:text-orange-700 transition-colors">
+                              <button onClick={() => setTicketPreview(t.ticketUrl || null)} className="text-orange-500 hover:text-orange-700 transition-colors">
                                 <Eye size={18} />
                               </button>
                             ) : <span className="text-slate-300">-</span>}
