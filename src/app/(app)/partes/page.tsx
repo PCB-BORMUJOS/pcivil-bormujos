@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Plus, FileText, Download, Trash2, Eye, Filter } from 'lucide-react'
@@ -8,7 +8,7 @@ import { ESTADOS_PARTE } from '@/constants/partesPSI'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 
-export default function PartesPage() {
+function PartesPageInner() {
   const [partes, setPartes] = useState([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
@@ -329,5 +329,13 @@ export default function PartesPage() {
         parteEditar={parteEditar}
       />
     </div>
+  )
+}
+
+export default function PartesPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center h-96"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" /></div>}>
+      <PartesPageInner />
+    </Suspense>
   )
 }
