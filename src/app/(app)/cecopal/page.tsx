@@ -161,10 +161,15 @@ export default function CecopalPage() {
         body: JSON.stringify(payload)
       })
       const data = await res.json()
+      console.log('POST psi response:', JSON.stringify(data))
+      if (!res.ok) {
+        alert('Error creando parte: ' + (data.error || JSON.stringify(data.errores || data)))
+        return
+      }
       if (data.parte?.id) {
         window.location.href = `/partes/psi?id=${data.parte.id}`
       } else {
-        window.location.href = '/partes/psi'
+        alert('Parte creado sin ID: ' + JSON.stringify(data))
       }
     } catch (e) {
       window.location.href = '/partes/psi'
