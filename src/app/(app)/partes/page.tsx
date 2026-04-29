@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Plus, FileText, Download, Trash2, Eye, Filter } from 'lucide-react'
 import ModalPartePSI from '@/components/partes/ModalPartePSI' // Adjust import path if needed
@@ -12,6 +13,8 @@ export default function PartesPage() {
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [parteEditar, setParteEditar] = useState(null)
+  const [cecopalData, setCecopalData] = useState<any>(null)
+  const searchParams = useSearchParams()
 
   // Filtros
   const [filtroFecha, setFiltroFecha] = useState('')
@@ -24,6 +27,33 @@ export default function PartesPage() {
   useEffect(() => {
     cargarPartes()
   }, [page, filtroFecha, filtroEstado])
+
+  useEffect(() => {
+    const cecopalId = searchParams.get('cecopal')
+    if (cecopalId) {
+      fetch(`/api/cecopal?tipo=incidencia-id&id=${cecopalId}`)
+        .then(r => r.json())
+        .then(data => {
+          if (data.incidencia) {
+            const inc = data.incidencia
+            setCecopalData({
+              lugar: inc.direccion || '',
+              motivo: inc.descripcion || inc.tipoIncidencia || '',
+              horaLlamada: inc.horaLlamada || '',
+              horaSalida: inc.horaSalida || '',
+              horaLlegada: inc.horaLlegada || '',
+              horaTerminado: inc.horaTerminado || '',
+              horaDisponible: inc.horaDisponible || '',
+              vehiculosIds: Array.isArray(inc.vehiculosIds) ? inc.vehiculosIds : [],
+              observaciones: inc.observaciones || '',
+            })
+            setParteEditar(null)
+            setShowModal(true)
+          }
+        })
+        .catch(() => {})
+    }
+  }, [searchParams])
 
   const cargarPartes = async () => {
     setLoading(true)
@@ -52,6 +82,7 @@ export default function PartesPage() {
 
   const handleNuevoParte = () => {
     setParteEditar(null)
+    setCecopalData(null)
     setShowModal(true)
   }
 
@@ -292,7 +323,8 @@ export default function PartesPage() {
       {/* MODAL */}
       <ModalPartePSI
         isOpen={showModal}
-        onClose={() => setShowModal(false)}
+        onClose={() => { setShowModal(false); setCecopalData(null) }}
+        initialData={cecopalData || undefined}
         onSave={handleGuardarParte}
         parteEditar={parteEditar}
       />

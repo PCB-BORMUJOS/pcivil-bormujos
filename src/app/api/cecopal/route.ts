@@ -48,6 +48,13 @@ export async function GET(request: NextRequest) {
       })
       return NextResponse.json({ vehiculos })
     }
+    if (tipo === 'incidencia-id') {
+      const id = searchParams.get('id')
+      if (!id) return NextResponse.json({ error: 'ID requerido' }, { status: 400 })
+      const incidencia = await prisma.incidenciaCecopal.findUnique({ where: { id } })
+      return NextResponse.json({ incidencia })
+    }
+
     if (tipo === 'incidencia-activa') {
       const incidencia = await prisma.incidenciaCecopal.findFirst({
         where: { estado: 'activa' },

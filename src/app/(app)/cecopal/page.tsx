@@ -365,7 +365,7 @@ export default function CecopalPage() {
               <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
                 <div className="p-4 space-y-3">
                   <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Acciones</p>
-                  <a href="/partes" className="flex items-center gap-2 w-full px-4 py-3 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 text-blue-300 rounded-lg text-sm font-medium transition-colors"><FileText size={15} /> Generar Parte PSI</a>
+                  <a href={`/partes?cecopal=${incidenciaActiva.id}`} className="flex items-center gap-2 w-full px-4 py-3 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 text-blue-300 rounded-lg text-sm font-medium transition-colors"><FileText size={15} /> Generar Parte PSI</a>
                   <button onClick={resolverIncidencia} disabled={guardando} className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white rounded-lg text-sm font-semibold transition-colors"><CheckCircle size={15} />{guardando ? 'Cerrando...' : 'Resolver Incidencia'}</button>
                 </div>
               </div>

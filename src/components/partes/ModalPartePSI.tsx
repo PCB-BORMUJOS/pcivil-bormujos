@@ -15,13 +15,26 @@ interface ModalPartePSIProps {
     onClose: () => void
     onSave: (data: any) => Promise<void>
     parteEditar?: any
+    initialData?: {
+        lugar?: string
+        motivo?: string
+        horaLlamada?: string
+        horaSalida?: string
+        horaLlegada?: string
+        horaTerminado?: string
+        horaDisponible?: string
+        vehiculosIds?: string[]
+        responsableTurno?: string
+        observaciones?: string
+    }
 }
 
 export default function ModalPartePSI({
     isOpen,
     onClose,
     onSave,
-    parteEditar
+    parteEditar,
+    initialData
 }: ModalPartePSIProps) {
     const [pagina, setPagina] = useState(1)
     const [loading, setLoading] = useState(false)
