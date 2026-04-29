@@ -62,6 +62,7 @@ export default function CecopalPage() {
   const [loading, setLoading] = useState(true)
   const [modo, setModo] = useState<'turno' | 'nueva' | 'activa'>('turno')
   const [guardando, setGuardando] = useState(false)
+  const [generandoParte, setGenerandoParte] = useState(false)
   const [novedadTexto, setNovedadTexto] = useState('')
   const [alertasExpanded, setAlertasExpanded] = useState(false)
   const [tipoSeleccionado, setTipoSeleccionado] = useState('')
@@ -120,6 +121,56 @@ export default function CecopalPage() {
       await fetch('/api/cecopal', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'resolver', id: incidenciaActiva.id, horaDisponible: incidenciaActiva.horaDisponible || getHoraActual(), observaciones: incidenciaActiva.observaciones }) })
       setIncidenciaActiva(null); setModo('turno'); await cargarDatos()
     } catch (e) { /* error silenciado */ } finally { setGuardando(false) }
+  }
+
+  const generarPartePSI = async () => {
+    if (!incidenciaActiva) return
+    setGenerandoParte(true)
+    try {
+      const hoy = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' })
+      const payload = {
+        fecha: hoy,
+        lugar: incidenciaActiva.direccion || '',
+        motivo: incidenciaActiva.descripcion || incidenciaActiva.tipoIncidencia || '',
+        horaLlamada: incidenciaActiva.horaLlamada || '',
+        horaSalida: incidenciaActiva.horaSalida || '',
+        horaLlegada: incidenciaActiva.horaLlegada || '',
+        horaTerminado: incidenciaActiva.horaTerminado || '',
+        horaDisponible: incidenciaActiva.horaDisponible || '',
+        vehiculosIds: incidenciaActiva.vehiculosIds || [],
+        observaciones: incidenciaActiva.observaciones || '',
+        tipologias: [],
+        equipoWalkies: [],
+        tipologiasOtrosTexto: {},
+        fotosUrls: [],
+        informacionExtra: JSON.stringify({
+          lugar: incidenciaActiva.direccion || '',
+          motivo: incidenciaActiva.descripcion || incidenciaActiva.tipoIncidencia || '',
+          tiempos: {
+            llamada: incidenciaActiva.horaLlamada || '00:00',
+            salida: incidenciaActiva.horaSalida || '00:00',
+            llegada: incidenciaActiva.horaLlegada || '00:00',
+            terminado: incidenciaActiva.horaTerminado || '00:00',
+            disponible: incidenciaActiva.horaDisponible || '00:00',
+          }
+        })
+      }
+      const res = await fetch('/api/partes/psi', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+      const data = await res.json()
+      if (data.parte?.id) {
+        window.location.href = `/partes/psi?id=${data.parte.id}`
+      } else {
+        window.location.href = '/partes/psi'
+      }
+    } catch (e) {
+      window.location.href = '/partes/psi'
+    } finally {
+      setGenerandoParte(false)
+    }
   }
 
   if (loading) return <div className="flex items-center justify-center h-96"><RefreshCw className="animate-spin text-blue-500" size={32} /></div>
@@ -365,7 +416,7 @@ export default function CecopalPage() {
               <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
                 <div className="p-4 space-y-3">
                   <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Acciones</p>
-                  <a href={`/partes?cecopal=${incidenciaActiva.id}`} className="flex items-center gap-2 w-full px-4 py-3 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 text-blue-300 rounded-lg text-sm font-medium transition-colors"><FileText size={15} /> Generar Parte PSI</a>
+                  <button onClick={generarPartePSI} disabled={generandoParte} className="flex items-center gap-2 w-full px-4 py-3 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 text-blue-300 rounded-lg text-sm font-medium transition-colors disabled:opacity-40"><FileText size={15} />{generandoParte ? 'Creando parte...' : 'Generar Parte PSI'}</button>
                   <button onClick={resolverIncidencia} disabled={guardando} className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white rounded-lg text-sm font-semibold transition-colors"><CheckCircle size={15} />{guardando ? 'Cerrando...' : 'Resolver Incidencia'}</button>
                 </div>
               </div>
