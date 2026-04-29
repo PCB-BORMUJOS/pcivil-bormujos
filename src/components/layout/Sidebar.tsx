@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { useSession, signOut } from 'next-auth/react'
 import { cn } from '@/lib/utils'
 import { TbDrone as GiDeliveryDrone } from 'react-icons/tb'
+import { Radio as RadioIcon } from 'lucide-react'
 import {
   LayoutDashboard,
   Calendar,
@@ -43,6 +44,7 @@ interface NavItem {
 
 const navigation: NavItem[] = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { name: 'CECOPAL', href: '/cecopal', icon: RadioIcon },
   { name: 'Cuadrantes', href: '/cuadrantes', icon: Calendar, adminOnly: true },
   { name: 'Administración', href: '/administracion', icon: ShieldCheck, adminOnly: true },
   { name: 'Mi Área', href: '/mi-area', icon: User },

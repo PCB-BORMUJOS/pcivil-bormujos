@@ -60,6 +60,7 @@ model Usuario {
 
   manuales              Manual[]
   partesPSI             PartePSI[]
+  incidenciasCecopal    IncidenciaCecopal[]
   inscripciones         Inscripcion[]
   firmasAsistencia      RegistroFirma[]        @relation("FirmasUsuario")
   certificaciones        Certificacion[]
@@ -1088,6 +1089,34 @@ model PartePSI {
   @@index([archivado])
   @@index([creadoPorId])
   @@map("partes_psi")
+}
+
+
+model IncidenciaCecopal {
+  id             String   @id @default(cuid())
+  numero         String   @unique
+  estado         String   @default("activa")
+  tipoIncidencia String   @map("tipo_incidencia")
+  origenAviso    String   @map("origen_aviso")
+  direccion      String
+  descripcion    String?  @db.Text
+  horaLlamada    String?  @map("hora_llamada")
+  horaSalida     String?  @map("hora_salida")
+  horaLlegada    String?  @map("hora_llegada")
+  horaTerminado  String?  @map("hora_terminado")
+  horaDisponible String?  @map("hora_disponible")
+  vehiculosIds   Json     @default("[]") @map("vehiculos_ids")
+  voluntariosIds Json     @default("[]") @map("voluntarios_ids")
+  observaciones  String?  @db.Text
+  parteId        String?  @map("parte_id")
+  operadorId     String   @map("operador_id")
+  operador       Usuario  @relation(fields: [operadorId], references: [id])
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@index([estado])
+  @@index([createdAt])
+  @@map("incidencias_cecopal")
 }
 
 model Aspirante {
