@@ -39,24 +39,31 @@ export function usePsiForm() {
                 setId(parte.id)
                 setImagenes(parte.imagenes || [])
 
-                if (parte.informacionExtra) {
-                    const extra = typeof parte.informacionExtra === 'string'
+                const extra = parte.informacionExtra
+                    ? (typeof parte.informacionExtra === 'string'
                         ? JSON.parse(parte.informacionExtra)
-                        : parte.informacionExtra
-
-                    setForm({
-                        ...INITIAL_PSI_STATE,
-                        ...extra,
-                        id: parte.id,
-                        numero: parte.numeroParte || parte.numero, // Handle schema difference
-                        fecha: parte.fecha ? new Date(parte.fecha).toISOString().split('T')[0] : '',
-                        hora: extra.hora || '',
-                        lugar: parte.lugar || '',
-                        motivo: parte.motivo || '',
-                        alertante: parte.alertante || '',
-                        observaciones: parte.observaciones || '',
-                    })
-                }
+                        : parte.informacionExtra)
+                    : {}
+                setForm({
+                    ...INITIAL_PSI_STATE,
+                    ...extra,
+                    id: parte.id,
+                    numero: parte.numeroParte || parte.numero || '',
+                    fecha: parte.fecha ? new Date(parte.fecha).toISOString().split('T')[0] : '',
+                    hora: extra.hora || '',
+                    lugar: parte.lugar || '',
+                    motivo: parte.motivo || '',
+                    alertante: parte.alertante || '',
+                    observaciones: parte.observaciones || '',
+                    tiempos: {
+                        llamada: parte.horaLlamada || extra.tiempos?.llamada || '00:00',
+                        salida: parte.horaSalida || extra.tiempos?.salida || '00:00',
+                        llegada: parte.horaLlegada || extra.tiempos?.llegada || '00:00',
+                        terminado: parte.horaTerminado || extra.tiempos?.terminado || '00:00',
+                        disponible: parte.horaDisponible || extra.tiempos?.disponible || '00:00',
+                    },
+                    vehiculosRow1: Array.isArray(parte.vehiculosIds) ? parte.vehiculosIds : (extra.vehiculosRow1 || []),
+                })
             }
         } catch (err) {
             console.error(err)
