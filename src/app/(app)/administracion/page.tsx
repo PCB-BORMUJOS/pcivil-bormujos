@@ -3211,6 +3211,7 @@ export default function AdministracionPage() {
                   importeFinal: datos.importeFinal ?? prev.importeFinal,
                   concepto: datos.concepto || prev.concepto,
                 }))}
+                onTicketUrl={(url) => setNuevoTicket(prev => ({ ...prev, ticketUrl: url }))}
               />
             </div>
             <div className="flex gap-3 pt-2">

@@ -13,9 +13,10 @@ interface TicketOCRUploaderProps {
     concepto?: string
   }) => void
   onImagenUrl?: (url: string) => void
+  onTicketUrl?: (url: string) => void
 }
 
-export default function TicketOCRUploader({ onDatosExtraidos, onImagenUrl }: TicketOCRUploaderProps) {
+export default function TicketOCRUploader({ onDatosExtraidos, onImagenUrl, onTicketUrl }: TicketOCRUploaderProps) {
   const [estado, setEstado] = useState<'idle'|'procesando'|'ok'|'error'>('idle')
   const [preview, setPreview] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -48,6 +49,17 @@ export default function TicketOCRUploader({ onDatosExtraidos, onImagenUrl }: Tic
 
       if (data.success && data.datos) {
         onDatosExtraidos(data.datos)
+        // Subir imagen a blob para guardar URL
+        try {
+          const blobForm = new FormData()
+          blobForm.append('file', file)
+          blobForm.append('filename', `tickets/combustible-${Date.now()}.${file.name.split('.').pop()}`)
+          const blobRes = await fetch('/api/admin/upload-ticket-imagen', { method: 'POST', body: blobForm })
+          if (blobRes.ok) {
+            const blobData = await blobRes.json()
+            if (blobData.url && onTicketUrl) onTicketUrl(blobData.url)
+          }
+        } catch { /* subida blob no crítica */ }
         setEstado('ok')
       } else {
         setEstado('error')
