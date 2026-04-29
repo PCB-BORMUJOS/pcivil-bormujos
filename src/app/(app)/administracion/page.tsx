@@ -1,4 +1,5 @@
 'use client'
+import TicketOCRUploader from '@/components/admin/TicketOCRUploader'
 import { PERMISOS_DISPONIBLES } from '@/lib/permisos';
 
 import {
