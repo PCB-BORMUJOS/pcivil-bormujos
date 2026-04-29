@@ -440,7 +440,7 @@ export default function AdministracionPage() {
   const [showNuevoTicket, setShowNuevoTicket] = useState(false);
   const [nuevoTicket, setNuevoTicket] = useState({
     fecha: '', hora: '', estacion: '', destino: 'MAQUINARIA', concepto: 'EFITEC 95',
-    litros: 0, precioLitro: 0, importeFinal: 0, vehiculoDestino: '', notas: ''
+    litros: 0, precioLitro: 0, importeFinal: 0, vehiculoDestino: '', notas: '', ticketUrl: ''
   });
 
   // Estados para Pólizas
@@ -2944,10 +2944,13 @@ export default function AdministracionPage() {
             </div>
             <div>
               <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Adjuntar Ticket</label>
-              <div className="border-2 border-dashed border-slate-200 rounded-lg p-6 text-center hover:border-orange-300 transition-colors cursor-pointer">
-                <Receipt size={32} className="mx-auto text-slate-300 mb-2" />
-                <p className="text-sm text-slate-500">Arrastra el ticket escaneado o haz clic para seleccionar</p>
-              </div>
+              <DocumentUploader
+                label="Ticket combustible"
+                apiEndpoint="/api/admin/caja/drive-upload"
+                onUpload={(url) => setNuevoTicket({ ...nuevoTicket, ticketUrl: url })}
+                currentUrl={nuevoTicket.ticketUrl}
+                folder="Tickets Combustible"
+              />
             </div>
             <div className="flex gap-3 pt-2">
               <button type="button" onClick={() => setShowNuevoTicket(false)} className="flex-1 py-2.5 border border-slate-300 text-slate-700 rounded-lg font-medium hover:bg-slate-50 transition-colors">Cancelar</button>
