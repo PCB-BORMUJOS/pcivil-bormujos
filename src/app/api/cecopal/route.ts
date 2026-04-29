@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
           turno,
           estado: { not: 'cancelada' }
         },
-        include: { usuario: { select: { id: true, nombre: true, apellidos: true, indicativo: true, telefono: true } } },
+        include: { usuario: { select: { id: true, nombre: true, apellidos: true, telefono: true } } },
         orderBy: { rol: 'asc' }
       })
       return NextResponse.json({ guardias, turno, fecha: hoy })
@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
     if (tipo === 'historial') {
       const incidencias = await prisma.incidenciaCecopal.findMany({
         where: { estado: { not: 'activa' } },
-        include: { operador: { select: { nombre: true, apellidos: true, indicativo: true } } },
+        include: { operador: { select: { nombre: true, apellidos: true } } },
         orderBy: { createdAt: 'desc' },
         take: 20
       })
