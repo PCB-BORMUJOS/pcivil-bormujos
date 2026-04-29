@@ -871,7 +871,7 @@ export default function AdministracionPage() {
         setShowNuevoTicket(false);
         setNuevoTicket({
           fecha: '', hora: '', estacion: '', destino: 'MAQUINARIA', concepto: 'EFITEC 95',
-          litros: 0, precioLitro: 0, importeFinal: 0, vehiculoDestino: '', notas: ''
+          litros: 0, precioLitro: 0, importeFinal: 0, vehiculoDestino: '', notas: '', ticketUrl: ''
         });
         cargarTicketsCombustible();
       } else {
