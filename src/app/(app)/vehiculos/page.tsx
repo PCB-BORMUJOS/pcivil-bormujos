@@ -19,6 +19,8 @@ import 'leaflet/dist/leaflet.css'
 const MapContainer = dynamic(() => import('react-leaflet').then(m => m.MapContainer), { ssr: false })
 const TileLayer = dynamic(() => import('react-leaflet').then(m => m.TileLayer), { ssr: false })
 const Marker = dynamic(() => import('react-leaflet').then(m => m.Marker), { ssr: false })
+const Circle = dynamic(() => import('react-leaflet').then(m => m.Circle), { ssr: false })
+const CircleMarker = dynamic(() => import('react-leaflet').then(m => m.CircleMarker), { ssr: false })
 const Popup = dynamic(() => import('react-leaflet').then(m => m.Popup), { ssr: false })
 
 interface Articulo { id: string; codigo?: string; nombre: string; descripcion?: string; stockActual: number; stockMinimo: number; unidad: string; familia?: { id: string; nombre: string } }
@@ -93,6 +95,20 @@ export default function VehiculosPage() {
   const [familias, setFamilias] = useState<Familia[]>([])
   const [peticiones, setPeticiones] = useState<any[]>([])
   const [categoriaArea, setCategoriaArea] = useState<string | null>(null)
+  const [ubicacionesGPS, setUbicacionesGPS] = useState<any[]>([])
+
+  useEffect(() => {
+    const fetchGPS = async () => {
+      try {
+        const res = await fetch('/api/vehiculos/ubicacion')
+        const data = await res.json()
+        setUbicacionesGPS(data.ubicaciones || [])
+      } catch (e) { console.error('Error GPS:', e) }
+    }
+    fetchGPS()
+    const interval = setInterval(fetchGPS, 10000)
+    return () => clearInterval(interval)
+  }, [])
   const [vehiculos, setVehiculos] = useState<Vehiculo[]>([])
   const [vehiculoSeleccionado, setVehiculoSeleccionado] = useState<Vehiculo | null>(null)
   const [documentos, setDocumentos] = useState<Documento[]>([])
@@ -457,7 +473,30 @@ export default function VehiculosPage() {
               {vehiculos.filter(v => v.latitud && v.longitud).map(v => (<Marker key={v.id} position={[v.latitud!, v.longitud!]} icon={createVehicleIcon(v.estado)}><Popup><div className="text-center"><p className="font-bold">{v.indicativo}</p><p className="text-sm">{v.matricula}</p></div></Popup></Marker>))}
             </MapContainer>
           </div>
-          <div className="bg-white border border-slate-200 rounded-2xl p-12 text-center text-slate-400"><Navigation className="w-12 h-12 mx-auto mb-3 opacity-30" /><p className="font-medium">Localización en tiempo real</p><p className="text-sm mt-1">Se activará con la conexión a los iPads de cada vehículo</p></div>
+          <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden" style={{ height: '400px' }}>
+            <div className="flex items-center justify-between px-4 py-2 bg-slate-50 border-b border-slate-200">
+              <div className="flex items-center gap-2">
+                <div className={`w-2 h-2 rounded-full ${ubicacionesGPS.length > 0 ? 'bg-green-500 animate-pulse' : 'bg-slate-300'}`}></div>
+                <span className="text-xs font-medium text-slate-600">GPS en tiempo real</span>
+              </div>
+              <span className="text-xs text-slate-400">{ubicacionesGPS.length} vehículo{ubicacionesGPS.length !== 1 ? 's' : ''} activo{ubicacionesGPS.length !== 1 ? 's' : ''}</span>
+            </div>
+            <MapContainer center={[37.3710, -6.0710]} zoom={14} style={{ height: 'calc(100% - 37px)', width: '100%' }} scrollWheelZoom={true}>
+              <TileLayer attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+              {ubicacionesGPS.map((u: any) => (
+                <CircleMarker key={u.id} center={[u.latitud, u.longitud]} radius={12} pathOptions={{ color: '#16a34a', fillColor: '#22c55e', fillOpacity: 0.85, weight: 2 }}>
+                  <Popup>
+                    <div style={{ minWidth: 140, textAlign: 'center' }}>
+                      <p style={{ fontWeight: 700, fontSize: 15, margin: '0 0 4px' }}>{u.vehiculo?.indicativo}</p>
+                      <p style={{ fontSize: 12, color: '#666', margin: '0 0 2px' }}>{u.vehiculo?.marca} {u.vehiculo?.modelo}</p>
+                      {u.velocidad !== null && <p style={{ fontSize: 12, color: '#16a34a', margin: '0 0 2px' }}>{u.velocidad} km/h</p>}
+                      <p style={{ fontSize: 11, color: '#999', margin: 0 }}>{new Date(u.createdAt).toLocaleTimeString('es-ES')}</p>
+                    </div>
+                  </Popup>
+                </CircleMarker>
+              ))}
+            </MapContainer>
+          </div>
         </div>
       )}
 
