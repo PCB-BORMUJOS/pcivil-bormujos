@@ -484,50 +484,46 @@ export default function VehiculosPage() {
               <div className="flex items-end"><button onClick={verRecorrido} disabled={loadingRecorrido} className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 text-sm font-semibold transition-colors disabled:opacity-50"><Route className="w-4 h-4" />{loadingRecorrido ? "Cargando..." : "Ver Recorrido"}</button></div>
             </div>
           </div>
-          <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden" style={{ height: '400px' }}>
-            <MapContainer center={[37.3710, -6.0710]} zoom={14} style={{ height: '100%', width: '100%' }} scrollWheelZoom={true}>
-              <TileLayer attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-              {recorrido.length > 0 ? (
-              <>
-                <Polyline positions={recorrido.map((p: any) => [p.latitud, p.longitud] as [number, number])} pathOptions={{ color: '#2563eb', weight: 3, opacity: 0.8 }} />
-                <CircleMarker center={[recorrido[0].latitud, recorrido[0].longitud]} radius={8} pathOptions={{ color: '#16a34a', fillColor: '#22c55e', fillOpacity: 1 }}>
-                  <Popup><div style={{ textAlign: 'center' }}><strong>Inicio</strong><br /><span style={{ fontSize: 11 }}>{new Date(recorrido[0].createdAt).toLocaleTimeString('es-ES')}</span></div></Popup>
-                </CircleMarker>
-                <CircleMarker center={[recorrido[recorrido.length-1].latitud, recorrido[recorrido.length-1].longitud]} radius={8} pathOptions={{ color: '#dc2626', fillColor: '#ef4444', fillOpacity: 1 }}>
-                  <Popup><div style={{ textAlign: 'center' }}><strong>Fin</strong><br /><span style={{ fontSize: 11 }}>{new Date(recorrido[recorrido.length-1].createdAt).toLocaleTimeString('es-ES')}</span></div></Popup>
-                </CircleMarker>
-              </>
-            ) : (
-              vehiculos.filter(v => v.latitud && v.longitud).map(v => (
-                <Marker key={v.id} position={[v.latitud!, v.longitud!]} icon={createVehicleIcon(v.estado)}>
-                  <Popup><div className="text-center"><p className="font-bold">{v.indicativo}</p><p className="text-sm">{v.matricula}</p></div></Popup>
-                </Marker>
-              ))
-            )}
-            </MapContainer>
-          </div>
-          <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden" style={{ height: '400px' }}>
+          <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden" style={{ height: '650px' }}>
             <div className="flex items-center justify-between px-4 py-2 bg-slate-50 border-b border-slate-200">
               <div className="flex items-center gap-2">
                 <div className={`w-2 h-2 rounded-full ${ubicacionesGPS.length > 0 ? 'bg-green-500 animate-pulse' : 'bg-slate-300'}`}></div>
-                <span className="text-xs font-medium text-slate-600">GPS en tiempo real</span>
+                <span className="text-xs font-medium text-slate-600">
+                  {recorrido.length > 0 ? `Recorrido: ${recorrido.length} puntos` : 'GPS en tiempo real'}
+                </span>
               </div>
-              <span className="text-xs text-slate-400">{ubicacionesGPS.length} vehículo{ubicacionesGPS.length !== 1 ? 's' : ''} activo{ubicacionesGPS.length !== 1 ? 's' : ''}</span>
+              <div className="flex items-center gap-3">
+                {recorrido.length > 0 && (
+                  <button onClick={() => setRecorrido([])} className="text-xs text-slate-500 hover:text-red-500 transition-colors">✕ Limpiar recorrido</button>
+                )}
+                <span className="text-xs text-slate-400">{ubicacionesGPS.length} vehículo{ubicacionesGPS.length !== 1 ? 's' : ''} activo{ubicacionesGPS.length !== 1 ? 's' : ''}</span>
+              </div>
             </div>
             <MapContainer center={[37.3710, -6.0710]} zoom={14} style={{ height: 'calc(100% - 37px)', width: '100%' }} scrollWheelZoom={true}>
               <TileLayer attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
               {ubicacionesGPS.map((u: any) => (
-                <CircleMarker key={u.id} center={[u.latitud, u.longitud]} radius={12} pathOptions={{ color: '#16a34a', fillColor: '#22c55e', fillOpacity: 0.85, weight: 2 }}>
+                <CircleMarker key={u.id} center={[u.latitud, u.longitud]} radius={14} pathOptions={{ color: '#16a34a', fillColor: '#22c55e', fillOpacity: 0.85, weight: 2 }}>
                   <Popup>
                     <div style={{ minWidth: 140, textAlign: 'center' }}>
                       <p style={{ fontWeight: 700, fontSize: 15, margin: '0 0 4px' }}>{u.vehiculo?.indicativo}</p>
-                      <p style={{ fontSize: 12, color: '#666', margin: '0 0 2px' }}>{u.vehiculo?.marca} {u.vehiculo?.modelo}</p>
+                      <p style={{ fontSize: 12, color: '#666', margin: '0 0 2px' }}>{u.vehiculo?.modelo}</p>
                       {u.velocidad !== null && <p style={{ fontSize: 12, color: '#16a34a', margin: '0 0 2px' }}>{u.velocidad} km/h</p>}
                       <p style={{ fontSize: 11, color: '#999', margin: 0 }}>{new Date(u.createdAt).toLocaleTimeString('es-ES')}</p>
                     </div>
                   </Popup>
                 </CircleMarker>
               ))}
+              {recorrido.length > 0 && (
+                <>
+                  <Polyline positions={recorrido.map((p: any) => [p.latitud, p.longitud] as [number, number])} pathOptions={{ color: '#2563eb', weight: 3, opacity: 0.8 }} />
+                  <CircleMarker center={[recorrido[0].latitud, recorrido[0].longitud]} radius={8} pathOptions={{ color: '#16a34a', fillColor: '#22c55e', fillOpacity: 1 }}>
+                    <Popup><div style={{ textAlign: 'center' }}><strong>Inicio</strong><br /><span style={{ fontSize: 11 }}>{new Date(recorrido[0].createdAt).toLocaleTimeString('es-ES')}</span></div></Popup>
+                  </CircleMarker>
+                  <CircleMarker center={[recorrido[recorrido.length-1].latitud, recorrido[recorrido.length-1].longitud]} radius={8} pathOptions={{ color: '#dc2626', fillColor: '#ef4444', fillOpacity: 1 }}>
+                    <Popup><div style={{ textAlign: 'center' }}><strong>Fin</strong><br /><span style={{ fontSize: 11 }}>{new Date(recorrido[recorrido.length-1].createdAt).toLocaleTimeString('es-ES')}</span></div></Popup>
+                  </CircleMarker>
+                </>
+              )}
             </MapContainer>
           </div>
         </div>
