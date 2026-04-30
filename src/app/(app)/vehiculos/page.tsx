@@ -177,6 +177,19 @@ export default function VehiculosPage() {
   useEffect(() => { if (inventoryTab === 'peticiones') cargarPeticiones() }, [inventoryTab, cargarPeticiones])
   useEffect(() => { if (vehiculoSeleccionado && showDetalleVehiculo) { cargarDocumentos(vehiculoSeleccionado.id); cargarMantenimientos(vehiculoSeleccionado.id); cargarRepostajes(vehiculoSeleccionado.id); cargarRegistrosFluidos(vehiculoSeleccionado.id) } }, [vehiculoSeleccionado, showDetalleVehiculo, cargarDocumentos, cargarMantenimientos, cargarRepostajes, cargarRegistrosFluidos])
 
+  useEffect(() => {
+    const fetchGPS = async () => {
+      try {
+        const res = await fetch('/api/vehiculos/ubicacion')
+        const data = await res.json()
+        setUbicacionesGPS(data.ubicaciones || [])
+      } catch (e) { console.error('Error GPS:', e) }
+    }
+    fetchGPS()
+    const interval = setInterval(fetchGPS, 10000)
+    return () => clearInterval(interval)
+  }, [])
+
   const handleCrearArticulo = async (e: React.FormEvent<HTMLFormElement>) => { e.preventDefault(); const f = new FormData(e.currentTarget); try { setSaving(true); const r = await fetch('/api/logistica', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'articulo', codigo: f.get('codigo'), nombre: f.get('nombre'), descripcion: f.get('descripcion'), stockActual: parseInt(f.get('stockActual') as string) || 0, stockMinimo: parseInt(f.get('stockMinimo') as string) || 0, unidad: f.get('unidad') || 'unidades', familiaId: f.get('familiaId') }) }); if (r.ok) { setShowNuevoArticulo(false); cargarDatos() } } catch (e) { /* error silenciado */ } finally { setSaving(false) } }
   const handleEditarArticulo = async (e: React.FormEvent<HTMLFormElement>) => { e.preventDefault(); if (!articuloSeleccionado) return; const f = new FormData(e.currentTarget); try { setSaving(true); const r = await fetch('/api/logistica', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'articulo', id: articuloSeleccionado.id, codigo: f.get('codigo'), nombre: f.get('nombre'), descripcion: f.get('descripcion'), stockActual: parseInt(f.get('stockActual') as string) || 0, stockMinimo: parseInt(f.get('stockMinimo') as string) || 0, unidad: f.get('unidad') || 'unidades', familiaId: f.get('familiaId') }) }); if (r.ok) { setShowEditarArticulo(false); setArticuloSeleccionado(null); cargarDatos() } } catch (e) { /* error silenciado */ } finally { setSaving(false) } }
   const handleCrearPeticion = async (e: React.FormEvent<HTMLFormElement>) => { e.preventDefault(); const f = new FormData(e.currentTarget); try { setSaving(true); const r = await fetch('/api/logistica', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'peticion', articuloId: f.get('articuloId') || null, nombreArticulo: f.get('nombreArticulo'), cantidad: parseInt(f.get('cantidad') as string) || 1, unidad: f.get('unidad') || 'unidades', prioridad: f.get('prioridad') || 'normal', descripcion: f.get('descripcion'), areaOrigen: 'vehiculos' }) }); if (r.ok) { setShowNuevaPeticion(false); cargarPeticiones() } } catch (e) { /* error silenciado */ } finally { setSaving(false) } }
