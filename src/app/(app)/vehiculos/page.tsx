@@ -21,6 +21,7 @@ const TileLayer = dynamic(() => import('react-leaflet').then(m => m.TileLayer), 
 const Marker = dynamic(() => import('react-leaflet').then(m => m.Marker), { ssr: false })
 const Circle = dynamic(() => import('react-leaflet').then(m => m.Circle), { ssr: false })
 const CircleMarker = dynamic(() => import('react-leaflet').then(m => m.CircleMarker), { ssr: false })
+const Polyline = dynamic(() => import('react-leaflet').then(m => m.Polyline), { ssr: false })
 const Popup = dynamic(() => import('react-leaflet').then(m => m.Popup), { ssr: false })
 
 interface Articulo { id: string; codigo?: string; nombre: string; descripcion?: string; stockActual: number; stockMinimo: number; unidad: string; familia?: { id: string; nombre: string } }
@@ -96,19 +97,22 @@ export default function VehiculosPage() {
   const [peticiones, setPeticiones] = useState<any[]>([])
   const [categoriaArea, setCategoriaArea] = useState<string | null>(null)
   const [ubicacionesGPS, setUbicacionesGPS] = useState<any[]>([])
+  const [recorrido, setRecorrido] = useState<any[]>([])
+  const [loadingRecorrido, setLoadingRecorrido] = useState(false)
 
-  useEffect(() => {
-    const fetchGPS = async () => {
-      try {
-        const res = await fetch('/api/vehiculos/ubicacion')
-        const data = await res.json()
-        setUbicacionesGPS(data.ubicaciones || [])
-      } catch (e) { console.error('Error GPS:', e) }
-    }
-    fetchGPS()
-    const interval = setInterval(fetchGPS, 10000)
-    return () => clearInterval(interval)
-  }, [])
+  const verRecorrido = async () => {
+    if (!fechaDesde || !fechaHasta) { alert('Selecciona fecha desde y hasta'); return }
+    setLoadingRecorrido(true)
+    setRecorrido([])
+    try {
+      const params = new URLSearchParams({ vehiculoId: filtroVehiculo, desde: fechaDesde, hasta: fechaHasta })
+      const res = await fetch('/api/vehiculos/ubicacion?' + params.toString())
+      const data = await res.json()
+      setRecorrido(data.puntos || [])
+      if (!data.puntos || data.puntos.length === 0) alert('No hay recorrido en ese período')
+    } catch(e) { alert('Error cargando recorrido') }
+    finally { setLoadingRecorrido(false) }
+  }
   const [vehiculos, setVehiculos] = useState<Vehiculo[]>([])
   const [vehiculoSeleccionado, setVehiculoSeleccionado] = useState<Vehiculo | null>(null)
   const [documentos, setDocumentos] = useState<Documento[]>([])
@@ -464,13 +468,29 @@ export default function VehiculosPage() {
               <div><label className="block text-xs font-medium text-slate-500 mb-1">Vehículo</label><select value={filtroVehiculo} onChange={e => setFiltroVehiculo(e.target.value)} className="px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"><option value="all">Todos</option>{vehiculos.map(v => <option key={v.id} value={v.id}>{v.indicativo} - {v.matricula}</option>)}</select></div>
               <div><label className="block text-xs font-medium text-slate-500 mb-1">Desde</label><input type="date" value={fechaDesde} onChange={e => setFechaDesde(e.target.value)} className="px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20" /></div>
               <div><label className="block text-xs font-medium text-slate-500 mb-1">Hasta</label><input type="date" value={fechaHasta} onChange={e => setFechaHasta(e.target.value)} className="px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20" /></div>
-              <div className="flex items-end"><button className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 text-sm font-semibold transition-colors"><Route className="w-4 h-4" />Ver Recorrido</button></div>
+              <div className="flex items-end"><button onClick={verRecorrido} disabled={loadingRecorrido} className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 text-sm font-semibold transition-colors disabled:opacity-50"><Route className="w-4 h-4" />{loadingRecorrido ? "Cargando..." : "Ver Recorrido"}</button></div>
             </div>
           </div>
           <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden" style={{ height: '400px' }}>
             <MapContainer center={[37.3710, -6.0710]} zoom={14} style={{ height: '100%', width: '100%' }} scrollWheelZoom={true}>
               <TileLayer attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-              {vehiculos.filter(v => v.latitud && v.longitud).map(v => (<Marker key={v.id} position={[v.latitud!, v.longitud!]} icon={createVehicleIcon(v.estado)}><Popup><div className="text-center"><p className="font-bold">{v.indicativo}</p><p className="text-sm">{v.matricula}</p></div></Popup></Marker>))}
+              {recorrido.length > 0 ? (
+              <>
+                <Polyline positions={recorrido.map((p: any) => [p.latitud, p.longitud] as [number, number])} pathOptions={{ color: '#2563eb', weight: 3, opacity: 0.8 }} />
+                <CircleMarker center={[recorrido[0].latitud, recorrido[0].longitud]} radius={8} pathOptions={{ color: '#16a34a', fillColor: '#22c55e', fillOpacity: 1 }}>
+                  <Popup><div style={{ textAlign: 'center' }}><strong>Inicio</strong><br /><span style={{ fontSize: 11 }}>{new Date(recorrido[0].createdAt).toLocaleTimeString('es-ES')}</span></div></Popup>
+                </CircleMarker>
+                <CircleMarker center={[recorrido[recorrido.length-1].latitud, recorrido[recorrido.length-1].longitud]} radius={8} pathOptions={{ color: '#dc2626', fillColor: '#ef4444', fillOpacity: 1 }}>
+                  <Popup><div style={{ textAlign: 'center' }}><strong>Fin</strong><br /><span style={{ fontSize: 11 }}>{new Date(recorrido[recorrido.length-1].createdAt).toLocaleTimeString('es-ES')}</span></div></Popup>
+                </CircleMarker>
+              </>
+            ) : (
+              vehiculos.filter(v => v.latitud && v.longitud).map(v => (
+                <Marker key={v.id} position={[v.latitud!, v.longitud!]} icon={createVehicleIcon(v.estado)}>
+                  <Popup><div className="text-center"><p className="font-bold">{v.indicativo}</p><p className="text-sm">{v.matricula}</p></div></Popup>
+                </Marker>
+              ))
+            )}
             </MapContainer>
           </div>
           <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden" style={{ height: '400px' }}>

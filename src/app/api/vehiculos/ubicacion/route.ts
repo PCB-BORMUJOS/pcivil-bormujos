@@ -15,7 +15,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Datos incompletos" }, { status: 400 })
     }
 
-    // Acepta ID real o indicativo
     let vehiculo = await prisma.vehiculo.findUnique({ where: { id: vehiculoId } })
     if (!vehiculo) {
       vehiculo = await prisma.vehiculo.findFirst({ where: { indicativo: vehiculoId.toUpperCase() } })
@@ -33,8 +32,7 @@ export async function POST(req: NextRequest) {
       data: {
         id: `${vehiculo.id}_${Date.now()}`,
         vehiculoId: vehiculo.id,
-        latitud,
-        longitud,
+        latitud, longitud,
         velocidad: velocidad ?? null,
         precision: precision ?? null,
         activo: true,
@@ -48,15 +46,36 @@ export async function POST(req: NextRequest) {
   }
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    const { searchParams } = new URL(req.url)
+    const vehiculoId = searchParams.get("vehiculoId")
+    const desde = searchParams.get("desde")
+    const hasta = searchParams.get("hasta")
+
+    // Modo recorrido historico
+    if (vehiculoId && desde && hasta) {
+      const desdeDate = new Date(desde)
+      const hastaDate = new Date(hasta)
+      hastaDate.setHours(23, 59, 59, 999)
+
+      const where: any = {
+        createdAt: { gte: desdeDate, lte: hastaDate }
+      }
+      if (vehiculoId !== "all") where.vehiculoId = vehiculoId
+
+      const puntos = await prisma.ubicacionVehiculo.findMany({
+        where,
+        include: { vehiculo: { select: { id: true, indicativo: true, modelo: true } } },
+        orderBy: { createdAt: "asc" },
+      })
+      return NextResponse.json({ puntos })
+    }
+
+    // Modo tiempo real - solo activos
     const ubicaciones = await prisma.ubicacionVehiculo.findMany({
       where: { activo: true },
-      include: {
-        vehiculo: {
-          select: { id: true, indicativo: true, tipo: true, modelo: true },
-        },
-      },
+      include: { vehiculo: { select: { id: true, indicativo: true, tipo: true, modelo: true } } },
       orderBy: { createdAt: "desc" },
     })
     return NextResponse.json({ ubicaciones })
