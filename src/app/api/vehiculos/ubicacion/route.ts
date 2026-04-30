@@ -15,15 +15,24 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Datos incompletos" }, { status: 400 })
     }
 
+    // Acepta ID real o indicativo
+    let vehiculo = await prisma.vehiculo.findUnique({ where: { id: vehiculoId } })
+    if (!vehiculo) {
+      vehiculo = await prisma.vehiculo.findFirst({ where: { indicativo: vehiculoId.toUpperCase() } })
+    }
+    if (!vehiculo) {
+      return NextResponse.json({ error: "Vehículo no encontrado" }, { status: 404 })
+    }
+
     await prisma.ubicacionVehiculo.updateMany({
-      where: { vehiculoId, activo: true },
+      where: { vehiculoId: vehiculo.id, activo: true },
       data: { activo: false },
     })
 
     const ubicacion = await prisma.ubicacionVehiculo.create({
       data: {
-        id: `${vehiculoId}_${Date.now()}`,
-        vehiculoId,
+        id: `${vehiculo.id}_${Date.now()}`,
+        vehiculoId: vehiculo.id,
         latitud,
         longitud,
         velocidad: velocidad ?? null,
@@ -32,7 +41,7 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    return NextResponse.json({ ok: true, id: ubicacion.id })
+    return NextResponse.json({ ok: true, id: ubicacion.id, indicativo: vehiculo.indicativo })
   } catch (error) {
     console.error("Error ubicacion POST:", error)
     return NextResponse.json({ error: "Error interno" }, { status: 500 })
@@ -50,7 +59,6 @@ export async function GET() {
       },
       orderBy: { createdAt: "desc" },
     })
-
     return NextResponse.json({ ubicaciones })
   } catch (error) {
     console.error("Error ubicacion GET:", error)
