@@ -298,6 +298,7 @@ model Vehiculo {
   repostajes      RepostajeVehiculo[]
   fluidos         RegistroFluidoVehiculo[]
 
+  ubicaciones     UbicacionVehiculo[]
   @@map("vehiculos")
 }
 
@@ -2055,4 +2056,20 @@ model PlanoEdificio {
 
   @@index([edificioId])
   @@map("planos_edificio")
+}
+
+model UbicacionVehiculo {
+  id         String   @id @default(cuid())
+  vehiculoId String
+  vehiculo   Vehiculo @relation(fields: [vehiculoId], references: [id], onDelete: Cascade)
+  latitud    Float
+  longitud   Float
+  velocidad  Float?
+  precision  Float?
+  activo     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+
+  @@index([vehiculoId])
+  @@index([createdAt])
+  @@map("ubicaciones_vehiculos")
 }

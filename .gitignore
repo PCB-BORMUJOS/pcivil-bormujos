@@ -13,3 +13,4 @@ tsconfig.tsbuildinfo
 
 # Backups locales BD
 backups/
+.env.save
