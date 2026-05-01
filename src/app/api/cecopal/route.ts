@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
           turno,
           estado: { not: 'cancelada' }
         },
-        include: { usuario: { select: { id: true, nombre: true, apellidos: true, telefono: true } } },
+        include: { usuario: { select: { id: true, nombre: true, apellidos: true, telefono: true, numeroVoluntario: true } } },
         orderBy: { rol: 'asc' }
       })
       return NextResponse.json({ guardias, turno, fecha: hoy })

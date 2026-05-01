@@ -242,7 +242,7 @@ export default function CecopalPage() {
           <div className="flex items-center gap-2">
             <Users size={13} className="text-blue-400" />
             <span className="text-slate-400 text-xs uppercase tracking-wider font-medium">Personal</span>
-            <div className="flex gap-1 flex-wrap">{turno.map(g => <span key={g.id} className="px-2 py-0.5 rounded bg-slate-700 text-white text-xs font-mono border border-slate-600">{g.usuario.indicativo || g.usuario.nombre}</span>)}</div>
+            <div className="flex gap-1 flex-wrap">{turno.map(g => <span key={g.id} className="px-2 py-0.5 rounded bg-slate-700 text-white text-xs font-mono border border-slate-600">{g.usuario.numeroVoluntario || g.usuario.nombre}</span>)}</div>
           </div>
           <div className="w-px h-4 bg-slate-600" />
           <div className="flex items-center gap-2">
@@ -337,7 +337,7 @@ export default function CecopalPage() {
               <div className="divide-y divide-slate-700/50">
                 {turno.length === 0 ? <div className="px-3 py-4 text-center text-slate-500 text-xs">Sin guardias</div> : turno.map(g => (
                   <div key={g.id} className="px-3 py-2.5 flex items-center justify-between">
-                    <div><p className="text-white text-xs font-medium">{g.usuario.nombre} {g.usuario.apellidos}</p><div className="flex items-center gap-1.5 mt-0.5">{g.usuario.indicativo && <span className="text-xs text-blue-400 font-mono">{g.usuario.indicativo}</span>}{g.rol && <span className="text-xs text-slate-500">{g.rol}</span>}</div></div>
+                    <div><p className="text-white text-xs font-medium">{g.usuario.nombre} {g.usuario.apellidos}</p><div className="flex items-center gap-1.5 mt-0.5">{g.usuario.numeroVoluntario && <span className="text-xs text-blue-400 font-mono">{g.usuario.numeroVoluntario}</span>}{g.rol && <span className="text-xs text-slate-500">{g.rol}</span>}</div></div>
                     {g.usuario.telefono && <a href={`tel:${g.usuario.telefono}`} className="text-slate-500 hover:text-emerald-400 transition-colors"><Phone size={12} /></a>}
                   </div>
                 ))}
@@ -381,7 +381,7 @@ export default function CecopalPage() {
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div><label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Vehículos Asignados</label><div className="space-y-1.5">{vehiculos.map(v => (<label key={v.id} className="flex items-center gap-3 p-2.5 bg-slate-700/50 rounded-lg border border-slate-600/50 cursor-pointer hover:border-slate-500"><input type="checkbox" checked={vehiculosSeleccionados.includes(v.id)} onChange={e => setVehiculosSeleccionados(prev => e.target.checked ? [...prev, v.id] : prev.filter(id => id !== v.id))} className="accent-blue-500" /><div><p className="text-white text-sm font-medium">{v.indicativo}</p><p className="text-slate-400 text-xs">{v.matricula}</p></div></label>))}</div></div>
-                    <div><label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Personal Asignado</label><div className="space-y-1.5">{turno.map(g => (<label key={g.id} className="flex items-center gap-3 p-2.5 bg-slate-700/50 rounded-lg border border-slate-600/50 cursor-pointer hover:border-slate-500"><input type="checkbox" checked={voluntariosSeleccionados.includes(g.usuarioId)} onChange={e => setVoluntariosSeleccionados(prev => e.target.checked ? [...prev, g.usuarioId] : prev.filter(id => id !== g.usuarioId))} className="accent-blue-500" /><div><p className="text-white text-sm font-medium">{g.usuario.indicativo || g.usuario.nombre}</p><p className="text-slate-400 text-xs">{g.rol || ''}</p></div></label>))}</div></div>
+                    <div><label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Personal Asignado</label><div className="space-y-1.5">{turno.map(g => (<label key={g.id} className="flex items-center gap-3 p-2.5 bg-slate-700/50 rounded-lg border border-slate-600/50 cursor-pointer hover:border-slate-500"><input type="checkbox" checked={voluntariosSeleccionados.includes(g.usuarioId)} onChange={e => setVoluntariosSeleccionados(prev => e.target.checked ? [...prev, g.usuarioId] : prev.filter(id => id !== g.usuarioId))} className="accent-blue-500" /><div><p className="text-white text-sm font-medium">{g.usuario.numeroVoluntario || g.usuario.nombre}</p><p className="text-slate-400 text-xs">{g.rol || ''}</p></div></label>))}</div></div>
                   </div>
                   <div className="flex justify-end gap-3 pt-2 border-t border-slate-700"><button onClick={() => setModo('turno')} className="px-5 py-2.5 text-slate-400 hover:text-white text-sm font-medium transition-colors">Cancelar</button><button onClick={crearIncidencia} disabled={!tipoSeleccionado || !origenSeleccionado || !direccion || guardando} className="flex items-center gap-2 px-6 py-2.5 bg-red-600 hover:bg-red-700 disabled:opacity-40 text-white rounded-lg font-semibold text-sm shadow-lg transition-colors"><Siren size={15} />{guardando ? 'Activando...' : 'Activar Incidencia'}</button></div>
                 </div>
@@ -402,7 +402,7 @@ export default function CecopalPage() {
                     <div className="px-4 py-3 border-b border-slate-700"><p className="text-white text-xs font-semibold uppercase tracking-wider">Recursos Activados</p></div>
                     <div className="p-3 space-y-2">
                       {vehiculos.filter((v: any) => (incidenciaActiva.vehiculosIds || []).includes(v.id)).map((v: any) => (<div key={v.id} className="flex items-center gap-2 p-2 bg-slate-700/50 rounded-lg"><Truck size={12} className="text-emerald-400" /><span className="text-white text-sm font-medium">{v.indicativo}</span><span className="text-slate-400 text-xs">{v.matricula}</span></div>))}
-                      {turno.filter((g: any) => (incidenciaActiva.voluntariosIds || []).includes(g.usuarioId)).map((g: any) => (<div key={g.id} className="flex items-center gap-2 p-2 bg-slate-700/50 rounded-lg"><Users size={12} className="text-blue-400" /><span className="text-white text-sm font-medium">{g.usuario.indicativo || g.usuario.nombre}</span><span className="text-slate-400 text-xs">{g.rol}</span></div>))}
+                      {turno.filter((g: any) => (incidenciaActiva.voluntariosIds || []).includes(g.usuarioId)).map((g: any) => (<div key={g.id} className="flex items-center gap-2 p-2 bg-slate-700/50 rounded-lg"><Users size={12} className="text-blue-400" /><span className="text-white text-sm font-medium">{g.usuario.numeroVoluntario || g.usuario.nombre}</span><span className="text-slate-400 text-xs">{g.rol}</span></div>))}
                     </div>
                   </div>
                 </div>
