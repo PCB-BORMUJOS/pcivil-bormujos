@@ -10,7 +10,7 @@ function getHoraActual(): string {
 
 function getHoraTurno(): string {
   const h = parseInt(new Date().toLocaleTimeString('es-ES', { timeZone: 'Europe/Madrid', hour: '2-digit' }))
-  if (h >= 7 && h < 15) return 'manana'
+  if (h >= 7 && h < 15) return 'mañana'
   if (h >= 15 && h < 23) return 'tarde'
   return 'noche'
 }
