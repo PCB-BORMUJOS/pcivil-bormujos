@@ -80,6 +80,7 @@ export default function CecopalPage() {
   const [voluntariosSeleccionados, setVoluntariosSeleccionados] = useState<string[]>([])
   const [ubicacionesGPS, setUbicacionesGPS] = useState<any[]>([])
   const [meteo, setMeteo] = useState<any>(null)
+  const [novedadesHoy, setNovedadesHoy] = useState<any[]>([])
   const [directorioOpen, setDirectorioOpen] = useState(false)
   const [contactos, setContactos] = useState<any[]>([])
   const [busquedaDir, setBusquedaDir] = useState('')
@@ -93,16 +94,18 @@ export default function CecopalPage() {
 
   const cargarDatos = useCallback(async () => {
     try {
-      const [rTurno, rVeh, rAlerta, rInc] = await Promise.all([
+      const [rTurno, rVeh, rAlerta, rInc, rNov] = await Promise.all([
         fetch('/api/cecopal?tipo=turno-hoy').then(r => r.json()),
         fetch('/api/cecopal?tipo=vehiculos-disponibles').then(r => r.json()),
         fetch('/api/cecopal?tipo=alertas').then(r => r.json()),
         fetch('/api/cecopal?tipo=incidencia-activa').then(r => r.json()),
+        fetch('/api/cecopal?tipo=novedades-hoy').then(r => r.json()),
       ])
       setTurno(rTurno.guardias || [])
       setVehiculos(rVeh.vehiculos || [])
       setAlertas(rAlerta)
       if (rInc.incidencia) { setIncidenciaActiva(rInc.incidencia); setModo('activa') }
+      setNovedadesHoy(rNov.novedades || [])
     } catch (e) {}
     finally { setLoading(false) }
   }, [])
@@ -211,7 +214,9 @@ export default function CecopalPage() {
     setGenerandoParte(true)
     try {
       const hoy = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' })
-      const payload = { fecha: hoy, lugar: incidenciaActiva.direccion || '', motivo: incidenciaActiva.descripcion || incidenciaActiva.tipoIncidencia || '', horaLlamada: incidenciaActiva.horaLlamada || '', horaSalida: incidenciaActiva.horaSalida || '', horaLlegada: incidenciaActiva.horaLlegada || '', horaTerminado: incidenciaActiva.horaTerminado || '', horaDisponible: incidenciaActiva.horaDisponible || '', vehiculosIds: incidenciaActiva.vehiculosIds || [], observaciones: incidenciaActiva.observaciones || '', tipologias: [], equipoWalkies: [], tipologiasOtrosTexto: {}, fotosUrls: [], informacionExtra: JSON.stringify({ lugar: incidenciaActiva.direccion || '', motivo: incidenciaActiva.descripcion || incidenciaActiva.tipoIncidencia || '', tiempos: { llamada: incidenciaActiva.horaLlamada || '00:00', salida: incidenciaActiva.horaSalida || '00:00', llegada: incidenciaActiva.horaLlegada || '00:00', terminado: incidenciaActiva.horaTerminado || '00:00', disponible: incidenciaActiva.horaDisponible || '00:00' } }) }
+      const obsNovedades = novedadesHoy.length > 0 ? 'NOVEDADES DEL TURNO:\n' + novedadesHoy.map((n: any) => `- ${n.horaLlamada || ''} ${n.descripcion}`).join('\n') : ''
+      const observacionesFinal = [incidenciaActiva.observaciones, obsNovedades].filter(Boolean).join('\n\n')
+      const payload = { fecha: hoy, lugar: incidenciaActiva.direccion || '', motivo: incidenciaActiva.descripcion || incidenciaActiva.tipoIncidencia || '', horaLlamada: incidenciaActiva.horaLlamada || '', horaSalida: incidenciaActiva.horaSalida || '', horaLlegada: incidenciaActiva.horaLlegada || '', horaTerminado: incidenciaActiva.horaTerminado || '', horaDisponible: incidenciaActiva.horaDisponible || '', vehiculosIds: incidenciaActiva.vehiculosIds || [], observaciones: observacionesFinal, tipologias: [], equipoWalkies: [], tipologiasOtrosTexto: {}, fotosUrls: [], informacionExtra: JSON.stringify({ lugar: incidenciaActiva.direccion || '', motivo: incidenciaActiva.descripcion || incidenciaActiva.tipoIncidencia || '', tiempos: { llamada: incidenciaActiva.horaLlamada || '00:00', salida: incidenciaActiva.horaSalida || '00:00', llegada: incidenciaActiva.horaLlegada || '00:00', terminado: incidenciaActiva.horaTerminado || '00:00', disponible: incidenciaActiva.horaDisponible || '00:00' } }) }
       const res = await fetch('/api/partes/psi', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
       const data = await res.json()
       if (!res.ok) { alert('Error: ' + (data.error || JSON.stringify(data.errores || data))); return }
@@ -344,7 +349,7 @@ export default function CecopalPage() {
 
       <div className="p-4 space-y-4">
         <div className="grid grid-cols-5 gap-4">
-          <div className="col-span-1 space-y-3">
+          <div className="col-span-1 flex flex-col gap-3">
             <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
               <div className="px-3 py-2.5 border-b border-slate-700 flex items-center gap-2"><Users size={13} className="text-blue-400" /><h3 className="text-white text-xs font-semibold uppercase tracking-wider">Personal en Turno</h3></div>
               <div className="divide-y divide-slate-700/50">
@@ -368,11 +373,24 @@ export default function CecopalPage() {
                 </div>
               ) : <div className="p-4 text-center text-slate-500 text-xs">Cargando...</div>}
             </div>
-            <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
-              <div className="px-3 py-2.5 border-b border-slate-700 flex items-center gap-2"><Edit size={13} className="text-slate-400" /><h3 className="text-white text-xs font-semibold uppercase tracking-wider">Novedades</h3></div>
-              <div className="p-3">
-                <textarea value={novedadTexto} onChange={e => setNovedadTexto(e.target.value)} placeholder="Registrar novedad..." rows={3} className="w-full bg-slate-700 border border-slate-600 rounded-lg p-2.5 text-white text-xs placeholder-slate-500 focus:outline-none focus:border-blue-500 resize-none" />
-                <button onClick={async () => { if (!novedadTexto.trim()) return; await fetch('/api/cecopal', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'novedad-turno', texto: novedadTexto }) }); setNovedadTexto('') }} disabled={!novedadTexto.trim()} className="mt-2 w-full flex items-center justify-center gap-1.5 px-3 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white rounded-lg text-xs font-medium transition-colors"><Send size={11} /> Registrar</button>
+            <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden flex flex-col flex-1">
+              <div className="px-3 py-2.5 border-b border-slate-700 flex items-center gap-2"><Edit size={13} className="text-slate-400" /><h3 className="text-white text-xs font-semibold uppercase tracking-wider">Novedades del Turno</h3><span className="ml-auto text-xs text-slate-500">{novedadesHoy.length} registradas</span></div>
+              <div className="flex-1 overflow-y-auto divide-y divide-slate-700/50">
+                {novedadesHoy.length === 0
+                  ? <div className="p-4 text-center text-slate-500 text-xs">Sin novedades registradas</div>
+                  : novedadesHoy.map((n: any) => (
+                    <div key={n.id} className="px-3 py-2">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <span className="text-blue-400 font-mono text-xs">{n.horaLlamada || '--:--'}</span>
+                      </div>
+                      <p className="text-slate-300 text-xs leading-relaxed">{n.descripcion}</p>
+                    </div>
+                  ))
+                }
+              </div>
+              <div className="p-3 border-t border-slate-700 flex-shrink-0">
+                <textarea value={novedadTexto} onChange={e => setNovedadTexto(e.target.value)} placeholder="Registrar novedad..." rows={2} className="w-full bg-slate-700 border border-slate-600 rounded-lg p-2.5 text-white text-xs placeholder-slate-500 focus:outline-none focus:border-blue-500 resize-none" />
+                <button onClick={async () => { if (!novedadTexto.trim()) return; await fetch('/api/cecopal', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'novedad-turno', texto: novedadTexto }) }); setNovedadTexto(''); cargarDatos() }} disabled={!novedadTexto.trim()} className="mt-2 w-full flex items-center justify-center gap-1.5 px-3 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white rounded-lg text-xs font-medium transition-colors"><Send size={11} /> Registrar</button>
               </div>
             </div>
           </div>

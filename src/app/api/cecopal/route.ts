@@ -27,6 +27,19 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const tipo = searchParams.get('tipo')
   try {
+    if (tipo === 'novedades-hoy') {
+      const hoy = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' })
+      const novedades = await prisma.incidenciaCecopal.findMany({
+        where: {
+          estado: 'novedad',
+          createdAt: { gte: new Date(hoy), lt: new Date(new Date(hoy).getTime() + 86400000) }
+        },
+        orderBy: { createdAt: 'asc' },
+        select: { id: true, descripcion: true, horaLlamada: true, createdAt: true }
+      })
+      return NextResponse.json({ novedades })
+    }
+
     if (tipo === 'turno-hoy') {
       const hoy = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' })
       const turno = getHoraTurno()
