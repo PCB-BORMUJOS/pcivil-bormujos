@@ -85,7 +85,11 @@ export default function CecopalPage() {
   const [busquedaDir, setBusquedaDir] = useState('')
   const [categoriaDir, setCategoriaDir] = useState('')
   const [showNuevoContacto, setShowNuevoContacto] = useState(false)
-  const [nuevoContacto, setNuevoContacto] = useState({ nombre: '', entidad: '', categoria: 'otro', cargo: '', telefono: '', telefonoAlt: '', email: '', disponibilidad: '', notas: '' })
+  const [nuevoContacto, setNuevoContacto] = useState({ nombre: '', entidad: '', categoria: '', cargo: '', telefono: '', telefonoAlt: '', email: '', extension3cx: '', disponibilidad: '', notas: '' })
+  const [contactoEditando, setContactoEditando] = useState<any>(null)
+  const [categoriasDir, setCategoriasDir] = useState<any[]>([])
+  const [showGestionCategorias, setShowGestionCategorias] = useState(false)
+  const [nuevaCategoria, setNuevaCategoria] = useState({ nombre: '', color: '#6366f1' })
 
   const cargarDatos = useCallback(async () => {
     try {
@@ -136,9 +140,14 @@ export default function CecopalPage() {
       const params = new URLSearchParams()
       if (busqueda) params.set('busqueda', busqueda)
       if (categoria) params.set('categoria', categoria)
-      const res = await fetch('/api/directorio?' + params.toString())
-      const data = await res.json()
-      setContactos(data.contactos || [])
+      const [resC, resCat] = await Promise.all([
+        fetch('/api/directorio?' + params.toString()),
+        fetch('/api/directorio?tipo=categorias')
+      ])
+      const dataC = await resC.json()
+      const dataCat = await resCat.json()
+      setContactos(dataC.contactos || [])
+      setCategoriasDir(dataCat.categorias || [])
     } catch (e) {}
   }
 
@@ -278,41 +287,45 @@ export default function CecopalPage() {
               <span className="text-slate-300 text-xs font-medium">Directorio</span>
             </button>
             {directorioOpen && (
-              <div className="absolute left-0 top-8 w-96 bg-slate-800 border border-slate-600 rounded-xl shadow-2xl z-[2000] overflow-hidden flex flex-col" style={{ maxHeight: '520px' }}>
+              <div className="absolute left-0 top-8 w-[420px] bg-slate-800 border border-slate-600 rounded-xl shadow-2xl z-[2000] overflow-hidden flex flex-col" style={{ maxHeight: '560px' }}>
                 <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700 flex-shrink-0">
                   <span className="text-white text-xs font-semibold uppercase tracking-wider">Directorio Telefónico</span>
                   <div className="flex items-center gap-2">
+                    <button onClick={() => setShowGestionCategorias(true)} className="px-2.5 py-1 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg text-xs transition-colors">Categorías</button>
                     <button onClick={() => setShowNuevoContacto(true)} className="flex items-center gap-1 px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-medium transition-colors">+ Nuevo</button>
                     <button onClick={() => setDirectorioOpen(false)} className="text-slate-500 hover:text-white"><X size={14} /></button>
                   </div>
                 </div>
                 <div className="p-3 border-b border-slate-700 flex-shrink-0 space-y-2">
-                  <input value={busquedaDir} onChange={e => { setBusquedaDir(e.target.value); cargarContactos(e.target.value, categoriaDir) }} placeholder="Buscar contacto..." className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-xs placeholder-slate-500 focus:outline-none focus:border-blue-500" />
+                  <input value={busquedaDir} onChange={e => { setBusquedaDir(e.target.value); cargarContactos(e.target.value, categoriaDir) }} placeholder="Buscar nombre, entidad, teléfono, extensión..." className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-xs placeholder-slate-500 focus:outline-none focus:border-blue-500" />
                   <select value={categoriaDir} onChange={e => { setCategoriaDir(e.target.value); cargarContactos(busquedaDir, e.target.value) }} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-blue-500">
                     <option value="">Todas las categorías</option>
-                    <option value="servicios_sociales">Servicios Sociales</option>
-                    <option value="policia">Policía</option>
-                    <option value="sanidad">Sanidad</option>
-                    <option value="juzgado">Juzgado</option>
-                    <option value="vivienda">Vivienda</option>
-                    <option value="otro">Otro</option>
+                    {categoriasDir.map((cat: any) => <option key={cat.id} value={cat.nombre}>{cat.nombre}</option>)}
                   </select>
                 </div>
                 <div className="overflow-y-auto flex-1">
                   {contactos.length === 0
                     ? <div className="p-6 text-center text-slate-500 text-xs">Sin contactos</div>
                     : contactos.map((ct: any) => (
-                      <div key={ct.id} className="px-4 py-3 border-b border-slate-700/50 hover:bg-slate-700/30 transition-colors">
+                      <div key={ct.id} className="px-4 py-3 border-b border-slate-700/50 hover:bg-slate-700/30 transition-colors group">
                         <div className="flex items-start justify-between gap-2">
-                          <div className="min-w-0">
-                            <p className="text-white text-xs font-semibold truncate">{ct.nombre}</p>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                              <p className="text-white text-xs font-semibold truncate">{ct.nombre}</p>
+                              <span className="text-xs px-1.5 py-0.5 bg-slate-700 text-slate-400 rounded flex-shrink-0">{ct.categoria}</span>
+                            </div>
                             {ct.entidad && <p className="text-slate-400 text-xs truncate">{ct.entidad}{ct.cargo ? ` · ${ct.cargo}` : ''}</p>}
-                            <div className="flex items-center gap-2 mt-1 flex-wrap">
+                            <div className="flex items-center gap-3 mt-1 flex-wrap">
                               <a href={`tel:${ct.telefono}`} className="flex items-center gap-1 text-emerald-400 hover:text-emerald-300 text-xs font-mono transition-colors"><Phone size={10} />{ct.telefono}</a>
                               {ct.telefonoAlt && <a href={`tel:${ct.telefonoAlt}`} className="flex items-center gap-1 text-blue-400 hover:text-blue-300 text-xs font-mono transition-colors"><Phone size={10} />{ct.telefonoAlt}</a>}
+                              {ct.extension3cx && <span className="text-xs text-purple-400 font-mono">3CX: {ct.extension3cx}</span>}
+                              {ct.email && <a href={`mailto:${ct.email}`} className="text-xs text-amber-400 hover:text-amber-300 transition-colors truncate">{ct.email}</a>}
                             </div>
                           </div>
-                          <span className="text-xs px-1.5 py-0.5 bg-slate-700 text-slate-400 rounded flex-shrink-0">{ct.disponibilidad === '24h' ? '24h' : ct.disponibilidad === 'guardia' ? 'Guardia' : 'Oficina'}</span>
+                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                            <button onClick={() => { setContactoEditando(ct); setShowNuevoContacto(true) }} className="p-1 text-slate-400 hover:text-blue-400 transition-colors" title="Editar">✏️</button>
+                            <button onClick={async () => { if (!confirm('¿Eliminar contacto?')) return; await fetch(`/api/directorio?id=${ct.id}`, { method: 'DELETE' }); cargarContactos(busquedaDir, categoriaDir) }} className="p-1 text-slate-400 hover:text-red-400 transition-colors" title="Eliminar">🗑️</button>
+                          </div>
                         </div>
                       </div>
                     ))
@@ -450,22 +463,86 @@ export default function CecopalPage() {
 
       {showNuevoContacto && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[3000] p-4">
-          <div className="bg-slate-800 rounded-xl border border-slate-600 w-full max-w-md overflow-hidden">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-700"><h3 className="text-white font-semibold text-sm">Nuevo Contacto</h3><button onClick={() => setShowNuevoContacto(false)} className="text-slate-500 hover:text-white"><X size={16} /></button></div>
-            <div className="p-5 space-y-3">
+          <div className="bg-slate-800 rounded-xl border border-slate-600 w-full max-w-lg overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-700">
+              <h3 className="text-white font-semibold text-sm">{contactoEditando ? 'Editar Contacto' : 'Nuevo Contacto'}</h3>
+              <button onClick={() => { setShowNuevoContacto(false); setContactoEditando(null) }} className="text-slate-500 hover:text-white"><X size={16} /></button>
+            </div>
+            <div className="p-5 space-y-3 max-h-[70vh] overflow-y-auto">
               <div className="grid grid-cols-2 gap-3">
-                <div className="col-span-2"><label className="block text-xs text-slate-400 mb-1">Nombre *</label><input value={nuevoContacto.nombre} onChange={e => setNuevoContacto(p => ({...p, nombre: e.target.value}))} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500" /></div>
-                <div><label className="block text-xs text-slate-400 mb-1">Entidad</label><input value={nuevoContacto.entidad} onChange={e => setNuevoContacto(p => ({...p, entidad: e.target.value}))} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500" /></div>
-                <div><label className="block text-xs text-slate-400 mb-1">Cargo</label><input value={nuevoContacto.cargo} onChange={e => setNuevoContacto(p => ({...p, cargo: e.target.value}))} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500" /></div>
-                <div><label className="block text-xs text-slate-400 mb-1">Teléfono *</label><input value={nuevoContacto.telefono} onChange={e => setNuevoContacto(p => ({...p, telefono: e.target.value}))} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500" /></div>
-                <div><label className="block text-xs text-slate-400 mb-1">Teléfono Alt.</label><input value={nuevoContacto.telefonoAlt} onChange={e => setNuevoContacto(p => ({...p, telefonoAlt: e.target.value}))} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500" /></div>
-                <div><label className="block text-xs text-slate-400 mb-1">Categoría *</label><select value={nuevoContacto.categoria} onChange={e => setNuevoContacto(p => ({...p, categoria: e.target.value}))} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500"><option value="servicios_sociales">Servicios Sociales</option><option value="policia">Policía</option><option value="sanidad">Sanidad</option><option value="juzgado">Juzgado</option><option value="vivienda">Vivienda</option><option value="otro">Otro</option></select></div>
-                <div><label className="block text-xs text-slate-400 mb-1">Disponibilidad</label><select value={nuevoContacto.disponibilidad} onChange={e => setNuevoContacto(p => ({...p, disponibilidad: e.target.value}))} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500"><option value="">Sin especificar</option><option value="24h">24 horas</option><option value="horario_oficina">Horario oficina</option><option value="guardia">Guardia</option></select></div>
-                <div className="col-span-2"><label className="block text-xs text-slate-400 mb-1">Notas</label><textarea value={nuevoContacto.notas} onChange={e => setNuevoContacto(p => ({...p, notas: e.target.value}))} rows={2} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500 resize-none" /></div>
+                <div className="col-span-2"><label className="block text-xs text-slate-400 mb-1">Nombre *</label><input value={contactoEditando ? contactoEditando.nombre : nuevoContacto.nombre} onChange={e => contactoEditando ? setContactoEditando((p: any) => ({...p, nombre: e.target.value})) : setNuevoContacto(p => ({...p, nombre: e.target.value}))} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500" /></div>
+                <div><label className="block text-xs text-slate-400 mb-1">Entidad</label><input value={contactoEditando ? contactoEditando.entidad || '' : nuevoContacto.entidad} onChange={e => contactoEditando ? setContactoEditando((p: any) => ({...p, entidad: e.target.value})) : setNuevoContacto(p => ({...p, entidad: e.target.value}))} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500" /></div>
+                <div><label className="block text-xs text-slate-400 mb-1">Cargo</label><input value={contactoEditando ? contactoEditando.cargo || '' : nuevoContacto.cargo} onChange={e => contactoEditando ? setContactoEditando((p: any) => ({...p, cargo: e.target.value})) : setNuevoContacto(p => ({...p, cargo: e.target.value}))} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500" /></div>
+                <div><label className="block text-xs text-slate-400 mb-1">Teléfono *</label><input value={contactoEditando ? contactoEditando.telefono : nuevoContacto.telefono} onChange={e => contactoEditando ? setContactoEditando((p: any) => ({...p, telefono: e.target.value})) : setNuevoContacto(p => ({...p, telefono: e.target.value}))} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500" /></div>
+                <div><label className="block text-xs text-slate-400 mb-1">Teléfono Alt.</label><input value={contactoEditando ? contactoEditando.telefonoAlt || '' : nuevoContacto.telefonoAlt} onChange={e => contactoEditando ? setContactoEditando((p: any) => ({...p, telefonoAlt: e.target.value})) : setNuevoContacto(p => ({...p, telefonoAlt: e.target.value}))} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500" /></div>
+                <div><label className="block text-xs text-slate-400 mb-1">Extensión 3CX</label><input value={contactoEditando ? contactoEditando.extension3cx || '' : nuevoContacto.extension3cx} onChange={e => contactoEditando ? setContactoEditando((p: any) => ({...p, extension3cx: e.target.value})) : setNuevoContacto(p => ({...p, extension3cx: e.target.value}))} placeholder="Ej: 101" className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500" /></div>
+                <div className="col-span-2"><label className="block text-xs text-slate-400 mb-1">Email</label><input type="email" value={contactoEditando ? contactoEditando.email || '' : nuevoContacto.email} onChange={e => contactoEditando ? setContactoEditando((p: any) => ({...p, email: e.target.value})) : setNuevoContacto(p => ({...p, email: e.target.value}))} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500" /></div>
+                <div><label className="block text-xs text-slate-400 mb-1">Categoría *</label>
+                  <select value={contactoEditando ? contactoEditando.categoria : nuevoContacto.categoria} onChange={e => contactoEditando ? setContactoEditando((p: any) => ({...p, categoria: e.target.value})) : setNuevoContacto(p => ({...p, categoria: e.target.value}))} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500">
+                    <option value="">Seleccionar...</option>
+                    {categoriasDir.map((cat: any) => <option key={cat.id} value={cat.nombre}>{cat.nombre}</option>)}
+                  </select>
+                </div>
+                <div><label className="block text-xs text-slate-400 mb-1">Disponibilidad</label>
+                  <select value={contactoEditando ? contactoEditando.disponibilidad || '' : nuevoContacto.disponibilidad} onChange={e => contactoEditando ? setContactoEditando((p: any) => ({...p, disponibilidad: e.target.value})) : setNuevoContacto(p => ({...p, disponibilidad: e.target.value}))} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500">
+                    <option value="">Sin especificar</option>
+                    <option value="24h">24 horas</option>
+                    <option value="horario_oficina">Horario oficina</option>
+                    <option value="guardia">Guardia</option>
+                  </select>
+                </div>
+                <div className="col-span-2"><label className="block text-xs text-slate-400 mb-1">Notas</label><textarea value={contactoEditando ? contactoEditando.notas || '' : nuevoContacto.notas} onChange={e => contactoEditando ? setContactoEditando((p: any) => ({...p, notas: e.target.value})) : setNuevoContacto(p => ({...p, notas: e.target.value}))} rows={2} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500 resize-none" /></div>
               </div>
               <div className="flex justify-end gap-3 pt-2 border-t border-slate-700">
-                <button onClick={() => setShowNuevoContacto(false)} className="px-4 py-2 text-slate-400 hover:text-white text-sm transition-colors">Cancelar</button>
-                <button onClick={async () => { if (!nuevoContacto.nombre || !nuevoContacto.telefono) return; const res = await fetch('/api/directorio', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(nuevoContacto) }); if (res.ok) { setShowNuevoContacto(false); setNuevoContacto({ nombre: '', entidad: '', categoria: 'otro', cargo: '', telefono: '', telefonoAlt: '', email: '', disponibilidad: '', notas: '' }); cargarContactos(busquedaDir, categoriaDir) } }} disabled={!nuevoContacto.nombre || !nuevoContacto.telefono} className="flex items-center gap-2 px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white rounded-lg text-sm font-medium transition-colors">Guardar</button>
+                <button onClick={() => { setShowNuevoContacto(false); setContactoEditando(null) }} className="px-4 py-2 text-slate-400 hover:text-white text-sm transition-colors">Cancelar</button>
+                <button onClick={async () => {
+                  const datos = contactoEditando || nuevoContacto
+                  if (!datos.nombre || !datos.telefono || !datos.categoria) return
+                  if (contactoEditando) {
+                    await fetch('/api/directorio', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(contactoEditando) })
+                  } else {
+                    await fetch('/api/directorio', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(nuevoContacto) })
+                  }
+                  setShowNuevoContacto(false)
+                  setContactoEditando(null)
+                  setNuevoContacto({ nombre: '', entidad: '', categoria: '', cargo: '', telefono: '', telefonoAlt: '', email: '', extension3cx: '', disponibilidad: '', notas: '' })
+                  cargarContactos(busquedaDir, categoriaDir)
+                }} disabled={!(contactoEditando ? contactoEditando.nombre && contactoEditando.telefono && contactoEditando.categoria : nuevoContacto.nombre && nuevoContacto.telefono && nuevoContacto.categoria)} className="flex items-center gap-2 px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white rounded-lg text-sm font-medium transition-colors">Guardar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showGestionCategorias && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[3000] p-4">
+          <div className="bg-slate-800 rounded-xl border border-slate-600 w-full max-w-sm overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-700">
+              <h3 className="text-white font-semibold text-sm">Gestión de Categorías</h3>
+              <button onClick={() => setShowGestionCategorias(false)} className="text-slate-500 hover:text-white"><X size={16} /></button>
+            </div>
+            <div className="p-5 space-y-4">
+              <div className="flex gap-2">
+                <input value={nuevaCategoria.nombre} onChange={e => setNuevaCategoria(p => ({...p, nombre: e.target.value}))} placeholder="Nueva categoría..." className="flex-1 bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500" />
+                <input type="color" value={nuevaCategoria.color} onChange={e => setNuevaCategoria(p => ({...p, color: e.target.value}))} className="w-10 h-9 rounded-lg border border-slate-600 bg-slate-700 cursor-pointer" />
+                <button onClick={async () => {
+                  if (!nuevaCategoria.nombre.trim()) return
+                  await fetch('/api/directorio', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'categoria', ...nuevaCategoria }) })
+                  setNuevaCategoria({ nombre: '', color: '#6366f1' })
+                  cargarContactos(busquedaDir, categoriaDir)
+                }} className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors">+</button>
+              </div>
+              <div className="space-y-2 max-h-60 overflow-y-auto">
+                {categoriasDir.map((cat: any) => (
+                  <div key={cat.id} className="flex items-center justify-between p-2.5 bg-slate-700/50 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: cat.color }} />
+                      <span className="text-white text-sm">{cat.nombre}</span>
+                    </div>
+                    <button onClick={async () => { if (!confirm('¿Eliminar categoría?')) return; await fetch(`/api/directorio?id=${cat.id}&tipo=categoria`, { method: 'DELETE' }); cargarContactos(busquedaDir, categoriaDir) }} className="text-slate-500 hover:text-red-400 text-xs transition-colors">✕</button>
+                  </div>
+                ))}
+                {categoriasDir.length === 0 && <p className="text-slate-500 text-xs text-center py-3">Sin categorías creadas</p>}
               </div>
             </div>
           </div>

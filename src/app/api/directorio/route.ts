@@ -7,6 +7,15 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const busqueda = searchParams.get("busqueda") || ""
     const categoria = searchParams.get("categoria") || ""
+    const tipo = searchParams.get("tipo") || ""
+
+    if (tipo === "categorias") {
+      const categorias = await prisma.categoriaDirectorio.findMany({
+        where: { activa: true },
+        orderBy: { nombre: "asc" },
+      })
+      return NextResponse.json({ categorias })
+    }
 
     const where: any = { activo: true }
     if (busqueda) {
@@ -15,6 +24,7 @@ export async function GET(req: NextRequest) {
         { entidad: { contains: busqueda, mode: "insensitive" } },
         { telefono: { contains: busqueda } },
         { cargo: { contains: busqueda, mode: "insensitive" } },
+        { extension3cx: { contains: busqueda } },
       ]
     }
     if (categoria) where.categoria = categoria
@@ -23,7 +33,6 @@ export async function GET(req: NextRequest) {
       where,
       orderBy: [{ categoria: "asc" }, { nombre: "asc" }],
     })
-
     return NextResponse.json({ contactos })
   } catch (error) {
     console.error("Error GET directorio:", error)
@@ -34,19 +43,53 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { nombre, entidad, categoria, cargo, telefono, telefonoAlt, email, disponibilidad, notas } = body
+    const { tipo } = body
 
+    if (tipo === "categoria") {
+      const { nombre, color } = body
+      if (!nombre) return NextResponse.json({ error: "Nombre requerido" }, { status: 400 })
+      const categoria = await prisma.categoriaDirectorio.create({
+        data: { nombre, color: color || "#6366f1" }
+      })
+      return NextResponse.json({ categoria })
+    }
+
+    const { nombre, entidad, categoria, cargo, telefono, telefonoAlt, email, extension3cx, disponibilidad, notas } = body
     if (!nombre || !telefono || !categoria) {
       return NextResponse.json({ error: "Nombre, teléfono y categoría son obligatorios" }, { status: 400 })
     }
-
     const contacto = await prisma.contactoDirectorio.create({
-      data: { nombre, entidad: entidad || null, categoria, cargo: cargo || null, telefono, telefonoAlt: telefonoAlt || null, email: email || null, disponibilidad: disponibilidad || null, notas: notas || null }
+      data: { nombre, entidad: entidad || null, categoria, cargo: cargo || null, telefono, telefonoAlt: telefonoAlt || null, email: email || null, extension3cx: extension3cx || null, disponibilidad: disponibilidad || null, notas: notas || null }
     })
-
     return NextResponse.json({ contacto })
   } catch (error) {
     console.error("Error POST directorio:", error)
+    return NextResponse.json({ error: "Error interno" }, { status: 500 })
+  }
+}
+
+export async function PUT(req: NextRequest) {
+  try {
+    const body = await req.json()
+    const { tipo, id } = body
+
+    if (tipo === "categoria") {
+      const { nombre, color } = body
+      const categoria = await prisma.categoriaDirectorio.update({
+        where: { id },
+        data: { nombre, color }
+      })
+      return NextResponse.json({ categoria })
+    }
+
+    const { nombre, entidad, categoria, cargo, telefono, telefonoAlt, email, extension3cx, disponibilidad, notas } = body
+    const contacto = await prisma.contactoDirectorio.update({
+      where: { id },
+      data: { nombre, entidad: entidad || null, categoria, cargo: cargo || null, telefono, telefonoAlt: telefonoAlt || null, email: email || null, extension3cx: extension3cx || null, disponibilidad: disponibilidad || null, notas: notas || null }
+    })
+    return NextResponse.json({ contacto })
+  } catch (error) {
+    console.error("Error PUT directorio:", error)
     return NextResponse.json({ error: "Error interno" }, { status: 500 })
   }
 }
@@ -55,13 +98,14 @@ export async function DELETE(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url)
     const id = searchParams.get("id")
+    const tipo = searchParams.get("tipo") || ""
     if (!id) return NextResponse.json({ error: "ID requerido" }, { status: 400 })
 
-    await prisma.contactoDirectorio.update({
-      where: { id },
-      data: { activo: false }
-    })
-
+    if (tipo === "categoria") {
+      await prisma.categoriaDirectorio.update({ where: { id }, data: { activa: false } })
+    } else {
+      await prisma.contactoDirectorio.update({ where: { id }, data: { activo: false } })
+    }
     return NextResponse.json({ ok: true })
   } catch (error) {
     console.error("Error DELETE directorio:", error)
