@@ -432,7 +432,7 @@ export default function CecopalPage() {
           </div>
         </div>
 
-        <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden" style={{ height: '420px' }}>
+        <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden" style={{ height: '600px' }}>
           <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-700">
             <div className="flex items-center gap-2"><div className={`w-2 h-2 rounded-full ${ubicacionesGPS.length > 0 ? 'bg-green-500 animate-pulse' : 'bg-slate-500'}`} /><span className="text-white text-xs font-semibold uppercase tracking-wider">Localización de Flota en Tiempo Real</span></div>
             <span className="text-slate-400 text-xs">{ubicacionesGPS.length} vehículo{ubicacionesGPS.length !== 1 ? 's' : ''} activo{ubicacionesGPS.length !== 1 ? 's' : ''}</span>
