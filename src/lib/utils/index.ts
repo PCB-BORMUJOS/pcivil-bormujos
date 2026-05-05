@@ -37,3 +37,22 @@ export function generateSlug(text: string): string {
 export function generateNumeroIncidencia(year: number, sequence: number): string {
   return `${year}-${String(sequence).padStart(4, '0')}`
 }
+
+export function safeJsonParse<T = unknown>(value: unknown, fallback: T): T {
+  if (typeof value !== 'string') return value as T ?? fallback
+  try {
+    return JSON.parse(value) as T
+  } catch {
+    return fallback
+  }
+}
+
+export function safeParseFloat(value: unknown, fallback = 0): number {
+  const n = parseFloat(String(value))
+  return isNaN(n) ? fallback : n
+}
+
+export function safeParseInt(value: unknown, fallback = 0): number {
+  const n = parseInt(String(value), 10)
+  return isNaN(n) ? fallback : n
+}

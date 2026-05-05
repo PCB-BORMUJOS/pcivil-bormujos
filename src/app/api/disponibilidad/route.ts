@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { registrarAudit, getUsuarioAudit } from '@/lib/audit'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
+import { safeJsonParse } from '@/lib/utils'
 
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions)
@@ -31,9 +32,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({
         disponibilidad: {
           ...disponibilidad,
-          detalles: typeof disponibilidad.detalles === 'string'
-            ? JSON.parse(disponibilidad.detalles)
-            : disponibilidad.detalles
+          detalles: safeJsonParse(disponibilidad.detalles, {})
         }
       })
     }

@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { registrarAudit, getUsuarioAudit } from '@/lib/audit'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
+import { safeJsonParse } from '@/lib/utils'
 
 export async function GET(request: NextRequest) {
   try {
@@ -136,17 +137,18 @@ export async function POST(request: NextRequest) {
       // Comprobar si está en prácticas
       const fichaCheck = await prisma.fichaVoluntario.findUnique({ where: { usuarioId } })
       if (fichaCheck?.enPracticas) {
-        // Incrementar contador de turnos de prácticas
-        const nuevoContador = (fichaCheck.turnosPracticasRealizados ?? 0) + 1
         const TURNOS_OBLIGATORIOS = 15
-        if (nuevoContador === TURNOS_OBLIGATORIOS) {
+        // Incremento atómico — evita race condition si dos guardias se crean a la vez
+        const fichaActualizada = await prisma.fichaVoluntario.update({
+          where: { usuarioId },
+          data: { turnosPracticasRealizados: { increment: 1 } }
+        })
+        const nuevoContador = fichaActualizada.turnosPracticasRealizados ?? 1
+        if (nuevoContador >= TURNOS_OBLIGATORIOS) {
           // Ha completado las prácticas → pasar a voluntario
           await prisma.fichaVoluntario.update({
             where: { usuarioId },
-            data: {
-              enPracticas: false,
-              turnosPracticasRealizados: nuevoContador
-            }
+            data: { enPracticas: false }
           })
           // Notificar al usuario
           await prisma.notificacion.create({
@@ -157,11 +159,6 @@ export async function POST(request: NextRequest) {
               tipo: 'sistema',
               leida: false
             }
-          })
-        } else {
-          await prisma.fichaVoluntario.update({
-            where: { usuarioId },
-            data: { turnosPracticasRealizados: nuevoContador }
           })
         }
         // NO generar dieta para personas en prácticas
@@ -174,11 +171,11 @@ export async function POST(request: NextRequest) {
       ]);
       const rawBaremo = configBaremo?.valor;
       const baremo: any[] = rawBaremo
-        ? (typeof rawBaremo === 'string' ? JSON.parse(rawBaremo) : rawBaremo as any[])
+        ? safeJsonParse(rawBaremo, [{ minHours: 4, amount: 29.45 }, { minHours: 8, amount: 49.15 }, { minHours: 12, amount: 72.37 }])
         : [{ minHours: 4, amount: 29.45 }, { minHours: 8, amount: 49.15 }, { minHours: 12, amount: 72.37 }];
       const rawKm = configKm?.valor;
       const precioKm: number = rawKm
-        ? ((typeof rawKm === 'string' ? JSON.parse(rawKm) : rawKm as any)?.precio ?? 0.19)
+        ? (safeJsonParse<{ precio?: number }>(rawKm, {})?.precio ?? 0.19)
         : 0.19;
       const horasPorTurno: Record<string, number> = { 'mañana': 5.5, 'tarde': 5, 'noche': 9 };
       const horasTrabajadas = horasTurno ? parseFloat(String(horasTurno)) : (horasPorTurno[turno.toLowerCase()] ?? 5);
@@ -194,9 +191,9 @@ export async function POST(request: NextRequest) {
       const ficha = await prisma.fichaVoluntario.findUnique({ where: { usuarioId } });
       const kmIda = Number(ficha?.kmDesplazamiento ?? 0);
       const kilometros = kmIda * 2;
-      const subtotalKm = parseFloat((kilometros * precioKm).toFixed(2));
+      const subtotalKm = Math.round(kilometros * precioKm * 100) / 100;
       const subtotalDietas = importeDia;
-      const totalDieta = parseFloat((subtotalDietas + subtotalKm).toFixed(2));
+      const totalDieta = Math.round((subtotalDietas + subtotalKm) * 100) / 100;
       const fechaGuardia = new Date(fecha + 'T12:00:00.000Z');
       const mesAnio = fechaGuardia.toISOString().slice(0, 7);
       await prisma.dieta.create({

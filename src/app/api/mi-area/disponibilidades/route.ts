@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
+import { safeJsonParse } from '@/lib/utils'
 
 // GET: Obtener historial de disponibilidades del usuario actual
 export async function GET(request: NextRequest) {
@@ -38,7 +39,7 @@ export async function GET(request: NextRequest) {
         // Parsear detalles JSON si es necesario
         const disponibilidadesFormateadas = disponibilidades.map(d => ({
             ...d,
-            detalles: typeof d.detalles === 'string' ? JSON.parse(d.detalles) : d.detalles
+            detalles: safeJsonParse(d.detalles, {})
         }))
 
         return NextResponse.json({ disponibilidades: disponibilidadesFormateadas })

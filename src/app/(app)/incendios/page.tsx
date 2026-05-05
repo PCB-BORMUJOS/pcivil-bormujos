@@ -483,7 +483,7 @@ export default function IncendiosPage() {
       const res = await fetch(`/api/incendios/plano?edificioId=${eid}`)
       const data = await res.json()
       setPlanos(data.planos || [])
-    } catch {}
+    } catch (e) { console.error('Error cargando planos:', e) }
   }
   const crearPlano = async () => {
     if (!selectedEdificio || !nuevoPlanoNombre.trim()) return

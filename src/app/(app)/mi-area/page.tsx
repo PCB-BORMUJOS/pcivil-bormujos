@@ -314,7 +314,7 @@ export default function MiAreaPage() {
         const resG = await fetch('/api/mi-area/guardias');
         const dataG = await resG.json();
         if (dataG.guardias) setMisGuardias(dataG.guardias);
-      } catch(e) { /* error silenciado */; }
+      } catch(e) { console.error('Error cargando guardias:', e) }
       if (resDisp.ok) {
         const dataDisp = await resDisp.json();
         setDisponibilidades(dataDisp.disponibilidades || []);

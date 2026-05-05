@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { registrarAudit, getUsuarioAudit } from '@/lib/audit'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
+import { safeJsonParse } from '@/lib/utils'
 
 // POST: Generar cuadrante automáticamente basado en disponibilidades
 export async function POST(request: NextRequest) {
@@ -89,7 +90,7 @@ export async function POST(request: NextRequest) {
             turnos.forEach(turno => {
                 // Filtrar usuarios disponibles para este día y turno
                 const disponiblesParaTurno = disponibilidades.filter(d => {
-                    const detalles = typeof d.detalles === 'string' ? JSON.parse(d.detalles) : d.detalles
+                    const detalles = safeJsonParse(d.detalles, {} as Record<string, string[]>)
                     const turnosDia = detalles[dia] || []
                     return turnosDia.includes(turno)
                 })

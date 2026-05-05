@@ -1,4 +1,5 @@
 'use client'
+import DOMPurify from 'isomorphic-dompurify'
 import { TbDrone as Drone } from 'react-icons/tb'
 import { usePermisos } from '@/lib/permisos'
 import React from 'react'
@@ -1980,7 +1981,7 @@ export default function DronesPage() {
                 <p className="text-xs font-bold text-slate-500 uppercase mb-2">Descripción completa</p>
                 <div className="bg-slate-50 rounded-xl p-4">
                   {notamSeleccionado.descripcionHtml ? (
-                    <div className="text-sm text-slate-700 leading-relaxed" dangerouslySetInnerHTML={{ __html: notamSeleccionado.descripcionHtml }} />
+                    <div className="text-sm text-slate-700 leading-relaxed" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(notamSeleccionado.descripcionHtml) }} />
                   ) : (
                     <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{notamSeleccionado.descripcion || 'Sin descripción'}</p>
                   )}

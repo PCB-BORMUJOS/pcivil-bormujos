@@ -721,7 +721,7 @@ export default function DashboardPage() {
       const resumenTotal: Record<string, any> = {};
       resultados.forEach(r => Object.assign(resumenTotal, r));
       setResumenDisponibilidad(resumenTotal);
-    } catch {}
+    } catch (e) { console.error('Error cargando resumen disponibilidad:', e) }
   };
 
   const handleEventClick = (evento: any) => setShowEventDetail(evento);

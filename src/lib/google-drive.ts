@@ -1,7 +1,7 @@
 import { google } from 'googleapis'
 import { Stream } from 'stream'
 
-const FOLDER_ID = process.env.GOOGLE_DRIVE_FOLDER_ID || '1I0i96umQtLaTBLUg1Om_Wx6PlxfjQbRQ'
+const FOLDER_ID = process.env.GOOGLE_DRIVE_FOLDER_ID
 const SCOPES = ['https://www.googleapis.com/auth/drive']
 
 const getDriveClient = async () => {
@@ -42,6 +42,7 @@ export async function uploadToGoogleDrive(
     try {
         const drive = await getDriveClient()
         const targetFolderId = folderId || FOLDER_ID
+        if (!targetFolderId) throw new Error('GOOGLE_DRIVE_FOLDER_ID no está configurado')
 
         const bufferStream = new Stream.PassThrough()
         bufferStream.end(buffer)
@@ -49,7 +50,7 @@ export async function uploadToGoogleDrive(
         const response = await drive.files.create({
             requestBody: {
                 name: filename,
-                parents: [folderId || FOLDER_ID],
+                parents: [targetFolderId],
             },
             media: {
                 mimeType,

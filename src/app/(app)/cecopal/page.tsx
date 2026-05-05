@@ -106,7 +106,7 @@ export default function CecopalPage() {
       setAlertas(rAlerta)
       if (rInc.incidencia) { setIncidenciaActiva(rInc.incidencia); setModo('activa') }
       setNovedadesHoy(rNov.novedades || [])
-    } catch (e) {}
+    } catch (e) { console.error('Error cargando datos CECOPAL:', e) }
     finally { setLoading(false) }
   }, [])
 
@@ -118,7 +118,7 @@ export default function CecopalPage() {
         const res = await fetch('/api/vehiculos/ubicacion')
         const data = await res.json()
         setUbicacionesGPS(data.ubicaciones || [])
-      } catch (e) {}
+      } catch (e) { console.error('Error GPS CECOPAL:', e) }
     }
     fetchGPS()
     const iv = setInterval(fetchGPS, 10000)
@@ -131,7 +131,7 @@ export default function CecopalPage() {
         const res = await fetch('https://api.open-meteo.com/v1/forecast?latitude=37.371&longitude=-6.071&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code&timezone=Europe/Madrid')
         const data = await res.json()
         setMeteo(data.current)
-      } catch (e) {}
+      } catch (e) { console.error('Error cargando meteo:', e) }
     }
     fetchMeteo()
     const iv = setInterval(fetchMeteo, 300000)
@@ -151,7 +151,7 @@ export default function CecopalPage() {
       const dataCat = await resCat.json()
       setContactos(dataC.contactos || [])
       setCategoriasDir(dataCat.categorias || [])
-    } catch (e) {}
+    } catch (e) { console.error('Error cargando directorio:', e) }
   }
 
   const getMeteoIcon = (code: number) => {
@@ -206,7 +206,7 @@ export default function CecopalPage() {
     try {
       await fetch('/api/cecopal', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'resolver', id: incidenciaActiva.id, horaDisponible: incidenciaActiva.horaDisponible || getHoraActual(), observaciones: incidenciaActiva.observaciones }) })
       setIncidenciaActiva(null); setModo('turno'); await cargarDatos()
-    } catch (e) {} finally { setGuardando(false) }
+    } catch (e) { console.error('Error resolviendo incidencia:', e) } finally { setGuardando(false) }
   }
 
   const generarPartePSI = async () => {
@@ -221,7 +221,7 @@ export default function CecopalPage() {
       const data = await res.json()
       if (!res.ok) { alert('Error: ' + (data.error || JSON.stringify(data.errores || data))); return }
       if (data.parte?.id) { window.location.href = `/partes/psi?id=${data.parte.id}` }
-    } catch (e) { window.location.href = '/partes/psi' } finally { setGenerandoParte(false) }
+    } catch (e) { console.error('Error generando parte PSI:', e) } finally { setGenerandoParte(false) }
   }
 
   if (loading) return <div className="flex items-center justify-center h-96"><RefreshCw className="animate-spin text-blue-500" size={32} /></div>

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
+import { safeJsonParse } from '@/lib/utils'
 
 export async function POST(request: NextRequest) {
   try {
@@ -29,12 +30,12 @@ export async function POST(request: NextRequest) {
 
     const rawBaremo = configBaremo?.valor
     const baremo: any[] = rawBaremo
-      ? (typeof rawBaremo === 'string' ? JSON.parse(rawBaremo) : rawBaremo as any[])
+      ? safeJsonParse(rawBaremo, [{ minHours: 4, amount: 29.45 }, { minHours: 8, amount: 49.15 }, { minHours: 12, amount: 72.37 }])
       : [{ minHours: 4, amount: 29.45 }, { minHours: 8, amount: 49.15 }, { minHours: 12, amount: 72.37 }]
 
     const rawKm = configKm?.valor
     const precioKm: number = rawKm
-      ? ((typeof rawKm === 'string' ? JSON.parse(rawKm) : rawKm as any)?.precio ?? 0.19)
+      ? (safeJsonParse<{ precio?: number }>(rawKm, {})?.precio ?? 0.19)
       : 0.19
 
     const fechaDate = new Date(fecha + 'T12:00:00.000Z')
@@ -69,8 +70,9 @@ export async function POST(request: NextRequest) {
     const kmIda = Number(ficha?.kmDesplazamiento ?? 0)
     const kilomeroYaContado = dietasOtrosTurnos.length > 0
     const kilometros    = kilomeroYaContado ? 0 : kmIda * 2
-    const subtotalKm    = parseFloat((kilometros * precioKm).toFixed(2))
-    const totalDieta    = parseFloat((importeDia + subtotalKm).toFixed(2))
+    // Redondeo en céntimos para evitar acumulación de errores de punto flotante
+    const subtotalKm    = Math.round(kilometros * precioKm * 100) / 100
+    const totalDieta    = Math.round((importeDia + subtotalKm) * 100) / 100
 
     // Si hay otros turnos, recalcular su importeDia a 0 (el importe correcto está en este turno)
     // porque el baremo se recalcula con el nuevo total
@@ -87,7 +89,7 @@ export async function POST(request: NextRequest) {
       })
       if (dietaConKm) {
         // Recalcular la dieta con km con importeDia=0 (el baremo va en el turno actual)
-        const nuevoTotalAnterior = parseFloat((0 + Number(dietaConKm.subtotalKm)).toFixed(2))
+        const nuevoTotalAnterior = Math.round(Number(dietaConKm.subtotalKm) * 100) / 100
         await prisma.dieta.update({
           where: { id: dietaConKm.id },
           data: { importeDia: 0, subtotalDietas: 0, totalDieta: nuevoTotalAnterior }

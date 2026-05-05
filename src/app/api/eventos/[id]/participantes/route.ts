@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { registrarAudit, getUsuarioAudit } from '@/lib/audit'
+import { safeJsonParse } from '@/lib/utils'
 
 // Calcula horas reales entre dos strings "HH:MM"
 function calcularHoras(horaInicio: string, horaFin: string): number {
@@ -24,11 +25,11 @@ async function getBaremo() {
   ]
   const rawBaremo = configBaremo?.valor
   const baremo: any[] = rawBaremo
-    ? (typeof rawBaremo === 'string' ? JSON.parse(rawBaremo) : rawBaremo as any[])
+    ? safeJsonParse(rawBaremo, BAREMO_DEFAULT)
     : BAREMO_DEFAULT
   const rawKm = configKm?.valor
   const precioKm: number = rawKm
-    ? ((typeof rawKm === 'string' ? JSON.parse(rawKm) : rawKm as any)?.precio ?? 0.19)
+    ? (safeJsonParse<{ precio?: number }>(rawKm, {})?.precio ?? 0.19)
     : 0.19
   return { baremo, precioKm }
 }

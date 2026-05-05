@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { registrarAudit, getUsuarioAudit } from '@/lib/audit'
+import { safeParseFloat, safeParseInt } from '@/lib/utils'
 
 function isAdmin(session: any) {
   return ['superadmin', 'admin'].includes(session?.user?.rol || '')
@@ -83,12 +84,12 @@ export async function POST(request: NextRequest) {
   try {
     const { usuarioId, usuarioNombre } = getUsuarioAudit(session)
     if (tipo === 'presupuesto') {
-      const result = await prisma.presupuestoAnual.create({ data: { ejercicio: parseInt(data.ejercicio), denominacion: data.denominacion, totalAprobado: 0, estado: data.estado || 'borrador', notas: data.notas || null } })
+      const result = await prisma.presupuestoAnual.create({ data: { ejercicio: safeParseInt(data.ejercicio, new Date().getFullYear()), denominacion: data.denominacion, totalAprobado: 0, estado: data.estado || 'borrador', notas: data.notas || null } })
       await registrarAudit({ accion: 'CREATE', entidad: 'PresupuestoAnual', entidadId: result.id, descripcion: `Presupuesto ${result.ejercicio}: ${result.denominacion}`, usuarioId, usuarioNombre, modulo: 'Presupuesto' })
       return NextResponse.json({ success: true, presupuesto: result })
     }
     if (tipo === 'partida') {
-      const result = await prisma.partidaPresupuestaria.create({ data: { presupuestoId: data.presupuestoId, codigo: data.codigo, denominacion: data.denominacion, capitulo: data.capitulo, importeAsignado: parseFloat(data.importeAsignado), importeModificado: data.importeModificado ? parseFloat(data.importeModificado) : null, motivoModificacion: data.motivoModificacion || null, fechaModificacion: data.fechaModificacion ? new Date(data.fechaModificacion) : null } })
+      const result = await prisma.partidaPresupuestaria.create({ data: { presupuestoId: data.presupuestoId, codigo: data.codigo, denominacion: data.denominacion, capitulo: data.capitulo, importeAsignado: safeParseFloat(data.importeAsignado), importeModificado: data.importeModificado ? safeParseFloat(data.importeModificado) : null, motivoModificacion: data.motivoModificacion || null, fechaModificacion: data.fechaModificacion ? new Date(data.fechaModificacion) : null } })
       const todasPartidas = await prisma.partidaPresupuestaria.findMany({ where: { presupuestoId: data.presupuestoId } })
       const nuevoTotal = todasPartidas.reduce((s: number, p: any) => s + Number(p.importeAsignado), 0)
       await prisma.presupuestoAnual.update({ where: { id: data.presupuestoId }, data: { totalAprobado: nuevoTotal } })
@@ -101,29 +102,29 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true, proveedor: result })
     }
     if (tipo === 'expediente') {
-      const ejercicio = parseInt(data.ejercicio) || new Date().getFullYear()
+      const ejercicio = safeParseInt(data.ejercicio, new Date().getFullYear())
       const count = await prisma.expedienteCompra.count({ where: { ejercicio } })
       const numero = `EXP-${ejercicio}-${String(count + 1).padStart(4, '0')}`
-      const result = await prisma.expedienteCompra.create({ data: { numero, ejercicio, titulo: data.titulo, descripcion: data.descripcion || null, tipo: data.tipo, estado: 'borrador', partidaId: data.partidaId || null, proveedorId: data.proveedorId || null, importeEstimado: data.importeEstimado ? parseFloat(data.importeEstimado) : null, fechaSolicitud: data.fechaSolicitud ? new Date(data.fechaSolicitud) : new Date(), objeto: data.objeto || null, criterios: data.criterios || null, notas: data.notas || null, solicitadoPor: usuarioNombre } })
+      const result = await prisma.expedienteCompra.create({ data: { numero, ejercicio, titulo: data.titulo, descripcion: data.descripcion || null, tipo: data.tipo, estado: 'borrador', partidaId: data.partidaId || null, proveedorId: data.proveedorId || null, importeEstimado: data.importeEstimado ? safeParseFloat(data.importeEstimado) : null, fechaSolicitud: data.fechaSolicitud ? new Date(data.fechaSolicitud) : new Date(), objeto: data.objeto || null, criterios: data.criterios || null, notas: data.notas || null, solicitadoPor: usuarioNombre } })
       if (data.partidaId && data.importeEstimado) {
         const partida = await prisma.partidaPresupuestaria.findUnique({ where: { id: data.partidaId } })
-        if (partida) await prisma.partidaPresupuestaria.update({ where: { id: data.partidaId }, data: { importeComprometido: Number(partida.importeComprometido) + parseFloat(data.importeEstimado) } })
+        if (partida) await prisma.partidaPresupuestaria.update({ where: { id: data.partidaId }, data: { importeComprometido: Number(partida.importeComprometido) + safeParseFloat(data.importeEstimado) } })
       }
       await prisma.historialExpediente.create({ data: { expedienteId: result.id, estadoAnterior: null, estadoNuevo: 'borrador', comentario: 'Expediente creado', usuarioId, usuarioNombre } })
       await registrarAudit({ accion: 'CREATE', entidad: 'ExpedienteCompra', entidadId: result.id, descripcion: `Expediente ${numero}: ${result.titulo}`, usuarioId, usuarioNombre, modulo: 'Presupuesto' })
       return NextResponse.json({ success: true, expediente: result })
     }
     if (tipo === 'linea') {
-      const result = await prisma.lineaExpediente.create({ data: { expedienteId: data.expedienteId, descripcion: data.descripcion, cantidad: parseFloat(data.cantidad), unidad: data.unidad, precioUnitario: data.precioUnitario ? parseFloat(data.precioUnitario) : null, importeTotal: data.importeTotal ? parseFloat(data.importeTotal) : null, iva: data.iva ? parseFloat(data.iva) : 21 } })
+      const result = await prisma.lineaExpediente.create({ data: { expedienteId: data.expedienteId, descripcion: data.descripcion, cantidad: safeParseFloat(data.cantidad), unidad: data.unidad, precioUnitario: data.precioUnitario ? safeParseFloat(data.precioUnitario) : null, importeTotal: data.importeTotal ? safeParseFloat(data.importeTotal) : null, iva: data.iva ? safeParseFloat(data.iva) : 21 } })
       return NextResponse.json({ success: true, linea: result })
     }
     if (tipo === 'presupuesto-proveedor') {
-      const result = await prisma.presupuestoProveedor.create({ data: { expedienteId: data.expedienteId, proveedorId: data.proveedorId, importe: parseFloat(data.importe), iva: parseFloat(data.iva || 21), importeTotal: parseFloat(data.importeTotal), estado: data.estado || 'pendiente', fechaEmision: data.fechaEmision ? new Date(data.fechaEmision) : null, fechaValidez: data.fechaValidez ? new Date(data.fechaValidez) : null, documentoUrl: data.documentoUrl || null, notas: data.notas || null } })
+      const result = await prisma.presupuestoProveedor.create({ data: { expedienteId: data.expedienteId, proveedorId: data.proveedorId, importe: safeParseFloat(data.importe), iva: safeParseFloat(data.iva ?? 21), importeTotal: safeParseFloat(data.importeTotal), estado: data.estado || 'pendiente', fechaEmision: data.fechaEmision ? new Date(data.fechaEmision) : null, fechaValidez: data.fechaValidez ? new Date(data.fechaValidez) : null, documentoUrl: data.documentoUrl || null, notas: data.notas || null } })
       return NextResponse.json({ success: true, presupuesto: result })
     }
     if (tipo === 'factura') {
-      const base = parseFloat(data.importeBase)
-      const iva = parseFloat(data.iva || 21)
+      const base = safeParseFloat(data.importeBase)
+      const iva = safeParseFloat(data.iva ?? 21)
       const importeIva = base * iva / 100
       const importeTotal = base + importeIva
       const result = await prisma.facturaExpediente.create({ data: { expedienteId: data.expedienteId, numeroFactura: data.numeroFactura, proveedor: data.proveedor, fechaFactura: new Date(data.fechaFactura), fechaRecepcion: data.fechaRecepcion ? new Date(data.fechaRecepcion) : null, importeBase: base, iva, importeIva, importeTotal, estado: 'pendiente', documentoUrl: data.documentoUrl || null, notas: data.notas || null } })

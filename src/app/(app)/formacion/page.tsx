@@ -1688,8 +1688,8 @@ export default function FormacionPage() {
                         grouped[key].inscritos.push(insc);
                       });
 
-                        return Object.values(grouped).map(g => (
-                          <tbody key={g.convocatoria?.id || Math.random()} className="divide-y">
+                        return Object.values(grouped).map((g, gIdx) => (
+                          <tbody key={g.convocatoria?.id || `group-${gIdx}`} className="divide-y">
                             <tr className="bg-slate-50 hover:bg-slate-100 cursor-pointer">
                               <td className="p-3" colSpan={5} onClick={() => toggleConvocatoria(g.convocatoria.id)}>
                                 <div className="flex items-center justify-between">
