@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 
-const AEMET_API_KEY = process.env.AEMET_API_KEY || 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJwY2l2aWxAYm9ybXVqb3MubmV0IiwianRpIjoiODI3OTk0MTItMjE1NS00MDA0LWEyOWUtZjczYzZjMTE0M2I4IiwiaXNzIjoiQUVNRVQiLCJpYXQiOjE3NjcwMzYwODQsInVzZXJJZCI6IjgyNzk5NDEyLTIxNTUtNDAwNC1hMjllLWY3M2M2YzExNDNiOCIsInJvbGUiOiIifQ.AkoaqmfDjK9YI4pvzYet4xJwk3W7FL4v45Ced4eP7IQ'
+const AEMET_API_KEY = process.env.AEMET_API_KEY
 const MUNICIPIO_BORMUJOS = '41017'
 const AEMET_DOMINIO = 'and' // Andalucía
 
@@ -472,8 +474,12 @@ async function fetchOpenMeteo(): Promise<any> {
 }
 
 export async function GET() {
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.email) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+
   try {
-    // Intentar primero con AEMET
+    // Intentar primero con AEMET (solo si la API key está configurada)
+    if (!AEMET_API_KEY) throw new Error('AEMET_API_KEY no configurada')
     const datosAemet = await fetchAEMET()
     console.log('✅ Datos obtenidos de AEMET')
     return NextResponse.json(datosAemet)

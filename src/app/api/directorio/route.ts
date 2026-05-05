@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from "next/server"
-import { PrismaClient } from "@prisma/client"
-const prisma = new PrismaClient()
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth"
+import { prisma } from "@/lib/db"
 
 export async function GET(req: NextRequest) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.email) return NextResponse.json({ error: "No autorizado" }, { status: 401 })
+
   try {
     const { searchParams } = new URL(req.url)
     const busqueda = searchParams.get("busqueda") || ""
@@ -17,7 +21,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ categorias })
     }
 
-    const where: any = { activo: true }
+    const where: Record<string, unknown> = { activo: true }
     if (busqueda) {
       where.OR = [
         { nombre: { contains: busqueda, mode: "insensitive" } },
@@ -41,6 +45,9 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.email) return NextResponse.json({ error: "No autorizado" }, { status: 401 })
+
   try {
     const body = await req.json()
     const { tipo } = body
@@ -69,6 +76,9 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PUT(req: NextRequest) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.email) return NextResponse.json({ error: "No autorizado" }, { status: 401 })
+
   try {
     const body = await req.json()
     const { tipo, id } = body
@@ -95,6 +105,9 @@ export async function PUT(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.email) return NextResponse.json({ error: "No autorizado" }, { status: 401 })
+
   try {
     const { searchParams } = new URL(req.url)
     const id = searchParams.get("id")

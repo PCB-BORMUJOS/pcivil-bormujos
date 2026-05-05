@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { uploadToGoogleDrive } from '@/lib/google-drive'
 
-const CAJA_TICKETS_FOLDER_ID = process.env.CAJA_TICKETS_FOLDER_ID || '10X11xzEnPc75OdGBNZvZiiEfzP_3wj0h'
+const CAJA_TICKETS_FOLDER_ID = process.env.CAJA_TICKETS_FOLDER_ID
 
 export async function POST(request: NextRequest) {
     try {

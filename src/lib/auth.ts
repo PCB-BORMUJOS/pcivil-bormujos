@@ -16,21 +16,30 @@ export const authOptions: AuthOptions = {
         credentials: Record<"email" | "password", string> | undefined,
         _req: any
       ): Promise<User | null> {
-        const ip = _req?.headers?.["x-forwarded-for"]?.split(",")[0]?.trim() || _req?.headers?.["x-real-ip"] || null
+        const ip = _req?.headers?.["x-forwarded-for"]?.split(",")[0]?.trim() || _req?.headers?.["x-real-ip"] || 'unknown'
         if (!credentials?.email || !credentials?.password) {
           throw new Error('Email y contraseña requeridos')
         }
+
+        const rateCheck = checkRateLimit(ip)
+        if (!rateCheck.allowed) {
+          throw new Error(`Demasiados intentos fallidos. Inténtalo en ${rateCheck.minutosRestantes} minutos.`)
+        }
+
         const usuario = await prisma.usuario.findUnique({
           where: { email: credentials.email },
           include: { rol: true, servicio: true }
         })
         if (!usuario || !usuario.activo) {
+          registerFailedAttempt(ip)
           throw new Error('Usuario no encontrado o inactivo')
         }
         const passwordValid = await compare(credentials.password, usuario.password)
         if (!passwordValid) {
+          registerFailedAttempt(ip)
           throw new Error('Contraseña incorrecta')
         }
+        resetAttempts(ip)
         await prisma.usuario.update({
           where: { id: usuario.id },
           data: { lastLogin: new Date() }
