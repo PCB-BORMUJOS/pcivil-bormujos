@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
+import { registrarAudit, getUsuarioAudit } from '@/lib/audit'
 
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions)
@@ -71,6 +72,8 @@ export async function POST(request: NextRequest) {
         })
       }
     }
+    const _auditReg = getUsuarioAudit(session)
+    await registrarAudit({ accion: 'CREATE', entidad: 'RegistroPractica', entidadId: registro.id, descripcion: `Registro de práctica creado — turno: ${registro.turno}, resultado: ${registro.resultado}`, usuarioId: _auditReg.usuarioId, usuarioNombre: _auditReg.usuarioNombre, modulo: 'Prácticas' })
     return NextResponse.json({ registro })
   } catch (error) {
     console.error(error)
@@ -101,6 +104,8 @@ export async function PUT(request: NextRequest) {
         practica: { select: { titulo: true, numero: true } }
       }
     })
+    const _auditRegU = getUsuarioAudit(session)
+    await registrarAudit({ accion: 'UPDATE', entidad: 'RegistroPractica', entidadId: registro.id, descripcion: `Práctica ${registro.practica?.numero || ''} firmada por jefe: ${firmadoJefeNombre}`, usuarioId: _auditRegU.usuarioId, usuarioNombre: _auditRegU.usuarioNombre, modulo: 'Prácticas' })
     return NextResponse.json({ registro })
   } catch (error) {
     console.error(error)

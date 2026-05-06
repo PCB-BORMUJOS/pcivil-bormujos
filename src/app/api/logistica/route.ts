@@ -573,6 +573,8 @@ export async function POST(request: NextRequest) {
         include: { categoria: true }
       })
 
+      const _auditFam = getUsuarioAudit(session)
+      await registrarAudit({ accion: 'CREATE', entidad: 'FamiliaArticulo', entidadId: familia.id, descripcion: `Familia creada: ${familia.nombre}`, usuarioId: _auditFam.usuarioId, usuarioNombre: _auditFam.usuarioNombre, modulo: 'Logística' })
       return NextResponse.json({ success: true, familia })
     }
 
@@ -588,6 +590,8 @@ export async function POST(request: NextRequest) {
         data: { nombre, direccion, responsable, telefono }
       })
 
+      const _auditEdi = getUsuarioAudit(session)
+      await registrarAudit({ accion: 'CREATE', entidad: 'Edificio', entidadId: edificio.id, descripcion: `Edificio registrado: ${edificio.nombre}`, usuarioId: _auditEdi.usuarioId, usuarioNombre: _auditEdi.usuarioNombre, modulo: 'Logística' })
       return NextResponse.json({ success: true, edificio })
     }
 
@@ -613,6 +617,8 @@ export async function POST(request: NextRequest) {
         include: { edificio: true }
       })
 
+      const _auditECI = getUsuarioAudit(session)
+      await registrarAudit({ accion: 'CREATE', entidad: 'EquipoECI', entidadId: equipo.id, descripcion: `Equipo ECI registrado: ${equipo.tipo}${equipo.subtipo ? ' (' + equipo.subtipo + ')' : ''} en ${equipo.ubicacion}`, usuarioId: _auditECI.usuarioId, usuarioNombre: _auditECI.usuarioNombre, modulo: 'Logística' })
       return NextResponse.json({ success: true, equipo })
     }
 
@@ -720,6 +726,8 @@ export async function POST(request: NextRequest) {
           observaciones
         }
       })
+      const _auditRad = getUsuarioAudit(session)
+      await registrarAudit({ accion: 'CREATE', entidad: 'EquipoRadio', entidadId: equipo.id, descripcion: `Equipo de radio registrado: ${equipo.codigo} (${equipo.marca} ${equipo.modelo})`, usuarioId: _auditRad.usuarioId, usuarioNombre: _auditRad.usuarioNombre, modulo: 'Logística' })
       return NextResponse.json({ success: true, equipo })
     }
 
@@ -743,6 +751,8 @@ export async function POST(request: NextRequest) {
         }
       })
 
+      const _auditBot = getUsuarioAudit(session)
+      await registrarAudit({ accion: 'CREATE', entidad: 'Botiquin', entidadId: botiquin.id, descripcion: `Botiquín registrado: ${botiquin.codigo} — ${botiquin.nombre} en ${botiquin.ubicacionActual}`, usuarioId: _auditBot.usuarioId, usuarioNombre: _auditBot.usuarioNombre, modulo: 'Logística' })
       return NextResponse.json({ success: true, botiquin })
     }
 
@@ -786,6 +796,8 @@ export async function POST(request: NextRequest) {
         })
       ])
 
+      const _auditBI = getUsuarioAudit(session)
+      await registrarAudit({ accion: 'CREATE', entidad: 'BotiquinItem', entidadId: item.id, descripcion: `Item añadido al botiquín: ${item.nombreItem} (x${item.cantidadActual})`, usuarioId: _auditBI.usuarioId, usuarioNombre: _auditBI.usuarioNombre, modulo: 'Logística' })
       return NextResponse.json({ success: true, item })
     }
 
@@ -834,6 +846,8 @@ export async function POST(request: NextRequest) {
         }
       })
 
+      const _auditRev = getUsuarioAudit(session)
+      await registrarAudit({ accion: 'CREATE', entidad: 'RevisionBotiquin', entidadId: revision.id, descripcion: `Revisión de botiquín registrada — verificados: ${revision.itemsVerificados}, faltantes: ${revision.itemsFaltantes}, caducados: ${revision.itemsCaducados}`, usuarioId: _auditRev.usuarioId, usuarioNombre: _auditRev.usuarioNombre, modulo: 'Logística' })
       return NextResponse.json({ success: true, revision })
     }
 
@@ -966,6 +980,8 @@ export async function POST(request: NextRequest) {
         }
       })
 
+      const _auditMan = getUsuarioAudit(session)
+      await registrarAudit({ accion: 'CREATE', entidad: 'Manual', entidadId: manual.id, descripcion: `Manual subido: ${manual.titulo} (${manual.categoria})`, usuarioId: _auditMan.usuarioId, usuarioNombre: _auditMan.usuarioNombre, modulo: 'Logística' })
       return NextResponse.json({ manual })
     }
 
@@ -985,6 +1001,8 @@ export async function POST(request: NextRequest) {
           observaciones: observaciones || null,
         }
       })
+      const _auditMnt = getUsuarioAudit(session)
+      await registrarAudit({ accion: 'CREATE', entidad: 'MantenimientoEquipo', entidadId: mantenimiento.id, descripcion: `Mantenimiento registrado: ${mantenimiento.tipo} — ${mantenimiento.descripcion}`, usuarioId: _auditMnt.usuarioId, usuarioNombre: _auditMnt.usuarioNombre, modulo: 'Logística' })
       return NextResponse.json({ mantenimiento })
     }
 
@@ -1008,6 +1026,8 @@ export async function POST(request: NextRequest) {
         where: { id: equipoId },
         data: { ciclosCarga: { increment: 1 } }
       })
+      const _auditCC = getUsuarioAudit(session)
+      await registrarAudit({ accion: 'CREATE', entidad: 'CicloCarga', entidadId: ciclo.id, descripcion: `Ciclo de carga registrado para equipo ${equipoId}`, usuarioId: _auditCC.usuarioId, usuarioNombre: _auditCC.usuarioNombre, modulo: 'Logística' })
       return NextResponse.json({ ciclo })
     }
 
@@ -1054,6 +1074,8 @@ export async function PUT(request: NextRequest) {
         }
       })
 
+      const _auditArtU = getUsuarioAudit(session)
+      await registrarAudit({ accion: 'UPDATE', entidad: 'Inventario', entidadId: articulo.id, descripcion: `Artículo actualizado: ${articulo.nombre} — stock: ${articulo.stockActual}`, usuarioId: _auditArtU.usuarioId, usuarioNombre: _auditArtU.usuarioNombre, modulo: 'Logística' })
       return NextResponse.json({ success: true, articulo })
     }
 
@@ -1098,6 +1120,8 @@ export async function PUT(request: NextRequest) {
         include: { categoria: true }
       })
 
+      const _auditFamU = getUsuarioAudit(session)
+      await registrarAudit({ accion: 'UPDATE', entidad: 'FamiliaArticulo', entidadId: familia.id, descripcion: `Familia actualizada: ${familia.nombre}`, usuarioId: _auditFamU.usuarioId, usuarioNombre: _auditFamU.usuarioNombre, modulo: 'Logística' })
       return NextResponse.json({ success: true, familia })
     }
 
@@ -1110,6 +1134,8 @@ export async function PUT(request: NextRequest) {
         data: { nombre, direccion, responsable, telefono }
       })
 
+      const _auditEdiU = getUsuarioAudit(session)
+      await registrarAudit({ accion: 'UPDATE', entidad: 'Edificio', entidadId: edificio.id, descripcion: `Edificio actualizado: ${edificio.nombre}`, usuarioId: _auditEdiU.usuarioId, usuarioNombre: _auditEdiU.usuarioNombre, modulo: 'Logística' })
       return NextResponse.json({ success: true, edificio })
     }
 
@@ -1129,6 +1155,8 @@ export async function PUT(request: NextRequest) {
         },
         include: { edificio: true }
       })
+      const _auditECIU = getUsuarioAudit(session)
+      await registrarAudit({ accion: 'UPDATE', entidad: 'EquipoECI', entidadId: equipo.id, descripcion: `Equipo ECI actualizado: ${equipo.tipo}${equipo.subtipo ? ' (' + equipo.subtipo + ')' : ''} — estado: ${equipo.estado}`, usuarioId: _auditECIU.usuarioId, usuarioNombre: _auditECIU.usuarioNombre, modulo: 'Logística' })
       return NextResponse.json({ success: true, equipo })
     }
 
@@ -1198,6 +1226,8 @@ export async function PUT(request: NextRequest) {
         }
       })
 
+      const _auditDEAU = getUsuarioAudit(session)
+      await registrarAudit({ accion: 'UPDATE', entidad: 'DEA', entidadId: dea.id, descripcion: `DEA actualizado: ${dea.codigo} — estado: ${dea.estado}`, usuarioId: _auditDEAU.usuarioId, usuarioNombre: _auditDEAU.usuarioNombre, modulo: 'Logística' })
       return NextResponse.json({ success: true, dea })
     }
 
@@ -1242,6 +1272,8 @@ export async function PUT(request: NextRequest) {
           ...(radioCobertura !== undefined && { radioCobertura: radioCobertura ? parseFloat(radioCobertura) : null }),
         }
       })
+      const _auditRadU = getUsuarioAudit(session)
+      await registrarAudit({ accion: 'UPDATE', entidad: 'EquipoRadio', entidadId: equipo.id, descripcion: `Equipo de radio actualizado: ${equipo.codigo} — estado: ${equipo.estado}`, usuarioId: _auditRadU.usuarioId, usuarioNombre: _auditRadU.usuarioNombre, modulo: 'Logística' })
       return NextResponse.json({ success: true, equipo })
     }
 
@@ -1262,6 +1294,8 @@ export async function PUT(request: NextRequest) {
         }
       })
 
+      const _auditBotU = getUsuarioAudit(session)
+      await registrarAudit({ accion: 'UPDATE', entidad: 'Botiquin', entidadId: botiquin.id, descripcion: `Botiquín actualizado: ${botiquin.codigo} — estado: ${botiquin.estado}, ubicación: ${botiquin.ubicacionActual}`, usuarioId: _auditBotU.usuarioId, usuarioNombre: _auditBotU.usuarioNombre, modulo: 'Logística' })
       return NextResponse.json({ success: true, botiquin })
     }
 
@@ -1281,6 +1315,8 @@ export async function PUT(request: NextRequest) {
         }
       })
 
+      const _auditBIU = getUsuarioAudit(session)
+      await registrarAudit({ accion: 'UPDATE', entidad: 'BotiquinItem', entidadId: item.id, descripcion: `Item de botiquín actualizado: ${item.nombreItem} — cantidad: ${item.cantidadActual}`, usuarioId: _auditBIU.usuarioId, usuarioNombre: _auditBIU.usuarioNombre, modulo: 'Logística' })
       return NextResponse.json({ success: true, item })
     }
 
@@ -1350,6 +1386,8 @@ export async function DELETE(request: NextRequest) {
           data: { stockAsignado: { decrement: asignacion.cantidad } }
         })
       }
+      const _auditDevVest = getUsuarioAudit(session)
+      await registrarAudit({ accion: 'UNASSIGN', entidad: 'Vestuario', entidadId: asignacion.id, descripcion: `Devolución de vestuario: ${asignacion.tipoPrenda} (x${asignacion.cantidad})`, usuarioId: _auditDevVest.usuarioId, usuarioNombre: _auditDevVest.usuarioNombre, modulo: 'Logística' })
       return NextResponse.json({ success: true })
     }
 
@@ -1364,6 +1402,8 @@ export async function DELETE(request: NextRequest) {
         }, { status: 400 })
       }
       await prisma.familiaArticulo.delete({ where: { id } })
+      const _auditFamD = getUsuarioAudit(session)
+      await registrarAudit({ accion: 'DELETE', entidad: 'FamiliaArticulo', entidadId: id, descripcion: `Familia de artículos eliminada`, usuarioId: _auditFamD.usuarioId, usuarioNombre: _auditFamD.usuarioNombre, modulo: 'Logística' })
       return NextResponse.json({ success: true })
     }
 
@@ -1378,30 +1418,40 @@ export async function DELETE(request: NextRequest) {
         }, { status: 400 })
       }
       await prisma.edificio.delete({ where: { id } })
+      const _auditEdiD = getUsuarioAudit(session)
+      await registrarAudit({ accion: 'DELETE', entidad: 'Edificio', entidadId: id, descripcion: `Edificio eliminado`, usuarioId: _auditEdiD.usuarioId, usuarioNombre: _auditEdiD.usuarioNombre, modulo: 'Logística' })
       return NextResponse.json({ success: true })
     }
 
     // ===== EQUIPO ECI =====
     if (tipo === 'equipo-eci') {
       await prisma.equipoECI.delete({ where: { id } })
+      const _auditECID = getUsuarioAudit(session)
+      await registrarAudit({ accion: 'DELETE', entidad: 'EquipoECI', entidadId: id, descripcion: `Equipo ECI eliminado`, usuarioId: _auditECID.usuarioId, usuarioNombre: _auditECID.usuarioNombre, modulo: 'Logística' })
       return NextResponse.json({ success: true })
     }
 
     // ===== HIDRANTE =====
     if (tipo === 'hidrante') {
       await prisma.hidrante.delete({ where: { id } })
+      const _auditHidD = getUsuarioAudit(session)
+      await registrarAudit({ accion: 'DELETE', entidad: 'Hidrante', entidadId: id, descripcion: `Hidrante eliminado`, usuarioId: _auditHidD.usuarioId, usuarioNombre: _auditHidD.usuarioNombre, modulo: 'Logística' })
       return NextResponse.json({ success: true })
     }
 
     // ===== DEA =====
     if (tipo === 'dea') {
       await prisma.dEA.delete({ where: { id } })
+      const _auditDEAD = getUsuarioAudit(session)
+      await registrarAudit({ accion: 'DELETE', entidad: 'DEA', entidadId: id, descripcion: `DEA eliminado`, usuarioId: _auditDEAD.usuarioId, usuarioNombre: _auditDEAD.usuarioNombre, modulo: 'Logística' })
       return NextResponse.json({ success: true })
     }
 
     // ===== EQUIPO RADIO =====
     if (tipo === 'equipo-radio') {
       await prisma.equipoRadio.delete({ where: { id } })
+      const _auditRadD = getUsuarioAudit(session)
+      await registrarAudit({ accion: 'DELETE', entidad: 'EquipoRadio', entidadId: id, descripcion: `Equipo de radio eliminado`, usuarioId: _auditRadD.usuarioId, usuarioNombre: _auditRadD.usuarioNombre, modulo: 'Logística' })
       return NextResponse.json({ success: true })
     }
 
@@ -1417,6 +1467,8 @@ export async function DELETE(request: NextRequest) {
       }
       await prisma.botiquinItem.deleteMany({ where: { botiquinId: id } })
       await prisma.botiquin.delete({ where: { id } })
+      const _auditBotD = getUsuarioAudit(session)
+      await registrarAudit({ accion: 'DELETE', entidad: 'Botiquin', entidadId: id, descripcion: `Botiquín eliminado`, usuarioId: _auditBotD.usuarioId, usuarioNombre: _auditBotD.usuarioNombre, modulo: 'Logística' })
       return NextResponse.json({ success: true })
     }
 
@@ -1436,6 +1488,8 @@ export async function DELETE(request: NextRequest) {
           })
         ] : [])
       ])
+      const _auditBID = getUsuarioAudit(session)
+      await registrarAudit({ accion: 'DELETE', entidad: 'BotiquinItem', entidadId: id, descripcion: `Item de botiquín eliminado: ${item.nombreItem}`, usuarioId: _auditBID.usuarioId, usuarioNombre: _auditBID.usuarioNombre, modulo: 'Logística' })
       return NextResponse.json({ success: true })
     }
 

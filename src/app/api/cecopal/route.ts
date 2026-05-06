@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { PrismaClient } from '@prisma/client'
-const prisma = new PrismaClient()
+import { prisma } from '@/lib/db'
+import { registrarAudit, getUsuarioAudit } from '@/lib/audit'
 
 function getHoraActual(): string {
   return new Date().toLocaleTimeString('es-ES', { timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit' })
@@ -132,6 +132,8 @@ export async function POST(request: NextRequest) {
           operadorId: (session.user as any).id
         }
       })
+      const _auditCec = getUsuarioAudit(session)
+      await registrarAudit({ accion: 'CREATE', entidad: 'IncidenciaCecopal', entidadId: incidencia.id, descripcion: `Incidencia activada: ${incidencia.numero} — ${incidencia.tipoIncidencia} en ${incidencia.direccion}`, usuarioId: _auditCec.usuarioId, usuarioNombre: _auditCec.usuarioNombre, modulo: 'CECOPAL' })
       return NextResponse.json({ incidencia })
     }
     if (tipo === 'novedad-turno') {
@@ -148,6 +150,8 @@ export async function POST(request: NextRequest) {
           operadorId: (session.user as any).id
         }
       })
+      const _auditNov = getUsuarioAudit(session)
+      await registrarAudit({ accion: 'CREATE', entidad: 'NovedadTurno', entidadId: novedad.id, descripcion: `Novedad de turno registrada: ${novedad.numero}`, usuarioId: _auditNov.usuarioId, usuarioNombre: _auditNov.usuarioNombre, modulo: 'CECOPAL' })
       return NextResponse.json({ novedad })
     }
     return NextResponse.json({ error: 'Tipo no válido' }, { status: 400 })
@@ -180,6 +184,8 @@ export async function PUT(request: NextRequest) {
           parteId: body.parteId || null
         }
       })
+      const _auditRes = getUsuarioAudit(session)
+      await registrarAudit({ accion: 'UPDATE', entidad: 'IncidenciaCecopal', entidadId: incidencia.id, descripcion: `Incidencia resuelta: ${incidencia.numero}${incidencia.horaDisponible ? ' — disponible: ' + incidencia.horaDisponible : ''}`, usuarioId: _auditRes.usuarioId, usuarioNombre: _auditRes.usuarioNombre, modulo: 'CECOPAL' })
       return NextResponse.json({ incidencia })
     }
     if (tipo === 'actualizar') {
@@ -196,6 +202,8 @@ export async function PUT(request: NextRequest) {
           horaDisponible: body.horaDisponible,
         }
       })
+      const _auditAct = getUsuarioAudit(session)
+      await registrarAudit({ accion: 'UPDATE', entidad: 'IncidenciaCecopal', entidadId: incidencia.id, descripcion: `Incidencia actualizada: ${incidencia.numero}`, usuarioId: _auditAct.usuarioId, usuarioNombre: _auditAct.usuarioNombre, modulo: 'CECOPAL' })
       return NextResponse.json({ incidencia })
     }
     return NextResponse.json({ error: 'Tipo no válido' }, { status: 400 })

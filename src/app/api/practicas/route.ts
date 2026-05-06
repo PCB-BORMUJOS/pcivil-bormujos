@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
+import { registrarAudit, getUsuarioAudit } from '@/lib/audit'
 
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions)
@@ -53,6 +54,8 @@ export async function POST(request: NextRequest) {
       const familia = await prisma.familiaPractica.create({
         data: { nombre: body.nombre, slug, color: body.color || '#f97316', icono: body.icono || 'BookOpen', orden: body.orden || 0 }
       })
+      const _auditFP = getUsuarioAudit(session)
+      await registrarAudit({ accion: 'CREATE', entidad: 'FamiliaPractica', entidadId: familia.id, descripcion: `Familia de prácticas creada: ${familia.nombre}`, usuarioId: _auditFP.usuarioId, usuarioNombre: _auditFP.usuarioNombre, modulo: 'Prácticas' })
       return NextResponse.json({ familia })
     }
 
@@ -82,6 +85,8 @@ export async function POST(request: NextRequest) {
         youtubeUrl: body.youtubeUrl || null,
       }
     })
+    const _auditPrac = getUsuarioAudit(session)
+    await registrarAudit({ accion: 'CREATE', entidad: 'Practica', entidadId: practica.id, descripcion: `Práctica creada: ${practica.numero} — ${practica.titulo}`, usuarioId: _auditPrac.usuarioId, usuarioNombre: _auditPrac.usuarioNombre, modulo: 'Prácticas' })
     return NextResponse.json({ practica })
   } catch (error) {
     console.error(error)
@@ -101,6 +106,8 @@ export async function PUT(request: NextRequest) {
         where: { id: body.id },
         data: { nombre: body.nombre, color: body.color, icono: body.icono, orden: body.orden }
       })
+      const _auditFPU = getUsuarioAudit(session)
+      await registrarAudit({ accion: 'UPDATE', entidad: 'FamiliaPractica', entidadId: familia.id, descripcion: `Familia de prácticas actualizada: ${familia.nombre}`, usuarioId: _auditFPU.usuarioId, usuarioNombre: _auditFPU.usuarioNombre, modulo: 'Prácticas' })
       return NextResponse.json({ familia })
     }
 
@@ -133,6 +140,8 @@ export async function PUT(request: NextRequest) {
         activa: data.activa ?? true,
       }
     })
+    const _auditPracU = getUsuarioAudit(session)
+    await registrarAudit({ accion: 'UPDATE', entidad: 'Practica', entidadId: practica.id, descripcion: `Práctica actualizada: ${practica.numero} — ${practica.titulo}`, usuarioId: _auditPracU.usuarioId, usuarioNombre: _auditPracU.usuarioNombre, modulo: 'Prácticas' })
     return NextResponse.json({ practica })
   } catch (error) {
     console.error(error)
@@ -148,10 +157,13 @@ export async function DELETE(request: NextRequest) {
   const tipo = searchParams.get('tipo')
   if (!id) return NextResponse.json({ error: 'ID requerido' }, { status: 400 })
   try {
+    const _auditDel = getUsuarioAudit(session)
     if (tipo === 'familia') {
       await prisma.familiaPractica.update({ where: { id }, data: { activa: false } })
+      await registrarAudit({ accion: 'DELETE', entidad: 'FamiliaPractica', entidadId: id, descripcion: `Familia de prácticas desactivada`, usuarioId: _auditDel.usuarioId, usuarioNombre: _auditDel.usuarioNombre, modulo: 'Prácticas' })
     } else {
       await prisma.practica.update({ where: { id }, data: { activa: false } })
+      await registrarAudit({ accion: 'DELETE', entidad: 'Practica', entidadId: id, descripcion: `Práctica desactivada`, usuarioId: _auditDel.usuarioId, usuarioNombre: _auditDel.usuarioNombre, modulo: 'Prácticas' })
     }
     return NextResponse.json({ ok: true })
   } catch (error) {

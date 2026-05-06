@@ -241,6 +241,8 @@ export async function POST(request: NextRequest) {
           observaciones: observaciones || null,
         }
       })
+      const _auditRepo = getUsuarioAudit(session)
+      await registrarAudit({ accion: 'CREATE', entidad: 'Vehículo', entidadId: repostaje.vehiculoId, descripcion: `Repostaje registrado: ${repostaje.litros}L de ${repostaje.tipoCarburante || 'carburante'}${repostaje.costeTotal ? ' — ' + repostaje.costeTotal + '€' : ''}`, usuarioId: _auditRepo.usuarioId, usuarioNombre: _auditRepo.usuarioNombre, modulo: 'Vehículos' })
       return NextResponse.json({ repostaje })
     }
     if (tipo === 'fluido') {
@@ -261,6 +263,8 @@ export async function POST(request: NextRequest) {
           observaciones: observaciones || null,
         }
       })
+      const _auditFlu = getUsuarioAudit(session)
+      await registrarAudit({ accion: 'CREATE', entidad: 'Vehículo', entidadId: registro.vehiculoId, descripcion: `Registro de fluido: ${registro.tipoFluido} — ${registro.accion}${registro.cantidad ? ' ' + registro.cantidad + ' ' + (registro.unidad || '') : ''}`, usuarioId: _auditFlu.usuarioId, usuarioNombre: _auditFlu.usuarioNombre, modulo: 'Vehículos' })
       return NextResponse.json({ registro })
     }
 
@@ -419,6 +423,8 @@ export async function PUT(request: NextRequest) {
           gasolinera: gasolinera || null,
         }
       })
+      const _auditRepoU = getUsuarioAudit(session)
+      await registrarAudit({ accion: 'UPDATE', entidad: 'Vehículo', entidadId: repostaje.vehiculoId, descripcion: `Repostaje actualizado: ${repostaje.litros}L`, usuarioId: _auditRepoU.usuarioId, usuarioNombre: _auditRepoU.usuarioNombre, modulo: 'Vehículos' })
       return NextResponse.json({ repostaje })
     }
     return NextResponse.json({ error: 'Tipo de operación no válido' }, { status: 400 })
@@ -509,12 +515,18 @@ export async function DELETE(request: NextRequest) {
 
     // DELETE Repostaje
     if (tipo === 'repostaje') {
+      const rep = await prisma.repostajeVehiculo.findUnique({ where: { id } })
       await prisma.repostajeVehiculo.delete({ where: { id } })
+      const { usuarioId, usuarioNombre } = getUsuarioAudit(session)
+      await registrarAudit({ accion: 'DELETE', entidad: 'Vehículo', entidadId: rep?.vehiculoId || id, descripcion: `Repostaje eliminado`, usuarioId, usuarioNombre, modulo: 'Vehículos' })
       return NextResponse.json({ success: true })
     }
     // DELETE Fluido
     if (tipo === 'fluido') {
+      const flu = await prisma.registroFluidoVehiculo.findUnique({ where: { id } })
       await prisma.registroFluidoVehiculo.delete({ where: { id } })
+      const { usuarioId, usuarioNombre } = getUsuarioAudit(session)
+      await registrarAudit({ accion: 'DELETE', entidad: 'Vehículo', entidadId: flu?.vehiculoId || id, descripcion: `Registro de fluido eliminado: ${flu?.tipoFluido || ''}`, usuarioId, usuarioNombre, modulo: 'Vehículos' })
       return NextResponse.json({ success: true })
     }
     return NextResponse.json({ error: 'Tipo de operación no válido' }, { status: 400 })
