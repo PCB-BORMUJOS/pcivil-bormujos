@@ -105,7 +105,16 @@ export default function VehiculosPage() {
     setLoadingRecorrido(true)
     setRecorrido([])
     try {
-      const params = new URLSearchParams({ vehiculoId: filtroVehiculo, desde: fechaDesde, hasta: fechaHasta })
+      // Construir ISO con offset de zona horaria del navegador para precisión horaria
+      const tz = (() => {
+        const off = -new Date().getTimezoneOffset()
+        const h = Math.floor(Math.abs(off) / 60).toString().padStart(2, '0')
+        const m = (Math.abs(off) % 60).toString().padStart(2, '0')
+        return (off >= 0 ? '+' : '-') + h + ':' + m
+      })()
+      const desde = `${fechaDesde}T${horaInicio || '00:00'}:00${tz}`
+      const hasta = `${fechaHasta}T${horaFin || '23:59'}:59${tz}`
+      const params = new URLSearchParams({ vehiculoId: filtroVehiculo, desde, hasta })
       const res = await fetch('/api/vehiculos/ubicacion?' + params.toString())
       const data = await res.json()
       setRecorrido(data.puntos || [])
@@ -139,6 +148,8 @@ export default function VehiculosPage() {
   const [filtroVehiculo, setFiltroVehiculo] = useState('all')
   const [fechaDesde, setFechaDesde] = useState('')
   const [fechaHasta, setFechaHasta] = useState('')
+  const [horaInicio, setHoraInicio] = useState('')
+  const [horaFin, setHoraFin] = useState('')
   const [showDetalleVehiculo, setShowDetalleVehiculo] = useState(false)
   const [showEditarFicha, setShowEditarFicha] = useState(false)
   const [showNuevoArticulo, setShowNuevoArticulo] = useState(false)
@@ -477,19 +488,53 @@ export default function VehiculosPage() {
       {mainTab === 'localizacion' && (
         <div className="space-y-4">
           <div className="bg-white border border-slate-200 rounded-2xl p-5">
-            <div className="flex flex-wrap items-center gap-4">
-              <div><label className="block text-xs font-medium text-slate-500 mb-1">Vehículo</label><select value={filtroVehiculo} onChange={e => setFiltroVehiculo(e.target.value)} className="px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"><option value="all">Todos</option>{vehiculos.map(v => <option key={v.id} value={v.id}>{v.indicativo} - {v.matricula}</option>)}</select></div>
-              <div><label className="block text-xs font-medium text-slate-500 mb-1">Desde</label><input type="date" value={fechaDesde} onChange={e => setFechaDesde(e.target.value)} className="px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20" /></div>
-              <div><label className="block text-xs font-medium text-slate-500 mb-1">Hasta</label><input type="date" value={fechaHasta} onChange={e => setFechaHasta(e.target.value)} className="px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20" /></div>
-              <div className="flex items-end"><button onClick={verRecorrido} disabled={loadingRecorrido} className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 text-sm font-semibold transition-colors disabled:opacity-50"><Route className="w-4 h-4" />{loadingRecorrido ? "Cargando..." : "Ver Recorrido"}</button></div>
+            <div className="flex flex-wrap items-end gap-3">
+              <div>
+                <label className="block text-xs font-medium text-slate-500 mb-1">Vehículo</label>
+                <select value={filtroVehiculo} onChange={e => setFiltroVehiculo(e.target.value)} className="px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20">
+                  <option value="all">Todos</option>
+                  {vehiculos.map(v => <option key={v.id} value={v.id}>{v.indicativo} - {v.matricula}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-500 mb-1">Fecha inicio</label>
+                <input type="date" value={fechaDesde} onChange={e => setFechaDesde(e.target.value)} className="px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-500 mb-1">Hora inicio</label>
+                <input type="time" value={horaInicio} onChange={e => setHoraInicio(e.target.value)} placeholder="00:00" className="px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 w-32" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-500 mb-1">Fecha fin</label>
+                <input type="date" value={fechaHasta} onChange={e => setFechaHasta(e.target.value)} className="px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-500 mb-1">Hora fin</label>
+                <input type="time" value={horaFin} onChange={e => setHoraFin(e.target.value)} placeholder="23:59" className="px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 w-32" />
+              </div>
+              <button onClick={verRecorrido} disabled={loadingRecorrido} className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 text-sm font-semibold transition-colors disabled:opacity-50">
+                <Route className="w-4 h-4" />{loadingRecorrido ? "Cargando..." : "Ver Recorrido"}
+              </button>
+              {(horaInicio || horaFin) && (
+                <button onClick={() => { setHoraInicio(''); setHoraFin('') }} className="text-xs text-slate-400 hover:text-slate-600 transition-colors px-2 py-1">
+                  ✕ Limpiar horas
+                </button>
+              )}
             </div>
+            {(horaInicio || horaFin) && (
+              <p className="text-xs text-blue-600 mt-2">
+                Franja horaria activa: {horaInicio || '00:00'} → {horaFin || '23:59'}
+              </p>
+            )}
           </div>
           <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden" style={{ height: '650px' }}>
             <div className="flex items-center justify-between px-4 py-2 bg-slate-50 border-b border-slate-200">
               <div className="flex items-center gap-2">
                 <div className={`w-2 h-2 rounded-full ${ubicacionesGPS.length > 0 ? 'bg-green-500 animate-pulse' : 'bg-slate-300'}`}></div>
                 <span className="text-xs font-medium text-slate-600">
-                  {recorrido.length > 0 ? `Recorrido: ${recorrido.length} puntos` : 'GPS en tiempo real'}
+                  {recorrido.length > 0
+                    ? `Recorrido: ${recorrido.length} puntos${horaInicio || horaFin ? ` · ${horaInicio || '00:00'}–${horaFin || '23:59'}` : ''}`
+                    : 'GPS en tiempo real'}
                 </span>
               </div>
               <div className="flex items-center gap-3">

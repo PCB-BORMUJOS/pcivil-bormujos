@@ -60,8 +60,9 @@ export async function GET(req: NextRequest) {
     // Modo recorrido historico
     if (vehiculoId && desde && hasta) {
       const desdeDate = new Date(desde)
+      // Solo forzar fin de día si el cliente no especificó hora (string sin 'T')
       const hastaDate = new Date(hasta)
-      hastaDate.setHours(23, 59, 59, 999)
+      if (!hasta.includes('T')) hastaDate.setHours(23, 59, 59, 999)
 
       const where: any = {
         createdAt: { gte: desdeDate, lte: hastaDate }
