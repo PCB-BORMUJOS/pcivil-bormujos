@@ -1142,13 +1142,29 @@ export async function PUT(request: NextRequest) {
           codigo,
           tipo: tipoHidrante,
           ubicacion,
-          // CORRECCIÓN 4: Validación de tipos numéricos
           latitud: isValid(latitud) ? parseFloat(latitud) : null,
           longitud: isValid(longitud) ? parseFloat(longitud) : null,
           presion: isValid(presion) ? parseFloat(presion) : null,
           caudal: isValid(caudal) ? parseInt(caudal) : null,
           estado
         }
+      })
+
+      const detalles: string[] = []
+      if (caudal !== undefined && caudal !== null && caudal !== '') detalles.push(`caudal: ${caudal} l/min`)
+      if (presion !== undefined && presion !== null && presion !== '') detalles.push(`presión: ${presion} bar`)
+      if (estado) detalles.push(`estado: ${estado}`)
+      if (ubicacion) detalles.push(`ubicación: ${ubicacion}`)
+
+      const _auditUserHIDR = getUsuarioAudit(session)
+      await registrarAudit({
+        accion: 'UPDATE',
+        entidad: 'Hidrante',
+        entidadId: hidrante.id,
+        descripcion: `Hidrante actualizado: ${hidrante.codigo}${detalles.length ? ' — ' + detalles.join(', ') : ''}`,
+        usuarioId: _auditUserHIDR.usuarioId,
+        usuarioNombre: _auditUserHIDR.usuarioNombre,
+        modulo: 'Logística'
       })
 
       return NextResponse.json({ success: true, hidrante })
