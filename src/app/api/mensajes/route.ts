@@ -41,38 +41,120 @@ export async function GET(request: NextRequest) {
     const areaUsuario = usuario.fichaVoluntario?.areaAsignada?.toLowerCase()
     const areaSecundaria = usuario.fichaVoluntario?.areaSecundaria?.toLowerCase()
 
-    const condicionesArea: any[] = [
+    const condicionesGrupo: any[] = [
       { destinatarioGrupo: 'todos' },
       { destinatarioGrupo: 'rol:' + usuario.rol.nombre },
     ]
-    if (areaUsuario) condicionesArea.push({ destinatarioGrupo: 'area:' + areaUsuario })
-    if (areaSecundaria) condicionesArea.push({ destinatarioGrupo: 'area:' + areaSecundaria })
+    if (areaUsuario) condicionesGrupo.push({ destinatarioGrupo: 'area:' + areaUsuario })
+    if (areaSecundaria) condicionesGrupo.push({ destinatarioGrupo: 'area:' + areaSecundaria })
 
-    let where: any = {}
+    // Cargar estados personales del usuario para mensajes grupales
+    const estadosUsuario = await prisma.mensajeEstado.findMany({
+      where: { usuarioId: usuario.id }
+    })
+    const estadoMap = new Map(estadosUsuario.map(e => [e.mensajeId, e]))
+
+    let mensajes: any[] = []
+
     if (tipo === 'recibidos') {
-      where = { OR: [{ destinatarioId: usuario.id }, ...condicionesArea], archivado: false, mensajePadreId: null }
+      // Mensajes individuales dirigidos al usuario (sin archivar)
+      const individuales = await prisma.mensaje.findMany({
+        where: { destinatarioId: usuario.id, archivado: false, mensajePadreId: null },
+        include: {
+          remitente: { select: { id: true, nombre: true, apellidos: true, avatar: true } },
+          destinatario: { select: { id: true, nombre: true, apellidos: true } },
+          respuestas: { select: { id: true } }
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 100
+      })
+
+      // Mensajes grupales (sin tener en cuenta archivado del registro compartido)
+      const grupales = await prisma.mensaje.findMany({
+        where: { OR: condicionesGrupo, mensajePadreId: null },
+        include: {
+          remitente: { select: { id: true, nombre: true, apellidos: true, avatar: true } },
+          destinatario: { select: { id: true, nombre: true, apellidos: true } },
+          respuestas: { select: { id: true } }
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 100
+      })
+
+      // Filtrar grupales archivados POR ESTE USUARIO y fusionar estado personal
+      const grupalesFiltrados = grupales
+        .filter(m => {
+          const estado = estadoMap.get(m.id)
+          return !estado?.archivado
+        })
+        .map(m => {
+          const estado = estadoMap.get(m.id)
+          return { ...m, leido: estado?.leido ?? false, leidoEn: estado?.leidoEn ?? null }
+        })
+
+      const idsGrupales = new Set(grupalesFiltrados.map(m => m.id))
+      mensajes = [
+        ...individuales,
+        ...grupalesFiltrados.filter(m => !individuales.some(i => i.id === m.id))
+      ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+
+      // Contar no leídos: individuales sin leer + grupales sin estado leído
+      const noLeidosIndividuales = individuales.filter(m => !m.leido).length
+      const noLeidosGrupales = grupalesFiltrados.filter(m => !m.leido).length
+      const noLeidos = noLeidosIndividuales + noLeidosGrupales
+
+      return NextResponse.json({ mensajes, noLeidos, usuarioActualId: usuario.id })
+
     } else if (tipo === 'enviados') {
-      where = { remitenteId: usuario.id, archivado: false, mensajePadreId: null }
+      mensajes = await prisma.mensaje.findMany({
+        where: { remitenteId: usuario.id, archivado: false, mensajePadreId: null },
+        include: {
+          remitente: { select: { id: true, nombre: true, apellidos: true, avatar: true } },
+          destinatario: { select: { id: true, nombre: true, apellidos: true } },
+          respuestas: { select: { id: true } }
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 100
+      })
     } else if (tipo === 'archivados') {
-      where = { OR: [{ destinatarioId: usuario.id }, { remitenteId: usuario.id }], archivado: true, mensajePadreId: null }
+      // Individuales archivados
+      const individualesArchivados = await prisma.mensaje.findMany({
+        where: {
+          OR: [{ destinatarioId: usuario.id }, { remitenteId: usuario.id }],
+          archivado: true,
+          mensajePadreId: null
+        },
+        include: {
+          remitente: { select: { id: true, nombre: true, apellidos: true, avatar: true } },
+          destinatario: { select: { id: true, nombre: true, apellidos: true } },
+          respuestas: { select: { id: true } }
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 50
+      })
+
+      // Grupales archivados por este usuario
+      const idsArchivadosGrupales = estadosUsuario
+        .filter(e => e.archivado)
+        .map(e => e.mensajeId)
+
+      const grupalesArchivados = idsArchivadosGrupales.length > 0
+        ? await prisma.mensaje.findMany({
+            where: { id: { in: idsArchivadosGrupales }, mensajePadreId: null },
+            include: {
+              remitente: { select: { id: true, nombre: true, apellidos: true, avatar: true } },
+              destinatario: { select: { id: true, nombre: true, apellidos: true } },
+              respuestas: { select: { id: true } }
+            },
+            orderBy: { createdAt: 'desc' }
+          })
+        : []
+
+      mensajes = [...individualesArchivados, ...grupalesArchivados]
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     }
 
-    const mensajes = await prisma.mensaje.findMany({
-      where,
-      include: {
-        remitente: { select: { id: true, nombre: true, apellidos: true, avatar: true } },
-        destinatario: { select: { id: true, nombre: true, apellidos: true } },
-        respuestas: { select: { id: true } }
-      },
-      orderBy: { createdAt: 'desc' },
-      take: 100
-    })
-
-    const noLeidos = tipo === 'recibidos' ? await prisma.mensaje.count({
-      where: { OR: [{ destinatarioId: usuario.id }, ...condicionesArea], leido: false, archivado: false }
-    }) : 0
-
-    return NextResponse.json({ mensajes, noLeidos, usuarioActualId: usuario.id })
+    return NextResponse.json({ mensajes, noLeidos: 0, usuarioActualId: usuario.id })
   } catch (error) {
     console.error('Error GET /api/mensajes:', error)
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
@@ -186,17 +268,75 @@ export async function PUT(request: NextRequest) {
     const body = await request.json()
     const { mensajeId, accion } = body
 
+    // Verificar si el mensaje es grupal
+    const mensaje = await prisma.mensaje.findUnique({ where: { id: mensajeId } })
+    if (!mensaje) return NextResponse.json({ error: 'Mensaje no encontrado' }, { status: 404 })
+
+    const esGrupal = !!mensaje.destinatarioGrupo
+
     if (accion === 'marcarLeido') {
-      await prisma.mensaje.update({ where: { id: mensajeId }, data: { leido: true, leidoEn: new Date() } })
+      if (esGrupal) {
+        // Estado personal por usuario — no afecta a otros
+        await prisma.mensajeEstado.upsert({
+          where: { mensajeId_usuarioId: { mensajeId, usuarioId: usuario.id } },
+          create: { mensajeId, usuarioId: usuario.id, leido: true, leidoEn: new Date() },
+          update: { leido: true, leidoEn: new Date() }
+        })
+      } else {
+        // Individual: verificar que el usuario es el destinatario
+        if (mensaje.destinatarioId === usuario.id) {
+          await prisma.mensaje.update({ where: { id: mensajeId }, data: { leido: true, leidoEn: new Date() } })
+        }
+      }
     } else if (accion === 'archivar') {
-      await prisma.mensaje.update({ where: { id: mensajeId }, data: { archivado: true } })
+      if (esGrupal) {
+        await prisma.mensajeEstado.upsert({
+          where: { mensajeId_usuarioId: { mensajeId, usuarioId: usuario.id } },
+          create: { mensajeId, usuarioId: usuario.id, archivado: true },
+          update: { archivado: true }
+        })
+      } else {
+        if (mensaje.destinatarioId === usuario.id || mensaje.remitenteId === usuario.id) {
+          await prisma.mensaje.update({ where: { id: mensajeId }, data: { archivado: true } })
+        }
+      }
     } else if (accion === 'desarchivar') {
-      await prisma.mensaje.update({ where: { id: mensajeId }, data: { archivado: false } })
+      if (esGrupal) {
+        await prisma.mensajeEstado.upsert({
+          where: { mensajeId_usuarioId: { mensajeId, usuarioId: usuario.id } },
+          create: { mensajeId, usuarioId: usuario.id, archivado: false },
+          update: { archivado: false }
+        })
+      } else {
+        if (mensaje.destinatarioId === usuario.id || mensaje.remitenteId === usuario.id) {
+          await prisma.mensaje.update({ where: { id: mensajeId }, data: { archivado: false } })
+        }
+      }
     } else if (accion === 'marcarTodosLeidos') {
+      // Individuales sin leer
       await prisma.mensaje.updateMany({
-        where: { OR: [{ destinatarioId: usuario.id }, { destinatarioGrupo: 'todos' }], leido: false },
+        where: { destinatarioId: usuario.id, leido: false },
         data: { leido: true }
       })
+      // Grupales: obtener los mensajes grupales visibles y hacer upsert de estado
+      const grupales = await prisma.mensaje.findMany({
+        where: {
+          OR: [
+            { destinatarioGrupo: 'todos' },
+            { destinatarioGrupo: 'rol:' + (await prisma.usuario.findUnique({ where: { id: usuario.id }, include: { rol: true } }))?.rol.nombre }
+          ]
+        },
+        select: { id: true }
+      })
+      if (grupales.length > 0) {
+        await Promise.all(grupales.map(m =>
+          prisma.mensajeEstado.upsert({
+            where: { mensajeId_usuarioId: { mensajeId: m.id, usuarioId: usuario.id } },
+            create: { mensajeId: m.id, usuarioId: usuario.id, leido: true, leidoEn: new Date() },
+            update: { leido: true, leidoEn: new Date() }
+          })
+        ))
+      }
     }
 
     return NextResponse.json({ success: true })

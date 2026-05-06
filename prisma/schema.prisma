@@ -44,6 +44,7 @@ model Usuario {
   registrosPracticaResponsable RegistroPractica[] @relation("RegistroResponsable")
   mensajesRecibidos      Mensaje[]             @relation("MensajesRecibidos")
   mensajesEnviados       Mensaje[]             @relation("MensajesEnviados")
+  mensajeEstados         MensajeEstado[]
   movimientosStock       MovimientoStock[]
   notificaciones         Notificacion[]
   peticionesAprobadas    PeticionMaterial[]    @relation("PeticionesAprobadas")
@@ -599,14 +600,32 @@ model Mensaje {
   mensajePadreId    String?   @map("mensaje_padre_id")
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
-  destinatario      Usuario?  @relation("MensajesRecibidos", fields: [destinatarioId], references: [id])
-  mensajePadre      Mensaje?  @relation("HiloMensajes", fields: [mensajePadreId], references: [id])
-  respuestas        Mensaje[] @relation("HiloMensajes")
-  remitente         Usuario   @relation("MensajesEnviados", fields: [remitenteId], references: [id])
+  destinatario      Usuario?        @relation("MensajesRecibidos", fields: [destinatarioId], references: [id])
+  mensajePadre      Mensaje?        @relation("HiloMensajes", fields: [mensajePadreId], references: [id])
+  respuestas        Mensaje[]       @relation("HiloMensajes")
+  remitente         Usuario         @relation("MensajesEnviados", fields: [remitenteId], references: [id])
+  estados           MensajeEstado[]
 
   @@index([destinatarioId, leido])
   @@index([remitenteId])
   @@map("mensajes")
+}
+
+model MensajeEstado {
+  id        String    @id @default(cuid())
+  mensajeId String    @map("mensaje_id")
+  usuarioId String    @map("usuario_id")
+  leido     Boolean   @default(false)
+  leidoEn   DateTime? @map("leido_en")
+  archivado Boolean   @default(false)
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  mensaje   Mensaje   @relation(fields: [mensajeId], references: [id])
+  usuario   Usuario   @relation(fields: [usuarioId], references: [id])
+
+  @@unique([mensajeId, usuarioId])
+  @@index([usuarioId])
+  @@map("mensaje_estado")
 }
 
 model Edificio {
