@@ -321,45 +321,35 @@ function CalendarView({ eventos, guardias, resumenDisponibilidad, onEventClick, 
   onMesChange: (fecha: Date) => void;
   userRole: string;
 }) {
-  // Estado vacío en SSR para evitar hidratación incorrecta con hora del servidor
-  const [todayStr, setTodayStr] = useState('')
   const [currentDate, setCurrentDate] = useState<Date | null>(null)
   const [draggedEvent, setDraggedEvent] = useState<any>(null);
   const [dragOverDate, setDragOverDate] = useState<string | null>(null);
   const daysOfWeek = ['LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB', 'DOM'];
 
-  // Inicialización y actualización a medianoche solo en cliente
+  // Inicializar mes actual y forzar re-render a medianoche
+  const [, forceUpdate] = useState(0)
   useEffect(() => {
-    const actualizarHoy = () => {
-      const hoy = getTodaySpain()
-      setTodayStr(hoy)
-      setCurrentDate(prev => {
-        // Solo inicializar si aún no tiene valor; no sobreescribir si el usuario navegó de mes
-        if (prev !== null) return prev
-        const [y, m, d] = hoy.split('-').map(Number)
-        return new Date(y, m - 1, d)
-      })
-    }
+    const hoy = getTodaySpain()
+    const [y, m, d] = hoy.split('-').map(Number)
+    setCurrentDate(prev => prev !== null ? prev : new Date(y, m - 1, d))
 
-    actualizarHoy()
-
-    // Programar actualización en el próximo cambio de día (medianoche España)
+    // Actualizar a medianoche en España
     const programarMedianoche = () => {
-      const ahora = new Date()
-      const mañanaSpain = getTodaySpain().split('-').map(Number)
-      const medianoche = new Date(mañanaSpain[0], mañanaSpain[1] - 1, mañanaSpain[2] + 1)
-      const msHastaMedianoche = medianoche.getTime() - ahora.getTime()
-      return setTimeout(() => {
-        actualizarHoy()
-        programarMedianoche()
-      }, msHastaMedianoche + 500) // +500ms para asegurar que ya pasó medianoche
+      const partes = getTodaySpain().split('-').map(Number)
+      // Medianoche España: próximo día a las 00:00 hora local del navegador
+      // Calculamos milisegundos exactos hasta las 00:00 CEST/CET
+      const ahoraUtc = Date.now()
+      const medianoche = new Date(partes[0], partes[1] - 1, partes[2] + 1)
+      const ms = Math.max(medianoche.getTime() - ahoraUtc + 500, 60000)
+      return setTimeout(() => { forceUpdate(n => n + 1); programarMedianoche() }, ms)
     }
-
     const timer = programarMedianoche()
     return () => clearTimeout(timer)
   }, [])
 
-  const fecha = currentDate ?? new Date()
+  const hoyStr = getTodaySpain()
+  const [hy, hm, hd] = hoyStr.split('-').map(Number)
+  const fecha = currentDate ?? new Date(hy, hm - 1, hd)
   const year = fecha.getFullYear();
   const month = fecha.getMonth();
   const daysCount = new Date(year, month + 1, 0).getDate();
@@ -379,7 +369,7 @@ function CalendarView({ eventos, guardias, resumenDisponibilidad, onEventClick, 
     setCurrentDate(newDate);
     onMesChange(newDate);
   };
-  const isToday = (d: typeof days[0]) => !!todayStr && d.current && d.date === todayStr;
+  const isToday = (d: typeof days[0]) => d.current && d.date === hoyStr;
 
   const getEventosDelDia = (date: string) => {
     return eventos.filter(e => {
