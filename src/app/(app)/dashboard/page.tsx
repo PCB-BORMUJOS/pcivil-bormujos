@@ -321,17 +321,47 @@ function CalendarView({ eventos, guardias, resumenDisponibilidad, onEventClick, 
   onMesChange: (fecha: Date) => void;
   userRole: string;
 }) {
-  const [currentDate, setCurrentDate] = useState(() => {
-    const todaySpain = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' })
-    const [y, m, d] = todaySpain.split('-').map(Number)
-    return new Date(y, m - 1, d)
-  });
+  // Estado vacío en SSR para evitar hidratación incorrecta con hora del servidor
+  const [todayStr, setTodayStr] = useState('')
+  const [currentDate, setCurrentDate] = useState<Date | null>(null)
   const [draggedEvent, setDraggedEvent] = useState<any>(null);
   const [dragOverDate, setDragOverDate] = useState<string | null>(null);
   const daysOfWeek = ['LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB', 'DOM'];
 
-  const year = currentDate.getFullYear();
-  const month = currentDate.getMonth();
+  // Inicialización y actualización a medianoche solo en cliente
+  useEffect(() => {
+    const actualizarHoy = () => {
+      const hoy = getTodaySpain()
+      setTodayStr(hoy)
+      setCurrentDate(prev => {
+        // Solo inicializar si aún no tiene valor; no sobreescribir si el usuario navegó de mes
+        if (prev !== null) return prev
+        const [y, m, d] = hoy.split('-').map(Number)
+        return new Date(y, m - 1, d)
+      })
+    }
+
+    actualizarHoy()
+
+    // Programar actualización en el próximo cambio de día (medianoche España)
+    const programarMedianoche = () => {
+      const ahora = new Date()
+      const mañanaSpain = getTodaySpain().split('-').map(Number)
+      const medianoche = new Date(mañanaSpain[0], mañanaSpain[1] - 1, mañanaSpain[2] + 1)
+      const msHastaMedianoche = medianoche.getTime() - ahora.getTime()
+      return setTimeout(() => {
+        actualizarHoy()
+        programarMedianoche()
+      }, msHastaMedianoche + 500) // +500ms para asegurar que ya pasó medianoche
+    }
+
+    const timer = programarMedianoche()
+    return () => clearTimeout(timer)
+  }, [])
+
+  const fecha = currentDate ?? new Date()
+  const year = fecha.getFullYear();
+  const month = fecha.getMonth();
   const daysCount = new Date(year, month + 1, 0).getDate();
   const firstDay = new Date(year, month, 1).getDay();
   const firstDayIndex = firstDay === 0 ? 6 : firstDay - 1;
@@ -343,14 +373,13 @@ function CalendarView({ eventos, guardias, resumenDisponibilidad, onEventClick, 
     days.push({ num: i, date, current: true });
   }
 
-  const monthName = currentDate.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+  const monthName = fecha.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
   const changeMonth = (dir: 'prev' | 'next') => {
     const newDate = new Date(year, month + (dir === 'next' ? 1 : -1), 1);
     setCurrentDate(newDate);
     onMesChange(newDate);
   };
-  const todayStr = getTodaySpain(); // YYYY-MM-DD Spain timezone
-  const isToday = (d: typeof days[0]) => d.current && d.date === todayStr;
+  const isToday = (d: typeof days[0]) => !!todayStr && d.current && d.date === todayStr;
 
   const getEventosDelDia = (date: string) => {
     return eventos.filter(e => {
