@@ -268,6 +268,33 @@ export async function PUT(request: NextRequest) {
     const body = await request.json()
     const { mensajeId, accion } = body
 
+    if (accion === 'marcarTodosLeidos') {
+      await prisma.mensaje.updateMany({
+        where: { destinatarioId: usuario.id, leido: false },
+        data: { leido: true }
+      })
+      const usuarioConRol = await prisma.usuario.findUnique({ where: { id: usuario.id }, include: { rol: true } })
+      const grupales = await prisma.mensaje.findMany({
+        where: {
+          OR: [
+            { destinatarioGrupo: 'todos' },
+            { destinatarioGrupo: 'rol:' + usuarioConRol?.rol.nombre }
+          ]
+        },
+        select: { id: true }
+      })
+      if (grupales.length > 0) {
+        await Promise.all(grupales.map(m =>
+          prisma.mensajeEstado.upsert({
+            where: { mensajeId_usuarioId: { mensajeId: m.id, usuarioId: usuario.id } },
+            create: { mensajeId: m.id, usuarioId: usuario.id, leido: true, leidoEn: new Date() },
+            update: { leido: true, leidoEn: new Date() }
+          })
+        ))
+      }
+      return NextResponse.json({ success: true })
+    }
+
     // Verificar si el mensaje es grupal
     const mensaje = await prisma.mensaje.findUnique({ where: { id: mensajeId } })
     if (!mensaje) return NextResponse.json({ error: 'Mensaje no encontrado' }, { status: 404 })
