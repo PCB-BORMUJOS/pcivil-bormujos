@@ -3,97 +3,82 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 
+async function getUsuario() {
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.email) return null
+  return prisma.usuario.findUnique({ where: { email: session.user.email } })
+}
+
 // GET - Obtener notificaciones del usuario
 export async function GET(request: NextRequest) {
-  const session = await getServerSession(authOptions)
-  if (!session) {
-    return new Response(JSON.stringify({ error: 'No autorizado' }), { status: 401 })
-  }
-
   try {
-    const session = await getServerSession()
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
-    }
-
-    const usuario = await prisma.usuario.findUnique({
-      where: { email: session.user.email }
-    })
-
-    if (!usuario) {
-      return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
-    }
+    const usuario = await getUsuario()
+    if (!usuario) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
     const { searchParams } = new URL(request.url)
     const soloNoLeidas = searchParams.get('noLeidas') === 'true'
     const limite = parseInt(searchParams.get('limite') || '20')
 
     const where: any = { usuarioId: usuario.id }
-    if (soloNoLeidas) {
-      where.leida = false
-    }
+    if (soloNoLeidas) where.leida = false
 
-    const notificaciones = await prisma.notificacion.findMany({
-      where,
-      include: {
-        peticion: {
-          select: { numero: true, nombreArticulo: true, estado: true }
-        }
-      },
-      orderBy: { createdAt: 'desc' },
-      take: limite
-    })
-
-    const noLeidas = await prisma.notificacion.count({
-      where: { usuarioId: usuario.id, leida: false }
-    })
+    const [notificaciones, noLeidas] = await Promise.all([
+      prisma.notificacion.findMany({
+        where,
+        include: { peticion: { select: { numero: true, nombreArticulo: true, estado: true } } },
+        orderBy: { createdAt: 'desc' },
+        take: limite,
+      }),
+      prisma.notificacion.count({ where: { usuarioId: usuario.id, leida: false } }),
+    ])
 
     return NextResponse.json({ notificaciones, noLeidas })
   } catch (error) {
-    console.error('Error en GET /api/notificaciones:', error)
+    console.error('Error GET /api/notificaciones:', error)
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
   }
 }
 
-// PUT - Marcar notificaciones como leídas
+// PUT - Marcar como leídas (individual o todas)
 export async function PUT(request: NextRequest) {
-  const session = await getServerSession(authOptions)
-  if (!session) {
-    return new Response(JSON.stringify({ error: 'No autorizado' }), { status: 401 })
-  }
-
   try {
-    const session = await getServerSession()
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
-    }
+    const usuario = await getUsuario()
+    if (!usuario) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
-    const usuario = await prisma.usuario.findUnique({
-      where: { email: session.user.email }
-    })
-
-    if (!usuario) {
-      return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
-    }
-
-    const body = await request.json()
-    const { notificacionId, marcarTodas } = body
+    const { notificacionId, marcarTodas } = await request.json()
 
     if (marcarTodas) {
       await prisma.notificacion.updateMany({
         where: { usuarioId: usuario.id, leida: false },
-        data: { leida: true }
+        data: { leida: true },
       })
     } else if (notificacionId) {
       await prisma.notificacion.update({
         where: { id: notificacionId, usuarioId: usuario.id },
-        data: { leida: true }
+        data: { leida: true },
       })
     }
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('Error en PUT /api/notificaciones:', error)
+    console.error('Error PUT /api/notificaciones:', error)
+    return NextResponse.json({ error: 'Error interno' }, { status: 500 })
+  }
+}
+
+// DELETE - Borrar todas las notificaciones leídas del usuario
+export async function DELETE() {
+  try {
+    const usuario = await getUsuario()
+    if (!usuario) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+
+    const { count } = await prisma.notificacion.deleteMany({
+      where: { usuarioId: usuario.id, leida: true },
+    })
+
+    return NextResponse.json({ success: true, eliminadas: count })
+  } catch (error) {
+    console.error('Error DELETE /api/notificaciones:', error)
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
   }
 }

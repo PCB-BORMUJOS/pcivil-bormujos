@@ -1,6 +1,6 @@
 'use client'
 
-import { Bell, Search, ChevronDown, Settings, User, LogOut, MessageSquare, HelpCircle, Package, ShoppingCart, CheckCircle, AlertTriangle, X, Send, Users, Mail } from 'lucide-react'
+import { Bell, Search, ChevronDown, Settings, User, LogOut, MessageSquare, HelpCircle, Package, ShoppingCart, CheckCircle, AlertTriangle, X, Send, Users, Mail, CheckCheck, Trash2 } from 'lucide-react'
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useSession, signOut } from 'next-auth/react'
 import Link from 'next/link'
@@ -203,6 +203,29 @@ export default function Header({
         setShowNotifications(false)
         window.location.href = enlace
       }
+    } catch (error) {
+      console.error('Error:', error)
+    }
+  }
+
+  const marcarTodasLeidas = async () => {
+    try {
+      await fetch('/api/notificaciones', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ marcarTodas: true }),
+      })
+      setNotificaciones(prev => prev.map(n => ({ ...n, leida: true })))
+      setNotificacionesNoLeidas(0)
+    } catch (error) {
+      console.error('Error:', error)
+    }
+  }
+
+  const borrarNotifsLeidas = async () => {
+    try {
+      await fetch('/api/notificaciones', { method: 'DELETE' })
+      setNotificaciones(prev => prev.filter(n => !n.leida))
     } catch (error) {
       console.error('Error:', error)
     }
@@ -466,10 +489,27 @@ export default function Header({
                   <div className="fixed inset-0 z-40 sm:hidden" onClick={() => setShowNotifications(false)} />
                   <div className="fixed inset-x-2 top-16 z-50 sm:absolute sm:inset-auto sm:right-0 sm:top-auto sm:mt-2 sm:w-96 bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
                     <div className="px-4 py-3 bg-gradient-to-r from-slate-50 to-slate-100 border-b border-slate-200">
-                      <div className="flex items-center justify-between">
-                        <h3 className="font-bold text-slate-800">Notificaciones</h3>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-slate-500">{notificacionesNoLeidas} sin leer</span>
+                      <div className="flex items-center justify-between gap-2">
+                        <h3 className="font-bold text-slate-800 flex-shrink-0">Notificaciones</h3>
+                        <div className="flex items-center gap-1.5">
+                          {notificacionesNoLeidas > 0 && (
+                            <button
+                              onClick={marcarTodasLeidas}
+                              className="flex items-center gap-1 text-[11px] font-semibold text-orange-600 hover:text-orange-700 px-2 py-1 rounded-lg hover:bg-orange-50 transition-colors"
+                              title="Marcar todas como leídas"
+                            >
+                              <CheckCheck size={12} />Leer todas
+                            </button>
+                          )}
+                          {notificaciones.some(n => n.leida) && (
+                            <button
+                              onClick={borrarNotifsLeidas}
+                              className="flex items-center gap-1 text-[11px] font-semibold text-slate-400 hover:text-red-500 px-2 py-1 rounded-lg hover:bg-red-50 transition-colors"
+                              title="Borrar notificaciones leídas"
+                            >
+                              <Trash2 size={12} />Borrar leídas
+                            </button>
+                          )}
                           <button onClick={() => setShowNotifications(false)} className="p-1 text-slate-400 hover:text-slate-600 sm:hidden">
                             <X size={18} />
                           </button>
