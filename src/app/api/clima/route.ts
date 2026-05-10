@@ -181,9 +181,8 @@ async function fetchAemetAlertas(): Promise<any[]> {
   try {
     // Primero verificar si la API key funciona consultando el estado
     const testResponse = await fetch(
-      `https://opendata.aemet.es/opendata/api/prediccion/especifica/municipio/diaria/${MUNICIPIO_BORMUJOS}`,
-      { 
-        headers: { 'api_key': AEMET_API_KEY },
+      `https://opendata.aemet.es/opendata/api/prediccion/especifica/municipio/diaria/${MUNICIPIO_BORMUJOS}?api_key=${AEMET_API_KEY}`,
+      {
         signal: controller.signal,
         cache: 'no-store'
       }
@@ -202,9 +201,8 @@ async function fetchAemetAlertas(): Promise<any[]> {
     
     try {
       const response = await fetch(
-        `https://opendata.aemet.es/opendata/api/prediccion/aviso/dominio/geografico/${AEMET_DOMINIO}`,
-        { 
-          headers: { 'api_key': AEMET_API_KEY },
+        `https://opendata.aemet.es/opendata/api/prediccion/aviso/dominio/geografico/${AEMET_DOMINIO}?api_key=${AEMET_API_KEY}`,
+        {
           signal: controller2.signal,
           cache: 'no-store'
         }
@@ -295,9 +293,8 @@ async function fetchAEMET(): Promise<any> {
   
   try {
     const response = await fetch(
-      `https://opendata.aemet.es/opendata/api/prediccion/especifica/municipio/diaria/${MUNICIPIO_BORMUJOS}`,
-      { 
-        headers: { 'api_key': AEMET_API_KEY },
+      `https://opendata.aemet.es/opendata/api/prediccion/especifica/municipio/diaria/${MUNICIPIO_BORMUJOS}?api_key=${AEMET_API_KEY}`,
+      {
         signal: controller.signal,
         cache: 'no-store'
       }
@@ -315,9 +312,6 @@ async function fetchAEMET(): Promise<any> {
     if (!prediccion || !prediccion[0]) {
       throw new Error('AEMET: Sin datos de predicción')
     }
-    
-    // Obtener alertas en paralelo
-    const alertasPromise = fetchAemetAlertas()
     
     const dias = prediccion[0].prediccion.dia
     const hoyFecha = new Date()
