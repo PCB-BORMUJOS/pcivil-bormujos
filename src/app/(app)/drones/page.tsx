@@ -1,5 +1,5 @@
 'use client'
-import DOMPurify from 'isomorphic-dompurify'
+import DOMPurify from 'dompurify'
 import { TbDrone as Drone } from 'react-icons/tb'
 import { usePermisos } from '@/lib/permisos'
 import React from 'react'

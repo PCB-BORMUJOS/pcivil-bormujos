@@ -28,7 +28,7 @@ export default function TrackingPage() {
           longitud: longitude,
           velocidad: speed !== null ? Math.round(speed * 3.6 * 10) / 10 : null,
           precision: accuracy,
-          token: process.env.NEXT_PUBLIC_TRACKING_TOKEN || 'pcb-gps-2026',
+          token: process.env.NEXT_PUBLIC_TRACKING_TOKEN,
         }),
       })
       if (res.ok) {

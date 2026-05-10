@@ -2,10 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { registrarAudit, getUsuarioAudit } from '@/lib/audit'
-import { PrismaClient } from '@prisma/client'
+import { prisma } from '@/lib/db'
 import { put, del } from '@vercel/blob'
-
-const prisma = new PrismaClient()
 
 // GET - Obtener vehículos, documentos o mantenimientos
 export async function GET(request: NextRequest) {

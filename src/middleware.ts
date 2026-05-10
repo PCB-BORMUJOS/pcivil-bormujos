@@ -41,6 +41,8 @@ export async function middleware(request: NextRequest) {
     '/presupuesto',
     '/drones',
     '/practicas',
+    '/cecopal',
+    '/megacode',
   ].some(route => pathname.startsWith(route))
 
   if (!token && isProtectedRoute) {
@@ -89,6 +91,8 @@ export const config = {
     '/presupuesto/:path*',
     '/drones/:path*',
     '/practicas/:path*',
+    '/cecopal/:path*',
+    '/megacode/:path*',
     '/login',
   ],
 }
