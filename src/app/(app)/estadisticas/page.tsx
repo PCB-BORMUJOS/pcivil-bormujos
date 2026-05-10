@@ -6,11 +6,12 @@ import {
   Legend, ResponsiveContainer, ComposedChart
 } from 'recharts'
 import {
-  BarChart2, Users, Calendar, Clock, TrendingUp, Award, Car,
+  BarChart2, Users, Calendar, Clock, TrendingUp,
   Package, FileText, RefreshCw, AlertTriangle, Activity, Truck,
   ShoppingCart, ArrowUpDown, DollarSign, Target, CheckCircle2,
-  MapPin, Gauge, Wrench, GraduationCap
-, ClipboardList } from 'lucide-react'
+  MapPin, Gauge, Wrench, GraduationCap, ClipboardList,
+  Fuel, Route, Plane, Shield
+} from 'lucide-react'
 
 const TABS = [
   { id: 'personal',  label: 'Personal',    icon: Users },
@@ -18,13 +19,15 @@ const TABS = [
   { id: 'formacion', label: 'Formación',   icon: GraduationCap },
   { id: 'logistica', label: 'Logística',   icon: Package },
   { id: 'vehiculos', label: 'Vehículos',   icon: Truck },
+  { id: 'drones',    label: 'Drones',      icon: Plane },
   { id: 'economico', label: 'Económico',   icon: DollarSign },
   { id: 'practicas', label: 'Prácticas',   icon: ClipboardList },
 ]
+
 const PALETTE = {
   indigo:'#4f46e5', blue:'#2563eb', teal:'#0d9488', green:'#16a34a',
   amber:'#d97706', orange:'#ea580c', red:'#dc2626', purple:'#7c3aed',
-  slate:'#475569', pink:'#db2777',
+  slate:'#475569', pink:'#db2777', cyan:'#0891b2', lime:'#65a30d',
 }
 const CHART_COLORS = Object.values(PALETTE)
 const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
@@ -32,24 +35,25 @@ const now = new Date()
 const currentYear = now.getFullYear()
 const YEARS = [currentYear, currentYear - 1, currentYear - 2]
 
-const fmtEur = (n: any) =>
-  (Number(n)||0).toLocaleString('es-ES',{style:'currency',currency:'EUR',maximumFractionDigits:0})
-const fmtKm = (n: any) => `${(Number(n)||0).toLocaleString('es-ES')} km`
-const fmtNum = (n: any) => (Number(n)||0).toLocaleString('es-ES')
-const fmtDate = (d: any) =>
-  d ? new Date(d).toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit',year:'numeric'}) : '—'
+const fmtEur  = (n: any) => (Number(n)||0).toLocaleString('es-ES',{style:'currency',currency:'EUR',maximumFractionDigits:0})
+const fmtKm   = (n: any) => `${(Number(n)||0).toLocaleString('es-ES')} km`
+const fmtNum  = (n: any) => (Number(n)||0).toLocaleString('es-ES')
+const fmtDate = (d: any) => d ? new Date(d).toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit',year:'numeric'}) : '—'
+const fmtL    = (n: any) => `${(Number(n)||0).toLocaleString('es-ES',{maximumFractionDigits:1})} L`
 
 function KpiCard({ label, value, sub, color='indigo', icon: Icon }: any) {
   const cm: Record<string,{bg:string;ring:string}> = {
-    indigo:{bg:'bg-indigo-600',ring:'ring-indigo-100'},
-    blue:  {bg:'bg-blue-600',  ring:'ring-blue-100'},
-    green: {bg:'bg-green-600', ring:'ring-green-100'},
-    amber: {bg:'bg-amber-500', ring:'ring-amber-100'},
-    red:   {bg:'bg-red-600',   ring:'ring-red-100'},
-    orange:{bg:'bg-orange-500',ring:'ring-orange-100'},
-    teal:  {bg:'bg-teal-600',  ring:'ring-teal-100'},
-    purple:{bg:'bg-purple-600',ring:'ring-purple-100'},
-    slate: {bg:'bg-slate-600', ring:'ring-slate-100'},
+    indigo:{bg:'bg-indigo-600',  ring:'ring-indigo-100'},
+    blue:  {bg:'bg-blue-600',    ring:'ring-blue-100'},
+    green: {bg:'bg-green-600',   ring:'ring-green-100'},
+    amber: {bg:'bg-amber-500',   ring:'ring-amber-100'},
+    red:   {bg:'bg-red-600',     ring:'ring-red-100'},
+    orange:{bg:'bg-orange-500',  ring:'ring-orange-100'},
+    teal:  {bg:'bg-teal-600',    ring:'ring-teal-100'},
+    purple:{bg:'bg-purple-600',  ring:'ring-purple-100'},
+    slate: {bg:'bg-slate-600',   ring:'ring-slate-100'},
+    cyan:  {bg:'bg-cyan-600',    ring:'ring-cyan-100'},
+    lime:  {bg:'bg-lime-600',    ring:'ring-lime-100'},
   }
   const c = cm[color] || cm.indigo
   return (
@@ -76,12 +80,14 @@ function Panel({ title, children, className='' }: any) {
 function Badge({ label, variant='default' }: any) {
   const v: Record<string,string> = {
     default:'bg-slate-100 text-slate-600',
-    green:'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200',
-    amber:'bg-amber-50 text-amber-700 ring-1 ring-amber-200',
-    red:'bg-red-50 text-red-700 ring-1 ring-red-200',
-    blue:'bg-blue-50 text-blue-700 ring-1 ring-blue-200',
-    indigo:'bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200',
-    purple:'bg-purple-50 text-purple-700 ring-1 ring-purple-200',
+    green:  'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200',
+    amber:  'bg-amber-50 text-amber-700 ring-1 ring-amber-200',
+    red:    'bg-red-50 text-red-700 ring-1 ring-red-200',
+    blue:   'bg-blue-50 text-blue-700 ring-1 ring-blue-200',
+    indigo: 'bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200',
+    purple: 'bg-purple-50 text-purple-700 ring-1 ring-purple-200',
+    orange: 'bg-orange-50 text-orange-700 ring-1 ring-orange-200',
+    teal:   'bg-teal-50 text-teal-700 ring-1 ring-teal-200',
   }
   return <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold ${v[variant]||v.default}`}>{label}</span>
 }
@@ -172,57 +178,92 @@ export default function EstadisticasPage() {
 
   useEffect(()=>{
     if (tab !== 'practicas') return
-    const cargarPracticas = async () => {
+    const cargar = async () => {
       try {
         const res = await fetch('/api/estadisticas/practicas')
-        const data = await res.json()
-        setStatsPracticas(data)
+        setStatsPracticas(await res.json())
       } catch(e) { console.error(e) }
     }
-    cargarPracticas()
+    cargar()
   },[tab])
 
-  const resumen          = data.resumen              || {}
-  const guardiasPorMes   = (data.guardiasPorMes      || []).map((g:any,i:number)=>({...g,mes:MESES[i]??g.mes}))
-  const dietasPorMes     = (data.dietasPorMes        || []).map((d:any,i:number)=>({...d,mes:MESES[i]??d.mes}))
-  const eventosPorMes    = (data.eventosPorMes        || []).map((e:any,i:number)=>({...e,mes:MESES[i]??e.mes}))
-  const cajaPorMes       = (data.cajaPorMes           || []).map((c:any,i:number)=>({...c,mes:MESES[i]??c.mes}))
-  const peticionesPorMes = (data.peticionesPorMes     || []).map((p:any,i:number)=>({...p,mes:MESES[i]??p.mes}))
-  const statsVoluntarios: any[] = data.statsVoluntarios || []
-  const statsPorArea: any[]     = data.statsPorArea     || []
-  const voluntarios: any[]      = data.todosVoluntarios  || []
-  const eventos: any[]          = data.eventosRaw        || []
+  // ── Extracción de datos ───────────────────────────────────────────────────
+  const resumen           = data.resumen              || {}
+  const guardiasPorMes    = (data.guardiasPorMes      || []).map((g:any,i:number)=>({...g,mes:MESES[i]??g.mes}))
+  const dietasPorMes      = (data.dietasPorMes        || []).map((d:any,i:number)=>({...d,mes:MESES[i]??d.mes}))
+  const eventosPorMes     = (data.eventosPorMes       || []).map((e:any,i:number)=>({...e,mes:MESES[i]??e.mes}))
+  const cajaPorMes        = (data.cajaPorMes          || []).map((c:any,i:number)=>({...c,mes:MESES[i]??c.mes}))
+  const peticionesPorMes  = (data.peticionesPorMes    || []).map((p:any,i:number)=>({...p,mes:MESES[i]??p.mes}))
+  const asignacionesPorMes= (data.asignacionesPorMes  || []).map((a:any,i:number)=>({...a,mes:MESES[i]??a.mes}))
+  const combustiblePorMes = (data.combustiblePorMes   || []).map((c:any,i:number)=>({...c,mes:MESES[i]??c.mes}))
+  const cecopalPorMes     = (data.cecopalPorMes       || []).map((c:any,i:number)=>({...c,mes:MESES[i]??c.mes}))
+  const vuelosPorMes      = (data.vuelosPorMes        || []).map((v:any,i:number)=>({...v,mes:MESES[i]??v.mes}))
+  const mantPorMes        = (data.statsVehiculos?.mantenimientoPorMes||[]).map((m:any,i:number)=>({...m,mes:MESES[i]??m.mes}))
+
+  const statsVoluntarios: any[] = data.statsVoluntarios  || []
+  const statsPorArea: any[]     = data.statsPorArea      || []
+  const voluntarios: any[]      = data.todosVoluntarios   || []
+  const eventos: any[]          = data.eventosRaw         || []
   const formaciones: any[]      = data.statsFormacion?.lista || []
   const vehiculos: any[]        = data.statsVehiculos?.lista || []
+  const statsVehiculosExt: any[]= data.statsVehiculosExt  || []
+  const mantPorTipo: any[]      = data.mantPorTipo        || []
+  const asignacionesRaw: any[]  = data.asignacionesRaw    || []
   const peticionesLog: any[]    = data.peticionesLog      || []
   const movimientosCaja: any[]  = data.movimientosCaja    || []
   const partidas: any[]         = data.partidas           || []
   const partesPSI: any[]        = data.partesPSI          || []
-  const mantPorMes = (data.statsVehiculos?.mantenimientoPorMes||[]).map((m:any,i:number)=>({...m,mes:MESES[i]??m.mes}))
+  const statsPilotos: any[]     = data.statsPilotos       || []
+  const totalLitros: number     = data.totalLitros        || 0
+  const totalCosteCombustible: number = data.totalCosteCombustible || 0
 
-  const totalHoras = resumen.totalHoras || 0
-  const volActivos = statsVoluntarios.filter((v:any)=>v.guardias>0)
+  const totalHoras  = resumen.totalHoras || 0
+  const volActivos  = statsVoluntarios.filter((v:any)=>v.guardias>0)
   const mediaHorasVol = volActivos.length ? (totalHoras/volActivos.length).toFixed(1) : '0'
-  const areaPie   = statsPorArea.map((a:any)=>({name:a.area||'Sin área',value:a.voluntarios||0}))
-  const eventoPie = Object.entries(data.eventosTipo||{}).map(([name,value])=>({name,value}))
-  const formPie   = Object.entries(data.statsFormacion?.porEstado||{}).map(([name,value])=>({name,value}))
-  const vehPie    = Object.entries(data.statsVehiculos?.porEstado||{}).map(([name,value])=>({name,value}))
-  const petPie    = Object.entries(data.peticionesEstados||{}).map(([name,value])=>({name,value}))
+
+  const areaPie    = statsPorArea.map((a:any)=>({name:a.area||'Sin área',value:a.voluntarios||0}))
+  const eventoPie  = Object.entries(data.eventosTipo||{}).map(([name,value])=>({name,value}))
+  const formPie    = Object.entries(data.statsFormacion?.porEstado||{}).map(([name,value])=>({name,value}))
+  const vehPie     = Object.entries(data.statsVehiculos?.porEstado||{}).map(([name,value])=>({name,value}))
+  const petPie     = Object.entries(data.peticionesEstados||{}).map(([name,value])=>({name,value}))
+  const dronePie   = Object.entries(data.droneEstados||{}).map(([name,value])=>({name,value}))
+  const cecopalPie = Object.entries(data.cecopalPorTipo||{}).map(([name,value])=>({name,value}))
+  const rolPie     = Object.entries(data.guardiasPorRol||{}).map(([name,value])=>({name,value}))
+
   const top10 = statsVoluntarios.slice(0,10).map((v:any)=>({
     nombre:`${v.nombre} ${(v.apellidos||'').split(' ')[0]}`.trim().slice(0,18),
-    guardias:v.guardias||0,horas:v.horas||0,
+    guardias:v.guardias||0, horas:v.horas||0,
   }))
   const horasColectivasPorMes = guardiasPorMes.map((g:any)=>({mes:g.mes,horas:(g.manana||0)*6+(g.tarde||0)*5+(g.noche||0)*9}))
-  const stockPorArea = Object.entries(data.stockPorArea||{}).map(([slug,s]:any)=>({name:s.nombre||slug,ok:s.total-s.stockBajo,stockBajo:s.stockBajo}))
-  const petPorArea = Object.entries(data.peticionesPorArea||{}).map(([name,value])=>({name,value}))
+  const stockPorArea  = Object.entries(data.stockPorArea||{}).map(([slug,s]:any)=>({name:s.nombre||slug,ok:s.total-s.stockBajo,stockBajo:s.stockBajo}))
+  const petPorArea    = Object.entries(data.peticionesPorArea||{}).map(([name,value])=>({name,value}))
+
+  const totalKmFlota  = vehiculos.reduce((a:number,v:any)=>a+(v.kmActual||0),0)
+  const totalKmPeriodo= statsVehiculosExt.reduce((a:number,v:any)=>a+(v.kmRecorridos||0),0)
+  const costeMantTotal= statsVehiculosExt.reduce((a:number,v:any)=>a+(v.costeMant||0),0)
+  const vehAlertas    = statsVehiculosExt.filter((v:any)=>v.itvAlerta||v.seguroAlerta)
+  const costeVehChart = statsVehiculosExt.map((v:any)=>({
+    name: v.indicativo||v.matricula,
+    mant: v.costeMant||0,
+    combust: v.costeCombustible||0,
+  }))
+
+  const totalHorasVuelo = (data.vuelosRaw||[]).reduce((a:number,v:any)=>a+Number(v.duracionMinutos||0)/60,0)
 
   const estadoBadge = (e:string) => {
-    const m:Record<string,string>={pendiente:'amber',aprobada:'blue',en_compra:'purple',recibida:'green',rechazada:'red',cancelada:'red',disponible:'green',en_servicio:'blue',mantenimiento:'amber',en_taller:'red',completado:'green',planificado:'blue',cancelado:'red'}
+    const m:Record<string,string>={
+      pendiente:'amber', aprobada:'blue', en_compra:'purple', recibida:'green',
+      rechazada:'red', cancelada:'red', disponible:'green', en_servicio:'blue',
+      mantenimiento:'amber', en_taller:'red', completado:'green', planificado:'blue',
+      cancelado:'red', operativo:'green', averiado:'red', en_mantenimiento:'amber',
+      activo:'green', inactivo:'red', registrado:'blue',
+    }
     return m[e]||'default'
   }
 
   return (
     <div className="min-h-screen bg-slate-50/50">
+      {/* Header */}
       <div className="bg-white border-b border-slate-100 px-6 py-5">
         <div className="flex flex-col sm:flex-row sm:items-center gap-4 justify-between max-w-screen-2xl mx-auto">
           <div className="flex items-center gap-4">
@@ -250,6 +291,7 @@ export default function EstadisticasPage() {
       </div>
 
       <div className="px-6 py-6 max-w-screen-2xl mx-auto space-y-6">
+        {/* Tabs */}
         <div className="flex gap-1 bg-white border border-slate-100 shadow-sm p-1 rounded-2xl overflow-x-auto">
           {TABS.map(t=>{
             const Icon=t.icon; const active=tab===t.id
@@ -271,6 +313,7 @@ export default function EstadisticasPage() {
 
         {!loading && (
           <>
+            {/* ══════════════ PERSONAL ══════════════ */}
             {tab==='personal' && (
               <div className="space-y-6">
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -356,13 +399,14 @@ export default function EstadisticasPage() {
               </div>
             )}
 
+            {/* ══════════════ OPERATIVO ══════════════ */}
             {tab==='operativo' && (
               <div className="space-y-6">
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                   <KpiCard label="Total guardias" value={fmtNum(resumen.totalGuardias)} icon={Calendar} color="indigo"/>
                   <KpiCard label="Eventos" value={fmtNum(resumen.totalEventos)} icon={Activity} color="amber"/>
                   <KpiCard label="Partes PSI" value={fmtNum(resumen.totalPSI)} icon={FileText} color="blue"/>
-                  <KpiCard label="Participaciones" value={fmtNum(resumen.totalParticipaciones)} icon={Users} color="green"/>
+                  <KpiCard label="Incidencias CECOPAL" value={fmtNum(resumen.totalCecopal)} icon={Shield} color="red" sub={`Año ${year}`}/>
                 </div>
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
                   <Panel title="Evolución mensual de guardias" className="lg:col-span-2">
@@ -379,8 +423,46 @@ export default function EstadisticasPage() {
                       </LineChart>
                     </ResponsiveContainer>
                   </Panel>
-                  <Panel title="Eventos por tipo">
+                  <Panel title="Guardias por rol">
                     <ResponsiveContainer width="100%" height={250}>
+                      <PieChart>
+                        <Pie data={rolPie.length?rolPie:[{name:'Sin datos',value:1}]} dataKey="value" nameKey="name" cx="50%" cy="45%" outerRadius={85} innerRadius={40} paddingAngle={2}>
+                          {rolPie.map((_:any,i:number)=><Cell key={i} fill={CHART_COLORS[i%CHART_COLORS.length]}/>)}
+                        </Pie>
+                        <Tooltip/><Legend wrapperStyle={{fontSize:11,color:'#64748b'}}/>
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </Panel>
+                </div>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                  <Panel title="Eventos por mes">
+                    <ResponsiveContainer width="100%" height={220}>
+                      <BarChart data={eventosPorMes} barSize={18}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false}/>
+                        <XAxis dataKey="mes" tick={{fontSize:11,fill:'#94a3b8'}} axisLine={false} tickLine={false}/>
+                        <YAxis tick={{fontSize:11,fill:'#94a3b8'}} axisLine={false} tickLine={false}/>
+                        <Tooltip content={<ChartTooltip/>} cursor={{fill:'#f8fafc'}}/>
+                        <Bar dataKey="total" name="Eventos" radius={[4,4,0,0]}>
+                          {eventosPorMes.map((_:any,i:number)=><Cell key={i} fill={CHART_COLORS[i%CHART_COLORS.length]}/>)}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </Panel>
+                  <Panel title="Incidencias CECOPAL por mes">
+                    <ResponsiveContainer width="100%" height={220}>
+                      <BarChart data={cecopalPorMes} barSize={18}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false}/>
+                        <XAxis dataKey="mes" tick={{fontSize:11,fill:'#94a3b8'}} axisLine={false} tickLine={false}/>
+                        <YAxis tick={{fontSize:11,fill:'#94a3b8'}} axisLine={false} tickLine={false}/>
+                        <Tooltip content={<ChartTooltip/>} cursor={{fill:'#f8fafc'}}/>
+                        <Bar dataKey="total" name="Incidencias" fill={PALETTE.red} radius={[4,4,0,0]}/>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </Panel>
+                </div>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                  <Panel title="Eventos por tipo">
+                    <ResponsiveContainer width="100%" height={220}>
                       <PieChart>
                         <Pie data={eventoPie.length?eventoPie:[{name:'Sin datos',value:1}]} dataKey="value" nameKey="name" cx="50%" cy="45%" outerRadius={85} innerRadius={40} paddingAngle={2}>
                           {eventoPie.map((_:any,i:number)=><Cell key={i} fill={CHART_COLORS[i%CHART_COLORS.length]}/>)}
@@ -389,20 +471,17 @@ export default function EstadisticasPage() {
                       </PieChart>
                     </ResponsiveContainer>
                   </Panel>
+                  <Panel title="Tipos de incidencia CECOPAL">
+                    <ResponsiveContainer width="100%" height={220}>
+                      <PieChart>
+                        <Pie data={cecopalPie.length?cecopalPie:[{name:'Sin datos',value:1}]} dataKey="value" nameKey="name" cx="50%" cy="45%" outerRadius={85} innerRadius={40} paddingAngle={2}>
+                          {cecopalPie.map((_:any,i:number)=><Cell key={i} fill={CHART_COLORS[i%CHART_COLORS.length]}/>)}
+                        </Pie>
+                        <Tooltip/><Legend wrapperStyle={{fontSize:11,color:'#64748b'}}/>
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </Panel>
                 </div>
-                <Panel title="Eventos por mes">
-                  <ResponsiveContainer width="100%" height={200}>
-                    <BarChart data={eventosPorMes} barSize={18}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false}/>
-                      <XAxis dataKey="mes" tick={{fontSize:11,fill:'#94a3b8'}} axisLine={false} tickLine={false}/>
-                      <YAxis tick={{fontSize:11,fill:'#94a3b8'}} axisLine={false} tickLine={false}/>
-                      <Tooltip content={<ChartTooltip/>} cursor={{fill:'#f8fafc'}}/>
-                      <Bar dataKey="total" name="Eventos" radius={[4,4,0,0]}>
-                        {eventosPorMes.map((_:any,i:number)=><Cell key={i} fill={CHART_COLORS[i%CHART_COLORS.length]}/>)}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </Panel>
                 <Panel title="Listado de eventos">
                   <DataTable
                     heads={['Evento','Fecha','Tipo','Participantes','Estado']}
@@ -433,6 +512,7 @@ export default function EstadisticasPage() {
               </div>
             )}
 
+            {/* ══════════════ FORMACIÓN ══════════════ */}
             {tab==='formacion' && (
               <div className="space-y-6">
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -479,11 +559,12 @@ export default function EstadisticasPage() {
               </div>
             )}
 
+            {/* ══════════════ LOGÍSTICA ══════════════ */}
             {tab==='logistica' && (
               <div className="space-y-6">
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                   <KpiCard label="Total artículos" value={fmtNum(resumen.totalArticulos)} icon={Package} color="indigo"/>
-                  <KpiCard label="Artículos stock bajo" value={fmtNum(stockPorArea.reduce((a:number,s:any)=>a+s.stockBajo,0))} icon={AlertTriangle} color="red"/>
+                  <KpiCard label="Stock bajo" value={fmtNum(stockPorArea.reduce((a:number,s:any)=>a+s.stockBajo,0))} icon={AlertTriangle} color="red"/>
                   <KpiCard label="Peticiones en período" value={fmtNum(resumen.totalPeticiones)} icon={ShoppingCart} color="amber"/>
                   <KpiCard label="Pendientes de resolver" value={fmtNum(peticionesLog.filter((p:any)=>p.estado==='pendiente').length)} icon={Clock} color="orange"/>
                 </div>
@@ -557,58 +638,244 @@ export default function EstadisticasPage() {
               </div>
             )}
 
+            {/* ══════════════ VEHÍCULOS ══════════════ */}
             {tab==='vehiculos' && (
               <div className="space-y-6">
+                {/* KPIs fila 1 */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                   <KpiCard label="Total flota" value={fmtNum(vehiculos.length)} icon={Truck} color="indigo"/>
                   <KpiCard label="Disponibles" value={fmtNum(vehiculos.filter((v:any)=>v.estado==='disponible').length)} icon={CheckCircle2} color="green"/>
-                  <KpiCard label="En servicio" value={fmtNum(vehiculos.filter((v:any)=>v.estado==='en_servicio').length)} icon={Activity} color="amber"/>
+                  <KpiCard label="Km totales flota" value={fmtKm(totalKmFlota)} icon={Gauge} color="blue" sub="Suma odómetros actuales"/>
                   <KpiCard label="En mantenimiento" value={fmtNum(vehiculos.filter((v:any)=>['mantenimiento','en_taller'].includes(v.estado)).length)} icon={Wrench} color="red"/>
                 </div>
+                {/* KPIs fila 2 */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                  <KpiCard label="Salidas registradas" value={fmtNum(resumen.totalSalidas)} icon={Activity} color="amber" sub={`Asignaciones ${year}`}/>
+                  <KpiCard label="Km recorridos" value={fmtKm(totalKmPeriodo)} icon={Route} color="teal" sub="Desde asignaciones"/>
+                  <KpiCard label="Litros combustible" value={fmtL(totalLitros)} icon={Fuel} color="orange" sub="Repostajes + SOLRED"/>
+                  <KpiCard label="Coste combustible" value={fmtEur(totalCosteCombustible)} icon={DollarSign} color="purple" sub={`Total ${year}`}/>
+                </div>
+
+                {/* Alertas ITV / Seguro */}
+                {vehAlertas.length>0 && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <AlertTriangle size={16} className="text-amber-600"/>
+                      <span className="text-sm font-bold text-amber-800">
+                        Documentación próxima a vencer (próximos 90 días)
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                      {vehAlertas.map((v:any)=>(
+                        <div key={v.id} className="bg-white rounded-xl p-3 border border-amber-100 flex items-center gap-3">
+                          <span className="font-black text-indigo-700 text-sm w-20 flex-shrink-0">{v.indicativo}</span>
+                          <div className="flex-1 space-y-0.5">
+                            {v.itvAlerta && (
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-[11px] font-bold text-amber-700 w-12">ITV</span>
+                                <span className="text-[11px] text-slate-600">{fmtDate(v.fechaItv)}</span>
+                              </div>
+                            )}
+                            {v.seguroAlerta && (
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-[11px] font-bold text-red-600 w-12">Seguro</span>
+                                <span className="text-[11px] text-slate-600">{fmtDate(v.fechaSeguro)}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Charts fila 1: Salidas+Km, Mantenimiento por tipo */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-                  <Panel title="Estado de la flota">
+                  <Panel title="Salidas y km recorridos por mes" className="lg:col-span-2">
+                    <ResponsiveContainer width="100%" height={260}>
+                      <ComposedChart data={asignacionesPorMes}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false}/>
+                        <XAxis dataKey="mes" tick={{fontSize:11,fill:'#94a3b8'}} axisLine={false} tickLine={false}/>
+                        <YAxis yAxisId="left"  tick={{fontSize:11,fill:'#94a3b8'}} axisLine={false} tickLine={false}/>
+                        <YAxis yAxisId="right" orientation="right" tick={{fontSize:11,fill:'#94a3b8'}} axisLine={false} tickLine={false} tickFormatter={(v:number)=>v>0?fmtKm(v):'0'}/>
+                        <Tooltip content={<ChartTooltip formatter={(name:string,val:any)=>name==='Km recorridos'?[fmtKm(val),name]:[`${val}`,name]}/>}/>
+                        <Legend wrapperStyle={{fontSize:11,color:'#64748b',paddingTop:8}}/>
+                        <Bar yAxisId="left" dataKey="salidas" name="Salidas" fill={PALETTE.indigo} radius={[4,4,0,0]} barSize={16}/>
+                        <Line yAxisId="right" type="monotone" dataKey="km" name="Km recorridos" stroke={PALETTE.teal} strokeWidth={2.5} dot={{r:3.5,fill:PALETTE.teal,strokeWidth:0}}/>
+                      </ComposedChart>
+                    </ResponsiveContainer>
+                  </Panel>
+                  <Panel title="Mantenimientos por tipo">
                     <ResponsiveContainer width="100%" height={260}>
                       <PieChart>
-                        <Pie data={vehPie.length?vehPie:[{name:'Sin datos',value:1}]} dataKey="value" nameKey="name" cx="50%" cy="45%" outerRadius={90} innerRadius={45} paddingAngle={3}>
-                          {vehPie.map((_:any,i:number)=><Cell key={i} fill={CHART_COLORS[i%CHART_COLORS.length]}/>)}
+                        <Pie data={mantPorTipo.length?mantPorTipo:[{name:'Sin datos',value:1}]} dataKey="value" nameKey="name" cx="50%" cy="45%" outerRadius={85} innerRadius={40} paddingAngle={2}>
+                          {mantPorTipo.map((_:any,i:number)=><Cell key={i} fill={CHART_COLORS[i%CHART_COLORS.length]}/>)}
                         </Pie>
                         <Tooltip/><Legend wrapperStyle={{fontSize:11,color:'#64748b'}}/>
                       </PieChart>
                     </ResponsiveContainer>
                   </Panel>
-                  <Panel title="Mantenimientos — cantidad y coste" className="lg:col-span-2">
-                    <ResponsiveContainer width="100%" height={260}>
-                      <ComposedChart data={mantPorMes}>
+                </div>
+
+                {/* Charts fila 2: Combustible, Costes acumulados */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                  <Panel title="Combustible por mes (litros y coste)">
+                    <ResponsiveContainer width="100%" height={230}>
+                      <ComposedChart data={combustiblePorMes}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false}/>
                         <XAxis dataKey="mes" tick={{fontSize:11,fill:'#94a3b8'}} axisLine={false} tickLine={false}/>
-                        <YAxis yAxisId="left" tick={{fontSize:11,fill:'#94a3b8'}} axisLine={false} tickLine={false}/>
+                        <YAxis yAxisId="left"  tick={{fontSize:11,fill:'#94a3b8'}} axisLine={false} tickLine={false}/>
                         <YAxis yAxisId="right" orientation="right" tick={{fontSize:11,fill:'#94a3b8'}} axisLine={false} tickLine={false} tickFormatter={(v:number)=>fmtEur(v)}/>
-                        <Tooltip content={<ChartTooltip formatter={(name:string,val:any)=>name==='Coste (€)'?[fmtEur(val),name]:[`${val}`,name]}/>}/>
+                        <Tooltip content={<ChartTooltip formatter={(name:string,val:any)=>name==='Coste (€)'?[fmtEur(val),name]:[`${Number(val).toLocaleString('es-ES')} L`,name]}/>}/>
                         <Legend wrapperStyle={{fontSize:11,color:'#64748b',paddingTop:8}}/>
-                        <Bar yAxisId="left" dataKey="total" name="Nº trabajos" fill={PALETTE.indigo} radius={[4,4,0,0]} barSize={16}/>
+                        <Bar yAxisId="left" dataKey="litros" name="Litros" fill={PALETTE.orange} radius={[4,4,0,0]} barSize={16}/>
                         <Line yAxisId="right" type="monotone" dataKey="coste" name="Coste (€)" stroke={PALETTE.red} strokeWidth={2.5} dot={{r:3.5,fill:PALETTE.red,strokeWidth:0}}/>
                       </ComposedChart>
                     </ResponsiveContainer>
                   </Panel>
+                  <Panel title="Coste total por vehículo">
+                    <ResponsiveContainer width="100%" height={230}>
+                      <BarChart data={costeVehChart} layout="vertical" barSize={13} margin={{left:8}}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false}/>
+                        <XAxis type="number" tick={{fontSize:11,fill:'#94a3b8'}} axisLine={false} tickLine={false} tickFormatter={(v:number)=>fmtEur(v)}/>
+                        <YAxis type="category" dataKey="name" tick={{fontSize:11,fill:'#475569'}} width={100} axisLine={false} tickLine={false}/>
+                        <Tooltip content={<ChartTooltip formatter={(name:string,val:any)=>[fmtEur(val),name]}/>} cursor={{fill:'#f8fafc'}}/>
+                        <Legend wrapperStyle={{fontSize:11,color:'#64748b',paddingTop:8}}/>
+                        <Bar dataKey="mant"    name="Mantenimiento" fill={PALETTE.red}    radius={[0,4,4,0]} stackId="a"/>
+                        <Bar dataKey="combust" name="Combustible"   fill={PALETTE.orange} radius={[0,4,4,0]} stackId="a"/>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </Panel>
                 </div>
-                <Panel title="Ficha de flota">
+
+                {/* Mantenimientos cantidad y coste por mes */}
+                <Panel title="Mantenimientos — cantidad y coste por mes">
+                  <ResponsiveContainer width="100%" height={220}>
+                    <ComposedChart data={mantPorMes}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false}/>
+                      <XAxis dataKey="mes" tick={{fontSize:11,fill:'#94a3b8'}} axisLine={false} tickLine={false}/>
+                      <YAxis yAxisId="left"  tick={{fontSize:11,fill:'#94a3b8'}} axisLine={false} tickLine={false}/>
+                      <YAxis yAxisId="right" orientation="right" tick={{fontSize:11,fill:'#94a3b8'}} axisLine={false} tickLine={false} tickFormatter={(v:number)=>fmtEur(v)}/>
+                      <Tooltip content={<ChartTooltip formatter={(name:string,val:any)=>name==='Coste (€)'?[fmtEur(val),name]:[`${val}`,name]}/>}/>
+                      <Legend wrapperStyle={{fontSize:11,color:'#64748b',paddingTop:8}}/>
+                      <Bar yAxisId="left" dataKey="total" name="Nº trabajos" fill={PALETTE.indigo} radius={[4,4,0,0]} barSize={16}/>
+                      <Line yAxisId="right" type="monotone" dataKey="coste" name="Coste (€)" stroke={PALETTE.red} strokeWidth={2.5} dot={{r:3.5,fill:PALETTE.red,strokeWidth:0}}/>
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                </Panel>
+
+                {/* Tabla resumen por vehículo */}
+                <Panel title="Resumen por vehículo">
                   <DataTable
-                    heads={['Indicativo','Matrícula','Marca / Modelo','Km actuales','Mantenimientos','Coste total','Estado']}
-                    rows={vehiculos.map((v:any)=>[
+                    heads={['Indicativo','Matrícula','Marca / Modelo','Km actual','Salidas','Km recorridos','Combustible','Coste comb.','Coste mant.','Estado']}
+                    rows={statsVehiculosExt.map((v:any)=>[
                       <span key="i" className="font-black text-indigo-700 text-sm">{v.indicativo}</span>,
                       <span key="m" className="font-mono text-xs">{v.matricula}</span>,
-                      `${v.marca} ${v.modelo}`,
-                      v.kmActual>0?<span key="km" className="font-medium">{fmtKm(v.kmActual)}</span>:'—',
-                      <span key="mt" className="font-bold">{v.mantenimientos||0}</span>,
-                      v.costeMant>0?<span key="c" className="font-semibold text-red-600">{fmtEur(v.costeMant)}</span>:'—',
+                      `${v.marca||''} ${v.modelo||''}`.trim()||'—',
+                      <span key="km" className="font-medium">{fmtKm(v.kmActual)}</span>,
+                      <span key="sal" className="font-bold">{v.salidas}</span>,
+                      v.kmRecorridos>0?<span key="r" className="font-semibold text-teal-700">{fmtKm(v.kmRecorridos)}</span>:'—',
+                      v.litrosCombustible>0?<span key="l">{fmtL(v.litrosCombustible)}</span>:'—',
+                      v.costeCombustible>0?<span key="cc" className="font-semibold text-orange-600">{fmtEur(v.costeCombustible)}</span>:'—',
+                      v.costeMant>0?<span key="cm" className="font-semibold text-red-600">{fmtEur(v.costeMant)}</span>:'—',
                       <Badge key="s" label={v.estado} variant={estadoBadge(v.estado)}/>,
                     ])}
                     empty="Sin vehículos registrados"
                   />
                 </Panel>
+
+                {/* Tabla movimientos (asignaciones) */}
+                {asignacionesRaw.length>0 && (
+                  <Panel title={`Movimientos registrados — ${year} (últimos 50)`}>
+                    <DataTable
+                      heads={['Fecha','Vehículo','Conductor / Usuario','Km inicio','Km fin','Km recorridos','Motivo']}
+                      rows={asignacionesRaw.slice(0,50).map((a:any)=>[
+                        fmtDate(a.fechaInicio),
+                        <span key="v" className="font-black text-indigo-700 text-xs">{a.vehiculo?.indicativo||a.vehiculo?.matricula||'—'}</span>,
+                        a.usuario?`${a.usuario.nombre} ${a.usuario.apellidos}`:'—',
+                        a.kmInicio?<span key="ki" className="font-mono text-xs">{fmtKm(a.kmInicio)}</span>:'—',
+                        a.kmFin?<span key="kf" className="font-mono text-xs">{fmtKm(a.kmFin)}</span>:'—',
+                        (a.kmFin&&a.kmInicio)?<span key="kr" className="font-bold text-teal-700">{fmtKm(a.kmFin-a.kmInicio)}</span>:'—',
+                        <span key="mo" className="text-xs text-slate-500">{a.motivo||'—'}</span>,
+                      ])}
+                      empty="Sin movimientos en este período"
+                    />
+                  </Panel>
+                )}
               </div>
             )}
 
+            {/* ══════════════ DRONES ══════════════ */}
+            {tab==='drones' && (
+              <div className="space-y-6">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                  <KpiCard label="Total flota RPAS" value={fmtNum(resumen.totalDrones)} icon={Plane} color="indigo"/>
+                  <KpiCard label="Operativos" value={fmtNum((data.droneEstados||{}).operativo||(data.droneEstados||{}).disponible||0)} icon={CheckCircle2} color="green"/>
+                  <KpiCard label="Vuelos en período" value={fmtNum(resumen.totalVuelos)} icon={Activity} color="amber" sub={`Año ${year}`}/>
+                  <KpiCard label="Horas de vuelo" value={`${totalHorasVuelo.toFixed(1)} h`} icon={Clock} color="blue" sub="Total acumulado"/>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+                  <Panel title="Vuelos y horas por mes" className="lg:col-span-2">
+                    <ResponsiveContainer width="100%" height={260}>
+                      <ComposedChart data={vuelosPorMes}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false}/>
+                        <XAxis dataKey="mes" tick={{fontSize:11,fill:'#94a3b8'}} axisLine={false} tickLine={false}/>
+                        <YAxis yAxisId="left"  tick={{fontSize:11,fill:'#94a3b8'}} axisLine={false} tickLine={false}/>
+                        <YAxis yAxisId="right" orientation="right" tick={{fontSize:11,fill:'#94a3b8'}} axisLine={false} tickLine={false} tickFormatter={(v:number)=>`${Number(v).toFixed(1)}h`}/>
+                        <Tooltip content={<ChartTooltip formatter={(name:string,val:any)=>name==='Horas'?[`${Number(val).toFixed(1)} h`,name]:[`${val}`,name]}/>}/>
+                        <Legend wrapperStyle={{fontSize:11,color:'#64748b',paddingTop:8}}/>
+                        <Bar yAxisId="left" dataKey="total" name="Vuelos" fill={PALETTE.indigo} radius={[4,4,0,0]} barSize={16}/>
+                        <Line yAxisId="right" type="monotone" dataKey="horas" name="Horas" stroke={PALETTE.teal} strokeWidth={2.5} dot={{r:3.5,fill:PALETTE.teal,strokeWidth:0}}/>
+                      </ComposedChart>
+                    </ResponsiveContainer>
+                  </Panel>
+                  <Panel title="Estado de la flota RPAS">
+                    <ResponsiveContainer width="100%" height={260}>
+                      <PieChart>
+                        <Pie data={dronePie.length?dronePie:[{name:'Sin datos',value:1}]} dataKey="value" nameKey="name" cx="50%" cy="45%" outerRadius={85} innerRadius={40} paddingAngle={2}>
+                          {dronePie.map((_:any,i:number)=><Cell key={i} fill={CHART_COLORS[i%CHART_COLORS.length]}/>)}
+                        </Pie>
+                        <Tooltip/><Legend wrapperStyle={{fontSize:11,color:'#64748b'}}/>
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </Panel>
+                </div>
+
+                {statsPilotos.length>0 && (
+                  <Panel title="Actividad por piloto">
+                    <ResponsiveContainer width="100%" height={Math.max(160, statsPilotos.length*44)}>
+                      <BarChart data={statsPilotos.map((p:any)=>({nombre:p.nombre.split(' ')[0]||p.nombre,vuelos:p.vuelos,horas:p.horas}))} layout="vertical" barSize={14} margin={{left:8}}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false}/>
+                        <XAxis type="number" tick={{fontSize:11,fill:'#94a3b8'}} axisLine={false} tickLine={false}/>
+                        <YAxis type="category" dataKey="nombre" tick={{fontSize:11,fill:'#475569'}} width={100} axisLine={false} tickLine={false}/>
+                        <Tooltip content={<ChartTooltip/>} cursor={{fill:'#f8fafc'}}/>
+                        <Legend wrapperStyle={{fontSize:11,color:'#64748b',paddingTop:8}}/>
+                        <Bar dataKey="vuelos" name="Vuelos" fill={PALETTE.indigo} radius={[0,4,4,0]}>
+                          {statsPilotos.map((_:any,i:number)=><Cell key={i} fill={CHART_COLORS[i%CHART_COLORS.length]}/>)}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </Panel>
+                )}
+
+                <Panel title="Detalle de vuelos">
+                  <DataTable
+                    heads={['Fecha','Drone','Piloto','Duración','Tipo']}
+                    rows={(data.vuelosRaw||[]).map((v:any)=>[
+                      fmtDate(v.fecha),
+                      <span key="d" className="font-mono text-xs font-bold text-indigo-600">{v.drone?.codigo||'—'}</span>,
+                      v.piloto?`${v.piloto.nombre} ${v.piloto.apellidos||''}`.trim():'—',
+                      v.duracionMinutos?`${v.duracionMinutos} min`:'—',
+                      v.tipo?<Badge key="t" label={v.tipo} variant="indigo"/>:'—',
+                    ])}
+                    empty="Sin vuelos en este período"
+                  />
+                </Panel>
+              </div>
+            )}
+
+            {/* ══════════════ ECONÓMICO ══════════════ */}
             {tab==='economico' && (
               <div className="space-y-6">
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -617,9 +884,10 @@ export default function EstadisticasPage() {
                   <KpiCard label="Ingresos caja" value={fmtEur(resumen.ingresos||0)} icon={TrendingUp} color="green"/>
                   <KpiCard label="Gastos caja" value={fmtEur(resumen.gastos||0)} icon={ArrowUpDown} color="red"/>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <KpiCard label="Saldo neto" value={fmtEur(resumen.saldo||0)} icon={Gauge} color={(resumen.saldo||0)>=0?'green':'red'} sub="Ingresos – Gastos"/>
-                  <KpiCard label="Días de servicio con dieta" value={fmtNum((data.diasServicio||[]).length||0)} icon={Calendar} color="amber" sub="Registros con dieta generada"/>
+                  <KpiCard label="Combustible total" value={fmtL(totalLitros)} icon={Fuel} color="orange" sub={fmtEur(totalCosteCombustible)}/>
+                  <KpiCard label="Días servicio con dieta" value={fmtNum((data.diasServicio||[]).length||0)} icon={Calendar} color="amber" sub="Registros con dieta"/>
                 </div>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
                   <Panel title="Evolución de dietas por mes">
@@ -657,7 +925,7 @@ export default function EstadisticasPage() {
                   <Panel title="Ejecución presupuestaria por partida">
                     <div className="space-y-4">
                       {partidas.map((p:any)=>(
-                        <ProgressBar key={p.id} label={`${p.codigo?`[${p.codigo}] `:''}${p.nombre}`} value={Number(p.importeEjecutado)||0} max={Number(p.importeAprobado)||1}/>
+                        <ProgressBar key={p.id} label={`${p.codigo?`[${p.codigo}] `:''}${p.nombre||p.denominacion}`} value={Number(p.importeEjecutado)||0} max={Number(p.importeAprobado||p.importeAsignado)||1}/>
                       ))}
                     </div>
                   </Panel>
@@ -692,6 +960,7 @@ export default function EstadisticasPage() {
               </div>
             )}
 
+            {/* ══════════════ PRÁCTICAS ══════════════ */}
             {tab==='practicas' && (
               <div className="space-y-6">
                 {!statsPracticas ? (
@@ -700,32 +969,32 @@ export default function EstadisticasPage() {
                   <>
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                       <KpiCard label="Total prácticas" value={statsPracticas.totalPracticas} icon={ClipboardList} color="orange"/>
-                      <KpiCard label="Realizaciones registradas" value={statsPracticas.totalRegistros} icon={CheckCircle2} color="green"/>
-                      <KpiCard label="Pendientes firma jefe" value={statsPracticas.registrosPendientes} icon={Clock} color="amber"/>
-                      <KpiCard label="Cobertura global" value={statsPracticas.coberturaGlobal + '%'} icon={Target} color="teal"/>
+                      <KpiCard label="Realizaciones" value={statsPracticas.totalRegistros} icon={CheckCircle2} color="green"/>
+                      <KpiCard label="Pendientes firma" value={statsPracticas.registrosPendientes} icon={Clock} color="amber"/>
+                      <KpiCard label="Cobertura global" value={`${statsPracticas.coberturaGlobal}%`} icon={Target} color="teal"/>
                     </div>
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
                       <Panel title="Cobertura por familia">
                         <div className="space-y-3">
-                          {(statsPracticas.coberturaFamilia || []).map((f: any) => (
+                          {(statsPracticas.coberturaFamilia||[]).map((f:any)=>(
                             <div key={f.familia}>
                               <div className="flex justify-between text-xs mb-1">
                                 <span className="font-medium text-slate-700 capitalize">{f.familia}</span>
                                 <span className="text-slate-500">{f.realizadas}/{f.total} — {f.pct}%</span>
                               </div>
                               <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                                <div className="h-full bg-orange-500 rounded-full transition-all" style={{ width: f.pct + '%' }} />
+                                <div className="h-full bg-orange-500 rounded-full transition-all" style={{width:`${f.pct}%`}}/>
                               </div>
                             </div>
                           ))}
                         </div>
                       </Panel>
                       <Panel title="Prácticas sin realizar">
-                        {(statsPracticas.practicasSinRealizarLista || []).length === 0 ? (
+                        {(statsPracticas.practicasSinRealizarLista||[]).length===0 ? (
                           <p className="text-sm text-slate-400 text-center py-4">¡Todas las prácticas se han realizado!</p>
                         ) : (
                           <div className="space-y-2">
-                            {(statsPracticas.practicasSinRealizarLista || []).map((p: any) => (
+                            {(statsPracticas.practicasSinRealizarLista||[]).map((p:any)=>(
                               <div key={p.id} className="flex items-center gap-2 py-1.5 border-b border-slate-50 last:border-0">
                                 <span className="font-mono text-xs text-slate-400 w-20 shrink-0">{p.numero}</span>
                                 <span className="text-xs text-slate-700 flex-1 truncate">{p.titulo}</span>
@@ -739,13 +1008,13 @@ export default function EstadisticasPage() {
                     <Panel title="Últimas realizaciones">
                       <DataTable
                         heads={['Práctica','Familia','Fecha','Turno','Responsable','Estado']}
-                        rows={(statsPracticas.registrosRecientes || []).map((r: any) => [
+                        rows={(statsPracticas.registrosRecientes||[]).map((r:any)=>[
                           <span key="t" className="font-medium text-slate-800">{r.practica?.numero} — {r.practica?.titulo}</span>,
-                          <Badge key="f" label={r.practica?.familia || '-'} variant="indigo"/>,
+                          <Badge key="f" label={r.practica?.familia||'-'} variant="indigo"/>,
                           fmtDate(r.fecha),
-                          r.turno === 'manana' ? 'Mañana' : r.turno === 'tarde' ? 'Tarde' : 'Noche',
+                          r.turno==='manana'?'Mañana':r.turno==='tarde'?'Tarde':'Noche',
                           <span key="r">{r.responsable?.nombre} {r.responsable?.apellidos}</span>,
-                          <Badge key="s" label={r.resultado === 'pendiente_jefe' ? 'Pendiente VB' : r.resultado} variant={r.resultado === 'completado' ? 'green' : 'amber'}/>,
+                          <Badge key="s" label={r.resultado==='pendiente_jefe'?'Pendiente VB':r.resultado} variant={r.resultado==='completado'?'green':'amber'}/>,
                         ])}
                         empty="No hay registros de prácticas"
                       />
