@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const { vehiculoId, latitud, longitud, velocidad, precision, token } = body
 
-    if (token !== process.env.TRACKING_TOKEN) {
+    if (process.env.TRACKING_TOKEN && token !== process.env.TRACKING_TOKEN) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 })
     }
 
