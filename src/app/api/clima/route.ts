@@ -467,27 +467,38 @@ async function fetchOpenMeteo(): Promise<any> {
   }
 }
 
+// Caché en memoria del servidor — evita llamadas repetidas a AEMET/Open-Meteo
+let serverCache: { ts: number; data: any } | null = null
+const SERVER_CACHE_TTL = 15 * 60 * 1000 // 15 minutos
+
 export async function GET() {
   const session = await getServerSession(authOptions)
   if (!session?.user?.email) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+
+  // Servir desde caché si es reciente
+  if (serverCache && Date.now() - serverCache.ts < SERVER_CACHE_TTL) {
+    return NextResponse.json(serverCache.data)
+  }
 
   try {
     // Intentar primero con AEMET (solo si la API key está configurada)
     if (!AEMET_API_KEY) throw new Error('AEMET_API_KEY no configurada')
     const datosAemet = await fetchAEMET()
     console.log('✅ Datos obtenidos de AEMET')
+    serverCache = { ts: Date.now(), data: datosAemet }
     return NextResponse.json(datosAemet)
   } catch (errorAemet) {
     console.warn('⚠️ AEMET falló, usando Open-Meteo como fallback')
-    
+
     try {
       // Fallback a Open-Meteo
       const datosOpenMeteo = await fetchOpenMeteo()
       console.log('✅ Datos obtenidos de Open-Meteo')
+      serverCache = { ts: Date.now(), data: datosOpenMeteo }
       return NextResponse.json(datosOpenMeteo)
     } catch (errorOpenMeteo) {
       console.error('❌ Ambas fuentes fallaron:', errorOpenMeteo)
-      
+
       // Datos de emergencia
       return NextResponse.json({
         temperatura: '--',

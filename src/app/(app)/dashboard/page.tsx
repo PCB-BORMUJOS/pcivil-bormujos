@@ -610,7 +610,27 @@ export default function DashboardPage() {
   const [stats, setStats] = useState({ total: 0, responsablesTurno: 0, conCarnet: 0, experienciaAlta: 0 });
   const [vehiculos, setVehiculos] = useState<any[]>([]);
   const [statsVeh, setStatsVeh] = useState({ total: 0, disponibles: 0, enServicio: 0, mantenimiento: 0 });
-  const [clima, setClima] = useState<any>(null);
+  const CLIMA_CACHE_KEY = 'pcivil_clima_cache'
+  const CLIMA_CACHE_TTL = 20 * 60 * 1000 // 20 minutos
+
+  const getClimaCache = (): any | null => {
+    try {
+      const raw = localStorage.getItem(CLIMA_CACHE_KEY)
+      if (!raw) return null
+      const { ts, data } = JSON.parse(raw)
+      if (Date.now() - ts > CLIMA_CACHE_TTL) return null
+      return data
+    } catch { return null }
+  }
+
+  const setClimaCache = (data: any) => {
+    try { localStorage.setItem(CLIMA_CACHE_KEY, JSON.stringify({ ts: Date.now(), data })) } catch { /* quota */ }
+  }
+
+  const [clima, setClima] = useState<any>(() => {
+    if (typeof window === 'undefined') return null
+    return getClimaCache()
+  });
   const [loadingVol, setLoadingVol] = useState(true);
   const [eventos, setEventos] = useState<any[]>([]);
   const [guardias, setGuardias] = useState<any[]>([]);
@@ -661,14 +681,23 @@ export default function DashboardPage() {
       });
     };
 
+    // Fetch clima independently with longer timeout — doesn't block the rest
+    fetchTimeout('/api/clima', 15000)
+      .then((climaData: any) => {
+        if (climaData && !climaData.error) {
+          setClima(climaData)
+          setClimaCache(climaData)
+        }
+      })
+      .catch(() => { /* silencioso — ya tenemos caché */ })
+
     Promise.all([
       fetchTimeout('/api/voluntarios', 5000),
       fetchTimeout('/api/vehiculos', 5000),
-      fetchTimeout('/api/clima', 5000),
       fetchTimeout('/api/eventos?privados=true', 5000),
       fetchTimeout('/api/guardias', 5000),
     ])
-      .then(([volData, vehData, climaData, eventosData, guardiasData]: any[]) => {
+      .then(([volData, vehData, eventosData, guardiasData]: any[]) => {
         setVoluntarios(volData.voluntarios || []);
         setTodosVoluntarios(volData.voluntarios || []);  // guardar copia completa para el selector
         fetch('/api/accion-social?tipo=miembros-viogen').then(r => r.json()).then(d => setMiembrosViogen(d.miembros || [])).catch(() => {});
@@ -686,7 +715,6 @@ export default function DashboardPage() {
         setStats(volData.stats || { total: 0, responsablesTurno: 0, conCarnet: 0, experienciaAlta: 0 });
         setVehiculos(vehData.vehiculos || []);
         setStatsVeh(vehData.stats || { total: 0, disponibles: 0, enServicio: 0, mantenimiento: 0 });
-        setClima(climaData);
         setEventos(eventosData.eventos || []);
         setGuardias(guardiasData.guardias || []);
         // Cargar resumen disponibilidad mes actual
