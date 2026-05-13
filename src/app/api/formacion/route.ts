@@ -4,6 +4,28 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { registrarAudit, getUsuarioAudit } from '@/lib/audit'
 
+// Verifica que el usuario autenticado tiene rol de admin/coordinador
+async function getAdminUser(session: any) {
+    if (!session?.user?.email) return null
+    const u = await (prisma as any).usuario.findUnique({
+        where: { email: session.user.email },
+        include: { rol: true }
+    })
+    if (!u) return null
+    const rolNombre = u.rol?.nombre?.toLowerCase() ?? ''
+    if (!['superadmin', 'admin', 'coordinador'].includes(rolNombre)) return null
+    return u
+}
+
+// Genera número de certificado secuencial único: CERT-YYYY-NNNNN
+async function generarNumeroCertificado(): Promise<string> {
+    const year = new Date().getFullYear()
+    const count = await (prisma as any).certificacion.count({
+        where: { numeroCertificado: { startsWith: `CERT-${year}-` } }
+    })
+    return `CERT-${year}-${String(count + 1).padStart(5, '0')}`
+}
+
 export async function GET(request: NextRequest) {
     try {
         const session = await getServerSession(authOptions)
@@ -257,7 +279,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
     try {
-        const session = await getServerSession()
+        const session = await getServerSession(authOptions)
         if (!session?.user?.email) {
             return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
         }
@@ -290,18 +312,28 @@ export async function POST(request: NextRequest) {
 
                 return NextResponse.json({ success: true, curso })
 
-            case 'convocatoria':
-                // Obtener el usuario actual
+            case 'convocatoria': {
+                const adminConv = await getAdminUser(session)
+                if (!adminConv) return NextResponse.json({ error: 'Sin permisos para crear convocatorias' }, { status: 403 })
+
+                const fechaInicioConv = new Date(data.fechaInicio)
+                const fechaFinConv = new Date(data.fechaFin)
+                if (isNaN(fechaInicioConv.getTime()) || isNaN(fechaFinConv.getTime())) {
+                    return NextResponse.json({ error: 'Fechas de inicio o fin no válidas' }, { status: 400 })
+                }
+                if (fechaFinConv < fechaInicioConv) {
+                    return NextResponse.json({ error: 'La fecha de fin no puede ser anterior a la de inicio' }, { status: 400 })
+                }
+
                 const usuario = await (prisma as any).usuario.findUnique({
                     where: { email: session.user.email },
                     include: { servicio: true }
                 })
 
-                // Crear la convocatoria
                 const convocatoriaData = {
                     ...data,
-                    fechaInicio: new Date(data.fechaInicio),
-                    fechaFin: new Date(data.fechaFin),
+                    fechaInicio: fechaInicioConv,
+                    fechaFin: fechaFinConv,
                     plazasDisponibles: Number(data.plazasDisponibles)
                 }
                 const convocatoria = await (prisma as any).convocatoria.create({ data: convocatoriaData })
@@ -345,46 +377,39 @@ export async function POST(request: NextRequest) {
                 })
 
                 return NextResponse.json({ success: true, convocatoria })
+            }
 
             case 'inscripcion':
                 // Verificar si es una acción de aprobar/rechazar
-                const { action, estado: newEstado, id: inscripcionId } = data
+                const { action, id: inscripcionId } = data
 
                 if (action === 'aprobar') {
-                    // Obtener la inscripción actual
-                    const inscripcionActual = await (prisma as any).inscripcion.findUnique({
-                        where: { id: inscripcionId }
-                    })
+                    const adminApr = await getAdminUser(session)
+                    if (!adminApr) return NextResponse.json({ error: 'Sin permisos para aprobar inscripciones' }, { status: 403 })
 
-                    if (!inscripcionActual) {
-                        return NextResponse.json({ error: 'Inscripción no encontrada' }, { status: 404 })
-                    }
-
-                    // Verificar plazas disponibles
-                    const conv = await (prisma as any).convocatoria.findUnique({
-                        where: { id: inscripcionActual.convocatoriaId }
-                    })
-
-                    if (!conv) {
-                        return NextResponse.json({ error: 'Convocatoria no encontrada' }, { status: 404 })
-                    }
-
-                    if (conv.plazasOcupadas >= conv.plazasDisponibles) {
-                        return NextResponse.json({ error: 'No hay plazas disponibles' }, { status: 400 })
-                    }
-
-                    // Aprobar: actualizar estado y ocupar plaza
-                    const [inscripcionAprobada] = await (prisma as any).$transaction([
-                        (prisma as any).inscripcion.update({
-                            where: { id: inscripcionId },
-                            data: { estado: 'confirmada' }
-                        }),
-                        (prisma as any).convocatoria.update({
-                            where: { id: inscripcionActual.convocatoriaId },
-                            data: { plazasOcupadas: { increment: 1 } }
+                    let inscripcionAprobada: any
+                    try {
+                        inscripcionAprobada = await (prisma as any).$transaction(async (tx: any) => {
+                            const insc = await tx.inscripcion.findUnique({ where: { id: inscripcionId } })
+                            if (!insc) throw new Error('INSCRIPCION_NOT_FOUND')
+                            if (insc.estado === 'confirmada') throw new Error('YA_CONFIRMADA')
+                            const conv = await tx.convocatoria.findUnique({ where: { id: insc.convocatoriaId } })
+                            if (!conv) throw new Error('CONV_NOT_FOUND')
+                            if (conv.plazasOcupadas >= conv.plazasDisponibles) throw new Error('SIN_PLAZAS')
+                            const updated = await tx.inscripcion.update({ where: { id: inscripcionId }, data: { estado: 'confirmada' } })
+                            await tx.convocatoria.update({ where: { id: insc.convocatoriaId }, data: { plazasOcupadas: { increment: 1 } } })
+                            return updated
                         })
-                    ])
+                    } catch (txErr: any) {
+                        if (txErr.message === 'SIN_PLAZAS') return NextResponse.json({ error: 'No hay plazas disponibles' }, { status: 400 })
+                        if (txErr.message === 'YA_CONFIRMADA') return NextResponse.json({ error: 'La inscripción ya está confirmada' }, { status: 400 })
+                        if (txErr.message === 'INSCRIPCION_NOT_FOUND') return NextResponse.json({ error: 'Inscripción no encontrada' }, { status: 404 })
+                        if (txErr.message === 'CONV_NOT_FOUND') return NextResponse.json({ error: 'Convocatoria no encontrada' }, { status: 404 })
+                        throw txErr
+                    }
 
+                    const { usuarioId: aproId, usuarioNombre: aproNombre } = getUsuarioAudit(session)
+                    await registrarAudit({ accion: 'APPROVE', entidad: 'Inscripción', entidadId: inscripcionId, descripcion: `Inscripción aprobada (usuario ${inscripcionAprobada.usuarioId})`, usuarioId: aproId, usuarioNombre: aproNombre, modulo: 'Formación' })
                     return NextResponse.json({ success: true, inscripcion: inscripcionAprobada, mensaje: 'Inscripción aprobada' })
                 }
 
@@ -419,6 +444,11 @@ export async function POST(request: NextRequest) {
                     return NextResponse.json({ error: 'Convocatoria no encontrada' }, { status: 404 })
                 }
 
+                // Solo se puede inscribir si la convocatoria tiene inscripciones abiertas
+                if (!['inscripciones_abiertas', 'en_curso'].includes(convCheck.estado)) {
+                    return NextResponse.json({ error: 'Las inscripciones para esta convocatoria no están abiertas' }, { status: 400 })
+                }
+
                 // Verificar si el usuario ya está inscrito
                 const inscripcionExistente = await (prisma as any).inscripcion.findFirst({
                     where: {
@@ -431,43 +461,14 @@ export async function POST(request: NextRequest) {
                     return NextResponse.json({ error: 'Ya estás inscrito en esta formación' }, { status: 400 })
                 }
 
-                // Determinar estado: si se proporciona, usarlo; si no, default 'pendiente'
-                const estadoInscripcion = data.estado || 'pendiente';
-
-                // Si es confirmada directamente, verificar plazas y ocupar
-                if (estadoInscripcion === 'confirmada' && convCheck.plazasOcupadas >= convCheck.plazasDisponibles) {
-                    return NextResponse.json({ error: 'No hay plazas disponibles' }, { status: 400 })
-                }
-
-                // Crear inscripción
+                // Nueva inscripción siempre como pendiente (requiere aprobación de admin)
                 const inscripcion = await (prisma as any).inscripcion.create({
                     data: {
                         convocatoriaId: data.convocatoriaId,
                         usuarioId: data.usuarioId,
-                        estado: estadoInscripcion
+                        estado: 'pendiente'
                     }
                 })
-
-                // Si está confirmada, ocupar plaza
-                if (estadoInscripcion === 'confirmada') {
-                    await (prisma as any).convocatoria.update({
-                        where: { id: data.convocatoriaId },
-                        data: { plazasOcupadas: { increment: 1 } }
-                    })
-                    
-                    const { usuarioId: aproId2, usuarioNombre: aproNombre2 } = getUsuarioAudit(session)
-                    await registrarAudit({
-                        accion: 'ASSIGN',
-                        entidad: 'Inscripción',
-                        entidadId: inscripcion.id,
-                        descripcion: `Usuario ${inscripcion.usuarioId} inscrito en ${convCheck.codigo}`,
-                        usuarioId: aproId2,
-                        usuarioNombre: aproNombre2,
-                        modulo: 'Formación'
-                    })
-
-                    return NextResponse.json({ success: true, inscripcion, mensaje: '¡Inscripción confirmada!' })
-                }
                 
                 const { usuarioId: solId, usuarioNombre: solNombre } = getUsuarioAudit(session)
                 await registrarAudit({
@@ -501,6 +502,9 @@ export async function POST(request: NextRequest) {
                 return NextResponse.json({ success: true, necesidad })
 
             case 'cerrar-acta':
+                const adminActa = await getAdminUser(session)
+                if (!adminActa) return NextResponse.json({ error: 'Sin permisos para cerrar actas' }, { status: 403 })
+
                 const { convocatoriaId } = data
                 if (!convocatoriaId) return NextResponse.json({ error: 'Convocatoria ID requerido' }, { status: 400 })
 
@@ -509,19 +513,16 @@ export async function POST(request: NextRequest) {
                     include: { curso: true }
                 })
                 if (!convActa) return NextResponse.json({ error: 'Convocatoria no encontrada' }, { status: 404 })
+                if (convActa.estado === 'finalizada') return NextResponse.json({ error: 'Esta convocatoria ya está finalizada' }, { status: 400 })
 
-                // Obtener inscripciones aptas sin certificar (aunque mejor certificar todas las aptas)
                 const inscripcionesAptas = await (prisma as any).inscripcion.findMany({
-                    where: {
-                        convocatoriaId,
-                        apto: true
-                    }
+                    where: { convocatoriaId, apto: true }
                 })
 
                 let certificadosGenerados = 0
+                let certificadosSaltados = 0
                 const fechaHoy = new Date()
 
-                // Calcular fecha expiración si aplica
                 let fechaExpiracion: Date | null = null
                 if (convActa.curso.validezMeses) {
                     fechaExpiracion = new Date()
@@ -529,12 +530,17 @@ export async function POST(request: NextRequest) {
                 }
 
                 for (const insc of inscripcionesAptas) {
-                    // Verificar si ya existe certificación para este curso y usuario (opcional, pero recomendable)
-                    // En este caso permitimos recertificación si es otra convocatoria diferente, pero 
-                    // si es la misma convocatoria no deberíamos duplicar.
-                    // Simplificación: crear certificación.
+                    // Evitar duplicar: si ya existe cert para este usuario+curso emitido hoy (misma ejecución del acta)
+                    const certExistente = await (prisma as any).certificacion.findFirst({
+                        where: {
+                            usuarioId: insc.usuarioId,
+                            cursoId: convActa.cursoId,
+                            fechaObtencion: { gte: new Date(fechaHoy.toDateString()) }
+                        }
+                    })
+                    if (certExistente) { certificadosSaltados++; continue }
 
-                    const numCert = `CERT-${fechaHoy.getFullYear()}-${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`
+                    const numCert = await generarNumeroCertificado()
 
                     await (prisma as any).certificacion.create({
                         data: {
@@ -543,7 +549,7 @@ export async function POST(request: NextRequest) {
                             fechaObtencion: fechaHoy,
                             fechaExpiracion,
                             numeroCertificado: numCert,
-                            entidadEmisora: 'Protección Civil Bormujos', // O data.entidad
+                            entidadEmisora: data.entidadEmisora || 'Protección Civil Bormujos',
                             vigente: true,
                             renovada: false
                         }
@@ -568,10 +574,11 @@ export async function POST(request: NextRequest) {
                     modulo: 'Formación'
                 })
 
-                return NextResponse.json({ success: true, certificadosGenerados })
+                return NextResponse.json({ success: true, certificadosGenerados, certificadosSaltados })
 
-            default:
             case 'jornada': {
+                const adminJ = await getAdminUser(session)
+                if (!adminJ) return NextResponse.json({ error: 'Sin permisos para crear jornadas' }, { status: 403 })
                 const { convocatoriaId: convIdJ, fecha, numeroJornada, titulo, horaInicio, horaFin } = body
                 if (!convIdJ || !fecha || !numeroJornada) {
                     return NextResponse.json({ error: 'convocatoriaId, fecha y numeroJornada requeridos' }, { status: 400 })
@@ -586,8 +593,9 @@ export async function POST(request: NextRequest) {
                         horaFin: horaFin || null
                     }
                 })
+                // Solo crear registros para inscritos confirmados (no pendientes)
                 const inscripciones = await (prisma as any).inscripcion.findMany({
-                    where: { convocatoriaId: convIdJ, estado: { in: ['confirmada', 'pendiente'] } },
+                    where: { convocatoriaId: convIdJ, estado: 'confirmada' },
                     select: { usuarioId: true }
                 })
                 if (inscripciones.length > 0) {
@@ -609,6 +617,8 @@ export async function POST(request: NextRequest) {
                 return NextResponse.json({ jornada, registrosCreados: inscripciones.length + externosJ.length })
             }
             case 'participante-externo': {
+                const adminExt = await getAdminUser(session)
+                if (!adminExt) return NextResponse.json({ error: 'Sin permisos' }, { status: 403 })
                 const { convocatoriaId: convIdE, nombre, apellidos, dni, email, telefono, organizacion, cargo } = body
                 if (!convIdE || !nombre || !apellidos) {
                     return NextResponse.json({ error: 'convocatoriaId, nombre y apellidos requeridos' }, { status: 400 })
@@ -628,6 +638,7 @@ export async function POST(request: NextRequest) {
                 }
                 return NextResponse.json({ externo })
             }
+            default:
                 return NextResponse.json({ error: 'Tipo no válido' }, { status: 400 })
         }
     } catch (error) {
@@ -638,7 +649,7 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
     try {
-        const session = await getServerSession()
+        const session = await getServerSession(authOptions)
         if (!session?.user?.email) {
             return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
         }
@@ -690,73 +701,43 @@ export async function PUT(request: NextRequest) {
                 const { action } = data
 
                 if (action === 'aprobar') {
-                    // Obtener la inscripción actual
-                    const inscripcionActual = await (prisma as any).inscripcion.findUnique({
-                        where: { id }
-                    })
+                    const adminAprPut = await getAdminUser(session)
+                    if (!adminAprPut) return NextResponse.json({ error: 'Sin permisos para aprobar inscripciones' }, { status: 403 })
 
-                    if (!inscripcionActual) {
-                        return NextResponse.json({ error: 'Inscripción no encontrada' }, { status: 404 })
-                    }
-
-                    // Verificar plazas disponibles
-                    const conv = await (prisma as any).convocatoria.findUnique({
-                        where: { id: inscripcionActual.convocatoriaId }
-                    })
-
-                    if (!conv) {
-                        return NextResponse.json({ error: 'Convocatoria no encontrada' }, { status: 404 })
-                    }
-
-                    if (conv.plazasOcupadas >= conv.plazasDisponibles) {
-                        return NextResponse.json({ error: 'No hay plazas disponibles' }, { status: 400 })
-                    }
-
-                    // Aprobar: actualizar estado y ocupar plaza
-                    const [inscripcionAprobada] = await (prisma as any).$transaction([
-                        (prisma as any).inscripcion.update({
-                            where: { id },
-                            data: { estado: 'confirmada' }
-                        }),
-                        (prisma as any).convocatoria.update({
-                            where: { id: inscripcionActual.convocatoriaId },
-                            data: { plazasOcupadas: { increment: 1 } }
+                    let inscripcionAprobada: any
+                    try {
+                        inscripcionAprobada = await (prisma as any).$transaction(async (tx: any) => {
+                            const insc = await tx.inscripcion.findUnique({ where: { id } })
+                            if (!insc) throw new Error('INSCRIPCION_NOT_FOUND')
+                            if (insc.estado === 'confirmada') throw new Error('YA_CONFIRMADA')
+                            const conv = await tx.convocatoria.findUnique({ where: { id: insc.convocatoriaId } })
+                            if (!conv) throw new Error('CONV_NOT_FOUND')
+                            if (conv.plazasOcupadas >= conv.plazasDisponibles) throw new Error('SIN_PLAZAS')
+                            const updated = await tx.inscripcion.update({ where: { id }, data: { estado: 'confirmada' } })
+                            await tx.convocatoria.update({ where: { id: insc.convocatoriaId }, data: { plazasOcupadas: { increment: 1 } } })
+                            return updated
                         })
-                    ])
+                    } catch (txErr: any) {
+                        if (txErr.message === 'SIN_PLAZAS') return NextResponse.json({ error: 'No hay plazas disponibles' }, { status: 400 })
+                        if (txErr.message === 'YA_CONFIRMADA') return NextResponse.json({ error: 'La inscripción ya está confirmada' }, { status: 400 })
+                        if (txErr.message === 'INSCRIPCION_NOT_FOUND') return NextResponse.json({ error: 'Inscripción no encontrada' }, { status: 404 })
+                        if (txErr.message === 'CONV_NOT_FOUND') return NextResponse.json({ error: 'Convocatoria no encontrada' }, { status: 404 })
+                        throw txErr
+                    }
 
                     const { usuarioId: aproId3, usuarioNombre: aproNombre3 } = getUsuarioAudit(session)
-                    await registrarAudit({
-                        accion: 'APPROVE',
-                        entidad: 'Inscripción',
-                        entidadId: id,
-                        descripcion: `Inscripción aprobada (Usuario ID: ${inscripcionActual.usuarioId}) para Convocatoria: ${conv.codigo}`,
-                        usuarioId: aproId3,
-                        usuarioNombre: aproNombre3,
-                        modulo: 'Formación'
-                    })
-
+                    await registrarAudit({ accion: 'APPROVE', entidad: 'Inscripción', entidadId: id, descripcion: `Inscripción aprobada (usuario ${inscripcionAprobada.usuarioId})`, usuarioId: aproId3, usuarioNombre: aproNombre3, modulo: 'Formación' })
                     return NextResponse.json({ success: true, inscripcion: inscripcionAprobada, mensaje: 'Inscripción aprobada' })
                 }
 
                 if (action === 'rechazar') {
-                    // Rechazar: solo actualizar estado
-                    const inscripcionRechazada = await (prisma as any).inscripcion.update({
-                        where: { id },
-                        data: { estado: 'rechazada' }
-                    })
-
+                    const adminRech = await getAdminUser(session)
+                    if (!adminRech) return NextResponse.json({ error: 'Sin permisos para rechazar inscripciones' }, { status: 403 })
                     const orginsc2 = await (prisma as any).inscripcion.findUnique({ where: { id }, include: { convocatoria: true } })
+                    if (!orginsc2) return NextResponse.json({ error: 'Inscripción no encontrada' }, { status: 404 })
+                    const inscripcionRechazada = await (prisma as any).inscripcion.update({ where: { id }, data: { estado: 'rechazada' } })
                     const { usuarioId: rechId2, usuarioNombre: rechNombre2 } = getUsuarioAudit(session)
-                    await registrarAudit({
-                        accion: 'REJECT',
-                        entidad: 'Inscripción',
-                        entidadId: id,
-                        descripcion: `Inscripción rechazada (Usuario ID: ${inscripcionRechazada.usuarioId}) para Convocatoria: ${orginsc2?.convocatoria.codigo}`,
-                        usuarioId: rechId2,
-                        usuarioNombre: rechNombre2,
-                        modulo: 'Formación'
-                    })
-
+                    await registrarAudit({ accion: 'REJECT', entidad: 'Inscripción', entidadId: id, descripcion: `Inscripción rechazada (usuario ${inscripcionRechazada.usuarioId}) para ${orginsc2?.convocatoria?.codigo || '-'}`, usuarioId: rechId2, usuarioNombre: rechNombre2, modulo: 'Formación' })
                     return NextResponse.json({ success: true, inscripcion: inscripcionRechazada, mensaje: 'Inscripción rechazada' })
                 }
 
@@ -772,10 +753,16 @@ export async function PUT(request: NextRequest) {
                 const necesidad = await (prisma as any).necesidadFormativa.update({ where: { id }, data })
                 return NextResponse.json({ success: true, necesidad })
 
-            default:
             case 'registro-firma': {
                 const { id: regId, asistio, firmaBase64, valoracionFormador, notaFormador, comentarioFormador } = body
                 if (!regId) return NextResponse.json({ error: 'id requerido' }, { status: 400 })
+                // Verificar que la jornada no esté bloqueada
+                const regExistente = await (prisma as any).registroFirma.findUnique({
+                    where: { id: regId },
+                    include: { jornada: { select: { bloqueada: true } } }
+                })
+                if (!regExistente) return NextResponse.json({ error: 'Registro no encontrado' }, { status: 404 })
+                if (regExistente.jornada?.bloqueada) return NextResponse.json({ error: 'La jornada está bloqueada y no admite cambios' }, { status: 400 })
                 const updateData: any = {}
                 if (asistio !== undefined) updateData.asistio = asistio
                 if (firmaBase64 !== undefined) {
@@ -792,6 +779,7 @@ export async function PUT(request: NextRequest) {
                 })
                 return NextResponse.json({ registro: registroActualizado })
             }
+            default:
                 return NextResponse.json({ error: 'Tipo no válido' }, { status: 400 })
         }
     } catch (error) {
@@ -802,7 +790,7 @@ export async function PUT(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
     try {
-        const session = await getServerSession()
+        const session = await getServerSession(authOptions)
         if (!session?.user?.email) {
             return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
         }
@@ -816,8 +804,11 @@ export async function DELETE(request: NextRequest) {
         }
 
         switch (tipo) {
-            case 'curso':
+            case 'curso': {
+                const adminDelC = await getAdminUser(session)
+                if (!adminDelC) return NextResponse.json({ error: 'Sin permisos para eliminar cursos' }, { status: 403 })
                 const cursoDel = await (prisma as any).curso.findUnique({ where: { id } })
+                if (!cursoDel) return NextResponse.json({ error: 'Curso no encontrado' }, { status: 404 })
                 await (prisma as any).curso.delete({ where: { id } })
                 const { usuarioId: delIdC, usuarioNombre: delNomC } = getUsuarioAudit(session)
                 await registrarAudit({
@@ -830,9 +821,13 @@ export async function DELETE(request: NextRequest) {
                     modulo: 'Formación'
                 })
                 return NextResponse.json({ success: true })
+            }
 
-            case 'convocatoria':
+            case 'convocatoria': {
+                const adminDelConv = await getAdminUser(session)
+                if (!adminDelConv) return NextResponse.json({ error: 'Sin permisos para eliminar convocatorias' }, { status: 403 })
                 const convDel = await (prisma as any).convocatoria.findUnique({ where: { id } })
+                if (!convDel) return NextResponse.json({ error: 'Convocatoria no encontrada' }, { status: 404 })
                 await (prisma as any).convocatoria.delete({ where: { id } })
                 const { usuarioId: delIdConv, usuarioNombre: delNomConv } = getUsuarioAudit(session)
                 await registrarAudit({
@@ -845,10 +840,13 @@ export async function DELETE(request: NextRequest) {
                     modulo: 'Formación'
                 })
                 return NextResponse.json({ success: true })
+            }
 
-            case 'inscripcion':
+            case 'inscripcion': {
                 const insc = await (prisma as any).inscripcion.findUnique({ where: { id } })
-                if (insc) {
+                if (!insc) return NextResponse.json({ error: 'Inscripción no encontrada' }, { status: 404 })
+                // Solo decrementar plazas si la inscripción estaba confirmada
+                if (insc.estado === 'confirmada') {
                     await (prisma as any).$transaction([
                         (prisma as any).inscripcion.delete({ where: { id } }),
                         (prisma as any).convocatoria.update({
@@ -856,26 +854,25 @@ export async function DELETE(request: NextRequest) {
                             data: { plazasOcupadas: { decrement: 1 } }
                         })
                     ])
-                    const { usuarioId: delIdI, usuarioNombre: delNomI } = getUsuarioAudit(session)
-                    await registrarAudit({
-                        accion: 'UNASSIGN',
-                        entidad: 'Inscripción',
-                        entidadId: id,
-                        descripcion: `Inscripción eliminada (Desasignación) del voluntario ${insc.usuarioId} de la convocatoria ${insc.convocatoriaId}`,
-                        usuarioId: delIdI,
-                        usuarioNombre: delNomI,
-                        modulo: 'Formación'
-                    })
+                } else {
+                    await (prisma as any).inscripcion.delete({ where: { id } })
                 }
+                const { usuarioId: delIdI, usuarioNombre: delNomI } = getUsuarioAudit(session)
+                await registrarAudit({ accion: 'UNASSIGN', entidad: 'Inscripción', entidadId: id, descripcion: `Inscripción eliminada del voluntario ${insc.usuarioId} de la convocatoria ${insc.convocatoriaId}`, usuarioId: delIdI, usuarioNombre: delNomI, modulo: 'Formación' })
                 return NextResponse.json({ success: true })
+            }
 
-            case 'certificacion':
+            case 'certificacion': {
+                const adminDelCert = await getAdminUser(session)
+                if (!adminDelCert) return NextResponse.json({ error: 'Sin permisos' }, { status: 403 })
                 await (prisma as any).certificacion.delete({ where: { id } })
                 return NextResponse.json({ success: true })
+            }
 
-            case 'necesidad':
+            case 'necesidad': {
                 await (prisma as any).necesidadFormativa.delete({ where: { id } })
                 return NextResponse.json({ success: true })
+            }
 
             default:
                 return NextResponse.json({ error: 'Tipo no válido' }, { status: 400 })
