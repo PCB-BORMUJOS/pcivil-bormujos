@@ -1004,6 +1004,7 @@ export default function FormacionPage() {
     try {
       if (convocatoriaEditando) {
         // Actualizar convocatoria existente
+        const convData = nuevaConvocatoriaData as any;
         const res = await fetch(`/api/formacion?id=${convocatoriaEditando.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -1017,7 +1018,9 @@ export default function FormacionPage() {
             horario: nuevaConvocatoriaData.horario,
             instructores: nuevaConvocatoriaData.instructores,
             formadorNombre: nuevaConvocatoriaData.formadorNombre,
-            formadorExterno: nuevaConvocatoriaData.formadorExterno
+            formadorExterno: nuevaConvocatoriaData.formadorExterno,
+            edicion: convData.edicion || null,
+            ...(convData.estado && { estado: convData.estado })
           })
         });
         if (res.ok) {
@@ -1095,6 +1098,85 @@ export default function FormacionPage() {
         cargarInscripciones();
         cargarConvocatorias();
       } else { alert('Error al actualizar estado'); }
+    } catch (e) { console.error("Error en operación:", e); alert('Error'); }
+  };
+
+  const handleAprobarInscripcion = async (id: string) => {
+    try {
+      const res = await fetch('/api/formacion', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tipo: 'inscripcion', id, action: 'aprobar' })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        cargarInscripciones();
+        cargarConvocatorias();
+      } else { alert('Error: ' + (data.error || 'No se pudo aprobar')); }
+    } catch (e) { console.error("Error en operación:", e); alert('Error'); }
+  };
+
+  const handleRechazarInscripcion = async (id: string) => {
+    if (!confirm('¿Rechazar esta inscripción?')) return;
+    try {
+      const res = await fetch('/api/formacion', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tipo: 'inscripcion', id, action: 'rechazar' })
+      });
+      if (res.ok) {
+        cargarInscripciones();
+      } else { alert('Error al rechazar'); }
+    } catch (e) { console.error("Error en operación:", e); alert('Error'); }
+  };
+
+  const handleEliminarInscripcion = async (id: string) => {
+    if (!confirm('¿Eliminar esta inscripción? Esta acción no se puede deshacer.')) return;
+    try {
+      const res = await fetch(`/api/formacion?tipo=inscripcion&id=${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        cargarInscripciones();
+        cargarConvocatorias();
+      } else { alert('Error al eliminar inscripción'); }
+    } catch (e) { console.error("Error en operación:", e); alert('Error'); }
+  };
+
+  const handleEliminarCurso = async (id: string, nombre: string) => {
+    if (!confirm(`¿Eliminar el curso "${nombre}"? Esto eliminará también todas sus convocatorias y certificaciones asociadas.`)) return;
+    try {
+      const res = await fetch(`/api/formacion?tipo=curso&id=${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        cargarCursos();
+      } else {
+        const data = await res.json();
+        alert('Error: ' + (data.error || 'No se pudo eliminar'));
+      }
+    } catch (e) { console.error("Error en operación:", e); alert('Error'); }
+  };
+
+  const handleEliminarConvocatoria = async (id: string, codigo: string) => {
+    if (!confirm(`¿Eliminar la convocatoria "${codigo}"? Se eliminarán también las inscripciones asociadas.`)) return;
+    try {
+      const res = await fetch(`/api/formacion?tipo=convocatoria&id=${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        cargarConvocatorias();
+      } else {
+        const data = await res.json();
+        alert('Error: ' + (data.error || 'No se pudo eliminar'));
+      }
+    } catch (e) { console.error("Error en operación:", e); alert('Error'); }
+  };
+
+  const handleCambiarEstadoConvocatoria = async (id: string, nuevoEstado: string) => {
+    try {
+      const res = await fetch('/api/formacion', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tipo: 'convocatoria', id, estado: nuevoEstado })
+      });
+      if (res.ok) {
+        cargarConvocatorias();
+      } else { alert('Error al cambiar estado'); }
     } catch (e) { console.error("Error en operación:", e); alert('Error'); }
   };
 
@@ -1517,6 +1599,11 @@ export default function FormacionPage() {
                               <Edit size={15} />
                             </button>
                           )}
+                          {isAdmin && (
+                            <button onClick={() => handleEliminarCurso(curso.id, curso.nombre)} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Eliminar">
+                              <Trash2 size={15} />
+                            </button>
+                          )}
                           <button onClick={() => toggleCursoExpand(curso.id)} className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors">
                             <ArrowUpDown size={15} />
                           </button>
@@ -1644,8 +1731,11 @@ export default function FormacionPage() {
                     <div className="col-span-2 flex justify-end gap-1">
                       {(isAdmin || isFormacionMember) ? (
                         <>
-                          <button onClick={() => { setConvocatoriaEditando(c); setNuevaConvocatoriaData({ ...nuevaConvocatoriaData, cursoId: c.curso?.id, fechaInicio: new Date(c.fechaInicio).toISOString().slice(0,10), fechaFin: new Date(c.fechaFin).toISOString().slice(0,10), lugar: c.lugar || '', plazasDisponibles: c.plazasDisponibles || 20, horario: c.horario || '', instructores: (c as any).instructores || '' }); setShowNuevaConvocatoria(true); }} className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors" title="Editar"><Edit size={15} /></button>
+                          <button onClick={() => { setConvocatoriaEditando(c); setNuevaConvocatoriaData({ ...nuevaConvocatoriaData, cursoId: c.curso?.id, fechaInicio: new Date(c.fechaInicio).toISOString().slice(0,10), fechaFin: new Date(c.fechaFin).toISOString().slice(0,10), lugar: c.lugar || '', plazasDisponibles: c.plazasDisponibles || 20, horario: c.horario || '', instructores: (c as any).instructores || '', formadorNombre: (c as any).formadorNombre || '', formadorExterno: (c as any).formadorExterno || false }); setShowNuevaConvocatoria(true); }} className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors" title="Editar"><Edit size={15} /></button>
                           <button onClick={() => handleOpenGestion(c)} className="p-1.5 text-blue-400 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors" title="Acta / Firmas"><FileText size={15} /></button>
+                          {isAdmin && c.estado !== 'finalizada' && (
+                            <button onClick={() => handleEliminarConvocatoria(c.id, c.codigo)} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Eliminar"><Trash2 size={15} /></button>
+                          )}
                         </>
                       ) : (
                         c.estado === 'inscripciones_abiertas' && c.plazasOcupadas < c.plazasDisponibles ? (
@@ -1719,15 +1809,29 @@ export default function FormacionPage() {
                                   <div className="font-medium text-slate-800">{ins.usuario?.nombre} {ins.usuario?.apellidos}</div>
                                   <div className="text-xs text-slate-500">{ins.usuario?.numeroVoluntario}</div>
                                 </td>
-                                <td className="p-3">{ins.convocatoria?.curso?.nombre || ins.convocatoria?.codigo}</td>
-                                <td className="p-3 text-center">{new Date(ins.fechaInscripcion).toLocaleDateString()}</td>
+                                <td className="p-3 text-xs text-slate-500">{ins.convocatoria?.curso?.nombre || ins.convocatoria?.codigo}</td>
+                                <td className="p-3 text-center text-xs">{new Date(ins.fechaInscripcion).toLocaleDateString()}</td>
                                 <td className="p-3 text-center">
-                                  <span className={`px-2 py-1 rounded-full text-xs font-bold ${ins.estado === 'admitida' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-600'}`}>{ins.estado}</span>
+                                  <span className={`px-2 py-1 rounded-full text-xs font-bold ${
+                                    ins.estado === 'confirmada' ? 'bg-green-100 text-green-700' :
+                                    ins.estado === 'pendiente' ? 'bg-yellow-100 text-yellow-700' :
+                                    ins.estado === 'rechazada' ? 'bg-red-100 text-red-700' :
+                                    'bg-slate-100 text-slate-600'
+                                  }`}>{ins.estado}</span>
                                 </td>
                                 <td className="p-3 text-right">
-                                  <div className="flex items-center justify-end gap-2">
+                                  <div className="flex items-center justify-end gap-1">
+                                    {(isAdmin || isFormacionMember) && ins.estado === 'pendiente' && (
+                                      <>
+                                        <button onClick={(e) => { e.stopPropagation(); handleAprobarInscripcion(ins.id); }} className="px-2 py-1 bg-green-100 text-green-700 hover:bg-green-200 rounded text-xs font-medium" title="Aprobar">✓ Aprobar</button>
+                                        <button onClick={(e) => { e.stopPropagation(); handleRechazarInscripcion(ins.id); }} className="px-2 py-1 bg-red-100 text-red-700 hover:bg-red-200 rounded text-xs font-medium" title="Rechazar">✗ Rechazar</button>
+                                      </>
+                                    )}
                                     {(isAdmin || isFormacionMember) && (
-                                      <button onClick={(e) => { e.stopPropagation(); setSelectedConvocatoriaForGrading(g.convocatoria); setShowGestionConvocatoria(true); setInscripcionesGrading([ins]); }} className="px-3 py-1 bg-orange-100 text-orange-700 rounded-lg text-xs">Firmar</button>
+                                      <button onClick={(e) => { e.stopPropagation(); setSelectedConvocatoriaForGrading(g.convocatoria); setShowGestionConvocatoria(true); setInscripcionesGrading([ins]); }} className="px-2 py-1 bg-orange-100 text-orange-700 hover:bg-orange-200 rounded text-xs">Firmar</button>
+                                    )}
+                                    {isAdmin && (
+                                      <button onClick={(e) => { e.stopPropagation(); handleEliminarInscripcion(ins.id); }} className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded" title="Eliminar inscripción"><Trash2 size={13} /></button>
                                     )}
                                   </div>
                                 </td>
@@ -2422,8 +2526,18 @@ export default function FormacionPage() {
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Instructores</label>
-              <input type="text" className="w-full border rounded-lg p-2" placeholder="Nombres de instructores..." value={nuevaConvocatoriaData.instructores} onChange={e => setNuevaConvocatoriaData({ ...nuevaConvocatoriaData, instructores: e.target.value })} />
+              <label className="block text-sm font-medium text-slate-700 mb-1">Horario</label>
+              <input type="text" className="w-full border rounded-lg p-2" placeholder="Ej. Sábados 09:00-14:00, o Viernes tarde 17:00-21:00" value={nuevaConvocatoriaData.horario} onChange={e => setNuevaConvocatoriaData({ ...nuevaConvocatoriaData, horario: e.target.value })} />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Instructores</label>
+                <input type="text" className="w-full border rounded-lg p-2" placeholder="Nombres de instructores..." value={nuevaConvocatoriaData.instructores} onChange={e => setNuevaConvocatoriaData({ ...nuevaConvocatoriaData, instructores: e.target.value })} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Edición</label>
+                <input type="text" className="w-full border rounded-lg p-2" placeholder="Ej. 1ª Edición, 2ª Edición..." value={(nuevaConvocatoriaData as any).edicion || ''} onChange={e => setNuevaConvocatoriaData({ ...nuevaConvocatoriaData, edicion: e.target.value } as any)} />
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -2435,6 +2549,18 @@ export default function FormacionPage() {
                 <label htmlFor="formadorExterno" className="text-sm font-medium text-slate-700">Formador externo</label>
               </div>
             </div>
+            {convocatoriaEditando && (
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Estado de la convocatoria</label>
+                <select className="w-full border rounded-lg p-2" value={(nuevaConvocatoriaData as any).estado || convocatoriaEditando.estado} onChange={e => setNuevaConvocatoriaData({ ...nuevaConvocatoriaData, estado: e.target.value } as any)}>
+                  <option value="planificada">Planificada</option>
+                  <option value="inscripciones_abiertas">Inscripciones abiertas</option>
+                  <option value="en_curso">En curso</option>
+                  <option value="finalizada">Finalizada</option>
+                  <option value="cancelada">Cancelada</option>
+                </select>
+              </div>
+            )}
               <div className="flex justify-end gap-2 pt-4 bg-slate-50 -mx-6 -mb-6 p-4 mt-4 border-t">
                 <button onClick={() => { setShowNuevaConvocatoria(false); setConvocatoriaEditando(null); }} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg font-medium">Cancelar</button>
                 <button onClick={handleGuardarConvocatoria} className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-sm font-medium">{convocatoriaEditando ? 'Guardar Cambios' : 'Crear Convocatoria'}</button>
