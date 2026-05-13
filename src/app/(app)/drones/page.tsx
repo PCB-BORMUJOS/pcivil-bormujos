@@ -137,6 +137,9 @@ export default function DronesPage() {
   const [showNuevoMant, setShowNuevoMant] = useState(false)
   const [showNuevaBateria, setShowNuevaBateria] = useState(false)
   const [showNotamManual, setShowNotamManual] = useState(false)
+  const [showCerrarVuelo, setShowCerrarVuelo] = useState(false)
+  const [vueloCierre, setVueloCierre] = useState<Vuelo | null>(null)
+  const [bateriasParaCierre, setBateriasParaCierre] = useState<Record<string, number>>({})
 
   // Filtros
   const [filtroEstadoDrone, setFiltroEstadoDrone] = useState('todos')
@@ -294,9 +297,8 @@ export default function DronesPage() {
     e.preventDefault()
     const f = new FormData(e.currentTarget)
     const meteo = { viento: f.get('viento'), visibilidad: f.get('visibilidad'), nubes: f.get('nubes'), temperatura: f.get('temperatura'), condicion: f.get('condicion') }
-    setVueloFormData({ tipo: 'vuelo', droneId: f.get('droneId'), pilotoId: f.get('pilotoId'), fecha: f.get('fecha'), horaInicio: f.get('horaInicio'), horaFin: f.get('horaFin'), duracionMinutos: f.get('duracionMinutos') ? parseInt(f.get('duracionMinutos') as string) : null, tipoOperacion: f.get('tipoOperacion'), categoriaAESA: f.get('categoriaAESA'), municipio: f.get('municipio') || 'Bormujos', lugarDespegue: f.get('lugarDespegue'), lugarAterrizaje: f.get('lugarAterrizaje'), descripcionZona: f.get('descripcionZona'), zonaAerea: f.get('zonaAerea'), latitudInicio: f.get('latitudInicio'), longitudInicio: f.get('longitudInicio'), alturaMaxima: f.get('alturaMaxima'), alturaMedia: f.get('alturaMedia'), condicionesMeteo: meteo, condicionesVuelo: f.get('condicionesVuelo'), notamConsultado: f.get('notamConsultado') === 'on', notamReferencia: f.get('notamReferencia'), objetivoMision: f.get('objetivoMision'), resultadoMision: f.get('resultadoMision'), personalApoyo: f.get('personalApoyo'), numeroVccOperador: f.get('numeroVccOperador'), incidencias: f.get('incidencias'), observaciones: f.get('observaciones'), estado: 'completado', bateriasUsadas: bateriasSeleccionadas })
+    setVueloFormData({ tipo: 'vuelo', droneId: f.get('droneId'), pilotoId: f.get('pilotoId'), fecha: f.get('fecha'), horaInicio: f.get('horaInicio'), tipoOperacion: f.get('tipoOperacion'), categoriaAESA: f.get('categoriaAESA'), municipio: f.get('municipio') || 'Bormujos', lugarDespegue: f.get('lugarDespegue'), lugarAterrizaje: f.get('lugarAterrizaje'), descripcionZona: f.get('descripcionZona'), zonaAerea: f.get('zonaAerea'), latitudInicio: f.get('latitudInicio'), longitudInicio: f.get('longitudInicio'), alturaMaxima: f.get('alturaMaxima'), alturaMedia: f.get('alturaMedia'), condicionesMeteo: meteo, condicionesVuelo: f.get('condicionesVuelo'), notamConsultado: f.get('notamConsultado') === 'on', notamReferencia: f.get('notamReferencia'), objetivoMision: f.get('objetivoMision'), personalApoyo: f.get('personalApoyo'), numeroVccOperador: f.get('numeroVccOperador'), observaciones: f.get('observaciones'), estado: 'en_curso' })
     setChecklistNuevo({})
-    setBateriasSeleccionadas({})
     setPasoNuevoVuelo(2)
   }
 
@@ -315,13 +317,6 @@ export default function DronesPage() {
         itemsChecklist[s.id] = s.items.map(i => ({ id: i.id, label: i.label, ok: checklistNuevo[i.id] || false, naAplicable: false }))
       })
       await fetch('/api/drones', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'checklist', vueloId: dataVuelo.vuelo.id, items: itemsChecklist, completado: true, firmadoPor: vueloFormData.pilotoId, observaciones: '' }) })
-      // Actualizar ciclos y minutos de cada bateria usada
-      const batUsadas = vueloFormData.bateriasUsadas || {}
-      for (const [batId, minutos] of Object.entries(batUsadas)) {
-        if (minutos && Number(minutos) > 0) {
-          await fetch('/api/drones', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'bateria-uso', id: batId, minutosVuelo: Number(minutos), duracionVuelo: vueloFormData.duracionMinutos || Number(minutos) }) })
-        }
-      }
       setShowNuevoVuelo(false)
       setPasoNuevoVuelo(1)
       setVueloFormData(null)
@@ -366,6 +361,48 @@ export default function DronesPage() {
         resultadoMision: f.get('resultadoMision'),
       })})
       setShowEditarVuelo(false)
+      cargarDatos()
+    } finally { setSaving(false) }
+  }
+
+  const handleCerrarVuelo = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    if (!vueloCierre) return
+    const f = new FormData(e.currentTarget)
+    const horaFin = f.get('horaFin') as string
+    const duracionMinutos = f.get('duracionMinutos') ? parseInt(f.get('duracionMinutos') as string) : null
+    const resultadoMision = f.get('resultadoMision') as string
+    const incidencias = f.get('incidencias') as string
+    const estado = incidencias?.trim() ? 'incidencia' : 'completado'
+    try {
+      setSaving(true)
+      await fetch('/api/drones', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tipo: 'vuelo',
+          id: vueloCierre.id,
+          estado,
+          horaFin: horaFin || null,
+          duracionMinutos,
+          resultadoMision: resultadoMision || null,
+          incidencias: incidencias || null,
+          bateriasUsadas: bateriasParaCierre
+        })
+      })
+      // Actualizar ciclos y minutos de cada batería usada
+      for (const [batId, minutos] of Object.entries(bateriasParaCierre)) {
+        if (minutos && Number(minutos) > 0) {
+          await fetch('/api/drones', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tipo: 'bateria-uso', id: batId, minutosVuelo: Number(minutos), duracionVuelo: duracionMinutos || Number(minutos) })
+          })
+        }
+      }
+      setShowCerrarVuelo(false)
+      setVueloCierre(null)
+      setBateriasParaCierre({})
       cargarDatos()
     } finally { setSaving(false) }
   }
@@ -909,7 +946,10 @@ export default function DronesPage() {
                           </div>
                         )}
                         {/* Acciones */}
-                        <div className="flex justify-end gap-2 pt-1">
+                        <div className="flex justify-end gap-2 pt-1 flex-wrap">
+                          {v.estado === 'en_curso' && (
+                            <button onClick={() => { setVueloCierre(v); setBateriasParaCierre({}); setShowCerrarVuelo(true) }} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold bg-amber-500 text-white rounded-lg hover:bg-amber-600"><CheckCircle2 size={12} />Cerrar vuelo</button>
+                          )}
                           <button onClick={() => { setVueloSeleccionado(v); setChecklistData(v.checklist || { items: {}, firmadoPor: '', observaciones: '' }); setShowChecklist(true) }} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-slate-200 rounded-lg hover:bg-slate-100 text-slate-600"><CheckCircle2 size={12} />Ver checklist</button>
                           <button onClick={() => { setVueloSeleccionado(v); setShowDetalleVuelo(true) }} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-teal-600 text-white rounded-lg hover:bg-teal-700"><Eye size={12} />Detalle completo</button>
                         </div>
@@ -1582,81 +1622,10 @@ export default function DronesPage() {
                     </select>
                   </div>
                 </div>
-                {/* Selector de baterias */}
-                {droneSeleccionadoWizard && (() => {
-                  const droneActual = drones.find(d => d.id === droneSeleccionadoWizard)
-                  const droneCompat = droneActual?.modelo?.toLowerCase().includes('mini') ? 'mini'
-                    : droneActual?.modelo?.toLowerCase().includes('pro') ? 'pro' : 'universal'
-                  const batsDisponibles = todasBaterias.filter((b: Bateria) =>
-                    b.estado === 'operativa' &&
-                    (b.compatibilidad === 'universal' || b.compatibilidad === droneCompat || b.compatibilidad === droneActual?.modelo)
-                  )
-                  if (batsDisponibles.length === 0) return null
-                  return (
-                    <div className="mt-3 border border-slate-100 rounded-xl overflow-hidden">
-                      <div className="bg-slate-50 px-4 py-2.5 border-b border-slate-100 flex items-center justify-between">
-                        <p className="text-xs font-bold text-slate-600 uppercase tracking-wide">Baterias a usar en este vuelo</p>
-                        <p className="text-[10px] text-slate-400">Marca las baterias y registra los minutos de uso</p>
-                      </div>
-                      <div className="divide-y divide-slate-50">
-                        {batsDisponibles.map((b: Bateria) => {
-                          const pct = Math.round((b.ciclosActuales / b.ciclosMaximos) * 100)
-                          const isSelected = bateriasSeleccionadas[b.id] !== undefined
-                          return (
-                            <div key={b.id} className={`flex items-center gap-3 px-4 py-3 transition-colors ${isSelected ? 'bg-teal-50' : 'hover:bg-slate-50'}`}>
-                              <input
-                                type="checkbox"
-                                checked={isSelected}
-                                onChange={e => {
-                                  if (e.target.checked) {
-                                    setBateriasSeleccionadas(prev => ({ ...prev, [b.id]: 0 }))
-                                  } else {
-                                    setBateriasSeleccionadas(prev => { const n = { ...prev }; delete n[b.id]; return n })
-                                  }
-                                }}
-                                className="w-4 h-4 accent-teal-600 shrink-0"
-                              />
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-sm font-bold text-slate-800">{b.codigo}</span>
-                                  <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${pct < 70 ? 'bg-green-100 text-green-700' : pct < 90 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-600'}`}>
-                                    {b.ciclosActuales}/{b.ciclosMaximos} ciclos ({pct}%)
-                                  </span>
-                                  {b.minutosVuelo !== undefined && <span className="text-[10px] text-slate-400">{Math.round((b.minutosVuelo || 0) / 60)}h {(b.minutosVuelo || 0) % 60}min totales</span>}
-                                  {b.capacidadMah && <span className="text-[10px] text-slate-400">{b.capacidadMah} mAh</span>}
-                                </div>
-                                <div className="mt-1 h-1 bg-slate-100 rounded-full w-32">
-                                  <div className={`h-full rounded-full ${pct < 70 ? 'bg-green-400' : pct < 90 ? 'bg-amber-400' : 'bg-red-400'}`} style={{ width: `${pct}%` }} />
-                                </div>
-                              </div>
-                              {isSelected && (
-                                <div className="flex items-center gap-2 shrink-0">
-                                  <label className="text-xs text-slate-500">Minutos usados:</label>
-                                  <input
-                                    type="number"
-                                    min="0"
-                                    max="180"
-                                    placeholder="30"
-                                    value={bateriasSeleccionadas[b.id] || ''}
-                                    onChange={e => setBateriasSeleccionadas(prev => ({ ...prev, [b.id]: parseInt(e.target.value) || 0 }))}
-                                    className="w-20 border border-teal-200 rounded-lg px-2 py-1 text-sm text-center font-bold text-teal-700 bg-white"
-                                  />
-                                </div>
-                              )}
-                            </div>
-                          )
-                        })}
-                      </div>
-                      {Object.keys(bateriasSeleccionadas).length > 0 && (
-                        <div className="bg-teal-50 px-4 py-2 border-t border-teal-100">
-                          <p className="text-xs text-teal-700 font-medium">
-                            {Object.keys(bateriasSeleccionadas).length} bateria/s seleccionada/s · Total: {Object.values(bateriasSeleccionadas).reduce((a, b) => a + b, 0)} min
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  )
-                })()}
+                <div className="mt-3 flex items-start gap-2 p-3 bg-amber-50 border border-amber-100 rounded-lg">
+                  <Battery size={14} className="text-amber-600 mt-0.5 shrink-0" />
+                  <p className="text-xs text-amber-700">Las baterías usadas y el tiempo de vuelo se registran al <strong>cerrar el vuelo</strong> una vez finalizado.</p>
+                </div>
               </div>
               {/* Identificacion AESA */}
               <div className="bg-teal-50 border border-teal-100 rounded-xl p-4">
@@ -1682,8 +1651,6 @@ export default function DronesPage() {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div><label className={labelCls}>Fecha *</label><input name="fecha" type="date" required defaultValue={new Date().toLocaleDateString('en-CA', {timeZone: 'Europe/Madrid'})} className={inputCls} /></div>
                   <div><label className={labelCls}>Hora inicio</label><input name="horaInicio" type="time" className={inputCls} /></div>
-                  <div><label className={labelCls}>Hora fin</label><input name="horaFin" type="time" className={inputCls} /></div>
-                  <div><label className={labelCls}>Duracion (min)</label><input name="duracionMinutos" type="number" placeholder="30" className={inputCls} /></div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
                   <div><label className={labelCls}>Tipo operacion *</label>
@@ -1804,10 +1771,9 @@ export default function DronesPage() {
                 </div>
                 <div><label className={labelCls}>Referencia NOTAM (si aplica)</label><input name="notamReferencia" id="notamReferenciaInput" placeholder="Se rellenará automáticamente al usar GPS..." className={inputCls} /></div>
               </div>
-              {/* Incidencias y observaciones */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div><label className={labelCls}>Incidencias durante el vuelo</label><textarea name="incidencias" rows={2} placeholder="Ninguna / descripcion de incidencias..." className={inputCls} /></div>
-                <div><label className={labelCls}>Observaciones</label><textarea name="observaciones" rows={2} className={inputCls} /></div>
+              {/* Observaciones */}
+              <div>
+                <div><label className={labelCls}>Observaciones pre-vuelo</label><textarea name="observaciones" rows={2} className={inputCls} /></div>
               </div>
               <div className="flex justify-end gap-3">
                 <button type="button" onClick={() => { setShowNuevoVuelo(false); setPasoNuevoVuelo(1) }} className="px-4 py-2 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50">Cancelar</button>
@@ -1901,6 +1867,89 @@ export default function DronesPage() {
                 <button onClick={handleGuardarChecklist} disabled={saving} className="px-6 py-2 bg-green-600 text-white text-sm font-bold rounded-lg hover:bg-green-700 disabled:opacity-50">{saving ? 'Guardando...' : 'Firmar y guardar'}</button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Cerrar Vuelo */}
+      {showCerrarVuelo && vueloCierre && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000] p-4">
+          <div className="bg-white rounded-2xl w-full max-w-xl max-h-[90vh] overflow-y-auto shadow-2xl">
+            <div className="flex items-center justify-between p-6 border-b">
+              <div>
+                <h3 className="text-lg font-bold text-slate-900">Cerrar vuelo</h3>
+                <p className="text-xs text-slate-500">{vueloCierre.numero} · {formatFecha(vueloCierre.fecha)}</p>
+              </div>
+              <button onClick={() => { setShowCerrarVuelo(false); setVueloCierre(null); setBateriasParaCierre({}) }}><X size={20} className="text-slate-400" /></button>
+            </div>
+            <form onSubmit={handleCerrarVuelo} className="p-6 space-y-5">
+              {/* Tiempos */}
+              <div>
+                <p className="text-xs font-bold text-slate-500 uppercase mb-3 flex items-center gap-2"><Clock size={12} />Tiempos de vuelo</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div><label className={labelCls}>Hora fin</label><input name="horaFin" type="time" className={inputCls} /></div>
+                  <div><label className={labelCls}>Duración total (min)</label><input name="duracionMinutos" type="number" placeholder="30" className={inputCls} /></div>
+                </div>
+              </div>
+              {/* Baterías */}
+              <div>
+                <p className="text-xs font-bold text-slate-500 uppercase mb-3 flex items-center gap-2"><Battery size={12} />Baterías utilizadas</p>
+                {(() => {
+                  const batsDrone = todasBaterias.filter(b => b.droneId === vueloCierre.droneId && b.estado !== 'baja')
+                  if (batsDrone.length === 0) return <p className="text-xs text-slate-400 italic">No hay baterías asociadas a este drone.</p>
+                  return (
+                    <div className="space-y-2">
+                      {batsDrone.map(b => (
+                        <div key={b.id} className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-slate-100">
+                          <input
+                            type="checkbox"
+                            id={`bat-cierre-${b.id}`}
+                            checked={b.id in bateriasParaCierre}
+                            onChange={e => {
+                              setBateriasParaCierre(prev => {
+                                const next = { ...prev }
+                                if (e.target.checked) next[b.id] = 0
+                                else delete next[b.id]
+                                return next
+                              })
+                            }}
+                            className="w-4 h-4 accent-teal-600 shrink-0"
+                          />
+                          <label htmlFor={`bat-cierre-${b.id}`} className="text-xs font-semibold text-slate-700 flex-1 cursor-pointer">
+                            {b.codigo} <span className="font-normal text-slate-400">{b.capacidadMah ? `— ${b.capacidadMah}mAh` : ''} {b.compatibilidad ? `(${b.compatibilidad})` : ''}</span>
+                          </label>
+                          {b.id in bateriasParaCierre && (
+                            <div className="flex items-center gap-1.5">
+                              <input
+                                type="number"
+                                min="0"
+                                placeholder="min"
+                                value={bateriasParaCierre[b.id] || ''}
+                                onChange={e => setBateriasParaCierre(prev => ({ ...prev, [b.id]: parseInt(e.target.value) || 0 }))}
+                                className="w-20 px-2 py-1 text-xs border border-slate-200 rounded-lg text-center"
+                              />
+                              <span className="text-[10px] text-slate-400">min</span>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )
+                })()}
+              </div>
+              {/* Resultado e incidencias */}
+              <div>
+                <p className="text-xs font-bold text-slate-500 uppercase mb-3 flex items-center gap-2"><ClipboardList size={12} />Resultado e incidencias</p>
+                <div className="space-y-3">
+                  <div><label className={labelCls}>Resultado de la misión</label><textarea name="resultadoMision" rows={2} placeholder="Describe el resultado operativo del vuelo..." className={inputCls} /></div>
+                  <div><label className={labelCls}>Incidencias durante el vuelo</label><textarea name="incidencias" rows={2} placeholder="Ninguna / descripción de incidencias..." className={inputCls} /></div>
+                </div>
+              </div>
+              <div className="flex justify-end gap-3 pt-2 border-t border-slate-100">
+                <button type="button" onClick={() => { setShowCerrarVuelo(false); setVueloCierre(null); setBateriasParaCierre({}) }} className="px-4 py-2 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50">Cancelar</button>
+                <button type="submit" disabled={saving} className="px-6 py-2 bg-amber-500 text-white text-sm font-bold rounded-lg hover:bg-amber-600 disabled:opacity-50">{saving ? 'Cerrando...' : 'Cerrar vuelo'}</button>
+              </div>
+            </form>
           </div>
         </div>
       )}
