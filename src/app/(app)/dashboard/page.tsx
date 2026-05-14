@@ -95,7 +95,7 @@ function AvailabilityForm({ onClose }: { onClose: () => void }) {
       finSemana.setDate(inicioSemana.getDate() + 6);
 
       const formatoCorto = (fecha: Date) => `${fecha.getDate()}/${fecha.getMonth() + 1}`;
-      const value = inicioSemana.toISOString().split('T')[0];
+      const value = inicioSemana.toLocaleDateString('sv-SE'); // sv-SE da YYYY-MM-DD en hora local, sin desfase UTC
       const label = `Del ${formatoCorto(inicioSemana)} al ${formatoCorto(finSemana)}/${finSemana.getFullYear().toString().slice(-2)}`;
 
       semanas.push({ value, label });

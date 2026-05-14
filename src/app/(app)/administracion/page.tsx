@@ -483,7 +483,7 @@ export default function AdministracionPage() {
     const diasHastaLunes = diaSemana === 0 ? 6 : diaSemana - 1;
     const lunes = new Date(hoy);
     lunes.setDate(hoy.getDate() - diasHastaLunes);
-    setSemanaDisp(lunes.toISOString().split('T')[0]);
+    setSemanaDisp(lunes.toLocaleDateString('sv-SE')); // sv-SE da YYYY-MM-DD en hora local, sin desfase UTC
   }, []);
 
   // Cargar datos según tab activa
@@ -1231,7 +1231,7 @@ export default function AdministracionPage() {
   const cambiarSemana = (direccion: 'prev' | 'next') => {
     const fecha = new Date(semanaDisp);
     fecha.setDate(fecha.getDate() + (direccion === 'next' ? 7 : -7));
-    setSemanaDisp(fecha.toISOString().split('T')[0]);
+    setSemanaDisp(fecha.toLocaleDateString('sv-SE'));
   };
 
   const toggleNoDisponible = async (id: string, noDisponible: boolean) => {
