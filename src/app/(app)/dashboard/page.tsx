@@ -326,29 +326,34 @@ function CalendarView({ eventos, guardias, resumenDisponibilidad, onEventClick, 
   const [dragOverDate, setDragOverDate] = useState<string | null>(null);
   const daysOfWeek = ['LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB', 'DOM'];
 
-  // Inicializar mes actual y forzar re-render a medianoche
-  const [, forceUpdate] = useState(0)
+  // hoyStr se calcula SOLO en el cliente — nunca en el servidor (SSR)
+  // Esto evita que el servidor UTC calcule una fecha incorrecta para Madrid
+  const [hoyStr, setHoyStr] = useState<string>('')
+
   useEffect(() => {
-    const hoy = getTodaySpain()
+    const calcularHoy = () => {
+      // sv-SE locale produce YYYY-MM-DD de forma fiable en todos los navegadores
+      return new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Madrid' })
+    }
+    const hoy = calcularHoy()
+    setHoyStr(hoy)
+
     const [y, m, d] = hoy.split('-').map(Number)
     setCurrentDate(prev => prev !== null ? prev : new Date(y, m - 1, d))
 
-    // Actualizar a medianoche en España
+    // Recalcular al cambiar de día en España
     const programarMedianoche = () => {
-      const partes = getTodaySpain().split('-').map(Number)
-      // Medianoche España: próximo día a las 00:00 hora local del navegador
-      // Calculamos milisegundos exactos hasta las 00:00 CEST/CET
+      const partes = calcularHoy().split('-').map(Number)
       const ahoraUtc = Date.now()
       const medianoche = new Date(partes[0], partes[1] - 1, partes[2] + 1)
       const ms = Math.max(medianoche.getTime() - ahoraUtc + 500, 60000)
-      return setTimeout(() => { forceUpdate(n => n + 1); programarMedianoche() }, ms)
+      return setTimeout(() => { setHoyStr(calcularHoy()); programarMedianoche() }, ms)
     }
     const timer = programarMedianoche()
     return () => clearTimeout(timer)
   }, [])
 
-  const hoyStr = getTodaySpain()
-  const [hy, hm, hd] = hoyStr.split('-').map(Number)
+  const [hy, hm, hd] = hoyStr ? hoyStr.split('-').map(Number) : [new Date().getFullYear(), new Date().getMonth() + 1, new Date().getDate()]
   const fecha = currentDate ?? new Date(hy, hm - 1, hd)
   const year = fecha.getFullYear();
   const month = fecha.getMonth();

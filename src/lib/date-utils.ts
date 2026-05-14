@@ -5,7 +5,8 @@ import { format, parseISO, isValid } from "date-fns"
  * Usar SIEMPRE esta función para comparaciones de "hoy" — nunca new Date() directo.
  */
 export function getTodaySpain(): string {
-  return new Date().toLocaleDateString("en-CA", { timeZone: "Europe/Madrid" })
+  // sv-SE produce YYYY-MM-DD con zero-padding de forma fiable en todos los entornos
+  return new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Madrid" })
 }
 
 /**
