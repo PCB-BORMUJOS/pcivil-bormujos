@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { uploadToGoogleDrive } from '@/lib/google-drive'
+import { put } from '@vercel/blob'
 import { PDFDocument } from 'pdf-lib'
-
-const CAJA_TICKETS_FOLDER_ID = process.env.CAJA_TICKETS_FOLDER_ID
 
 async function comprimirPDF(buffer: Buffer): Promise<Buffer> {
   try {
@@ -51,11 +49,14 @@ export async function POST(request: NextRequest) {
     const fecha = new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Madrid' })
     const filename = `Justificante_Caja_${movimientoId || fecha}_${fecha}.pdf`
 
-    const driveFile = await uploadToGoogleDrive(bufferFinal, filename, 'application/pdf', CAJA_TICKETS_FOLDER_ID)
+    const blob = await put(`caja-tickets/${filename}`, bufferFinal, {
+      access: 'public',
+      contentType: 'application/pdf',
+    })
 
     return NextResponse.json({
       success: true,
-      webViewLink: driveFile.url,
+      webViewLink: blob.url,
       tamanoOriginalKb: Math.round(tamanoOriginal / 1024),
       tamanoFinalKb: Math.round(tamanoFinal / 1024),
       ahorroKb,
