@@ -62,8 +62,9 @@ export async function POST(request: NextRequest) {
       reduccionPct: pct,
       mensaje: `Justificante subido correctamente${ahorroKb > 0 ? ` (comprimido ${pct}%, ahorrado ${ahorroKb} KB)` : ''}`,
     })
-  } catch (error) {
-    console.error('Error en /api/admin/caja/drive-upload:', error)
-    return NextResponse.json({ error: 'Error subiendo archivo' }, { status: 500 })
+  } catch (error: any) {
+    console.error('Error en /api/admin/caja/drive-upload:', error?.message || error)
+    const mensaje = error?.message || 'Error subiendo archivo'
+    return NextResponse.json({ error: mensaje }, { status: 500 })
   }
 }

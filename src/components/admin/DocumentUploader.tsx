@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useId } from 'react'
 import { Upload, FileText, Eye } from 'lucide-react'
 
 interface DocumentUploaderProps {
@@ -19,7 +19,8 @@ export default function DocumentUploader({
   const [uploading, setUploading] = useState(false)
   const [mensaje, setMensaje] = useState<string | null>(null)
 
-  const inputId = `upload-${label.replace(/\s/g, '-')}-${Math.random().toString(36).slice(2, 7)}`
+  const reactId = useId()
+  const inputId = `upload-${label.replace(/\s/g, '-')}-${reactId.replace(/:/g, '')}`
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
