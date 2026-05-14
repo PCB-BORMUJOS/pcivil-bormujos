@@ -1807,7 +1807,7 @@ export default function AdministracionPage() {
                         <th className="text-left py-3 px-4 text-xs font-bold text-slate-500 uppercase hidden sm:table-cell">Descripción</th>
                         <th className="text-right py-3 px-4 text-xs font-bold text-slate-500 uppercase">Importe</th>
                         <th className="text-right py-3 px-4 text-xs font-bold text-slate-500 uppercase">Saldo</th>
-                        <th className="text-center py-3 px-4 text-xs font-bold text-slate-500 uppercase">Adjunto</th>
+                        <th className="text-center py-3 px-4 text-xs font-bold text-slate-500 uppercase">Acciones</th>
                         <th className="text-center py-3 px-4 text-xs font-bold text-slate-500 uppercase">ACCIONES</th>
                       </tr>
                     </thead>
@@ -1827,13 +1827,6 @@ export default function AdministracionPage() {
                             {m.tipo === 'entrada' ? '+' : '-'}{Number(m.importe).toFixed(2)} €
                           </td>
                           <td className="py-3 px-4 text-right font-medium text-slate-700">{Number(m.saldoPosterior).toFixed(2)} €</td>
-                          <td className="py-3 px-4 text-center">
-                            {m.adjuntoUrl ? (
-                              <a href={m.adjuntoUrl} target="_blank" className="text-orange-600 hover:text-orange-700">
-                                <FileText size={18} />
-                              </a>
-                            ) : <span className="text-slate-300">-</span>}
-                          </td>
                           <td className="py-3 px-4">
                             <div className="flex items-center justify-center gap-2">
                               <button onClick={() => handleAbrirEdicion(m)} className="p-1.5 bg-slate-100 text-slate-600 rounded hover:bg-slate-200 transition-colors" title="Editar">
@@ -1843,34 +1836,25 @@ export default function AdministracionPage() {
                                 <Trash2 size={14} />
                               </button>
                               <DocumentUploader
-                                label="Ticket"
+                                label="Justificante"
                                 apiEndpoint="/api/admin/caja/drive-upload"
+                                extraFields={{ movimientoId: m.id }}
+                                compact
                                 onUpload={async (url) => {
-                                  // Actualizar el movimiento con el nuevo URL en la base de datos
                                   try {
                                     const res = await fetch('/api/admin/caja', {
                                       method: 'PUT',
                                       headers: { 'Content-Type': 'application/json' },
                                       body: JSON.stringify({
-                                        id: m.id,
-                                        tipo: m.tipo,
-                                        concepto: m.concepto,
-                                        descripcion: m.descripcion,
-                                        importe: m.importe,
-                                        categoria: m.categoria,
-                                        fecha: m.fecha,
-                                        adjuntoUrl: url
+                                        id: m.id, tipo: m.tipo, concepto: m.concepto,
+                                        descripcion: m.descripcion, importe: m.importe,
+                                        categoria: m.categoria, fecha: m.fecha, adjuntoUrl: url
                                       })
-                                    });
-                                    const data = await res.json();
-                                    if (data.success) {
-                                      cargarMovimientosCaja();
-                                    } else {
-                                      alert('Error al guardar adjunto: ' + data.error);
-                                    }
-                                  } catch (error) {
-                                    alert('Error al guardar adjunto');
-                                  }
+                                    })
+                                    const data = await res.json()
+                                    if (data.success) cargarMovimientosCaja()
+                                    else alert('Error al guardar adjunto: ' + data.error)
+                                  } catch { alert('Error al guardar adjunto') }
                                 }}
                                 currentUrl={m.adjuntoUrl}
                                 folder="Tickets Caja"
@@ -3041,9 +3025,9 @@ export default function AdministracionPage() {
               </select>
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Adjunto</label>
+              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Justificante PDF</label>
               <DocumentUploader
-                label="Ticket"
+                label="Justificante"
                 apiEndpoint="/api/admin/caja/drive-upload"
                 onUpload={(url) => setNuevoMovimiento({ ...nuevoMovimiento, adjuntoUrl: url })}
                 currentUrl={nuevoMovimiento.adjuntoUrl}
@@ -3106,10 +3090,11 @@ export default function AdministracionPage() {
               </select>
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Adjunto</label>
+              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Justificante PDF</label>
               <DocumentUploader
-                label="Ticket"
+                label="Justificante"
                 apiEndpoint="/api/admin/caja/drive-upload"
+                extraFields={{ movimientoId: movimientoEditando.id }}
                 onUpload={(url) => setMovimientoEditando({ ...movimientoEditando, adjuntoUrl: url })}
                 currentUrl={movimientoEditando.adjuntoUrl}
                 folder="Tickets Caja"
