@@ -8,7 +8,8 @@ import {
   CheckSquare, Square, Save, Droplets,
   Calendar as CalendarIcon, X, AlertTriangle,
   Search, Bell, ChevronDown, Thermometer,
-  CloudRain, Cloud, CloudSun, Plus, Lock, Globe, Edit, Trash2
+  CloudRain, Cloud, CloudSun, Plus, Lock, Globe, Edit, Trash2,
+  CloudSnow, CloudLightning, CloudFog, CloudDrizzle
 } from 'lucide-react';
 
 const DAYS_OF_WEEK = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
@@ -41,18 +42,19 @@ function getEventColor(tipo: string, color?: string) {
   }
 }
 
-// Función para obtener el icono del clima
-function getWeatherIcon(icono: string) {
+// Iconos SVG del clima — consistentes en todos los navegadores/SO
+function WeatherIcon({ icono, size = 24, className = '' }: { icono: string; size?: number; className?: string }) {
+  const props = { size, className }
   switch (icono) {
-    case 'sun': return '☀️';
-    case 'partly-cloudy': return '🌤️';
-    case 'cloudy': return '☁️';
-    case 'overcast': return '🌥️';
-    case 'rain': return '🌧️';
-    case 'storm': return '⛈️';
-    case 'snow': return '🌨️';
-    case 'fog': return '🌫️';
-    default: return '🌤️';
+    case 'sun': return <Sun {...props} className={`text-yellow-500 ${className}`} />
+    case 'partly-cloudy': return <CloudSun {...props} className={`text-blue-400 ${className}`} />
+    case 'cloudy': return <Cloud {...props} className={`text-slate-400 ${className}`} />
+    case 'overcast': return <Cloud {...props} className={`text-slate-500 ${className}`} />
+    case 'rain': return <CloudRain {...props} className={`text-blue-500 ${className}`} />
+    case 'storm': return <CloudLightning {...props} className={`text-purple-500 ${className}`} />
+    case 'snow': return <CloudSnow {...props} className={`text-sky-400 ${className}`} />
+    case 'fog': return <CloudFog {...props} className={`text-slate-400 ${className}`} />
+    default: return <CloudSun {...props} className={`text-blue-400 ${className}`} />
   }
 }
 
@@ -1045,7 +1047,7 @@ export default function DashboardPage() {
                 </p>
               )}
             </div>
-            <div className="bg-yellow-100 p-2.5 rounded-xl text-2xl">{getWeatherIcon(clima?.proximosDias?.[0]?.icono || 'sun')}</div>
+            <div className="bg-yellow-50 p-2.5 rounded-xl"><WeatherIcon icono={clima?.proximosDias?.[0]?.icono || 'sun'} size={28} /></div>
           </div>
         </div>
       </div>
@@ -1771,7 +1773,7 @@ export default function DashboardPage() {
             )}
 
             <div className="text-center py-4 bg-gradient-to-br from-yellow-50 to-orange-50 rounded-xl mb-4">
-              <span className="text-6xl">{getWeatherIcon(clima.proximosDias?.[0]?.icono)}</span>
+              <WeatherIcon icono={clima.proximosDias?.[0]?.icono || 'sun'} size={64} />
               <h4 className="text-4xl font-bold text-slate-800 mt-2">{clima.temperatura}°C</h4>
               <p className="text-slate-600">{clima.estadoCielo}</p>
               <div className="flex justify-center gap-6 mt-4 text-sm text-slate-500">
@@ -1786,7 +1788,7 @@ export default function DashboardPage() {
                   {clima.proximosDias.map((d: any, i: number) => (
                     <div key={i} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
                       <div className="flex items-center gap-3">
-                        <span className="text-2xl">{getWeatherIcon(d.icono)}</span>
+                        <WeatherIcon icono={d.icono || 'sun'} size={28} />
                         <div><p className="font-bold text-slate-800">{d.dia}</p><p className="text-xs text-slate-500">{d.estado}</p></div>
                       </div>
                       <div><span className="font-bold text-orange-500">{d.tempMax}°</span><span className="text-slate-400 mx-1">/</span><span className="text-blue-500">{d.tempMin}°</span></div>
