@@ -12,8 +12,10 @@ const BORMUJOS_LON = -6.0722
 
 function getIcono(codigo: number): string {
   // Códigos WMO de Open-Meteo
-  if (codigo === 0) return 'sun'
-  if (codigo <= 3) return 'partly-cloudy'
+  if (codigo === 0) return 'sun'           // Despejado
+  if (codigo === 1) return 'sun'           // Mayormente despejado
+  if (codigo === 2) return 'partly-cloudy' // Parcialmente nublado
+  if (codigo === 3) return 'cloudy'        // Nublado
   if (codigo <= 48) return 'fog'
   if (codigo <= 57) return 'rain'
   if (codigo <= 67) return 'rain'
@@ -403,6 +405,7 @@ async function fetchAEMET(): Promise<any> {
       tempMaxima: hoy.temperatura.maxima,
       tempMinima: hoy.temperatura.minima,
       estadoCielo,
+      icono: getIconoAemet(estadoCielo),
       humedad,
       viento: { velocidad: viento.velocidad || 10, direccion: viento.direccion || 'N' },
       uvMax: hoy.uvMax || 5,
@@ -453,6 +456,7 @@ async function fetchOpenMeteo(): Promise<any> {
     tempMaxima: Math.round(data.daily.temperature_2m_max[0]),
     tempMinima: Math.round(data.daily.temperature_2m_min[0]),
     estadoCielo: getDescripcionWMO(data.current.weather_code),
+    icono: getIcono(data.current.weather_code),
     humedad: data.current.relative_humidity_2m,
     viento: {
       velocidad: Math.round(data.current.wind_speed_10m),

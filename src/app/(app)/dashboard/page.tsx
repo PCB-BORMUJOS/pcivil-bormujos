@@ -1047,7 +1047,7 @@ export default function DashboardPage() {
                 </p>
               )}
             </div>
-            <div className="bg-yellow-50 p-2.5 rounded-xl"><WeatherIcon icono={clima?.proximosDias?.[0]?.icono || 'sun'} size={28} /></div>
+            <div className="bg-yellow-50 p-2.5 rounded-xl"><WeatherIcon icono={clima?.icono || 'sun'} size={28} /></div>
           </div>
         </div>
       </div>
@@ -1773,7 +1773,7 @@ export default function DashboardPage() {
             )}
 
             <div className="text-center py-4 bg-gradient-to-br from-yellow-50 to-orange-50 rounded-xl mb-4">
-              <WeatherIcon icono={clima.proximosDias?.[0]?.icono || 'sun'} size={64} />
+              <WeatherIcon icono={clima.icono || 'sun'} size={64} />
               <h4 className="text-4xl font-bold text-slate-800 mt-2">{clima.temperatura}°C</h4>
               <p className="text-slate-600">{clima.estadoCielo}</p>
               <div className="flex justify-center gap-6 mt-4 text-sm text-slate-500">
