@@ -1800,7 +1800,7 @@ export default function MiAreaPage() {
                           </tr>
                         </thead>
                         <tbody>
-                          {dietas.map(dieta => (
+                          {dietas.filter(d => Number(d.totalDieta) > 0 || Number(d.subtotalKm) > 0).map(dieta => (
                             <tr key={dieta.id} className="border-b border-slate-100 hover:bg-slate-50/50">
                               <td className="py-3 px-4">
                                 <span className="text-sm text-slate-800">

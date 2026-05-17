@@ -330,6 +330,8 @@ model Guardia {
   servicioId String   @map("servicio_id")
   estado     String   @default("programada")
   horasTurno       Float?   @map("horas_turno")
+  horaInicio       String?  @map("hora_inicio")
+  horaFin          String?  @map("hora_fin")
   descripcionExtra String?  @map("descripcion_extra")
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")

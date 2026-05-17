@@ -28,6 +28,9 @@ interface GuardiaExistente {
   turno: string
   usuarioId: string
   rol: string | null
+  horaInicio?: string | null
+  horaFin?: string | null
+  horasTurno?: number | null
   usuario: {
     id: string
     nombre: string
@@ -88,9 +91,18 @@ const DIAS = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'do
 const DIA_LABELS = ['LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB', 'DOM']
 
 const TURNOS = [
-  { key: 'mañana' as const, label: 'Mañana', horas: '09:00 – 14:30' },
-  { key: 'tarde' as const, label: 'Tarde', horas: '17:00 – 22:00' },
+  { key: 'mañana' as const, label: 'Mañana', defaultInicio: '09:00', defaultFin: '14:30' },
+  { key: 'tarde' as const, label: 'Tarde', defaultInicio: '17:00', defaultFin: '22:00' },
 ]
+
+function calcularHorasEntreTiempos(inicio: string, fin: string): number {
+  const [hI, mI] = inicio.split(':').map(Number)
+  const [hF, mF] = fin.split(':').map(Number)
+  let minI = hI * 60 + mI
+  let minF = hF * 60 + mF
+  if (minF <= minI) minF += 24 * 60 // cruza medianoche
+  return Math.round(((minF - minI) / 60) * 100) / 100
+}
 
 export default function CuadrantesPage() {
   const [semanaStart, setSemanaStart] = useState<Date>(() => getCurrentMonday(new Date()))
@@ -113,6 +125,11 @@ export default function CuadrantesPage() {
   const [todosUsuarios, setTodosUsuarios] = useState<any[]>([])
   const [idsNoDisponible, setIdsNoDisponible] = useState<string[]>([])
   const [idsQueRespondieron, setIdsQueRespondieron] = useState<string[]>([])
+  // Horario por slot: key = slotKey(fecha, turno) → { inicio, fin }
+  const [horariosSlot, setHorariosSlot] = useState<Record<string, { inicio: string; fin: string }>>({})
+  // Slot cuyo horario se está editando actualmente
+  const [editandoHorario, setEditandoHorario] = useState<string | null>(null)
+  const [guardandoHorario, setGuardandoHorario] = useState<Record<string, boolean>>({})
   const { data: session } = useSession()
   const isAdmin = ['superadmin', 'admin'].includes((session?.user as any)?.rol ?? '')
 
@@ -207,6 +224,7 @@ export default function CuadrantesPage() {
                   esOperativo: disp.usuario.esOperativo,
                   turnosDeseados: disp.turnosDeseados,
                   puedeDobleturno: disp.puedeDobleturno,
+                  fichaVoluntario: disp.usuario.fichaVoluntario ?? null,
                 })
               }
             }
@@ -245,6 +263,17 @@ export default function CuadrantesPage() {
         TURNOS.forEach(({ key }) => { capMap[slotKey(dateStr, key)] = 4 })
       })
       setCapacidad(capMap)
+      // Reconstruir horarios personalizados desde las guardias guardadas
+      const horariosMap: Record<string, { inicio: string; fin: string }> = {}
+      guardias.forEach(g => {
+        if (g.horaInicio && g.horaFin) {
+          const sk = slotKey(g.fecha.slice(0, 10), g.turno)
+          if (!horariosMap[sk]) {
+            horariosMap[sk] = { inicio: g.horaInicio, fin: g.horaFin }
+          }
+        }
+      })
+      setHorariosSlot(horariosMap)
       const sugMap = calcularSugerencias(dispMap, asigMap)
       setSugerencias(sugMap)
       setPendiente(false)
@@ -275,6 +304,47 @@ export default function CuadrantesPage() {
 
   const turnosAsignadosUsuario = (userId: string): number =>
     Object.values(asignaciones).flat().filter(id => id === userId).length
+
+  const getHorarioSlot = (sk: string, turnoKey: string): { inicio: string; fin: string } => {
+    if (horariosSlot[sk]) return horariosSlot[sk]
+    const turnoInfo = TURNOS.find(t => t.key === turnoKey)
+    return { inicio: turnoInfo?.defaultInicio ?? '09:00', fin: turnoInfo?.defaultFin ?? '14:30' }
+  }
+
+  const guardarHorarioSlot = async (sk: string, dateStr: string, turnoKey: string, inicio: string, fin: string) => {
+    setGuardandoHorario(p => ({ ...p, [sk]: true }))
+    const horas = calcularHorasEntreTiempos(inicio, fin)
+    try {
+      // Actualizar todas las guardias ya guardadas de este slot
+      const guardiasSlot = guardiasGuardadas.filter(
+        g => g.fecha.slice(0, 10) === dateStr && g.turno === turnoKey
+      )
+      await Promise.all(
+        guardiasSlot.map(g =>
+          fetch('/api/cuadrantes', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: g.id, horaInicio: inicio, horaFin: fin })
+          })
+        )
+      )
+      // Recalcular dietas con las nuevas horas para cada persona del slot
+      const uidsSlot = asignaciones[sk] || []
+      await Promise.all(
+        uidsSlot.map(uid =>
+          fetch('/api/cuadrantes/dieta-slot', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ usuarioId: uid, fecha: dateStr, turno: turnoKey, horas })
+          })
+        )
+      )
+      setHorariosSlot(p => ({ ...p, [sk]: { inicio, fin } }))
+    } finally {
+      setGuardandoHorario(p => ({ ...p, [sk]: false }))
+      setEditandoHorario(null)
+    }
+  }
 
   const handleGuardar = async () => {
     const totalAsig = Object.values(asignaciones).flat().length
@@ -310,10 +380,13 @@ export default function CuadrantesPage() {
             ? 'Conductor'
             : 'Interviniente'
           if (yaExiste) {
-            // Si el rol cambió, eliminar y recrear
+            // Si el rol cambió, actualizar con PUT sin borrar la guardia (preserva contador prácticas)
             if (yaExiste.rol !== rolFinal) {
-              aEliminar.push(yaExiste)
-              cuerpos.push({ fecha, turno, usuarioId: uid, tipo: 'programada', rol: rolFinal })
+              fetch('/api/cuadrantes', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: yaExiste.id, rol: rolFinal })
+              })
             }
             return
           }
@@ -361,18 +434,29 @@ export default function CuadrantesPage() {
 
   const handlePublicar = async () => {
     const totalAsig = Object.values(asignaciones).flat().length
-    if (!confirm(`¿Publicar el cuadrante?\nSe guardarán ${totalAsig} asignaciones y se reemplazarán las anteriores.`)) return
+    if (!confirm(`¿Publicar el cuadrante?\nSe guardarán ${totalAsig} asignaciones y se notificará a los voluntarios.`)) return
     setGuardando(true)
     try {
-      await Promise.all(
-        guardiasGuardadas.map(g =>
-          fetch(`/api/cuadrantes?id=${g.id}`, { method: 'DELETE' })
-        )
-      )
+      // Usar el mismo diff inteligente que handleGuardar para no borrar+recrear innecesariamente
+      // Esto evita que el contador de prácticas suba en cada publicación
+
+      // Guardias a eliminar: las que ya no están en las asignaciones actuales
+      const aEliminar = guardiasGuardadas.filter(g => {
+        const dateStr = g.fecha.slice(0, 10)
+        const sk = slotKey(dateStr, g.turno)
+        const uidsEnSlot = asignaciones[sk] || []
+        return !uidsEnSlot.includes(g.usuarioId)
+      })
+
+      // Guardias a crear: las que están en asignaciones pero no existen aún,
+      // o las que cambian de rol (en ese caso también se elimina la existente)
       const cuerpos: any[] = []
       Object.entries(asignaciones).forEach(([sk, userIds]) => {
         const { fecha, turno } = parseSlotKey(sk)
         userIds.forEach(uid => {
+          const yaExiste = guardiasGuardadas.find(
+            g => g.usuarioId === uid && g.fecha.slice(0, 10) === fecha && g.turno === turno
+          )
           const u =
             disponibilidades[sk]?.find(d => d.id === uid) ||
             guardiasGuardadas.find(g => g.usuarioId === uid)?.usuario ||
@@ -385,33 +469,59 @@ export default function CuadrantesPage() {
             : (u as any)?.carnetConducir
             ? 'Conductor'
             : 'Interviniente'
+          if (yaExiste) {
+            // Si el rol cambió, usar PUT para actualizar sin borrar+recrear
+            if (yaExiste.rol !== rolFinal) {
+              fetch(`/api/cuadrantes`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: yaExiste.id, rol: rolFinal })
+              })
+            }
+            return
+          }
           cuerpos.push({ fecha, turno, usuarioId: uid, tipo: 'programada', rol: rolFinal })
         })
       })
-      const resultados = await Promise.all(
-        cuerpos.map(body =>
-          fetch('/api/cuadrantes', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body),
-          })
+
+      if (aEliminar.length > 0) {
+        await Promise.all(
+          aEliminar.map(g => fetch(`/api/cuadrantes?id=${g.id}`, { method: 'DELETE' }))
         )
-      )
-      const fallidas = resultados.filter(r => !r.ok).length
+      }
+
+      let fallidas = 0
+      if (cuerpos.length > 0) {
+        const resultados = await Promise.all(
+          cuerpos.map(body =>
+            fetch('/api/cuadrantes', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(body),
+            })
+          )
+        )
+        fallidas = resultados.filter(r => !r.ok).length
+      }
+
       if (fallidas > 0) {
         alert(`⚠ Cuadrante publicado con ${fallidas} error(es). Recarga para verificar.`)
       }
-      // Notificar siempre, independientemente de errores parciales
-      const asigParaNotif = cuerpos.map(b => ({ usuarioId: b.usuarioId, fecha: b.fecha, turno: b.turno }))
+
+      // Notificar a todos los asignados (incluye tanto nuevos como ya existentes)
+      const asigParaNotif = Object.entries(asignaciones).flatMap(([sk, userIds]) => {
+        const { fecha, turno } = parseSlotKey(sk)
+        return userIds.map(uid => ({ usuarioId: uid, fecha, turno }))
+      })
       await fetch('/api/cuadrantes/notificar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ asignaciones: asigParaNotif, semanaLabel: formatRange(semanaStart) })
       })
-      if (cuerpos.length > 0) alert('Cuadrante publicado correctamente')
+      if (totalAsig > 0) alert('Cuadrante publicado correctamente')
       await cargarDatos()
     } catch (e) {
-      /* error silenciado */
+      console.error('Error al publicar el cuadrante:', e)
       alert('Error al publicar el cuadrante')
     } finally {
       setGuardando(false)
@@ -539,9 +649,57 @@ export default function CuadrantesPage() {
                 return (
                   <div key={dayIdx} className={`border-r border-slate-100 last:border-r-0 p-2.5 ${dayIdx >= 5 ? 'bg-slate-50/60' : ''} ${turno.key === 'tarde' ? 'bg-slate-50/30' : ''}`}>
                     <div className={`flex items-center justify-between mb-1.5 pb-1 border-b ${turno.key === 'mañana' ? 'border-amber-100' : 'border-indigo-100'}`}>
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-1 flex-1 min-w-0">
                         <Clock size={12} className={turno.key === 'mañana' ? 'text-amber-500' : 'text-indigo-500'} />
                         <span className={`text-[11px] font-bold uppercase tracking-wide ${turno.key === 'mañana' ? 'text-amber-600' : 'text-indigo-600'}`}>{turno.label}</span>
+                        {/* Editor de horario inline */}
+                        {editandoHorario === sk ? (
+                          <div className="flex items-center gap-0.5 ml-1" onClick={e => e.stopPropagation()}>
+                            {(() => {
+                              const h = getHorarioSlot(sk, turno.key)
+                              return (
+                                <>
+                                  <input
+                                    type="time"
+                                    defaultValue={h.inicio}
+                                    id={`hi_${sk}`}
+                                    className="text-[9px] border border-slate-300 rounded px-0.5 py-0.5 w-14 text-slate-700 focus:outline-none focus:border-orange-400"
+                                  />
+                                  <span className="text-[9px] text-slate-400">–</span>
+                                  <input
+                                    type="time"
+                                    defaultValue={h.fin}
+                                    id={`hf_${sk}`}
+                                    className="text-[9px] border border-slate-300 rounded px-0.5 py-0.5 w-14 text-slate-700 focus:outline-none focus:border-orange-400"
+                                  />
+                                  <button
+                                    disabled={!!guardandoHorario[sk]}
+                                    onClick={async () => {
+                                      const iEl = document.getElementById(`hi_${sk}`) as HTMLInputElement
+                                      const fEl = document.getElementById(`hf_${sk}`) as HTMLInputElement
+                                      if (iEl && fEl) {
+                                        await guardarHorarioSlot(sk, dateStr, turno.key, iEl.value, fEl.value)
+                                      }
+                                    }}
+                                    className="text-[9px] font-bold px-1 py-0.5 rounded bg-orange-500 text-white hover:bg-orange-600 disabled:opacity-50"
+                                  >{guardandoHorario[sk] ? '…' : '✓'}</button>
+                                  <button
+                                    onClick={() => setEditandoHorario(null)}
+                                    className="text-[9px] px-1 py-0.5 rounded bg-slate-200 text-slate-500 hover:bg-slate-300"
+                                  ><X size={8} /></button>
+                                </>
+                              )
+                            })()}
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => setEditandoHorario(sk)}
+                            title="Ajustar horario de este turno"
+                            className={`ml-1 text-[9px] font-mono px-1 py-0.5 rounded hover:bg-slate-100 transition-colors ${horariosSlot[sk] ? 'text-orange-600 font-bold bg-orange-50' : 'text-slate-400'}`}
+                          >
+                            {(() => { const h = getHorarioSlot(sk, turno.key); return `${h.inicio}–${h.fin}` })()}
+                          </button>
+                        )}
                       </div>
                       <div className="flex items-center gap-0.5">
                         <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded ${slotOk ? 'bg-green-100 text-green-700' : slotParcial ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-400'}`}>

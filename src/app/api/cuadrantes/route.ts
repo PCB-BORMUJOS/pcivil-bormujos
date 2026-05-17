@@ -34,6 +34,7 @@ export async function GET(request: NextRequest) {
       },
       orderBy: [{ fecha: 'asc' }, { turno: 'asc' }]
     })
+    // horaInicio y horaFin ya se incluyen en el select completo de guardia
     if (!incluirDisponibilidades) {
       return NextResponse.json({ guardias })
     }
@@ -179,23 +180,56 @@ export async function POST(request: NextRequest) {
         : 0.19;
       const horasPorTurno: Record<string, number> = { 'mañana': 5.5, 'tarde': 5, 'noche': 9 };
       const horasTrabajadas = horasTurno ? parseFloat(String(horasTurno)) : (horasPorTurno[turno.toLowerCase()] ?? 5);
-      if (tipo === 'extraordinaria') {
-        const inicioDia = new Date(fecha + 'T00:00:00.000Z');
-        const finDia = new Date(fecha + 'T23:59:59.999Z');
-        await prisma.dieta.deleteMany({
-          where: { usuarioId, fecha: { gte: inicioDia, lte: finDia }, notas: { not: 'extraordinaria' } }
-        });
-      }
-      const tramo = [...baremo].reverse().find(t => horasTrabajadas >= (t.horasMin ?? t.minHours ?? 0));
+
+      const fechaGuardia = new Date(fecha + 'T12:00:00.000Z');
+      const inicioDia = new Date(fecha + 'T00:00:00.000Z');
+      const finDia = new Date(fecha + 'T23:59:59.999Z');
+      const mesAnio = fechaGuardia.toISOString().slice(0, 7);
+
+      // Obtener dietas de otros turnos del mismo día para acumular horas correctamente
+      const dietasOtrosTurnos = await prisma.dieta.findMany({
+        where: { usuarioId, fecha: { gte: inicioDia, lte: finDia }, turno: { not: turno } },
+        select: { id: true, horasTrabajadas: true, turno: true, kilometros: true, subtotalKm: true }
+      });
+      const horasOtrosTurnos = dietasOtrosTurnos.reduce((sum, d) => sum + Number(d.horasTrabajadas), 0);
+      const horasTotalesDia = horasOtrosTurnos + horasTrabajadas;
+
+      // Baremo se calcula sobre el TOTAL del día
+      const tramo = [...baremo].reverse().find(t => horasTotalesDia >= (t.horasMin ?? t.minHours ?? 0));
       const importeDia = tramo?.importe ?? tramo?.amount ?? 0;
+
       const ficha = await prisma.fichaVoluntario.findUnique({ where: { usuarioId } });
       const kmIda = Number(ficha?.kmDesplazamiento ?? 0);
-      const kilometros = kmIda * 2;
+      // Km se cuenta UNA sola vez por día
+      const kmYaContado = dietasOtrosTurnos.length > 0;
+      const kilometros = kmYaContado ? 0 : kmIda * 2;
       const subtotalKm = Math.round(kilometros * precioKm * 100) / 100;
-      const subtotalDietas = importeDia;
-      const totalDieta = Math.round((subtotalDietas + subtotalKm) * 100) / 100;
-      const fechaGuardia = new Date(fecha + 'T12:00:00.000Z');
-      const mesAnio = fechaGuardia.toISOString().slice(0, 7);
+      const totalDieta = Math.round((importeDia + subtotalKm) * 100) / 100;
+
+      // Si hay otros turnos del mismo día, poner su importeDia a 0 (el baremo acumulado va aquí)
+      if (dietasOtrosTurnos.length > 0) {
+        const dietaConKm = dietasOtrosTurnos.find(d => Number(d.kilometros) > 0);
+        if (dietaConKm) {
+          const nuevoTotalAnterior = Math.round(Number(dietaConKm.subtotalKm) * 100) / 100;
+          await prisma.dieta.update({
+            where: { id: dietaConKm.id },
+            data: { importeDia: 0, subtotalDietas: 0, totalDieta: nuevoTotalAnterior }
+          });
+        }
+        await prisma.dieta.updateMany({
+          where: { usuarioId, fecha: { gte: inicioDia, lte: finDia }, turno: { not: turno }, kilometros: 0 },
+          data: { importeDia: 0, subtotalDietas: 0, totalDieta: 0 }
+        });
+      }
+
+      // Eliminar dieta previa de este mismo turno si existía (reasignación)
+      await prisma.dieta.deleteMany({ where: { usuarioId, fecha: { gte: inicioDia, lte: finDia }, turno } });
+
+      const desglose = [
+        ...dietasOtrosTurnos.map(d => `${d.turno}:${d.horasTrabajadas}h`),
+        `${turno}:${horasTrabajadas}h`
+      ].join(' + ');
+
       await prisma.dieta.create({
         data: {
           usuarioId,
@@ -204,13 +238,16 @@ export async function POST(request: NextRequest) {
           turno,
           horasTrabajadas,
           importeDia,
-          subtotalDietas,
+          subtotalDietas: importeDia,
           kilometros,
           importeKm: precioKm,
           subtotalKm,
           totalDieta,
           mesAnio,
-          estado: 'pendiente'
+          estado: 'pendiente',
+          notas: dietasOtrosTurnos.length > 0
+            ? `${horasTotalesDia}h día (${desglose}) - baremo ${importeDia}€`
+            : undefined
         }
       });
     } catch (dietaError) {
@@ -238,14 +275,31 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'No tienes permisos' }, { status: 403 })
     }
     const body = await request.json()
-    const { id, tipo, notas, estado } = body
+    const { id, tipo, notas, estado, rol, horaInicio, horaFin } = body
     if (!id) return NextResponse.json({ error: 'ID requerido' }, { status: 400 })
+
+    // Calcular horasTurno automáticamente si se proporcionan hora inicio y fin
+    let horasTurnoCalculadas: number | undefined
+    if (horaInicio && horaFin) {
+      const [hIni, mIni] = horaInicio.split(':').map(Number)
+      const [hFin, mFin] = horaFin.split(':').map(Number)
+      let minutosIni = hIni * 60 + mIni
+      let minutosFin = hFin * 60 + mFin
+      // Turno de noche puede cruzar medianoche
+      if (minutosFin <= minutosIni) minutosFin += 24 * 60
+      horasTurnoCalculadas = Math.round(((minutosFin - minutosIni) / 60) * 100) / 100
+    }
+
     const guardia = await prisma.guardia.update({
       where: { id },
       data: {
         ...(tipo && { tipo }),
         ...(notas !== undefined && { notas }),
-        ...(estado && { estado })
+        ...(estado && { estado }),
+        ...(rol !== undefined && { rol }),
+        ...(horaInicio !== undefined && { horaInicio }),
+        ...(horaFin !== undefined && { horaFin }),
+        ...(horasTurnoCalculadas !== undefined && { horasTurno: horasTurnoCalculadas }),
       },
       include: {
         usuario: { select: { id: true, nombre: true, apellidos: true, numeroVoluntario: true } }
@@ -274,8 +328,24 @@ export async function DELETE(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
     if (!id) return NextResponse.json({ error: 'ID requerido' }, { status: 400 })
+
+    // Obtener la guardia antes de borrar para saber si hay que decrementar prácticas
+    const guardia = await prisma.guardia.findUnique({ where: { id } })
+
     await prisma.dieta.deleteMany({ where: { guardiaId: id } })
     await prisma.guardia.delete({ where: { id } })
+
+    // Si el voluntario estaba en prácticas cuando se creó este turno, decrementar el contador
+    if (guardia) {
+      const ficha = await prisma.fichaVoluntario.findUnique({ where: { usuarioId: guardia.usuarioId } })
+      if (ficha?.enPracticas && ficha.turnosPracticasRealizados > 0) {
+        await prisma.fichaVoluntario.update({
+          where: { usuarioId: guardia.usuarioId },
+          data: { turnosPracticasRealizados: { decrement: 1 } }
+        })
+      }
+    }
+
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('Error al eliminar guardia:', error)
