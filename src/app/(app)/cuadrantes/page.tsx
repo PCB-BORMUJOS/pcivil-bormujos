@@ -808,6 +808,7 @@ export default function CuadrantesPage() {
 
                           // Determinar estilo según estado
                           let className = ''
+                          // Admin siempre puede asignar cualquier voluntario sin excepción
                           let clickable = true
                           if (u.isAsig && esPracticas) {
                             className = 'bg-amber-100 border border-amber-400 text-amber-900'
@@ -816,27 +817,32 @@ export default function CuadrantesPage() {
                           } else if (u.tieneDisponibilidadEsteSlot && isSug) {
                             className = 'bg-indigo-50 border border-indigo-200 text-indigo-900 hover:bg-indigo-100'
                           } else if (u.tieneDisponibilidadEsteSlot && agotado) {
-                            className = 'bg-red-50 border border-red-100 text-red-300 cursor-not-allowed opacity-50'
-                            clickable = false
+                            if (isAdmin) {
+                              // Admin puede forzar aunque el voluntario ya tenga los turnos deseados cubiertos
+                              className = 'bg-red-50 border border-red-200 text-red-500 hover:bg-red-100 hover:text-red-700'
+                            } else {
+                              className = 'bg-red-50 border border-red-100 text-red-300 cursor-not-allowed opacity-50'
+                              clickable = false
+                            }
                           } else if (u.tieneDisponibilidadEsteSlot) {
                             className = 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
-                          } else if (!u.haRespondido && !u.esNoDisponible) {
-                            className = 'bg-red-50 border border-dashed border-red-300 text-red-400 hover:bg-red-100'
-                          } else if (isAdmin && !u.esNoDisponible) {
-                            // Admin puede ver y asignar voluntarios sin disponibilidad declarada
-                            className = 'bg-slate-50 border border-dashed border-slate-200 text-slate-400 hover:bg-slate-100 hover:text-slate-600'
                           } else if (u.esNoDisponible) {
-                            className = 'bg-slate-50 border border-dashed border-slate-200 text-slate-300 hover:bg-slate-100'
+                            // No disponible: admin puede forzar igualmente
+                            className = isAdmin
+                              ? 'bg-red-50 border border-dashed border-red-300 text-red-400 hover:bg-red-100 hover:text-red-600'
+                              : 'bg-slate-50 border border-dashed border-slate-200 text-slate-300'
+                          } else if (!u.haRespondido) {
+                            className = 'bg-red-50 border border-dashed border-red-300 text-red-400 hover:bg-red-100'
                           } else {
-                            // Respondió para otros slots pero no este — visible en gris
-                            className = 'bg-slate-50 border border-dashed border-slate-200 text-slate-400 hover:bg-slate-100'
+                            // Respondió disponibilidad pero no para este slot concreto
+                            className = 'bg-slate-50 border border-dashed border-slate-200 text-slate-400 hover:bg-slate-100 hover:text-slate-600'
                           }
 
                           return (
                             <div
                               key={u.id}
                               onClick={() => clickable && toggleAsignacion(sk, u.id)}
-                              title={`${u.nombre} ${u.apellidos}${u.tieneDisponibilidadEsteSlot ? ` · Quiere ${u.turnosDeseados} turnos · ${restantes} restantes` : u.esNoDisponible ? ' · No disponible esta semana' : ' · Sin disponibilidad declarada'}`}
+                              title={`${u.nombre} ${u.apellidos}${u.tieneDisponibilidadEsteSlot ? ` · Quiere ${u.turnosDeseados} turnos · ${restantes} restantes${agotado && isAdmin ? ' · Turnos deseados cubiertos — asignación forzada posible' : ''}` : u.esNoDisponible ? ` · No disponible esta semana${isAdmin ? ' — asignación forzada posible' : ''}` : ' · Sin disponibilidad declarada'}`}
                               className={`flex items-center gap-1.5 px-2 py-2 mr-0.5 rounded-lg text-[13px] font-medium transition-all select-none cursor-pointer ${className}`}
                             >
                               <span className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${u.isAsig && u.estadoGuardia === 'ausente' ? 'bg-purple-500 border-purple-500 text-white' : u.isAsig && esPracticas ? 'bg-amber-500 border-amber-500 text-white' : u.isAsig ? 'bg-green-500 border-green-500 text-white' : 'border-slate-300'}`} style={{ fontSize: '9px' }}>
