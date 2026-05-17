@@ -1475,12 +1475,22 @@ export default function DashboardPage() {
           <div className="space-y-5 max-h-[70vh] overflow-y-auto pr-1">
 
             {/* Franja horaria */}
-            <div className={`p-3 rounded-lg flex items-center gap-3 ${showGuardiaDetail.turno === 'mañana' ? 'bg-green-50 border border-green-200' : 'bg-blue-50 border border-blue-200'}`}>
-              <div className={`w-3 h-3 rounded-full flex-shrink-0 ${showGuardiaDetail.turno === 'mañana' ? 'bg-green-500' : 'bg-blue-500'}`} />
-              <span className="font-bold text-slate-700">
-                {showGuardiaDetail.turno === 'mañana' ? '09:00 – 14:30' : '17:00 – 22:00'}
-              </span>
-            </div>
+            {(() => {
+              // Tomar el horario real de la primera guardia del slot si existe, o el estándar
+              const g0 = showGuardiaDetail.guardias[0]
+              const horaIni = g0?.horaInicio ?? (showGuardiaDetail.turno === 'mañana' ? '09:00' : '17:00')
+              const horaFin = g0?.horaFin   ?? (showGuardiaDetail.turno === 'mañana' ? '14:30' : '22:00')
+              const esPersonalizado = !!g0?.horaInicio
+              return (
+                <div className={`p-3 rounded-lg flex items-center gap-3 ${showGuardiaDetail.turno === 'mañana' ? 'bg-green-50 border border-green-200' : 'bg-blue-50 border border-blue-200'}`}>
+                  <div className={`w-3 h-3 rounded-full flex-shrink-0 ${showGuardiaDetail.turno === 'mañana' ? 'bg-green-500' : 'bg-blue-500'}`} />
+                  <span className="font-bold text-slate-700">{horaIni} – {horaFin}</span>
+                  {esPersonalizado && (
+                    <span className="text-[10px] font-semibold text-orange-600 bg-orange-100 px-1.5 py-0.5 rounded ml-1">Horario ajustado</span>
+                  )}
+                </div>
+              )
+            })()}
 
             {/* Personal asignado a la guardia */}
             <div>
