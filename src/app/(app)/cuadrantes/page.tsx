@@ -549,7 +549,8 @@ export default function CuadrantesPage() {
     const cap = capacidad[sk] || 4
     const operativos = uids.filter(uid => {
       const u = disponibilidades[sk]?.find(d => d.id === uid) ||
-        guardiasGuardadas.find(g => g.usuarioId === uid)?.usuario
+        guardiasGuardadas.find(g => g.usuarioId === uid)?.usuario ||
+        todosUsuarios.find((t: any) => t.id === uid)
       return (u as any)?.esOperativo !== false
     })
     return operativos.length >= cap
@@ -656,7 +657,9 @@ export default function CuadrantesPage() {
                 const cap = capacidad[sk] || 4
                 const asignadosOp = asignados.filter(uid => {
                   const u = disponibles.find(d => d.id === uid) ||
-                    guardiasGuardadas.find(g => g.usuarioId === uid)?.usuario
+                    guardiasGuardadas.find(g => g.usuarioId === uid)?.usuario ||
+                    todosUsuarios.find((t: any) => t.id === uid)
+                  // Solo false explícito excluye; si no hay dato se asume operativo
                   return (u as any)?.esOperativo !== false
                 })
                 const slotOk = asignadosOp.length >= cap
