@@ -663,58 +663,11 @@ export default function CuadrantesPage() {
                 const slotParcial = asignadosOp.length > 0 && asignadosOp.length < cap
                 return (
                   <div key={dayIdx} className={`border-r border-slate-100 last:border-r-0 p-2.5 ${dayIdx >= 5 ? 'bg-slate-50/60' : ''} ${turno.key === 'tarde' ? 'bg-slate-50/30' : ''}`}>
+                    {/* Cabecera del slot: nombre del turno + contador de cobertura */}
                     <div className={`flex items-center justify-between mb-1.5 pb-1 border-b ${turno.key === 'mañana' ? 'border-amber-100' : 'border-indigo-100'}`}>
-                      <div className="flex items-center gap-1 flex-1 min-w-0">
+                      <div className="flex items-center gap-1">
                         <Clock size={12} className={turno.key === 'mañana' ? 'text-amber-500' : 'text-indigo-500'} />
                         <span className={`text-[11px] font-bold uppercase tracking-wide ${turno.key === 'mañana' ? 'text-amber-600' : 'text-indigo-600'}`}>{turno.label}</span>
-                        {/* Editor de horario inline */}
-                        {editandoHorario === sk ? (
-                          <div className="flex items-center gap-0.5 ml-1" onClick={e => e.stopPropagation()}>
-                            {(() => {
-                              const h = getHorarioSlot(sk, turno.key)
-                              return (
-                                <>
-                                  <input
-                                    type="time"
-                                    defaultValue={h.inicio}
-                                    id={`hi_${sk}`}
-                                    className="text-[9px] border border-slate-300 rounded px-0.5 py-0.5 w-14 text-slate-700 focus:outline-none focus:border-orange-400"
-                                  />
-                                  <span className="text-[9px] text-slate-400">–</span>
-                                  <input
-                                    type="time"
-                                    defaultValue={h.fin}
-                                    id={`hf_${sk}`}
-                                    className="text-[9px] border border-slate-300 rounded px-0.5 py-0.5 w-14 text-slate-700 focus:outline-none focus:border-orange-400"
-                                  />
-                                  <button
-                                    disabled={!!guardandoHorario[sk]}
-                                    onClick={async () => {
-                                      const iEl = document.getElementById(`hi_${sk}`) as HTMLInputElement
-                                      const fEl = document.getElementById(`hf_${sk}`) as HTMLInputElement
-                                      if (iEl && fEl) {
-                                        await guardarHorarioSlot(sk, dateStr, turno.key, iEl.value, fEl.value)
-                                      }
-                                    }}
-                                    className="text-[9px] font-bold px-1 py-0.5 rounded bg-orange-500 text-white hover:bg-orange-600 disabled:opacity-50"
-                                  >{guardandoHorario[sk] ? '…' : '✓'}</button>
-                                  <button
-                                    onClick={() => setEditandoHorario(null)}
-                                    className="text-[9px] px-1 py-0.5 rounded bg-slate-200 text-slate-500 hover:bg-slate-300"
-                                  ><X size={8} /></button>
-                                </>
-                              )
-                            })()}
-                          </div>
-                        ) : (
-                          <button
-                            onClick={() => setEditandoHorario(sk)}
-                            title="Ajustar horario de este turno"
-                            className={`ml-1 text-[9px] font-mono px-1 py-0.5 rounded hover:bg-slate-100 transition-colors ${horariosSlot[sk] ? 'text-orange-600 font-bold bg-orange-50' : 'text-slate-400'}`}
-                          >
-                            {(() => { const h = getHorarioSlot(sk, turno.key); return `${h.inicio}–${h.fin}` })()}
-                          </button>
-                        )}
                       </div>
                       <div className="flex items-center gap-0.5">
                         <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded ${slotOk ? 'bg-green-100 text-green-700' : slotParcial ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-400'}`}>
@@ -724,8 +677,9 @@ export default function CuadrantesPage() {
                         <button onClick={() => setCapacidad(p => ({ ...p, [sk]: (p[sk] || 4) + 1 }))} className="w-4 h-4 flex items-center justify-center hover:bg-slate-200 rounded text-slate-400"><Plus size={7} /></button>
                       </div>
                     </div>
-                    {/* Botones de excepción: solo para jornadas que se alargan más de lo normal */}
-                    <div className="flex items-center gap-0.5 mb-1.5">
+                    {/* Fila de controles: extensiones de jornada + ajuste de horario */}
+                    <div className="flex items-center gap-0.5 mb-1.5 flex-wrap">
+                      {/* Botones de excepción (+8h / +12h) */}
                       <span className="text-[8px] text-slate-400 mr-0.5">Ext:</span>
                       {[8, 12].map(h => (
                         <button
@@ -754,7 +708,57 @@ export default function CuadrantesPage() {
                           ) + ' disabled:opacity-40'}
                         >+{h}h</button>
                       ))}
-                      {guardandoHoras[sk] && <span className="text-[8px] text-slate-400 ml-1">…</span>}
+                      {guardandoHoras[sk] && <span className="text-[8px] text-slate-400">…</span>}
+                      {/* Separador */}
+                      <span className="text-slate-200 mx-0.5">|</span>
+                      {/* Editor de horario del turno */}
+                      {editandoHorario === sk ? (
+                        <div className="flex items-center gap-0.5" onClick={e => e.stopPropagation()}>
+                          {(() => {
+                            const h = getHorarioSlot(sk, turno.key)
+                            return (
+                              <>
+                                <input
+                                  type="time"
+                                  defaultValue={h.inicio}
+                                  id={`hi_${sk}`}
+                                  className="text-[9px] border border-slate-300 rounded px-0.5 py-0.5 w-14 text-slate-700 focus:outline-none focus:border-orange-400"
+                                />
+                                <span className="text-[9px] text-slate-400">–</span>
+                                <input
+                                  type="time"
+                                  defaultValue={h.fin}
+                                  id={`hf_${sk}`}
+                                  className="text-[9px] border border-slate-300 rounded px-0.5 py-0.5 w-14 text-slate-700 focus:outline-none focus:border-orange-400"
+                                />
+                                <button
+                                  disabled={!!guardandoHorario[sk]}
+                                  onClick={async () => {
+                                    const iEl = document.getElementById(`hi_${sk}`) as HTMLInputElement
+                                    const fEl = document.getElementById(`hf_${sk}`) as HTMLInputElement
+                                    if (iEl && fEl) {
+                                      await guardarHorarioSlot(sk, dateStr, turno.key, iEl.value, fEl.value)
+                                    }
+                                  }}
+                                  className="text-[9px] font-bold px-1 py-0.5 rounded bg-orange-500 text-white hover:bg-orange-600 disabled:opacity-50"
+                                >{guardandoHorario[sk] ? '…' : '✓'}</button>
+                                <button
+                                  onClick={() => setEditandoHorario(null)}
+                                  className="text-[9px] px-1 py-0.5 rounded bg-slate-200 text-slate-500 hover:bg-slate-300"
+                                ><X size={8} /></button>
+                              </>
+                            )
+                          })()}
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setEditandoHorario(sk)}
+                          title="Ajustar horario de este turno"
+                          className={`text-[9px] font-mono px-1.5 py-0.5 rounded border transition-colors ${horariosSlot[sk] ? 'border-orange-300 text-orange-600 font-bold bg-orange-50 hover:bg-orange-100' : 'border-slate-200 text-slate-400 hover:bg-slate-100 hover:text-slate-600'}`}
+                        >
+                          {(() => { const h = getHorarioSlot(sk, turno.key); return `${h.inicio}–${h.fin}` })()}
+                        </button>
+                      )}
                     </div>
                     <div className="space-y-0.5 max-h-56 overflow-y-auto pr-1">
                       {(() => {
