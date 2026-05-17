@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No tienes permisos para crear guardias' }, { status: 403 })
     }
     const body = await request.json()
-    const { fecha, turno, usuarioId, tipo, notas, servicioId, rol, horasTurno, descripcionExtra } = body
+    const { fecha, turno, usuarioId, tipo, notas, servicioId, rol, horasTurno, horaInicio, horaFin, descripcionExtra } = body
     if (!fecha || !turno || !usuarioId) {
       return NextResponse.json({ error: 'Fecha, turno y usuarioId son requeridos' }, { status: 400 })
     }
@@ -123,6 +123,8 @@ export async function POST(request: NextRequest) {
         tipo: tipo || 'programada',
         notas: notas || '',
         horasTurno: horasTurno ? parseFloat(horasTurno) : null,
+        horaInicio: horaInicio || null,
+        horaFin: horaFin || null,
         descripcionExtra: descripcionExtra || null,
         usuarioId,
         servicioId: servicioId || usuarioAsignado?.servicioId || '',

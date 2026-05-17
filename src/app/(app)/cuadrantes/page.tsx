@@ -42,13 +42,6 @@ interface GuardiaExistente {
   }
 }
 
-const getNextMonday = (date: Date): Date => {
-  const d = new Date(date)
-  d.setHours(0, 0, 0, 0)
-  d.setDate(d.getDate() + ((1 + 7 - d.getDay()) % 7 || 7))
-  return d
-}
-
 const getCurrentMonday = (date: Date): Date => {
   const d = new Date(date)
   d.setHours(0, 0, 0, 0)
@@ -390,7 +383,19 @@ export default function CuadrantesPage() {
             }
             return
           }
-          cuerpos.push({ fecha, turno, usuarioId: uid, tipo: 'programada', rol: rolFinal })
+          // Si el slot tiene horario personalizado, incluirlo para que el POST lo guarde
+          const horarioPersonalizado = horariosSlot[sk]
+          const horasTurnoPersonalizado = horarioPersonalizado
+            ? calcularHorasEntreTiempos(horarioPersonalizado.inicio, horarioPersonalizado.fin)
+            : undefined
+          cuerpos.push({
+            fecha, turno, usuarioId: uid, tipo: 'programada', rol: rolFinal,
+            ...(horarioPersonalizado && {
+              horaInicio: horarioPersonalizado.inicio,
+              horaFin: horarioPersonalizado.fin,
+              horasTurno: horasTurnoPersonalizado
+            })
+          })
         })
       })
 
@@ -480,7 +485,18 @@ export default function CuadrantesPage() {
             }
             return
           }
-          cuerpos.push({ fecha, turno, usuarioId: uid, tipo: 'programada', rol: rolFinal })
+          const horarioPersonalizado = horariosSlot[sk]
+          const horasTurnoPersonalizado = horarioPersonalizado
+            ? calcularHorasEntreTiempos(horarioPersonalizado.inicio, horarioPersonalizado.fin)
+            : undefined
+          cuerpos.push({
+            fecha, turno, usuarioId: uid, tipo: 'programada', rol: rolFinal,
+            ...(horarioPersonalizado && {
+              horaInicio: horarioPersonalizado.inicio,
+              horaFin: horarioPersonalizado.fin,
+              horasTurno: horasTurnoPersonalizado
+            })
+          })
         })
       })
 
@@ -645,7 +661,6 @@ export default function CuadrantesPage() {
                 })
                 const slotOk = asignadosOp.length >= cap
                 const slotParcial = asignadosOp.length > 0 && asignadosOp.length < cap
-                const asignadosExternos = asignados.filter(uid => !disponibles.find(d => d.id === uid))
                 return (
                   <div key={dayIdx} className={`border-r border-slate-100 last:border-r-0 p-2.5 ${dayIdx >= 5 ? 'bg-slate-50/60' : ''} ${turno.key === 'tarde' ? 'bg-slate-50/30' : ''}`}>
                     <div className={`flex items-center justify-between mb-1.5 pb-1 border-b ${turno.key === 'mañana' ? 'border-amber-100' : 'border-indigo-100'}`}>
@@ -709,11 +724,14 @@ export default function CuadrantesPage() {
                         <button onClick={() => setCapacidad(p => ({ ...p, [sk]: (p[sk] || 4) + 1 }))} className="w-4 h-4 flex items-center justify-center hover:bg-slate-200 rounded text-slate-400"><Plus size={7} /></button>
                       </div>
                     </div>
+                    {/* Botones de excepción: solo para jornadas que se alargan más de lo normal */}
                     <div className="flex items-center gap-0.5 mb-1.5">
-                      {[4, 8, 12].map(h => (
+                      <span className="text-[8px] text-slate-400 mr-0.5">Ext:</span>
+                      {[8, 12].map(h => (
                         <button
                           key={h}
                           disabled={!!guardandoHoras[sk] || asignadosOp.length === 0}
+                          title={`Forzar baremo de ${h}h para todo el turno (jornada excepcional)`}
                           onClick={async () => {
                             if (asignadosOp.length === 0) { alert('Asigna personas al turno primero'); return }
                             setGuardandoHoras(p => ({ ...p, [sk]: true }))
@@ -728,7 +746,6 @@ export default function CuadrantesPage() {
                             }
                             setHorasSlot(p => ({ ...p, [sk]: h }))
                             setGuardandoHoras(p => ({ ...p, [sk]: false }))
-                            alert('Dietas (' + h + 'h) actualizadas para ' + ok + ' personas')
                           }}
                           className={'text-[8px] font-bold px-1.5 py-0.5 rounded transition-colors ' + (
                             horasSlot[sk] === h
@@ -737,7 +754,7 @@ export default function CuadrantesPage() {
                           ) + ' disabled:opacity-40'}
                         >+{h}h</button>
                       ))}
-                      {guardandoHoras[sk] && <span className="text-[8px] text-slate-400 ml-1">...</span>}
+                      {guardandoHoras[sk] && <span className="text-[8px] text-slate-400 ml-1">…</span>}
                     </div>
                     <div className="space-y-0.5 max-h-56 overflow-y-auto pr-1">
                       {(() => {
@@ -834,15 +851,15 @@ export default function CuadrantesPage() {
                               )}
                               {u.isAsig && (
                                 <span className="flex gap-0.5 ml-0.5" onClick={e => e.stopPropagation()}>
-                                  {/* Botones horas individuales */}
-                                  {[4, 8, 12].map(h => {
+                                  {/* Botones excepción individuales: alargar la jornada de una persona concreta */}
+                                  {[8, 12].map(h => {
                                     const pk = `${u.id}_${dateStr}_${turno.key}`
                                     const activo = horasPersona[pk] === h
                                     return (
                                       <button
                                         key={h}
                                         disabled={!!guardandoPersona[pk]}
-                                        title={`Asignar +${h}h a ${u.numeroVoluntario}`}
+                                        title={`Baremo ${h}h para ${u.numeroVoluntario} (jornada excepcional)`}
                                         onClick={async () => {
                                           setGuardandoPersona(p => ({ ...p, [pk]: true }))
                                           setHorasPersona(p => ({ ...p, [pk]: h }))
