@@ -4,7 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { getServerSession } from 'next-auth'
 
 export async function GET(
-    req: Request,
+    _req: Request,
     { params }: { params: { id: string } }
 ) {
     try {
@@ -94,6 +94,9 @@ export async function PUT(
         if (body.firmaJefeServicio !== undefined) updateData.firmaJefeServicio = body.firmaJefeServicio
         if (body.tipoFirmaJefe !== undefined) updateData.tipoFirmaJefe = body.tipoFirmaJefe
 
+        // Full form state (for exact restoration)
+        if (body.informacionExtra !== undefined) updateData.informacionExtra = body.informacionExtra
+
         // PDF and Drive fields
         if (body.pdfUrl !== undefined) updateData.pdfUrl = body.pdfUrl
         if (body.pdfGenerado !== undefined) updateData.pdfGenerado = body.pdfGenerado
@@ -130,7 +133,7 @@ export async function PUT(
 }
 
 export async function DELETE(
-    req: Request,
+    _req: Request,
     { params }: { params: { id: string } }
 ) {
     try {

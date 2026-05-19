@@ -1,19 +1,16 @@
 'use client'
 import { useState, useEffect, Suspense } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { Plus, FileText, Download, Trash2, Eye, Filter } from 'lucide-react'
-import ModalPartePSI from '@/components/partes/ModalPartePSI' // Adjust import path if needed
+import { Plus, Download, Trash2, Eye, FileText } from 'lucide-react'
 import { ESTADOS_PARTE } from '@/constants/partesPSI'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 
 function PartesPageInner() {
+  const router = useRouter()
   const [partes, setPartes] = useState([])
   const [loading, setLoading] = useState(true)
-  const [showModal, setShowModal] = useState(false)
-  const [parteEditar, setParteEditar] = useState(null)
-  const [cecopalData, setCecopalData] = useState<any>(null)
   const searchParams = useSearchParams()
 
   // Filtros
@@ -28,116 +25,66 @@ function PartesPageInner() {
     cargarPartes()
   }, [page, filtroFecha, filtroEstado])
 
+  // Redirigir a /partes/psi?cecopal=ID si viene ?cecopal=ID desde CECOPAL
   useEffect(() => {
     const cecopalId = searchParams.get('cecopal')
     if (cecopalId) {
-      fetch(`/api/cecopal?tipo=incidencia-id&id=${cecopalId}`)
-        .then(r => r.json())
-        .then(data => {
-          if (data.incidencia) {
-            const inc = data.incidencia
-            setCecopalData({
-              lugar: inc.direccion || '',
-              motivo: inc.descripcion || inc.tipoIncidencia || '',
-              horaLlamada: inc.horaLlamada || '',
-              horaSalida: inc.horaSalida || '',
-              horaLlegada: inc.horaLlegada || '',
-              horaTerminado: inc.horaTerminado || '',
-              horaDisponible: inc.horaDisponible || '',
-              vehiculosIds: Array.isArray(inc.vehiculosIds) ? inc.vehiculosIds : [],
-              observaciones: inc.observaciones || '',
-            })
-            setParteEditar(null)
-            setShowModal(true)
-          }
-        })
-        .catch(() => {})
+      router.replace(`/partes/psi?cecopal=${cecopalId}`)
     }
   }, [searchParams])
 
   const cargarPartes = async () => {
     setLoading(true)
     try {
-      const params = new URLSearchParams({
-        page: String(page),
-        limit: '20'
-      })
-
+      const params = new URLSearchParams({ page: String(page), limit: '20' })
       if (filtroFecha) params.append('fecha', filtroFecha)
       if (filtroEstado !== 'todos') params.append('estado', filtroEstado)
 
       const response = await fetch(`/api/partes/psi?${params}`)
       const data = await response.json()
-
       if (data.partes) {
         setPartes(data.partes)
         setTotalPages(data.totalPages)
       }
-    } catch (error) {
-      /* error silenciado */
+    } catch {
+      /* silenciado */
     } finally {
       setLoading(false)
     }
   }
 
-  const handleNuevoParte = () => {
-    setParteEditar(null)
-    setCecopalData(null)
-    setShowModal(true)
-  }
-
-  const handleEditarParte = (parte: any) => {
-    setParteEditar(parte)
-    setShowModal(true)
-  }
-
-  const handleGuardarParte = async (data: any) => {
-    // Save is handled in modal usually, but here we can define the save function passed to modal
-    // Actually the Modal calls `onSave` which should probably call the API.
-
-    // We update the data via API
-    try {
-      const url = '/api/partes/psi'
-      const method = 'POST' // Always POST for creation? Or PUT for update? The endpoint is POST.
-
-      const response = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      })
-
-      if (response.ok) {
-        await cargarPartes()
-        setShowModal(false)
-      } else {
-        alert('Error al guardar el parte')
-      }
-    } catch (e) {
-      /* error silenciado */
-      alert('Error de conexión')
-    }
-  }
-
-  const handleEliminarParte = async (id: string) => {
+  const handleEliminar = async (id: string) => {
     if (!confirm('¿Está seguro de eliminar este parte?')) return
-
     try {
-      const response = await fetch(`/api/partes/psi?id=${id}`, {
-        method: 'DELETE'
-      })
-
+      const response = await fetch(`/api/partes/psi?id=${id}`, { method: 'DELETE' })
       if (response.ok) {
         await cargarPartes()
       } else {
-        alert('No se pudo eliminar (Posiblemente requiere permisos de Superadmin)')
+        alert('No se pudo eliminar (requiere permisos de Superadmin)')
       }
-    } catch (error) {
-      /* error silenciado */
+    } catch {
+      /* silenciado */
     }
   }
 
   const handleDescargarPDF = async (id: string, numeroParte: string) => {
-    window.open(`/api/partes/psi/${id}/pdf?download=true`, '_blank')
+    // Cargamos el parte y generamos el PDF con pdf-generator-v3 (mismo que el formulario)
+    try {
+      const res = await fetch(`/api/partes/psi/${id}`)
+      if (!res.ok) { alert('No se pudo cargar el parte'); return }
+      const parte = await res.json()
+
+      const extra = parte.informacionExtra
+        ? (typeof parte.informacionExtra === 'string' ? JSON.parse(parte.informacionExtra) : parte.informacionExtra)
+        : {}
+
+      const { generatePsiPdfV3 } = await import('@/lib/pdf-generator-v3')
+      const doc = await generatePsiPdfV3({ ...extra, numero: numeroParte })
+      doc.save(`PSI_${numeroParte}.pdf`)
+    } catch (e) {
+      console.error(e)
+      alert('Error al generar el PDF')
+    }
   }
 
   return (
@@ -161,9 +108,7 @@ function PartesPageInner() {
       <div className="bg-white rounded-xl p-4 mb-6 shadow-sm border border-gray-200">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Filtrar por fecha
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Filtrar por fecha</label>
             <input
               type="date"
               value={filtroFecha}
@@ -171,11 +116,8 @@ function PartesPageInner() {
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
             />
           </div>
-
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Filtrar por estado
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Filtrar por estado</label>
             <select
               value={filtroEstado}
               onChange={(e) => setFiltroEstado(e.target.value)}
@@ -187,14 +129,9 @@ function PartesPageInner() {
               <option value="completo">Completo</option>
             </select>
           </div>
-
           <div className="h-10 flex">
             <button
-              onClick={() => {
-                setFiltroFecha('')
-                setFiltroEstado('todos')
-                setPage(1)
-              }}
+              onClick={() => { setFiltroFecha(''); setFiltroEstado('todos'); setPage(1) }}
               className="px-4 py-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 font-medium flex-1"
             >
               Limpiar
@@ -219,14 +156,12 @@ function PartesPageInner() {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={6} className="text-center py-12 text-gray-400">
-                  Cargando información...
-                </td>
+                <td colSpan={6} className="text-center py-12 text-gray-400">Cargando...</td>
               </tr>
             ) : partes.length === 0 ? (
               <tr>
                 <td colSpan={6} className="text-center py-12 text-gray-400">
-                  No hay partes registrados que coincidan con los filtros.
+                  No hay partes que coincidan con los filtros.
                 </td>
               </tr>
             ) : (
@@ -246,9 +181,7 @@ function PartesPageInner() {
                   </td>
                   <td className="p-4 text-center">
                     {ESTADOS_PARTE[parte.estado as keyof typeof ESTADOS_PARTE] ? (
-                      <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium border ${ESTADOS_PARTE[parte.estado as keyof typeof ESTADOS_PARTE].bgColor
-                        } ${ESTADOS_PARTE[parte.estado as keyof typeof ESTADOS_PARTE].textColor} ${ESTADOS_PARTE[parte.estado as keyof typeof ESTADOS_PARTE].borderColor
-                        }`}>
+                      <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium border ${ESTADOS_PARTE[parte.estado as keyof typeof ESTADOS_PARTE].bgColor} ${ESTADOS_PARTE[parte.estado as keyof typeof ESTADOS_PARTE].textColor} ${ESTADOS_PARTE[parte.estado as keyof typeof ESTADOS_PARTE].borderColor}`}>
                         {ESTADOS_PARTE[parte.estado as keyof typeof ESTADOS_PARTE].label}
                       </span>
                     ) : <span>{parte.estado}</span>}
@@ -258,7 +191,7 @@ function PartesPageInner() {
                       <Link
                         href={`/partes/psi?id=${parte.id}`}
                         className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-transparent hover:border-blue-100"
-                        title="Ver detalle"
+                        title="Abrir parte"
                       >
                         <Eye size={18} />
                       </Link>
@@ -270,8 +203,7 @@ function PartesPageInner() {
                           className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors border border-transparent hover:border-gray-200"
                           title="Ver en Google Drive"
                         >
-                          {/* Drive Logo or External Link Icon */}
-                          <img src="https://upload.wikimedia.org/wikipedia/commons/1/12/Google_Drive_icon_%282020%29.svg" alt="Drive" className="w-4 h-4" />
+                          <FileText size={18} />
                         </a>
                       )}
                       <button
@@ -282,7 +214,7 @@ function PartesPageInner() {
                         <Download size={18} />
                       </button>
                       <button
-                        onClick={() => handleEliminarParte(parte.id)}
+                        onClick={() => handleEliminar(parte.id)}
                         className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-100"
                         title="Eliminar"
                       >
@@ -319,22 +251,13 @@ function PartesPageInner() {
           </button>
         </div>
       )}
-
-      {/* MODAL */}
-      <ModalPartePSI
-        isOpen={showModal}
-        onClose={() => { setShowModal(false); setCecopalData(null) }}
-        initialData={cecopalData || undefined}
-        onSave={handleGuardarParte}
-        parteEditar={parteEditar}
-      />
     </div>
   )
 }
 
 export default function PartesPage() {
   return (
-    <Suspense fallback={<div className="flex items-center justify-center h-96"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" /></div>}>
+    <Suspense fallback={<div className="flex items-center justify-center h-96"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500" /></div>}>
       <PartesPageInner />
     </Suspense>
   )

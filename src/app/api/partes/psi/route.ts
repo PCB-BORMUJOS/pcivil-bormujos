@@ -180,7 +180,7 @@ export async function POST(request: NextRequest) {
         const parte = await prisma.partePSI.create({
             data: {
                 numeroParte,
-                fecha: new Date(),
+                fecha: body.fecha ? new Date(body.fecha) : new Date(),
                 estado,
                 horaLlamada: body.horaLlamada,
                 horaSalida: body.horaSalida,
@@ -192,9 +192,9 @@ export async function POST(request: NextRequest) {
                 alertante: body.alertante,
                 circulacion: body.circulacion,
                 matriculasImplicados: body.matriculasImplicados,
-                vehiculosIds: body.vehiculosIds,
-                equipoWalkies: body.equipoWalkies,
-                tipologias: body.tipologias,
+                vehiculosIds: body.vehiculosIds || [],
+                equipoWalkies: body.equipoWalkies || [],
+                tipologias: body.tipologias || [],
                 tipologiasOtrosTexto: body.tipologiasOtrosTexto || {},
                 policiaLocal: body.policiaLocal,
                 guardiaCivil: body.guardiaCivil,
@@ -203,21 +203,16 @@ export async function POST(request: NextRequest) {
                 numeroHeridos: body.numeroHeridos,
                 tieneFallecidos: body.tieneFallecidos || false,
                 numeroFallecidos: body.numeroFallecidos,
-                indicativosInforman: body.indicativosInforman, // Assuming schema has this or mapping to indicativoCumplimenta?
+                indicativosInforman: body.indicativosInforman,
                 descripcionAccidente: body.descripcionAccidente,
-                observaciones: body.observaciones,
+                observaciones: body.observaciones || '',
                 desarrolloDetallado: body.desarrolloDetallado || '',
                 fotosUrls,
-                // Mapping form fields to schema fields
-                // Form uses: indicativosInforman, firmaInformante, responsableTurno, firmaResponsable
-                // Schema seems to use: indicativoCumplimenta, firmaIndicativoCumplimenta, responsableTurno, firmaResponsableTurno
-                // We need to check schema.prisma to be sure.
-                // Based on previous file reads, schema has indicativoCumplimenta. 
-                // Let's assume we map them here.
-                indicativoCumplimenta: body.indicativosInforman,
-                firmaIndicativoCumplimenta: body.firmaInformante,
+                informacionExtra: body.informacionExtra ?? null,
+                indicativoCumplimenta: body.indicativoCumplimenta || body.indicativosInforman,
+                firmaIndicativoCumplimenta: body.firmaIndicativoCumplimenta || body.firmaInformante || null,
                 responsableTurno: body.responsableTurno,
-                firmaResponsableTurno: body.firmaResponsable,
+                firmaResponsableTurno: body.firmaResponsableTurno || body.firmaResponsable || null,
                 firmaJefeServicio: body.firmaJefeServicio || null,
                 tipoFirmaJefe: body.tipoFirmaJefe || null,
                 creadoPorId: userId
@@ -228,7 +223,6 @@ export async function POST(request: NextRequest) {
                 }
             }
         })
-        const { registrarAudit, getUsuarioAudit } = await import('@/lib/audit')
         const { usuarioId, usuarioNombre } = getUsuarioAudit(session)
         await registrarAudit({
             accion: 'CREATE',

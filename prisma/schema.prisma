@@ -1082,6 +1082,7 @@ model PartePSI {
   observaciones             String @db.Text // Página 1 - Resumen
   desarrolloDetallado       String @db.Text // Página 2 - Detalle completo
   fotosUrls                 Json // ["https://blob.vercel.com/foto1.jpg", "..."] - Página 3
+  informacionExtra          Json? // Estado completo del formulario (PsiFormState) para restauración exacta
   
   // Firmas (base64 PNG dataURL)
   indicativoCumplimenta     String? // Indicativo seleccionado (ej: "B-13")

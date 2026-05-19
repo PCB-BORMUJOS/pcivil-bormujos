@@ -15,6 +15,7 @@ export function usePsiForm() {
     const router = useRouter()
     const searchParams = useSearchParams()
     const initialId = searchParams?.get('id')
+    const cecopalId = searchParams?.get('cecopal')
 
     const [id, setId] = useState<string | null>(initialId || null)
     const [loading, setLoading] = useState(false)
@@ -30,6 +31,33 @@ export function usePsiForm() {
         }
     }, [initialId])
 
+    // Pre-rellenar desde incidencia CECOPAL si viene ?cecopal=ID
+    useEffect(() => {
+        if (!cecopalId || initialId) return
+        fetch(`/api/cecopal?tipo=incidencia-id&id=${cecopalId}`)
+            .then(r => r.json())
+            .then(data => {
+                if (data.incidencia) {
+                    const inc = data.incidencia
+                    setForm(prev => ({
+                        ...prev,
+                        lugar: inc.direccion || '',
+                        motivo: inc.descripcion || inc.tipoIncidencia || '',
+                        tiempos: {
+                            llamada: inc.horaLlamada || '00:00',
+                            salida: inc.horaSalida || '00:00',
+                            llegada: inc.horaLlegada || '00:00',
+                            terminado: inc.horaTerminado || '00:00',
+                            disponible: inc.horaDisponible || '00:00',
+                        },
+                        observaciones: inc.observaciones || '',
+                    }))
+                    setHasChanges(true)
+                }
+            })
+            .catch(() => {})
+    }, [cecopalId, initialId])
+
     const loadParte = async (parteId: string) => {
         setLoading(true)
         try {
@@ -37,24 +65,71 @@ export function usePsiForm() {
             if (res.ok) {
                 const parte = await res.json()
                 setId(parte.id)
-                setImagenes(parte.imagenes || [])
+                // Fotos guardadas en Vercel Blob (URLs, no base64)
+                setImagenes(
+                    Array.isArray(parte.fotosUrls)
+                        ? parte.fotosUrls.map((url: string, i: number) => ({ id: `foto-${i}`, url }))
+                        : []
+                )
 
-                const extra = parte.informacionExtra
+                // informacionExtra contiene el PsiFormState completo guardado al hacer save
+                const extra: Partial<PsiFormState> = parte.informacionExtra
                     ? (typeof parte.informacionExtra === 'string'
                         ? JSON.parse(parte.informacionExtra)
                         : parte.informacionExtra)
                     : {}
+
+                // Si no hay informacionExtra (partes antiguos), reconstruir desde columnas DB
+                const tipologiasDB: string[] = Array.isArray(parte.tipologias) ? parte.tipologias : []
+                const tieneExtra = Object.keys(extra).length > 0
+
+                const prevPrevencion = tieneExtra ? extra.prevencion : {
+                    mantenimiento: tipologiasDB.some(t => t === 'prevencion.mantenimiento' || t === 'mantenimiento'),
+                    practicas: tipologiasDB.some(t => t === 'prevencion.practicas' || t === 'practicas'),
+                    suministros: tipologiasDB.some(t => t === 'prevencion.suministros' || t === 'suministros'),
+                    preventivo: tipologiasDB.some(t => t === 'prevencion.preventivo' || t === 'preventivo'),
+                    otros: tipologiasDB.some(t => t === 'prevencion.otros'),
+                }
+                const prevIntervencion = tieneExtra ? extra.intervencion : {
+                    svb: tipologiasDB.some(t => t === 'intervencion.svb' || t === 'svb' || t === 'soporte_vital'),
+                    incendios: tipologiasDB.some(t => t === 'intervencion.incendios' || t === 'incendios'),
+                    inundaciones: tipologiasDB.some(t => t === 'intervencion.inundaciones' || t === 'inundaciones'),
+                    otros_riesgos_meteo: tipologiasDB.some(t => t === 'intervencion.otros_riesgos_meteo' || t === 'otros_riesgos_meteo' || t === 'riesgos_meteo'),
+                    activacion_pem_bor: tipologiasDB.some(t => t === 'intervencion.activacion_pem_bor' || t === 'activacion_pem_bor' || t === 'pem_bor'),
+                    otros: tipologiasDB.some(t => t === 'intervencion.otros'),
+                }
+                const prevOtros = tieneExtra ? extra.otros : {
+                    reunion_coordinacion: tipologiasDB.some(t => t === 'otros.reunion_coordinacion' || t === 'reunion_coordinacion'),
+                    reunion_areas: tipologiasDB.some(t => t === 'otros.reunion_areas' || t === 'reunion_areas'),
+                    limpieza: tipologiasDB.some(t => t === 'otros.limpieza' || t === 'limpieza'),
+                    formacion: tipologiasDB.some(t => t === 'otros.formacion' || t === 'formacion'),
+                    otros: tipologiasDB.some(t => t === 'otros.otros'),
+                }
+
+                // Reconstruir tabla1 desde equipoWalkies DB si no hay extra
+                const equipoWalkiesDB: Array<{ vehiculo?: string; equipo: string; walkie: string }> =
+                    Array.isArray(parte.equipoWalkies) ? parte.equipoWalkies : []
+                const tabla1DB = Array(8).fill(null).map((_, i) => {
+                    const row = equipoWalkiesDB.filter(r => r.vehiculo)[i]
+                    return { vehiculo: row?.vehiculo || '', equipo: row?.equipo || '', walkie: row?.walkie || '' }
+                })
+                const tabla2DB = Array(8).fill(null).map((_, i) => {
+                    const row = equipoWalkiesDB.filter(r => !r.vehiculo)[i]
+                    return { equipo: row?.equipo || '', walkie: row?.walkie || '' }
+                })
+
                 setForm({
                     ...INITIAL_PSI_STATE,
                     ...extra,
                     id: parte.id,
-                    numero: parte.numeroParte || parte.numero || '',
+                    numero: parte.numeroParte || '',
                     fecha: parte.fecha ? new Date(parte.fecha).toISOString().split('T')[0] : '',
-                    hora: extra.hora || '',
                     lugar: parte.lugar || '',
                     motivo: parte.motivo || '',
-                    alertante: parte.alertante || '',
+                    alertante: parte.alertante || extra.alertante || '',
+                    circulacion: parte.circulacion || extra.circulacion || '',
                     observaciones: parte.observaciones || '',
+                    desarrolloDetallado: parte.desarrolloDetallado || extra.desarrolloDetallado || '',
                     tiempos: {
                         llamada: parte.horaLlamada || extra.tiempos?.llamada || '00:00',
                         salida: parte.horaSalida || extra.tiempos?.salida || '00:00',
@@ -62,6 +137,35 @@ export function usePsiForm() {
                         terminado: parte.horaTerminado || extra.tiempos?.terminado || '00:00',
                         disponible: parte.horaDisponible || extra.tiempos?.disponible || '00:00',
                     },
+                    prevencion: prevPrevencion ?? INITIAL_PSI_STATE.prevencion,
+                    intervencion: prevIntervencion ?? INITIAL_PSI_STATE.intervencion,
+                    otros: prevOtros ?? INITIAL_PSI_STATE.otros,
+                    tabla1: tieneExtra ? (extra.tabla1 ?? tabla1DB) : tabla1DB,
+                    tabla2: tieneExtra ? (extra.tabla2 ?? tabla2DB) : tabla2DB,
+                    matriculasImplicados: tieneExtra
+                        ? (extra.matriculasImplicados ?? INITIAL_PSI_STATE.matriculasImplicados)
+                        : (parte.matriculasImplicados
+                            ? String(parte.matriculasImplicados).split(',').map((s: string) => s.trim()).slice(0, 5).concat(Array(5).fill('')).slice(0, 5)
+                            : INITIAL_PSI_STATE.matriculasImplicados),
+                    heridosSi: tieneExtra ? (extra.heridosSi ?? parte.tieneHeridos) : parte.tieneHeridos,
+                    heridosNo: tieneExtra ? (extra.heridosNo ?? !parte.tieneHeridos) : !parte.tieneHeridos,
+                    heridosNum: tieneExtra ? (extra.heridosNum ?? String(parte.numeroHeridos || '')) : String(parte.numeroHeridos || ''),
+                    fallecidosSi: tieneExtra ? (extra.fallecidosSi ?? parte.tieneFallecidos) : parte.tieneFallecidos,
+                    fallecidosNo: tieneExtra ? (extra.fallecidosNo ?? !parte.tieneFallecidos) : !parte.tieneFallecidos,
+                    fallecidosNum: tieneExtra ? (extra.fallecidosNum ?? String(parte.numeroFallecidos || '')) : String(parte.numeroFallecidos || ''),
+                    indicativosInforman: parte.indicativoCumplimenta || extra.indicativosInforman || '',
+                    responsableTurno: parte.responsableTurno || extra.responsableTurno || '',
+                    vbJefeServicio: extra.vbJefeServicio || '',
+                    indicativoCumplimenta: parte.indicativoCumplimenta || extra.indicativoCumplimenta || '',
+                    firmaInformante: parte.firmaIndicativoCumplimenta || extra.firmaInformante || null,
+                    firmaResponsable: parte.firmaResponsableTurno || extra.firmaResponsable || null,
+                    firmaJefe: parte.firmaJefeServicio || extra.firmaJefe || null,
+                    posiblesCausas: parte.posiblesCausas || extra.posiblesCausas || '',
+                    policiaLocalDe: parte.policiaLocal || extra.policiaLocalDe || '',
+                    guardiaCivilDe: parte.guardiaCivil || extra.guardiaCivilDe || '',
+                    autoridadInterviene: extra.autoridadInterviene || '',
+                    otrosDescripcion: extra.otrosDescripcion || '',
+                    fotos: [],
                 })
             }
         } catch (err) {
