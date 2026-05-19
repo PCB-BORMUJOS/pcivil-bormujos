@@ -1664,7 +1664,10 @@ export default function MiAreaPage() {
               )}
 
               {activeTab === 'notificaciones' && (
-                <NotificacionesTab initialSubTab={(typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('subtab') : null) as any || 'mensajes'} />
+                <NotificacionesTab
+                  initialSubTab={(typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('subtab') : null) as any || 'mensajes'}
+                  initialMensajeId={(typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('mensajeId') : null) || undefined}
+                />
               )}
 
               {activeTab === 'configuracion' && (

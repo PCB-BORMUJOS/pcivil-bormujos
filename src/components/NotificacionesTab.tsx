@@ -17,7 +17,7 @@ interface MensajeItem {
 interface Notificacion { id: string; tipo: string; titulo: string; mensaje: string; enlace?: string; leida: boolean; createdAt: string }
 interface UsuarioDest { id: string; nombre: string; apellidos: string; numeroVoluntario?: string; rol: { nombre: string } }
 interface Grupo { value: string; label: string; tipo: string }
-interface Props { initialSubTab?: 'mensajes' | 'sistema' }
+interface Props { initialSubTab?: 'mensajes' | 'sistema' | 'recibidos'; initialMensajeId?: string }
 
 const AVATAR_COLORS = [
   'bg-rose-500', 'bg-orange-500', 'bg-amber-500', 'bg-emerald-500',
@@ -53,7 +53,7 @@ const NOTIF_ICON: Record<string, { Icon: any; cls: string }> = {
   default:  { Icon: Info,          cls: 'bg-slate-100 text-slate-500' },
 }
 
-export default function NotificacionesTab({ initialSubTab = 'mensajes' }: Props) {
+export default function NotificacionesTab({ initialSubTab = 'mensajes', initialMensajeId }: Props) {
   type SubTab = 'recibidos' | 'enviados' | 'archivados' | 'sistema'
   const [tab, setTab] = useState<SubTab>(initialSubTab === 'sistema' ? 'sistema' : 'recibidos')
   const [mensajes, setMensajes] = useState<MensajeItem[]>([])
@@ -143,6 +143,14 @@ export default function NotificacionesTab({ initialSubTab = 'mensajes' }: Props)
 
   const volverALista = () => { setSeleccionado(null); setHilo([]); setVistaMovil('lista') }
 
+  // Auto-open message when arriving from a notification link
+  useEffect(() => {
+    if (!initialMensajeId || loading || tab !== 'recibidos') return
+    const target = mensajes.find(m => m.id === initialMensajeId)
+    if (target) abrirMensaje(target)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialMensajeId, mensajes, loading])
+
   const enviarRespuesta = async () => {
     if (!respuesta.trim() || !hilo.length) return
     setEnviandoResp(true)
@@ -185,7 +193,26 @@ export default function NotificacionesTab({ initialSubTab = 'mensajes' }: Props)
       setNotifs(p => p.map(x => x.id === n.id ? { ...x, leida: true } : x))
       setNoLeidosSistema(p => Math.max(0, p - 1))
     }
-    if (n.enlace) window.location.href = n.enlace
+    if (n.tipo === 'mensaje' && n.enlace) {
+      // Extract mensajeId from enlace and navigate within the component
+      const url = new URL(n.enlace, window.location.origin)
+      const mensajeId = url.searchParams.get('mensajeId')
+      setTab('recibidos')
+      if (mensajeId) {
+        // cargarMensajes will run via the tab useEffect, then auto-open kicks in
+        // We navigate to the recibidos view with the message pre-selected
+        await cargarMensajes('recibidos')
+        // find and open message directly
+        const r = await fetch(`/api/mensajes?tipo=recibidos`)
+        if (r.ok) {
+          const d = await r.json()
+          const target = (d.mensajes || []).find((m: MensajeItem) => m.id === mensajeId)
+          if (target) { setMensajes(d.mensajes || []); abrirMensaje(target) }
+        }
+      }
+    } else if (n.enlace) {
+      window.location.href = n.enlace
+    }
   }
 
   const marcarTodosLeidos = async () => {

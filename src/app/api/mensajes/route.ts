@@ -206,7 +206,7 @@ export async function POST(request: NextRequest) {
           tipo: 'mensaje',
           titulo: 'Nuevo mensaje de ' + usuario.nombre + ' ' + usuario.apellidos,
           mensaje: asunto,
-          enlace: '/mi-area?tab=notificaciones',
+          enlace: '/mi-area?tab=notificaciones&subtab=recibidos&mensajeId=' + mensaje.id,
           usuarioId: destinatarioId
         }
       })
@@ -243,7 +243,7 @@ export async function POST(request: NextRequest) {
             tipo: 'mensaje',
             titulo: 'Mensaje de ' + usuario.nombre + ' ' + usuario.apellidos,
             mensaje: asunto,
-            enlace: '/mi-area?tab=notificaciones',
+            enlace: '/mi-area?tab=notificaciones&subtab=recibidos&mensajeId=' + mensaje.id,
             usuarioId: u.id
           }))
         })
