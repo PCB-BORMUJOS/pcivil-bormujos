@@ -142,7 +142,15 @@ export async function DELETE(
             return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
         }
 
-        // Opcional: Validar permisos extras para borrar
+        const usuario = await prisma.usuario.findUnique({
+            where: { email: session.user.email! },
+            include: { rol: true }
+        })
+        const rolNombre = usuario?.rol?.nombre || ''
+        if (!['superadmin', 'superadministrador', 'admin'].includes(rolNombre)) {
+            return NextResponse.json({ error: 'Sin permisos para eliminar partes' }, { status: 403 })
+        }
+
         const parteExist = await prisma.partePSI.findUnique({ where: { id: params.id } })
 
         await prisma.partePSI.delete({

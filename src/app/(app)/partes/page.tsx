@@ -130,9 +130,13 @@ function PartesPageInner() {
   const handleEliminar = async (id: string) => {
     if (!confirm('¿Está seguro de eliminar este parte?')) return
     try {
-      const res = await fetch(`/api/partes/psi?id=${id}`, { method: 'DELETE' })
-      if (res.ok) await cargarPartes()
-      else alert('No se pudo eliminar (requiere permisos de Superadmin)')
+      const res = await fetch(`/api/partes/psi/${id}`, { method: 'DELETE' })
+      if (res.ok) {
+        await cargarPartes()
+      } else {
+        const data = await res.json().catch(() => ({}))
+        alert(data.error || 'No se pudo eliminar')
+      }
     } catch { /* silenciado */ }
   }
 

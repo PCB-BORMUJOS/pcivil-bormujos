@@ -250,6 +250,7 @@ export default function Sidebar() {
                               <Link
                                 key={sub.href}
                                 href={sub.href}
+                                prefetch={false}
                                 className={cn(
                                   'block px-3 py-2 text-sm rounded-lg transition-colors',
                                   isSubActive
