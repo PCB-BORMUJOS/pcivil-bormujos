@@ -62,7 +62,6 @@ export function usePsiForm() {
                         terminado: parte.horaTerminado || extra.tiempos?.terminado || '00:00',
                         disponible: parte.horaDisponible || extra.tiempos?.disponible || '00:00',
                     },
-                    vehiculosRow1: Array.isArray(parte.vehiculosIds) ? parte.vehiculosIds : (extra.vehiculosRow1 || []),
                 })
             }
         } catch (err) {

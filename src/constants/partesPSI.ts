@@ -4,22 +4,22 @@ export const TIPOLOGIAS_PSI = {
         { id: 'practicas', label: 'Prácticas', numero: '2' },
         { id: 'suministros', label: 'Suministros', numero: '3' },
         { id: 'preventivo', label: 'Preventivo', numero: '4' },
-        { id: 'otros_grupo1', label: 'Otros', numero: '5', tieneTexto: true }
+        { id: 'otros', label: 'Otros', numero: '5', tieneTexto: true }
     ],
     grupo2: [
-        { id: 'soporte_vital', label: 'Soporte Vital', numero: '1' },
+        { id: 'svb', label: 'Soporte Vital', numero: '1' },
         { id: 'incendios', label: 'Incendios', numero: '2' },
         { id: 'inundaciones', label: 'Inundaciones', numero: '3' },
-        { id: 'riesgos_meteo', label: 'Otros Riesgos Meteo', numero: '4' },
-        { id: 'pem_bor', label: 'Activación PEM-BOR', numero: '5' },
-        { id: 'otros_grupo2', label: 'Otros', numero: '6', tieneTexto: true }
+        { id: 'otros_riesgos_meteo', label: 'Otros Riesgos Meteo', numero: '4' },
+        { id: 'activacion_pem_bor', label: 'Activación PEM-BOR', numero: '5' },
+        { id: 'otros', label: 'Otros', numero: '6', tieneTexto: true }
     ],
     grupo3: [
         { id: 'reunion_coordinacion', label: 'Reunión Coordinación', numero: '1' },
         { id: 'reunion_areas', label: 'Reunión Áreas', numero: '2' },
         { id: 'limpieza', label: 'Limpieza', numero: '3' },
         { id: 'formacion', label: 'Formación', numero: '4' },
-        { id: 'otros_grupo3', label: 'Otros', numero: '5', tieneTexto: true }
+        { id: 'otros', label: 'Otros', numero: '5', tieneTexto: true }
     ]
 } as const
 
