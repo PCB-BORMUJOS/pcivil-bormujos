@@ -142,11 +142,7 @@ export async function DELETE(
             return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
         }
 
-        const usuario = await prisma.usuario.findUnique({
-            where: { email: session.user.email! },
-            include: { rol: true }
-        })
-        const rolNombre = usuario?.rol?.nombre || ''
+        const rolNombre = (session.user as any).rol as string || ''
         if (!['superadmin', 'superadministrador', 'admin'].includes(rolNombre)) {
             return NextResponse.json({ error: 'Sin permisos para eliminar partes' }, { status: 403 })
         }
