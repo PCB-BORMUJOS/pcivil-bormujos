@@ -280,6 +280,7 @@
 
 .timeGrid {
   display: flex;
+  width: 100%;
   justify-content: center;
   gap: 26px;
   padding: 10px 0 6px 0;
