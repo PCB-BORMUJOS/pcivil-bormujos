@@ -1,5 +1,6 @@
 'use client'
 import { usePermisos } from '@/lib/permisos'
+import PeticionesTab, { MovimientosTab } from '@/components/PeticionesTab'
 
 import dynamic from 'next/dynamic'
 import { useState, useEffect } from 'react'
@@ -105,7 +106,11 @@ const PRIORIDADES = {
 }
 
 export default function SocorrismoPage() {
-  const { canCreate, canEdit, canDelete, canCreatePeticion } = usePermisos()
+  const { canCreate, canEdit, canDelete, canCreatePeticion, isAdmin } = usePermisos()
+  const [peticiones, setPeticiones] = useState<Peticion[]>([])
+  const [filtroPeticiones, setFiltroPeticiones] = useState('all')
+  const [showNuevaPeticion, setShowNuevaPeticion] = useState(false)
+  const [peticionStats, setPeticionStats] = useState({ total: 0, pendientes: 0, aprobadas: 0, enCompra: 0, recibidas: 0, rechazadas: 0 })
   // Estados principales
   const [mainTab, setMainTab] = useState<'inventario' | 'deas' | 'botiquines'>('inventario')
   const [inventoryTab, setInventoryTab] = useState<'stock' | 'peticiones' | 'movimientos'>('stock')
@@ -139,13 +144,11 @@ export default function SocorrismoPage() {
   const [deas, setDeas] = useState<DEA[]>([])
   const [vehiculos, setVehiculos] = useState<any[]>([])
   const [botiquines, setBotiquines] = useState<any[]>([])
-  const [peticiones, setPeticiones] = useState<Peticion[]>([])
   const [categoriaSocorrismo, setCategoriaSocorrismo] = useState<string | null>(null)
 
   // Estados de filtros
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedFamiliaFilter, setSelectedFamiliaFilter] = useState('all')
-  const [filtroPeticiones, setFiltroPeticiones] = useState('all')
 
   // Paginación
   const [currentPage, setCurrentPage] = useState(1)
@@ -153,7 +156,6 @@ export default function SocorrismoPage() {
 
   // Estados de modales
   const [showNuevoArticulo, setShowNuevoArticulo] = useState(false)
-  const [showNuevaPeticion, setShowNuevaPeticion] = useState(false)
   const [showGestionFamilias, setShowGestionFamilias] = useState(false)
   const [showNuevoDEA, setShowNuevoDEA] = useState(false)
   const [showNuevoBotiquin, setShowNuevoBotiquin] = useState(false)
@@ -177,14 +179,6 @@ export default function SocorrismoPage() {
   const [statsArticulos, setStatsArticulos] = useState({ totalArticulos: 0, stockBajo: 0 })
   const [deasStats, setDeasStats] = useState({ total: 0, operativos: 0 })
   const [botiquinesStats, setBotiquinesStats] = useState({ total: 0, operativos: 0, revisionPendiente: 0, incompletos: 0 })
-  const [peticionStats, setPeticionStats] = useState({
-    total: 0,
-    pendientes: 0,
-    aprobadas: 0,
-    enCompra: 0,
-    recibidas: 0,
-    rechazadas: 0
-  })
 
   // Cargar datos al montar
   useEffect(() => {
@@ -581,86 +575,12 @@ export default function SocorrismoPage() {
 
               {/* Tab Peticiones */}
               {inventoryTab === 'peticiones' && (
-                <div>
-                  <div className="flex items-center justify-between mb-6">
-                    <div className="flex items-center gap-2">
-                      <Filter size={18} className="text-slate-400" />
-                      <select
-                        value={filtroPeticiones}
-                        onChange={e => setFiltroPeticiones(e.target.value)}
-                        className="border border-slate-200 rounded-lg px-3 py-2 text-sm"
-                      >
-                        <option value="all">Todos los estados</option>
-                        <option value="pendiente">Pendientes ({peticionStats.pendientes})</option>
-                        <option value="aprobada">Aprobadas ({peticionStats.aprobadas})</option>
-                        <option value="en_compra">En Compra ({peticionStats.enCompra})</option>
-                        <option value="recibida">Recibidas ({peticionStats.recibidas})</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  {peticiones.length === 0 ? (
-                    <div className="text-center py-12 text-slate-500">
-                      <ShoppingCart className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                      <p>No hay peticiones de material</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {peticiones.map(peticion => {
-                        const estadoInfo = ESTADOS_PETICION[peticion.estado as keyof typeof ESTADOS_PETICION] || ESTADOS_PETICION.pendiente
-                        const prioridadInfo = PRIORIDADES[peticion.prioridad as keyof typeof PRIORIDADES] || PRIORIDADES.normal
-                        const EstadoIcon = estadoInfo.icon
-
-                        return (
-                          <div key={peticion.id} className="bg-white border border-slate-200 rounded-xl p-4">
-                            <div className="flex items-start justify-between gap-4">
-                              <div className="flex items-start gap-4 flex-1">
-                                <div className="w-12 h-12 rounded-xl bg-red-100 flex items-center justify-center">
-                                  <Heart size={24} className="text-red-600" />
-                                </div>
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2 flex-wrap">
-                                    <span className="font-bold text-slate-800">{peticion.numero}</span>
-                                    <span className={`px-2 py-0.5 rounded-full text-xs font-bold border ${estadoInfo.color}`}>
-                                      <EstadoIcon size={12} className="inline mr-1" />
-                                      {estadoInfo.label}
-                                    </span>
-                                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${prioridadInfo.color}`}>
-                                      {prioridadInfo.label}
-                                    </span>
-                                  </div>
-                                  <p className="font-medium text-slate-700 mt-1">
-                                    {peticion.nombreArticulo}{' '}
-                                    <span className="text-slate-400">× {peticion.cantidad} {peticion.unidad}</span>
-                                  </p>
-                                  <div className="flex items-center gap-4 mt-2 text-xs text-slate-500">
-                                    <span className="flex items-center gap-1">
-                                      <User size={12} /> {peticion.solicitante.nombre} {peticion.solicitante.apellidos}
-                                    </span>
-                                    <span className="flex items-center gap-1">
-                                      <Calendar size={12} /> {new Date(peticion.fechaSolicitud).toLocaleDateString('es-ES')}
-                                    </span>
-                                  </div>
-                                  {peticion.descripcion && (
-                                    <p className="text-sm text-slate-500 mt-2">{peticion.descripcion}</p>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  )}
-                </div>
+                <PeticionesTab areaOrigen="socorrismo" isAdmin={isAdmin} accentColor="from-red-600 to-red-700" />
               )}
 
               {/* Tab Movimientos */}
               {inventoryTab === 'movimientos' && (
-                <div className="text-center py-12 text-slate-400">
-                  <RefreshCw size={48} className="mx-auto mb-4 opacity-50" />
-                  <p>Próximamente: Historial de movimientos</p>
-                </div>
+                <MovimientosTab inventario="socorrismo" />
               )}
             </div>
           </div>
@@ -1333,90 +1253,6 @@ export default function SocorrismoPage() {
                 </div>
               </form>
             )}
-          </div>
-        </div>
-      )}
-
-      {/* Modal Nueva Petición */}
-      {showNuevaPeticion && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60" onClick={() => setShowNuevaPeticion(false)}>
-          <div className="bg-white rounded-xl w-full max-w-2xl" onClick={e => e.stopPropagation()}>
-            <div className="bg-blue-600 p-5 text-white flex justify-between items-center">
-              <h2 className="text-xl font-bold">Nueva Petición</h2>
-              <button onClick={() => setShowNuevaPeticion(false)}>
-                <X size={24} />
-              </button>
-            </div>
-            <form onSubmit={async (e) => {
-              e.preventDefault()
-              const form = e.target as HTMLFormElement
-              const articuloIdInput = (form.elements.namedItem('articuloId') as HTMLSelectElement)
-              const articuloSelec = articulos.find(a => a.id === articuloIdInput.value)
-              const formData = {
-                articuloId: articuloIdInput.value || null,
-                nombreArticulo: articuloSelec?.nombre || (form.elements.namedItem('nombreArticulo') as HTMLInputElement)?.value || 'Material solicitado',
-                cantidad: parseInt((form.elements.namedItem('cantidad') as HTMLInputElement).value),
-                unidad: articuloSelec?.unidad || 'Unidad',
-                prioridad: (form.elements.namedItem('prioridad') as HTMLSelectElement).value,
-                descripcion: (form.elements.namedItem('motivo') as HTMLTextAreaElement).value,
-                areaOrigen: 'socorrismo'
-              }
-              try {
-                const res = await fetch('/api/logistica', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ tipo: 'peticion', ...formData })
-                })
-                if (res.ok) {
-                  setShowNuevaPeticion(false)
-                  form.reset()
-                  alert('✅ Petición creada correctamente')
-                  if (inventoryTab === 'peticiones') {
-                    cargarPeticiones()
-                  }
-                }
-              } catch (error) {
-                /* error silenciado */
-              }
-            }} className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Artículo</label>
-                <select name="articuloId" className="w-full border border-slate-300 rounded-lg p-2.5">
-                  <option value="">Seleccionar artículo...</option>
-                  {articulos.map(art => (
-                    <option key={art.id} value={art.id}>
-                      {art.nombre} (Stock: {art.stockActual})
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Cantidad *</label>
-                  <input name="cantidad" type="number" min="1" defaultValue="1" className="w-full border border-slate-300 rounded-lg p-2.5" required />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Prioridad</label>
-                  <select name="prioridad" className="w-full border border-slate-300 rounded-lg p-2.5">
-                    <option value="normal">Normal</option>
-                    <option value="alta">Alta</option>
-                    <option value="urgente">Urgente</option>
-                  </select>
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Motivo</label>
-                <textarea name="motivo" className="w-full border border-slate-300 rounded-lg p-2.5" rows={3} placeholder="Razón de la petición..."></textarea>
-              </div>
-              <div className="flex justify-end gap-3 pt-4 border-t">
-                <button type="button" onClick={() => setShowNuevaPeticion(false)} className="px-5 py-2.5 text-slate-600 hover:bg-slate-100 rounded-lg font-medium">
-                  Cancelar
-                </button>
-                <button type="submit" className="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">
-                  Crear Petición
-                </button>
-              </div>
-            </form>
           </div>
         </div>
       )}

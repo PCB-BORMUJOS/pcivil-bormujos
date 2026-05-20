@@ -1,7 +1,9 @@
 'use client'
+import PeticionesTab, { MovimientosTab } from '@/components/PeticionesTab'
 
 import { useState, useEffect, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
+import { usePermisos } from '@/lib/permisos'
 import {
   RefreshCw, Plus, Search, Edit, Trash2, X, Save,
   Package, AlertTriangle, CheckCircle, ShoppingCart,
@@ -411,6 +413,10 @@ function PlantaSeparadas() {
 // ===================== COMPONENTE PRINCIPAL =====================
 export default function PMAPage() {
   const { data: session } = useSession()
+  const { isAdmin } = usePermisos()
+  const [peticiones, setPeticiones] = useState<Peticion[]>([])
+  const [filtroPeticiones, setFiltroPeticiones] = useState('all')
+  const [showNuevaPeticion, setShowNuevaPeticion] = useState(false)
   const [mainTab, setMainTab] = useState<'inventario' | 'remolque' | 'despliegues' | 'ficha'>('inventario')
   const [inventoryTab, setInventoryTab] = useState<'stock' | 'peticiones' | 'movimientos'>('stock')
   const [loading, setLoading] = useState(true)
@@ -418,18 +424,15 @@ export default function PMAPage() {
   // Inventario
   const [articulos, setArticulos] = useState<Articulo[]>([])
   const [familias, setFamilias] = useState<Familia[]>([])
-  const [peticiones, setPeticiones] = useState<Peticion[]>([])
   const [categoriaPMA, setCategoriaPMA] = useState<string | null>(null)
 
   // Filtros
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedFamiliaFilter, setSelectedFamiliaFilter] = useState('all')
-  const [filtroPeticiones, setFiltroPeticiones] = useState('all')
 
   // Modales
   const [showNuevoArticulo, setShowNuevoArticulo] = useState(false)
   const [showEditArticulo, setShowEditArticulo] = useState(false)
-  const [showNuevaPeticion, setShowNuevaPeticion] = useState(false)
   const [showGestionFamilias, setShowGestionFamilias] = useState(false)
   const [articuloSeleccionado, setArticuloSeleccionado] = useState<Articulo | null>(null)
 
@@ -473,16 +476,7 @@ export default function PMAPage() {
     finally { setLoading(false) }
   }, [])
 
-  const cargarPeticiones = useCallback(async () => {
-    try {
-      const res = await fetch('/api/logistica/peticiones?area=pma')
-      const data = await res.json()
-      setPeticiones(data.peticiones || [])
-    } catch (err) { console.error("Error en operación:", err) }
-  }, [])
-
   useEffect(() => { cargarDatos() }, [cargarDatos])
-  useEffect(() => { if (inventoryTab === 'peticiones') cargarPeticiones() }, [inventoryTab, cargarPeticiones])
 
   // ---- HANDLERS INVENTARIO ----
   const handleCrearArticulo = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -492,10 +486,6 @@ export default function PMAPage() {
   const handleEditarArticulo = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault(); if (!articuloSeleccionado) return; const f = new FormData(e.currentTarget)
     try { const r = await fetch('/api/logistica', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'articulo', id: articuloSeleccionado.id, codigo: f.get('codigo'), nombre: f.get('nombre'), descripcion: f.get('descripcion'), stockActual: parseInt(f.get('stockActual') as string) || 0, stockMinimo: parseInt(f.get('stockMinimo') as string) || 0, unidad: f.get('unidad'), familiaId: f.get('familiaId') }) }); if (r.ok) { setShowEditArticulo(false); setArticuloSeleccionado(null); cargarDatos() } } catch (err) { console.error("Error en operación:", err) }
-  }
-  const handleCrearPeticion = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault(); const f = new FormData(e.currentTarget)
-    try { const r = await fetch('/api/logistica', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'peticion', articuloId: f.get('articuloId') || null, nombreArticulo: f.get('nombreArticulo'), cantidad: parseInt(f.get('cantidad') as string) || 1, unidad: f.get('unidad') || 'unidad', prioridad: f.get('prioridad') || 'normal', descripcion: f.get('descripcion'), areaOrigen: 'pma' }) }); if (r.ok) { setShowNuevaPeticion(false); cargarPeticiones() } } catch (err) { console.error("Error en operación:", err) }
   }
   const handleCrearFamilia = async (nombre: string) => {
     if (!categoriaPMA || !nombre.trim()) return
@@ -547,7 +537,6 @@ export default function PMAPage() {
   })
   const totalPaginas = Math.ceil(articulosFiltrados.length / ITEMS_POR_PAGINA)
   const articulosPag = articulosFiltrados.slice((paginaActual - 1) * ITEMS_POR_PAGINA, paginaActual * ITEMS_POR_PAGINA)
-  const peticionesFiltradas = peticiones.filter(p => filtroPeticiones === 'all' || p.estado === filtroPeticiones)
   const materialFiltrado = materialRemolque.filter(m => filtroCategoria === 'all' || m.categoria === filtroCategoria)
   const checkStats = { total: materialRemolque.length, ok: Object.values(checkMap).filter(v => v.ok).length }
 
@@ -687,16 +676,10 @@ export default function PMAPage() {
           )}
 
           {inventoryTab === 'peticiones' && (
-            <div className="space-y-3">
-              <div className="flex gap-2 flex-wrap">
-                <button onClick={() => setFiltroPeticiones('all')} className={`px-3 py-1.5 rounded-lg text-sm font-medium ${filtroPeticiones==='all'?'bg-orange-500 text-white':'bg-white border border-slate-200 text-slate-600'}`}>Todas</button>
-                {Object.entries(ESTADOS_PETICION).map(([k, v]) => <button key={k} onClick={() => setFiltroPeticiones(k)} className={`px-3 py-1.5 rounded-lg text-sm font-medium ${filtroPeticiones===k?'bg-orange-500 text-white':'bg-white border border-slate-200 text-slate-600'}`}>{v.label}</button>)}
-              </div>
-              <div className="space-y-3">{peticionesFiltradas.length === 0 ? <div className="bg-white border border-slate-200 rounded-2xl p-12 text-center text-slate-400">No hay peticiones</div> : peticionesFiltradas.map(p => { const est = ESTADOS_PETICION[p.estado] || ESTADOS_PETICION.pendiente; const pri = PRIORIDADES[p.prioridad] || PRIORIDADES.normal; return (<div key={p.id} className="bg-white border border-slate-200 rounded-2xl p-4"><div className="flex items-center gap-2 flex-wrap"><span className="font-mono text-xs text-slate-400">{p.numero}</span><span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${est.color}`}>{est.label}</span><span className={`px-2 py-0.5 rounded-full text-xs font-medium ${pri.color}`}>{pri.label}</span></div><p className="font-medium text-slate-800 mt-1">{p.nombreArticulo} <span className="text-slate-400">× {p.cantidad} {p.unidad}</span></p>{p.descripcion && <p className="text-sm text-slate-500 mt-1">{p.descripcion}</p>}<p className="text-xs text-slate-400 mt-2">{p.solicitante?.nombre} — {new Date(p.fechaSolicitud).toLocaleDateString('es-ES')}</p></div>) })}</div>
-            </div>
+            <PeticionesTab areaOrigen="pma" isAdmin={isAdmin} accentColor="from-lime-600 to-lime-700" />
           )}
 
-          {inventoryTab === 'movimientos' && <div className="bg-white border border-slate-200 rounded-2xl p-12 text-center"><History className="w-12 h-12 text-slate-300 mx-auto mb-3" /><p className="text-slate-400">Historial de movimientos de stock</p><p className="text-sm text-slate-300 mt-1">Se registrarán automáticamente al crear peticiones y recibir material</p></div>}
+          {inventoryTab === 'movimientos' && <MovimientosTab inventario="pma" />}
         </div>
       )}
 
@@ -988,20 +971,6 @@ export default function PMAPage() {
             <div><label className="block text-sm font-medium text-slate-700 mb-1">Familia *</label><select name="familiaId" required defaultValue={articuloSeleccionado.familia?.id||''} className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-200"><option value="">Seleccionar...</option>{familias.map(f => <option key={f.id} value={f.id}>{f.nombre}</option>)}</select></div>
             <div className="grid grid-cols-2 gap-4"><div><label className="block text-sm font-medium text-slate-700 mb-1">Stock Actual</label><input name="stockActual" type="number" defaultValue={articuloSeleccionado.stockActual} min={0} className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-200" /></div><div><label className="block text-sm font-medium text-slate-700 mb-1">Stock Mínimo</label><input name="stockMinimo" type="number" defaultValue={articuloSeleccionado.stockMinimo} min={0} className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-200" /></div></div>
             <div className="flex justify-end gap-3 pt-2"><button type="button" onClick={() => { setShowEditArticulo(false); setArticuloSeleccionado(null) }} className="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl text-sm font-medium hover:bg-slate-200">Cancelar</button><button type="submit" className="px-4 py-2 bg-orange-500 text-white rounded-xl text-sm font-medium hover:bg-orange-600">Guardar</button></div>
-          </form>
-        </div></div>
-      )}
-
-      {/* Modal Nueva Petición */}
-      {showNuevaPeticion && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000] p-4"><div className="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-          <div className="flex items-center justify-between p-5 border-b border-slate-200"><h3 className="text-lg font-bold text-slate-800">Nueva Petición — PMA</h3><button onClick={() => setShowNuevaPeticion(false)} className="p-1 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5" /></button></div>
-          <form onSubmit={handleCrearPeticion} className="p-5 space-y-4">
-            <div><label className="block text-sm font-medium text-slate-700 mb-1">Artículo del inventario</label><select name="articuloId" onChange={e => { const art = articulos.find(a => a.id === e.target.value); if (art) { const ni = e.target.form?.querySelector('input[name="nombreArticulo"]') as HTMLInputElement; const ui = e.target.form?.querySelector('select[name="unidad"]') as HTMLSelectElement; if (ni) ni.value = art.nombre; if (ui) ui.value = art.unidad }}} className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-200"><option value="">Seleccionar (opcional)...</option>{articulos.map(a => <option key={a.id} value={a.id}>{a.nombre} (Stock: {a.stockActual})</option>)}</select></div>
-            <div><label className="block text-sm font-medium text-slate-700 mb-1">Nombre del material *</label><input name="nombreArticulo" required className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-200" /></div>
-            <div className="grid grid-cols-3 gap-4"><div><label className="block text-sm font-medium text-slate-700 mb-1">Cantidad *</label><input name="cantidad" type="number" required min={1} defaultValue={1} className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-200" /></div><div><label className="block text-sm font-medium text-slate-700 mb-1">Unidad</label><select name="unidad" className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-200"><option value="unidad">Unidad</option><option value="metro">Metro</option><option value="kg">Kg</option><option value="litro">Litro</option><option value="caja">Caja</option></select></div><div><label className="block text-sm font-medium text-slate-700 mb-1">Prioridad</label><select name="prioridad" className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-200"><option value="normal">Normal</option><option value="baja">Baja</option><option value="alta">Alta</option><option value="urgente">Urgente</option></select></div></div>
-            <div><label className="block text-sm font-medium text-slate-700 mb-1">Motivo</label><textarea name="descripcion" rows={2} className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-200" /></div>
-            <div className="flex justify-end gap-3 pt-2"><button type="button" onClick={() => setShowNuevaPeticion(false)} className="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl text-sm font-medium hover:bg-slate-200">Cancelar</button><button type="submit" className="px-4 py-2 bg-orange-500 text-white rounded-xl text-sm font-medium hover:bg-orange-600">Enviar</button></div>
           </form>
         </div></div>
       )}

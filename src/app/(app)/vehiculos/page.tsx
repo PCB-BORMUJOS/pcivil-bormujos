@@ -1,5 +1,6 @@
 'use client'
 import { usePermisos } from '@/lib/permisos'
+import PeticionesTab, { MovimientosTab } from '@/components/PeticionesTab'
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import dynamic from 'next/dynamic'
@@ -85,7 +86,10 @@ function NivelIndicador({ nivel }: { nivel?: string }) {
 }
 
 export default function VehiculosPage() {
-  const { canCreate, canEdit, canDelete, canCreatePeticion } = usePermisos()
+  const { canCreate, canEdit, canDelete, canCreatePeticion, isAdmin } = usePermisos()
+  const [peticiones, setPeticiones] = useState<any[]>([])
+  const [filtroPeticiones, setFiltroPeticiones] = useState('all')
+  const [showNuevaPeticion, setShowNuevaPeticion] = useState(false)
   const { data: session } = useSession()
   const [mainTab, setMainTab] = useState<'inventario' | 'flota' | 'documentacion' | 'localizacion'>('inventario')
   const [inventoryTab, setInventoryTab] = useState<'stock' | 'peticiones' | 'movimientos'>('stock')
@@ -94,7 +98,6 @@ export default function VehiculosPage() {
   const [saving, setSaving] = useState(false)
   const [articulos, setArticulos] = useState<Articulo[]>([])
   const [familias, setFamilias] = useState<Familia[]>([])
-  const [peticiones, setPeticiones] = useState<any[]>([])
   const [categoriaArea, setCategoriaArea] = useState<string | null>(null)
   const [ubicacionesGPS, setUbicacionesGPS] = useState<any[]>([])
   const [recorrido, setRecorrido] = useState<any[]>([])
@@ -143,7 +146,6 @@ export default function VehiculosPage() {
   }, [registrosFluidos])
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedFamiliaFilter, setSelectedFamiliaFilter] = useState('all')
-  const [filtroPeticiones, setFiltroPeticiones] = useState('all')
   const [filtroEstadoVehiculo, setFiltroEstadoVehiculo] = useState('all')
   const [filtroVehiculo, setFiltroVehiculo] = useState('all')
   const [fechaDesde, setFechaDesde] = useState('')
@@ -154,7 +156,6 @@ export default function VehiculosPage() {
   const [showEditarFicha, setShowEditarFicha] = useState(false)
   const [showNuevoArticulo, setShowNuevoArticulo] = useState(false)
   const [showEditarArticulo, setShowEditarArticulo] = useState(false)
-  const [showNuevaPeticion, setShowNuevaPeticion] = useState(false)
   const [showGestionFamilias, setShowGestionFamilias] = useState(false)
   const [showNuevoRepostaje, setShowNuevoRepostaje] = useState(false)
   const [showEditarRepostaje, setShowEditarRepostaje] = useState(false)
@@ -178,14 +179,12 @@ export default function VehiculosPage() {
       if (dataCat.categoria) setCategoriaArea(dataCat.categoria.id)
     } catch (error) { /* error silenciado */ } finally { setLoading(false) }
   }, [])
-  const cargarPeticiones = useCallback(async () => { try { const r = await fetch('/api/logistica/peticiones?area=vehiculos'); const d = await r.json(); setPeticiones(d.peticiones || []) } catch (e) { /* error silenciado */ } }, [])
   const cargarDocumentos = useCallback(async (vid: string) => { try { const r = await fetch(`/api/vehiculos?tipo=documentos&vehiculoId=${vid}`); const d = await r.json(); setDocumentos(d.documentos || []) } catch (e) { /* error silenciado */ } }, [])
   const cargarMantenimientos = useCallback(async (vid: string) => { try { const r = await fetch(`/api/vehiculos?tipo=mantenimientos&vehiculoId=${vid}`); const d = await r.json(); setMantenimientos(d.mantenimientos || []) } catch (e) { /* error silenciado */ } }, [])
   const cargarRepostajes = useCallback(async (vid: string) => { try { const r = await fetch(`/api/vehiculos?tipo=repostajes&vehiculoId=${vid}`); const d = await r.json(); setRepostajes(d.repostajes || []) } catch (e) { /* error silenciado */ } }, [])
   const cargarRegistrosFluidos = useCallback(async (vid: string) => { try { const r = await fetch(`/api/vehiculos?tipo=fluidos&vehiculoId=${vid}`); const d = await r.json(); setRegistrosFluidos(d.registros || []) } catch (e) { /* error silenciado */ } }, [])
 
   useEffect(() => { cargarDatos() }, [cargarDatos])
-  useEffect(() => { if (inventoryTab === 'peticiones') cargarPeticiones() }, [inventoryTab, cargarPeticiones])
   useEffect(() => { if (vehiculoSeleccionado && showDetalleVehiculo) { cargarDocumentos(vehiculoSeleccionado.id); cargarMantenimientos(vehiculoSeleccionado.id); cargarRepostajes(vehiculoSeleccionado.id); cargarRegistrosFluidos(vehiculoSeleccionado.id) } }, [vehiculoSeleccionado, showDetalleVehiculo, cargarDocumentos, cargarMantenimientos, cargarRepostajes, cargarRegistrosFluidos])
 
   useEffect(() => {
@@ -203,7 +202,6 @@ export default function VehiculosPage() {
 
   const handleCrearArticulo = async (e: React.FormEvent<HTMLFormElement>) => { e.preventDefault(); const f = new FormData(e.currentTarget); try { setSaving(true); const r = await fetch('/api/logistica', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'articulo', codigo: f.get('codigo'), nombre: f.get('nombre'), descripcion: f.get('descripcion'), stockActual: parseInt(f.get('stockActual') as string) || 0, stockMinimo: parseInt(f.get('stockMinimo') as string) || 0, unidad: f.get('unidad') || 'unidades', familiaId: f.get('familiaId') }) }); if (r.ok) { setShowNuevoArticulo(false); cargarDatos() } } catch (e) { /* error silenciado */ } finally { setSaving(false) } }
   const handleEditarArticulo = async (e: React.FormEvent<HTMLFormElement>) => { e.preventDefault(); if (!articuloSeleccionado) return; const f = new FormData(e.currentTarget); try { setSaving(true); const r = await fetch('/api/logistica', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'articulo', id: articuloSeleccionado.id, codigo: f.get('codigo'), nombre: f.get('nombre'), descripcion: f.get('descripcion'), stockActual: parseInt(f.get('stockActual') as string) || 0, stockMinimo: parseInt(f.get('stockMinimo') as string) || 0, unidad: f.get('unidad') || 'unidades', familiaId: f.get('familiaId') }) }); if (r.ok) { setShowEditarArticulo(false); setArticuloSeleccionado(null); cargarDatos() } } catch (e) { /* error silenciado */ } finally { setSaving(false) } }
-  const handleCrearPeticion = async (e: React.FormEvent<HTMLFormElement>) => { e.preventDefault(); const f = new FormData(e.currentTarget); try { setSaving(true); const r = await fetch('/api/logistica', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'peticion', articuloId: f.get('articuloId') || null, nombreArticulo: f.get('nombreArticulo'), cantidad: parseInt(f.get('cantidad') as string) || 1, unidad: f.get('unidad') || 'unidades', prioridad: f.get('prioridad') || 'normal', descripcion: f.get('descripcion'), areaOrigen: 'vehiculos' }) }); if (r.ok) { setShowNuevaPeticion(false); cargarPeticiones() } } catch (e) { /* error silenciado */ } finally { setSaving(false) } }
   const handleCrearFamilia = async () => { if (!nuevaFamilia.trim() || !categoriaArea) return; try { const r = await fetch('/api/logistica', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'familia', nombre: nuevaFamilia.trim(), categoriaId: categoriaArea }) }); if (r.ok) { setNuevaFamilia(''); cargarDatos() } } catch (e) { /* error silenciado */ } }
   const handleEditarFamilia = async (id: string) => { if (!familiaEditandoNombre.trim()) return; try { const r = await fetch('/api/logistica', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'familia', id, nombre: familiaEditandoNombre.trim() }) }); if (r.ok) { setFamiliaEditando(null); cargarDatos() } } catch (e) { /* error silenciado */ } }
   const handleEliminarFamilia = async (id: string) => { if (!confirm('¿Eliminar esta familia?')) return; try { await fetch(`/api/logistica?tipo=familia&id=${id}`, { method: 'DELETE' }); cargarDatos() } catch (e) { /* error silenciado */ } }
@@ -244,7 +242,6 @@ export default function VehiculosPage() {
   const abrirDetalleVehiculo = (v: Vehiculo) => { setVehiculoSeleccionado(v); setVehicleDetailTab('ficha'); setShowDetalleVehiculo(true) }
 
   const articulosFiltrados = articulos.filter(a => { const ms = !searchTerm || a.nombre.toLowerCase().includes(searchTerm.toLowerCase()) || (a.codigo && a.codigo.toLowerCase().includes(searchTerm.toLowerCase())); return ms && (selectedFamiliaFilter === 'all' || a.familia?.id === selectedFamiliaFilter) })
-  const peticionesFiltradas = peticiones.filter(p => filtroPeticiones === 'all' || p.estado === filtroPeticiones)
   const vehiculosFiltrados = vehiculos.filter(v => filtroEstadoVehiculo === 'all' || v.estado === filtroEstadoVehiculo)
   const stats = { totalArticulos: articulos.length, stockBajo: articulos.filter(a => a.stockActual <= a.stockMinimo).length, totalVehiculos: vehiculos.length, operativos: vehiculos.filter(v => v.estado === 'disponible' || v.estado === 'en_servicio').length, enTaller: vehiculos.filter(v => v.estado === 'en_taller').length }
 
@@ -371,33 +368,11 @@ export default function VehiculosPage() {
 
           {/* PETICIONES */}
           {inventoryTab === 'peticiones' && (
-            <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
-              <div className="p-5 border-b border-slate-100 flex items-center gap-3 flex-wrap">
-                <span className="text-sm font-medium text-slate-600">Filtrar:</span>
-                <button onClick={() => setFiltroPeticiones('all')} className={`px-3.5 py-1.5 text-xs font-medium rounded-full transition-colors ${filtroPeticiones === 'all' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Todas</button>
-                {Object.entries(ESTADOS_PETICION).map(([k, v]) => (<button key={k} onClick={() => setFiltroPeticiones(k)} className={`px-3.5 py-1.5 text-xs font-medium rounded-full border transition-colors ${filtroPeticiones === k ? 'bg-slate-800 text-white border-slate-800' : `${v.color}`}`}>{v.label}</button>))}
-              </div>
-              <div className="divide-y divide-slate-50">
-                {peticionesFiltradas.length === 0 ? (
-                  <div className="text-center py-16 text-slate-400"><ClipboardList className="w-12 h-12 mx-auto mb-3 opacity-30" /><p className="font-medium">No hay peticiones</p></div>
-                ) : peticionesFiltradas.map(pet => {
-                  const est = ESTADOS_PETICION[pet.estado] || ESTADOS_PETICION.pendiente; const pri = PRIORIDADES[pet.prioridad] || PRIORIDADES.normal; const EI = est.icon
-                  return (
-                    <div key={pet.id} className="p-5 hover:bg-slate-50/50 transition-colors">
-                      <div className="flex items-center gap-2 mb-1"><span className="text-xs font-mono text-slate-400">{pet.numero}</span><span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium border ${est.color}`}><EI className="w-3 h-3" />{est.label}</span><span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${pri.color}`}>{pri.label}</span></div>
-                      <p className="font-medium text-slate-800">{pet.nombreArticulo}</p>
-                      <p className="text-sm text-slate-500 mt-0.5">{pet.cantidad} {pet.unidad} · {new Date(pet.fechaSolicitud).toLocaleDateString('es-ES')}</p>
-                      {pet.descripcion && <p className="text-sm text-slate-400 mt-1">{pet.descripcion}</p>}
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
+            <PeticionesTab areaOrigen="vehiculos" isAdmin={isAdmin} accentColor="from-blue-600 to-blue-700" />
           )}
 
-          {/* MOVIMIENTOS */}
           {inventoryTab === 'movimientos' && (
-            <div className="bg-white border border-slate-200 rounded-2xl p-12 text-center text-slate-400"><History className="w-12 h-12 mx-auto mb-3 opacity-30" /><p className="font-medium">Historial de movimientos</p><p className="text-sm mt-1">Los movimientos de stock se registrarán aquí</p></div>
+            <MovimientosTab inventario="vehiculos" />
           )}
         </div>
       )}
@@ -771,22 +746,6 @@ export default function VehiculosPage() {
               <div><label className="block text-sm font-medium text-slate-700 mb-1">Descripción</label><textarea name="descripcion" rows={2} defaultValue={articuloSeleccionado.descripcion || ''} className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20" /></div>
               <div className="grid grid-cols-3 gap-4"><div><label className="block text-sm font-medium text-slate-700 mb-1">Stock Actual</label><input name="stockActual" type="number" min="0" defaultValue={articuloSeleccionado.stockActual} className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20" /></div><div><label className="block text-sm font-medium text-slate-700 mb-1">Stock Mínimo</label><input name="stockMinimo" type="number" min="0" defaultValue={articuloSeleccionado.stockMinimo} className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20" /></div><div><label className="block text-sm font-medium text-slate-700 mb-1">Unidad</label><input name="unidad" defaultValue={articuloSeleccionado.unidad} className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20" /></div></div>
               <div className="flex justify-end gap-2 pt-2"><button type="button" onClick={() => { setShowEditarArticulo(false); setArticuloSeleccionado(null) }} className="px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-xl">Cancelar</button><button type="submit" disabled={saving} className="px-5 py-2.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl disabled:opacity-50">{saving ? 'Guardando...' : 'Guardar Cambios'}</button></div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL: NUEVA PETICIÓN */}
-      {showNuevaPeticion && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000] p-4" onClick={() => setShowNuevaPeticion(false)}>
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg" onClick={e => e.stopPropagation()}>
-            <div className="p-5 border-b border-slate-200 flex items-center justify-between"><h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2"><ShoppingCart className="w-5 h-5 text-blue-500" />Nueva Petición de Material</h3><button onClick={() => setShowNuevaPeticion(false)} className="p-1 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5 text-slate-400" /></button></div>
-            <form onSubmit={handleCrearPeticion} className="p-5 space-y-4">
-              <div><label className="block text-sm font-medium text-slate-700 mb-1">Artículo existente (opcional)</label><select name="articuloId" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"><option value="">— Material nuevo —</option>{articulos.map(a => <option key={a.id} value={a.id}>{a.nombre} (Stock: {a.stockActual})</option>)}</select></div>
-              <div><label className="block text-sm font-medium text-slate-700 mb-1">Nombre del material *</label><input name="nombreArticulo" required className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20" /></div>
-              <div className="grid grid-cols-3 gap-4"><div><label className="block text-sm font-medium text-slate-700 mb-1">Cantidad *</label><input name="cantidad" type="number" min="1" defaultValue={1} required className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20" /></div><div><label className="block text-sm font-medium text-slate-700 mb-1">Unidad</label><input name="unidad" defaultValue="unidades" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20" /></div><div><label className="block text-sm font-medium text-slate-700 mb-1">Prioridad</label><select name="prioridad" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20">{Object.entries(PRIORIDADES).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}</select></div></div>
-              <div><label className="block text-sm font-medium text-slate-700 mb-1">Motivo</label><textarea name="descripcion" rows={2} className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20" /></div>
-              <div className="flex justify-end gap-2 pt-2"><button type="button" onClick={() => setShowNuevaPeticion(false)} className="px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-xl">Cancelar</button><button type="submit" disabled={saving} className="px-5 py-2.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl disabled:opacity-50">{saving ? 'Enviando...' : 'Enviar Petición'}</button></div>
             </form>
           </div>
         </div>

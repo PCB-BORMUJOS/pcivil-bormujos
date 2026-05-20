@@ -2,6 +2,7 @@
 import DOMPurify from 'dompurify'
 import { TbDrone as Drone } from 'react-icons/tb'
 import { usePermisos } from '@/lib/permisos'
+import PeticionesTab, { MovimientosTab } from '@/components/PeticionesTab'
 import React from 'react'
 import { useState, useEffect, useCallback } from 'react'
 import { Check, ClipboardList, 
@@ -77,7 +78,10 @@ function getVueloIcon(estado: string) {
 
 export default function DronesPage() {
   const [tab, setTab] = useState<'inventario' | 'dashboard' | 'flota' | 'pilotos' | 'operaciones' | 'mantenimiento' | 'mapa' | 'checklist'>('inventario')
-  const { canCreate, canEdit, canDelete } = usePermisos()
+  const { canCreate, canEdit, canDelete, isAdmin } = usePermisos()
+  const [peticiones, setPeticiones] = useState<any[]>([])
+  const [filtroPeticiones, setFiltroPeticiones] = useState('all')
+  const [showNuevaPeticion, setShowNuevaPeticion] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
@@ -92,13 +96,10 @@ export default function DronesPage() {
   const [zonas, setZonas] = useState<Zona[]>([])
   const [articulos, setArticulos] = useState<any[]>([])
   const [familias, setFamilias] = useState<any[]>([])
-  const [peticiones, setPeticiones] = useState<any[]>([])
   const [inventoryTab, setInventoryTab] = useState<'stock'|'peticiones'|'movimientos'>('stock')
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedFamiliaFilter, setSelectedFamiliaFilter] = useState('all')
-  const [filtroPeticiones, setFiltroPeticiones] = useState('all')
   const [showNuevoArticulo, setShowNuevoArticulo] = useState(false)
-  const [showNuevaPeticion, setShowNuevaPeticion] = useState(false)
   const [showGestionFamilias, setShowGestionFamilias] = useState(false)
   const [showEditarArticulo, setShowEditarArticulo] = useState(false)
   const [articuloSeleccionado, setArticuloSeleccionado] = useState<any>(null)
@@ -185,9 +186,7 @@ export default function DronesPage() {
 
   useEffect(() => { cargarDatos() }, [cargarDatos])
   const cargarInventario = useCallback(async () => { try { const [resInv, resCat] = await Promise.all([fetch("/api/logistica?inventario=drones"), fetch("/api/logistica?tipo=categoria&slug=drones")]); const dataInv = await resInv.json(); const dataCat = await resCat.json(); setArticulos(dataInv.articulos || []); setFamilias(dataInv.familias || []); if (dataCat.categoria) setCategoriaArea(dataCat.categoria.id) } catch(e) { console.error(e) } }, [])
-  const cargarPeticiones = useCallback(async () => { try { const r = await fetch("/api/logistica/peticiones?area=drones"); const d = await r.json(); setPeticiones(d.peticiones || []) } catch(e) { console.error(e) } }, [])
   useEffect(() => { cargarInventario() }, [cargarInventario])
-  useEffect(() => { if (inventoryTab === "peticiones") cargarPeticiones() }, [inventoryTab, cargarPeticiones])
 
   const consultarNotamsENAIRE = async () => {
     setCargandoNotams(true)
@@ -2150,22 +2149,10 @@ export default function DronesPage() {
           )}
           {inventoryTab === 'peticiones' && (
             <div className="p-5">
-              <div className="flex items-center justify-between mb-4">
-                <button onClick={() => setShowNuevaPeticion(true)} className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg text-sm font-medium hover:bg-teal-700"><Plus className="w-4 h-4" />Nueva Petición</button>
-              </div>
-              <div className="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden">
-                {peticiones.length === 0 ? <div className="text-center py-12 text-slate-400"><ShoppingCart className="w-10 h-10 mx-auto mb-2 opacity-30" /><p>No hay peticiones</p></div>
-                : peticiones.map(pet => (
-                  <div key={pet.id} className="p-4 hover:bg-slate-50">
-                    <div className="flex items-center gap-2 mb-1"><span className="text-xs font-mono text-slate-400">{pet.numero}</span><span className="px-2 py-0.5 rounded-full text-xs font-medium bg-teal-50 text-teal-700 border border-teal-200">{pet.estado}</span></div>
-                    <p className="font-medium text-slate-800">{pet.nombreArticulo}</p>
-                    <p className="text-sm text-slate-500">{pet.cantidad} {pet.unidad} · {new Date(pet.fechaSolicitud).toLocaleDateString('es-ES')}</p>
-                  </div>
-                ))}
-              </div>
+              <PeticionesTab areaOrigen="drones" isAdmin={isAdmin} accentColor="from-teal-600 to-teal-700" />
             </div>
           )}
-          {inventoryTab === 'movimientos' && <div className="p-12 text-center text-slate-400"><History className="w-12 h-12 mx-auto mb-3 opacity-30" /><p className="font-medium">Historial de movimientos</p><p className="text-sm mt-1">Los movimientos de stock se registrarán aquí</p></div>}
+          {inventoryTab === 'movimientos' && <div className="p-5"><MovimientosTab inventario="drones" /></div>}
         </div>
       )}
 

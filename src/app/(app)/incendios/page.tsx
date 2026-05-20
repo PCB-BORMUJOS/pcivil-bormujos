@@ -1,6 +1,7 @@
 'use client';
 import EditorPlano from '@/components/EditorPlano';
 import { usePermisos } from '@/lib/permisos'
+import PeticionesTab, { MovimientosTab } from '@/components/PeticionesTab'
 import React, { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import 'leaflet/dist/leaflet.css';
@@ -168,7 +169,11 @@ const AREAS_NOMBRE: Record<string, string> = {
 };
 
 export default function IncendiosPage() {
-  const { canCreate, canEdit, canDelete, canCreatePeticion } = usePermisos()
+  const { canCreate, canEdit, canDelete, canCreatePeticion, isAdmin } = usePermisos()
+  const [peticiones, setPeticiones] = useState<any[]>([])
+  const [filtroPeticiones, setFiltroPeticiones] = useState('all')
+  const [showNuevaPeticion, setShowNuevaPeticion] = useState(false)
+  const [peticionStats, setPeticionStats] = useState({ total: 0, pendientes: 0, aprobadas: 0, enCompra: 0, recibidas: 0, rechazadas: 0 })
   const [mainTab, setMainTab] = useState<'inventario' | 'eci-edificios' | 'inventario-eci' | 'hidrantes'>('inventario');
   const [inventoryTab, setInventoryTab] = useState<'stock' | 'peticiones' | 'movimientos'>('stock');
 
@@ -200,7 +205,6 @@ export default function IncendiosPage() {
   const [showNuevoArticulo, setShowNuevoArticulo] = useState(false);
   const [showEditarArticulo, setShowEditarArticulo] = useState(false);
   const [showVerArticulo, setShowVerArticulo] = useState(false);
-  const [showNuevaPeticion, setShowNuevaPeticion] = useState(false);
   const [showGestionFamilias, setShowGestionFamilias] = useState(false);
   const [familiaEditando, setFamiliaEditando] = useState<{id: string, nombre: string} | null>(null);
   const [nombreFamiliaEdit, setNombreFamiliaEdit] = useState('');
@@ -233,9 +237,6 @@ export default function IncendiosPage() {
   const [nuevoPlanoNombre, setNuevoPlanoNombre] = useState('');
   const [nuevoPlanoArchivo, setNuevoPlanoArchivo] = useState<File | null>(null);
   const [creandoPlano, setCreandoPlano] = useState(false);
-  const [peticiones, setPeticiones] = useState<any[]>([]);
-  const [filtroPeticiones, setFiltroPeticiones] = useState("all");
-  const [peticionStats, setPeticionStats] = useState({ total: 0, pendientes: 0, aprobadas: 0, enCompra: 0, recibidas: 0, rechazadas: 0 });
 
   const [articuloSeleccionado, setArticuloSeleccionado] = useState<Articulo | null>(null);
   const [edificioSeleccionado, setEdificioSeleccionado] = useState<Edificio | null>(null);
@@ -828,95 +829,11 @@ export default function IncendiosPage() {
               )}
 
               {inventoryTab === 'peticiones' && (
-                <>
-                  <div className="flex items-center justify-between mb-6">
-                    <div className="flex items-center gap-2">
-                      <Filter size={18} className="text-slate-400" />
-                      <select value={filtroPeticiones} onChange={e => setFiltroPeticiones(e.target.value)} className="border border-slate-200 rounded-lg px-3 py-2 text-sm">
-                        <option value="all">Todos los estados</option>
-                        <option value="pendiente">Pendientes ({peticionStats.pendientes})</option>
-                        <option value="aprobada">Aprobadas ({peticionStats.aprobadas})</option>
-                        <option value="en_compra">En Compra ({peticionStats.enCompra})</option>
-                        <option value="recibida">Recibidas ({peticionStats.recibidas})</option>
-                        <option value="rechazada">Rechazadas ({peticionStats.rechazadas})</option>
-                      </select>
-                    </div>
-                    <div className="flex items-center gap-4 text-sm">
-                      <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-yellow-400"></span> {peticionStats.pendientes} Pendientes</span>
-                      <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-blue-400"></span> {peticionStats.aprobadas} Aprobadas</span>
-                      <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-purple-400"></span> {peticionStats.enCompra} En Compra</span>
-                      <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-green-400"></span> {peticionStats.recibidas} Recibidas</span>
-                    </div>
-                  </div>
-                  {peticiones.length === 0 ? (
-                    <div className="text-center py-12 text-slate-500">
-                      <ShoppingCart className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                      <p>No hay peticiones de material</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {peticiones.map(peticion => {
-                        const estadoInfo = ESTADOS_PETICION[peticion.estado as keyof typeof ESTADOS_PETICION] || ESTADOS_PETICION.pendiente;
-                        const prioridadInfo = PRIORIDADES[peticion.prioridad as keyof typeof PRIORIDADES] || PRIORIDADES.normal;
-                        const EstadoIcon = estadoInfo.icon;
-                        return (
-                          <div key={peticion.id} className="bg-white border border-slate-200 rounded-xl p-4 hover:shadow-md transition-shadow">
-                            <div className="flex items-start justify-between gap-4">
-                              <div className="flex items-start gap-4 flex-1">
-                                <div className="w-12 h-12 rounded-xl bg-orange-100 flex items-center justify-center">
-                                  <Flame size={24} className="text-orange-600" />
-                                </div>
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2 flex-wrap">
-                                    <span className="font-bold text-slate-800">{peticion.numero}</span>
-                                    <span className={`px-2 py-0.5 rounded-full text-xs font-bold border ${estadoInfo.color}`}>
-                                      <EstadoIcon size={12} className="inline mr-1" />{estadoInfo.label}
-                                    </span>
-                                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${prioridadInfo.color}`}>{prioridadInfo.label}</span>
-                                  </div>
-                                  <p className="font-medium text-slate-700 mt-1">{peticion.nombreArticulo} <span className="text-slate-400">× {peticion.cantidad} {peticion.unidad}</span></p>
-                                  <div className="flex items-center gap-4 mt-2 text-xs text-slate-500">
-                                    <span className="flex items-center gap-1"><User size={12} /> {peticion.solicitante.nombre} {peticion.solicitante.apellidos}</span>
-                                    <span className="flex items-center gap-1"><Calendar size={12} /> {new Date(peticion.fechaSolicitud).toLocaleDateString('es-ES')}</span>
-                                  </div>
-                                  {peticion.descripcion && <p className="text-sm text-slate-500 mt-2">{peticion.descripcion}</p>}
-                                </div>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2 mt-4 pt-4 border-t border-slate-100">
-                              <div className={`flex items-center gap-1 text-xs ${peticion.fechaSolicitud ? 'text-green-600' : 'text-slate-300'}`}>
-                                <div className={`w-2 h-2 rounded-full ${peticion.fechaSolicitud ? 'bg-green-500' : 'bg-slate-200'}`}></div>
-                                Solicitada
-                              </div>
-                              <div className="flex-1 h-px bg-slate-200"></div>
-                              <div className={`flex items-center gap-1 text-xs ${peticion.fechaAprobacion ? 'text-green-600' : 'text-slate-300'}`}>
-                                <div className={`w-2 h-2 rounded-full ${peticion.fechaAprobacion ? 'bg-green-500' : 'bg-slate-200'}`}></div>
-                                Aprobada
-                              </div>
-                              <div className="flex-1 h-px bg-slate-200"></div>
-                              <div className={`flex items-center gap-1 text-xs ${peticion.fechaCompra ? 'text-green-600' : 'text-slate-300'}`}>
-                                <div className={`w-2 h-2 rounded-full ${peticion.fechaCompra ? 'bg-green-500' : 'bg-slate-200'}`}></div>
-                                En Compra
-                              </div>
-                              <div className="flex-1 h-px bg-slate-200"></div>
-                              <div className={`flex items-center gap-1 text-xs ${peticion.fechaRecepcion ? 'text-green-600' : 'text-slate-300'}`}>
-                                <div className={`w-2 h-2 rounded-full ${peticion.fechaRecepcion ? 'bg-green-500' : 'bg-slate-200'}`}></div>
-                                Recibida
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </>
+                <PeticionesTab areaOrigen="incendios" isAdmin={isAdmin} accentColor="from-orange-600 to-orange-700" />
               )}
 
               {inventoryTab === 'movimientos' && (
-                <div className="text-center py-12 text-slate-400">
-                  <RefreshCw size={48} className="mx-auto mb-4 opacity-50" />
-                  <p>Próximamente</p>
-                </div>
+                <MovimientosTab inventario="incendios" />
               )}
             </div>
           </div>

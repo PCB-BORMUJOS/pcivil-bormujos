@@ -230,6 +230,7 @@ model Articulo {
   botiquinItems  BotiquinItem[]
   movimientos    MovimientoStock[]
   peticiones     PeticionMaterial[]
+  peticionItems  PeticionItem[]
 
   @@unique([servicioId, codigo])
   @@map("articulos")
@@ -519,10 +520,11 @@ model PeticionMaterial {
   numero          String              @unique
   solicitanteId   String              @map("solicitante_id")
   areaOrigen      String              @map("area_origen")
+  // Legacy single-article fields (kept for backward compat, null when usando items)
   articuloId      String?             @map("articulo_id")
-  nombreArticulo  String              @map("nombre_articulo")
-  cantidad        Int
-  unidad          String              @default("unidad")
+  nombreArticulo  String?             @map("nombre_articulo")
+  cantidad        Int?
+  unidad          String?
   motivo          String
   prioridad       String              @default("normal")
   descripcion     String?
@@ -538,6 +540,8 @@ model PeticionMaterial {
   notasRecepcion  String?             @map("notas_recepcion")
   motivoRechazo   String?             @map("motivo_rechazo")
   proveedor       String?
+  numeroRc        String?             @map("numero_rc")
+  numeroAlbaran   String?             @map("numero_albaran")
   numeroFactura   String?             @map("numero_factura")
   costeEstimado   Decimal?            @map("coste_estimado") @db.Decimal(10, 2)
   costeFinal      Decimal?            @map("coste_final") @db.Decimal(10, 2)
@@ -545,6 +549,7 @@ model PeticionMaterial {
   urlAlbaran      String?             @map("url_albaran")
   createdAt       DateTime            @default(now()) @map("created_at")
   updatedAt       DateTime            @updatedAt @map("updated_at")
+  items           PeticionItem[]
   historial       HistorialPeticion[]
   expedienteCompra  ExpedienteCompra?  @relation("PeticionExpediente")
   notificaciones  Notificacion[]
@@ -554,6 +559,23 @@ model PeticionMaterial {
   solicitante     Usuario             @relation("PeticionesSolicitadas", fields: [solicitanteId], references: [id])
 
   @@map("peticiones_material")
+}
+
+model PeticionItem {
+  id              String            @id @default(cuid())
+  peticionId      String            @map("peticion_id")
+  articuloId      String?           @map("articulo_id")
+  nombreArticulo  String            @map("nombre_articulo")
+  cantidad        Int
+  cantidadRecibida Int?             @map("cantidad_recibida")
+  unidad          String            @default("unidad")
+  costeUnitario   Decimal?          @map("coste_unitario") @db.Decimal(10, 2)
+  notas           String?
+  createdAt       DateTime          @default(now()) @map("created_at")
+  articulo        Articulo?         @relation(fields: [articuloId], references: [id])
+  peticion        PeticionMaterial  @relation(fields: [peticionId], references: [id], onDelete: Cascade)
+
+  @@map("peticion_items")
 }
 
 model HistorialPeticion {

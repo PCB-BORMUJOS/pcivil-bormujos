@@ -1,4 +1,5 @@
 'use client'
+import PeticionesTab, { MovimientosTab } from '@/components/PeticionesTab'
 
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
@@ -261,7 +262,10 @@ function GestionFamiliasModal({ familias, categoriaId, onClose, onRefresh }: {
 
 export default function AccionSocialPage() {
   const { data: session } = useSession()
-  const { canVerViogen } = usePermisos()
+  const { canVerViogen, isAdmin } = usePermisos()
+  const [peticiones, setPeticiones] = useState<Peticion[]>([])
+  const [filtroPeticiones, setFiltroPeticiones] = useState('all')
+  const [showNuevaPeticion, setShowNuevaPeticion] = useState(false)
 
   // Tabs
   const [mainTab, setMainTab] = useState<'inventario' | 'espacios' | 'centros' | 'directorio' | 'viogen' | 'cuadrante'>('inventario')
@@ -270,7 +274,6 @@ export default function AccionSocialPage() {
   // Datos
   const [articulos, setArticulos] = useState<Articulo[]>([])
   const [familias, setFamilias] = useState<Familia[]>([])
-  const [peticiones, setPeticiones] = useState<Peticion[]>([])
   const [espacios, setEspacios] = useState<EspacioAcogida[]>([])
   const [centros, setCentros] = useState<CentroEmergencia[]>([])
   const [contactos, setContactos] = useState<Contacto[]>([])
@@ -284,7 +287,6 @@ export default function AccionSocialPage() {
   const [searchContacto, setSearchContacto] = useState('')
   const [searchViogen, setSearchViogen] = useState('')
   const [filtroFamilia, setFiltroFamilia] = useState('all')
-  const [filtroPeticiones, setFiltroPeticiones] = useState('all')
   const [filtroCategoria, setFiltroCategoria] = useState('all')
   const [filtroViogen, setFiltroViogen] = useState('all')
   const [expandedCaso, setExpandedCaso] = useState<string | null>(null)
@@ -297,7 +299,6 @@ export default function AccionSocialPage() {
   // Modales
   const [showNuevoArticulo, setShowNuevoArticulo] = useState(false)
   const [showEditArticulo, setShowEditArticulo] = useState(false)
-  const [showNuevaPeticion, setShowNuevaPeticion] = useState(false)
   const [showGestionFamilias, setShowGestionFamilias] = useState(false)
   const [showNuevoEspacio, setShowNuevoEspacio] = useState(false)
   const [showEditEspacio, setShowEditEspacio] = useState(false)
@@ -356,7 +357,6 @@ export default function AccionSocialPage() {
   }
 
   useEffect(() => { cargarDatos() }, [])
-  useEffect(() => { if (inventoryTab === 'peticiones') cargarPeticiones() }, [inventoryTab])
   useEffect(() => { if (mainTab === 'cuadrante') cargarCuadrante() }, [semanaOffset, mainTab])
 
   // ─── Cuadrante VIOGEN - generar días de la semana ─────────────────────────
@@ -654,38 +654,11 @@ export default function AccionSocialPage() {
               )}
 
               {inventoryTab === 'peticiones' && (
-                <div className="space-y-3">
-                  <div className="flex gap-2 flex-wrap">
-                    {Object.entries({ all: 'Todas', pendiente: 'Pendientes', aprobada: 'Aprobadas', en_compra: 'En Compra', recibida: 'Recibidas' }).map(([k, v]) => (
-                      <button key={k} onClick={() => setFiltroPeticiones(k)}
-                        className={`px-3 py-1.5 text-xs font-medium rounded-full border ${
-                          filtroPeticiones === k ? 'bg-rose-600 text-white border-rose-600' : 'border-gray-200 text-gray-600 hover:bg-gray-50'
-                        }`}>{v}</button>
-                    ))}
-                  </div>
-                  {petsFiltradas.length === 0
-                    ? <p className="text-center py-12 text-gray-400 text-sm">No hay peticiones registradas</p>
-                    : petsFiltradas.map(p => (
-                      <div key={p.id} className="border border-gray-200 rounded-lg p-4">
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <span className="text-xs font-mono text-gray-400">{p.numero}</span>
-                            <p className="font-medium text-gray-900 mt-0.5">{p.nombreArticulo} — {p.cantidad} {p.unidad}</p>
-                            {p.descripcion && <p className="text-xs text-gray-500 mt-1">{p.descripcion}</p>}
-                          </div>
-                          <div className="flex gap-2">
-                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${ESTADOS_PETICION[p.estado]?.color}`}>
-                              {ESTADOS_PETICION[p.estado]?.label}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                </div>
+                <PeticionesTab areaOrigen="accion_social" isAdmin={isAdmin} accentColor="from-rose-600 to-rose-700" />
               )}
 
               {inventoryTab === 'movimientos' && (
-                <p className="text-center py-12 text-gray-400 text-sm">No hay movimientos registrados</p>
+                <MovimientosTab inventario="accion_social" />
               )}
             </div>
           )}

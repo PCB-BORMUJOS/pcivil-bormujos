@@ -6,7 +6,7 @@ import { prisma } from '@/lib/db'
 import { notificarCambioPeticion } from '@/lib/notificaciones'
 
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
@@ -18,12 +18,22 @@ export async function GET(
     const peticion = await prisma.peticionMaterial.findUnique({
       where: { id: params.id },
       include: {
+        items: {
+          include: {
+            articulo: {
+              select: {
+                id: true, nombre: true, codigo: true, stockActual: true, unidad: true,
+                familia: { select: { nombre: true, categoria: { select: { nombre: true, slug: true } } } }
+              }
+            }
+          }
+        },
         solicitante: { select: { id: true, nombre: true, apellidos: true, numeroVoluntario: true } },
-        articulo: { 
-          select: { 
+        articulo: {
+          select: {
             id: true, nombre: true, codigo: true, stockActual: true, unidad: true,
             familia: { select: { nombre: true, categoria: { select: { nombre: true, slug: true } } } }
-          } 
+          }
         },
         aprobadoPor: { select: { nombre: true, apellidos: true } },
         recibidoPor: { select: { nombre: true, apellidos: true } },
@@ -59,17 +69,23 @@ export async function PUT(
       where: { email: session.user.email },
       include: { rol: true }
     })
-
     if (!usuario) {
       return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
     }
 
     const body = await request.json()
-    const { accion, comentario, proveedor, costeEstimado, costeFinal, numeroFactura, urlRc, urlAlbaran, nombreArticulo, cantidad, unidad, motivo, prioridad, descripcion, areaOrigen } = body
+    const {
+      accion, comentario, proveedor, costeEstimado, costeFinal,
+      numeroFactura, numeroRc, numeroAlbaran, urlRc, urlAlbaran,
+      nombreArticulo, cantidad, unidad, motivo, prioridad, descripcion, areaOrigen,
+      // Para recepción parcial: [{ itemId, cantidadRecibida, costeUnitario }]
+      itemsRecepcion
+    } = body
 
     const peticionActual = await prisma.peticionMaterial.findUnique({
       where: { id: params.id },
-      include: { 
+      include: {
+        items: { include: { articulo: true } },
         articulo: true,
         solicitante: { select: { id: true, nombre: true, apellidos: true } }
       }
@@ -94,7 +110,8 @@ export async function PUT(
           fechaAprobacion: new Date(),
           aprobadoPorId: usuario.id,
           notasAprobacion: comentario,
-          ...(urlRc ? { urlRc } : {})
+          ...(urlRc ? { urlRc } : {}),
+          ...(numeroRc ? { numeroRc } : {})
         }
         break
 
@@ -121,7 +138,9 @@ export async function PUT(
           fechaCompra: new Date(),
           proveedor,
           costeEstimado: costeEstimado ? parseFloat(costeEstimado) : null,
-          notasCompra: comentario
+          notasCompra: comentario,
+          ...(numeroRc ? { numeroRc } : {}),
+          ...(urlRc ? { urlRc } : {})
         }
         break
 
@@ -137,28 +156,56 @@ export async function PUT(
           costeFinal: costeFinal ? parseFloat(costeFinal) : null,
           numeroFactura,
           notasRecepcion: comentario,
-          ...(urlAlbaran ? { urlAlbaran } : {})
+          ...(urlAlbaran ? { urlAlbaran } : {}),
+          ...(numeroAlbaran ? { numeroAlbaran } : {})
         }
-        
-        // Actualizar stock del artículo
-        if (peticionActual.articuloId && peticionActual.articulo) {
-          const nuevoStock = peticionActual.articulo.stockActual + peticionActual.cantidad
-          
+
+        // Actualizar stock de cada item de la petición
+        const itemsAActualizar = peticionActual.items.length > 0
+          ? peticionActual.items
+          : peticionActual.articuloId && peticionActual.articulo
+            // Compatibilidad con peticiones antiguas de un solo artículo
+            ? [{ id: null as null, articuloId: peticionActual.articuloId, articulo: peticionActual.articulo, cantidad: peticionActual.cantidad ?? 0, nombreArticulo: peticionActual.nombreArticulo || '', unidad: peticionActual.unidad || 'unidad' }]
+            : []
+
+        for (const item of itemsAActualizar) {
+          if (!item.articuloId || !item.articulo) continue
+
+          // Si hay recepción parcial, usa cantidadRecibida; si no, usa cantidad total
+          const recepcionItem = Array.isArray(itemsRecepcion)
+            ? itemsRecepcion.find((r: any) => r.itemId === item.id)
+            : null
+          const cantidadAIngresar: number = recepcionItem?.cantidadRecibida ?? item.cantidad
+          if (!cantidadAIngresar || cantidadAIngresar <= 0) continue
+
+          const nuevoStock = item.articulo.stockActual + cantidadAIngresar
+
           await prisma.articulo.update({
-            where: { id: peticionActual.articuloId },
+            where: { id: item.articuloId },
             data: { stockActual: nuevoStock }
           })
 
           await prisma.movimientoStock.create({
             data: {
               tipo: 'entrada',
-              cantidad: peticionActual.cantidad,
+              cantidad: cantidadAIngresar,
               motivo: `Recepción petición ${peticionActual.numero}`,
-              notas: `Stock actualizado: ${peticionActual.articulo.stockActual} → ${nuevoStock}`,
-              articuloId: peticionActual.articuloId,
+              notas: `Stock: ${item.articulo.stockActual} → ${nuevoStock}. Albarán: ${numeroAlbaran || '-'}`,
+              articuloId: item.articuloId,
               usuarioId: usuario.id
             }
           })
+
+          // Actualizar cantidadRecibida en el item si tiene id propio
+          if (item.id && recepcionItem) {
+            await prisma.peticionItem.update({
+              where: { id: item.id },
+              data: {
+                cantidadRecibida: cantidadAIngresar,
+                costeUnitario: recepcionItem.costeUnitario ? parseFloat(recepcionItem.costeUnitario) : null
+              }
+            })
+          }
         }
         break
 
@@ -167,31 +214,28 @@ export async function PUT(
           return NextResponse.json({ error: 'No se puede cancelar esta petición' }, { status: 400 })
         }
         nuevoEstado = 'cancelada'
-        datosActualizar = {
-          estado: nuevoEstado,
-          motivoRechazo: comentario
-        }
+        datosActualizar = { estado: nuevoEstado, motivoRechazo: comentario }
         break
 
       case 'editar':
-        // Solo administradores o en estados tempranos (validado por el cliente, pero idealmente aquí verificamos rol)
-        if (nombreArticulo) datosActualizar.nombreArticulo = nombreArticulo;
-        if (cantidad) datosActualizar.cantidad = parseInt(cantidad.toString(), 10) || peticionActual.cantidad;
-        if (unidad) datosActualizar.unidad = unidad;
-        if (motivo) datosActualizar.motivo = motivo;
-        if (prioridad) datosActualizar.prioridad = prioridad;
-        if (descripcion !== undefined) datosActualizar.descripcion = descripcion;
-        if (areaOrigen) datosActualizar.areaOrigen = areaOrigen;
-        // Permite editar coste/proveedor/urgencia si se envían
-        if (proveedor !== undefined) datosActualizar.proveedor = proveedor;
-        if (costeEstimado !== undefined) datosActualizar.costeEstimado = costeEstimado ? parseFloat(costeEstimado.toString()) : null;
-        if (costeFinal !== undefined) datosActualizar.costeFinal = costeFinal ? parseFloat(costeFinal.toString()) : null;
-        if (numeroFactura !== undefined) datosActualizar.numeroFactura = numeroFactura;
+        if (nombreArticulo) datosActualizar.nombreArticulo = nombreArticulo
+        if (cantidad) datosActualizar.cantidad = parseInt(String(cantidad), 10) || peticionActual.cantidad
+        if (unidad) datosActualizar.unidad = unidad
+        if (motivo) datosActualizar.motivo = motivo
+        if (prioridad) datosActualizar.prioridad = prioridad
+        if (descripcion !== undefined) datosActualizar.descripcion = descripcion
+        if (areaOrigen) datosActualizar.areaOrigen = areaOrigen
+        if (proveedor !== undefined) datosActualizar.proveedor = proveedor
+        if (costeEstimado !== undefined) datosActualizar.costeEstimado = costeEstimado ? parseFloat(String(costeEstimado)) : null
+        if (costeFinal !== undefined) datosActualizar.costeFinal = costeFinal ? parseFloat(String(costeFinal)) : null
+        if (numeroFactura !== undefined) datosActualizar.numeroFactura = numeroFactura
         break
 
       case 'actualizar_docs':
-        if (urlRc !== undefined) datosActualizar.urlRc = urlRc;
-        if (urlAlbaran !== undefined) datosActualizar.urlAlbaran = urlAlbaran;
+        if (urlRc !== undefined) datosActualizar.urlRc = urlRc
+        if (urlAlbaran !== undefined) datosActualizar.urlAlbaran = urlAlbaran
+        if (numeroRc !== undefined) datosActualizar.numeroRc = numeroRc
+        if (numeroAlbaran !== undefined) datosActualizar.numeroAlbaran = numeroAlbaran
         break
 
       default:
@@ -202,6 +246,9 @@ export async function PUT(
       where: { id: params.id },
       data: datosActualizar,
       include: {
+        items: {
+          include: { articulo: { select: { nombre: true, codigo: true, stockActual: true } } }
+        },
         solicitante: { select: { id: true, nombre: true, apellidos: true, numeroVoluntario: true } },
         articulo: { select: { nombre: true, codigo: true, stockActual: true } },
         aprobadoPor: { select: { nombre: true, apellidos: true } },
@@ -219,13 +266,12 @@ export async function PUT(
       }
     })
 
-    // Notificar al solicitante del cambio de estado
     try {
       await notificarCambioPeticion(
         {
           id: peticionActual.id,
           numero: peticionActual.numero,
-          nombreArticulo: peticionActual.nombreArticulo,
+          nombreArticulo: peticionActual.nombreArticulo ?? '',
           solicitanteId: peticionActual.solicitanteId
         },
         nuevoEstado,
@@ -243,13 +289,23 @@ export async function PUT(
     const auditDescMap: Record<string, string> = {
       aprobar: `Petición ${peticionActualizada.numero} aprobada`,
       rechazar: `Petición ${peticionActualizada.numero} rechazada`,
-      en_compra: `Petición ${peticionActualizada.numero} → en compra`,
-      recibir: `Petición ${peticionActualizada.numero} recibida`,
+      en_compra: `Petición ${peticionActualizada.numero} → en compra (proveedor: ${proveedor || '-'})`,
+      recibir: `Petición ${peticionActualizada.numero} recibida. Albarán: ${numeroAlbaran || '-'}`,
       cancelar: `Petición ${peticionActualizada.numero} cancelada`,
       editar: `Petición ${peticionActualizada.numero} editada`,
       actualizar_docs: `Petición ${peticionActualizada.numero} documentos actualizados`
     }
-    await registrarAudit({ accion: auditAccionMap[accion] || 'UPDATE', entidad: 'PeticionMaterial', entidadId: peticionActualizada.id, descripcion: auditDescMap[accion] || `Petición ${peticionActualizada.numero} actualizada`, usuarioId, usuarioNombre, modulo: 'Logistica', datosNuevos: { estado: peticionActualizada.estado } })
+    await registrarAudit({
+      accion: auditAccionMap[accion] || 'UPDATE',
+      entidad: 'PeticionMaterial',
+      entidadId: peticionActualizada.id,
+      descripcion: auditDescMap[accion] || `Petición ${peticionActualizada.numero} actualizada`,
+      usuarioId,
+      usuarioNombre,
+      modulo: 'Logistica',
+      datosNuevos: { estado: peticionActualizada.estado }
+    })
+
     return NextResponse.json({ success: true, peticion: peticionActualizada })
   } catch (error) {
     console.error('Error en PUT /api/logistica/peticiones/[id]:', error)

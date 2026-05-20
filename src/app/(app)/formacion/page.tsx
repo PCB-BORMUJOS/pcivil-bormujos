@@ -1,6 +1,7 @@
 
 
 'use client';
+import PeticionesTab, { MovimientosTab } from '@/components/PeticionesTab';
 
 import React, { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
@@ -1392,94 +1393,12 @@ export default function FormacionPage() {
 
               {/* === TAB PETICIONES === */}
               {inventoryTab === 'peticiones' && (
-                <div className="space-y-4">
-                  {peticiones.length === 0 ? (
-                    <div className="text-center py-12 border-2 border-dashed border-slate-200 rounded-xl">
-                      <ClipboardList size={40} className="mx-auto text-slate-300 mb-2" />
-                      <p className="text-slate-500">No hay peticiones realizadas</p>
-                      <button onClick={() => setShowNuevaPeticion(true)} className="mt-4 text-blue-600 font-medium hover:underline">Solicitar material</button>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {peticiones.map(pet => (
-                        <div key={pet.id} className="bg-white border border-slate-200 p-4 rounded-xl hover:shadow-sm transition-shadow">
-                          <div className="flex justify-between items-start">
-                            <div className="flex gap-3">
-                              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${pet.estado === 'pendiente' ? 'bg-yellow-100 text-yellow-600' :
-                                pet.estado === 'aprobada' ? 'bg-blue-100 text-blue-600' :
-                                  pet.estado === 'recibida' ? 'bg-green-100 text-green-600' : 'bg-slate-100'
-                                }`}>
-                                <ClipboardList size={20} />
-                              </div>
-                              <div>
-                                <h4 className="font-bold text-slate-800">{pet.nombreArticulo}</h4>
-                                <p className="text-sm text-slate-500 flex items-center gap-2">
-                                  {pet.cantidad} {pet.unidad} • <Clock size={12} /> {new Date(pet.fechaSolicitud).toLocaleDateString()}
-                                </p>
-                                {pet.motivo && <p className="text-xs text-slate-500 mt-1 italic">"{pet.motivo}"</p>}
-                              </div>
-                            </div>
-                            <span className={`px-2 py-1 rounded text-xs font-bold uppercase tracking-wider ${pet.estado === 'pendiente' ? 'bg-yellow-100 text-yellow-700' :
-                              pet.estado === 'aprobada' ? 'bg-blue-100 text-blue-700' :
-                                pet.estado === 'recibida' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-600'
-                              }`}>
-                              {pet.estado.replace('_', ' ')}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                <PeticionesTab areaOrigen="formacion" isAdmin={isAdmin} accentColor="from-blue-600 to-blue-700" />
               )}
 
               {/* === TAB MOVIMIENTOS === */}
               {inventoryTab === 'movimientos' && (
-                <div className="space-y-4">
-                  <div className="bg-blue-50 text-blue-800 p-4 rounded-lg flex items-start gap-3">
-                    <Clock size={20} className="shrink-0 mt-0.5" />
-                    <div className="text-sm">
-                      <p className="font-bold">Historial de movimientos</p>
-                      <p className="opacity-80">Mostrando los últimos 100 movimientos de tus artículos.</p>
-                    </div>
-                  </div>
-
-                  {movimientos.length === 0 ? (
-                    <div className="text-center py-12 text-slate-400">
-                      <ArrowUpDown size={40} className="mx-auto mb-2 opacity-50" />
-                      <p>No hay movimientos registrados</p>
-                    </div>
-                  ) : (
-                    <div className="border border-slate-200 rounded-lg overflow-hidden">
-                      <table className="w-full text-sm">
-                        <thead className="bg-slate-50">
-                          <tr>
-                            <th className="p-3 text-left">Artículo</th>
-                            <th className="p-3 text-center">Tipo</th>
-                            <th className="p-3 text-right">Cantidad</th>
-                            <th className="p-3 text-left">Usuario</th>
-                            <th className="p-3 text-right">Fecha</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
-                          {movimientos.map(mov => (
-                            <tr key={mov.id}>
-                              <td className="p-3 font-medium">{mov.articulo.nombre}</td>
-                              <td className="p-3 text-center">
-                                <span className={`px-2 py-0.5 rounded text-xs uppercase font-bold ${mov.tipo === 'entrada' ? 'bg-green-100 text-green-700' :
-                                  mov.tipo === 'salida' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'
-                                  }`}>{mov.tipo}</span>
-                              </td>
-                              <td className="p-3 text-right font-mono">{mov.cantidad}</td>
-                              <td className="p-3 text-slate-500">{mov.usuario.nombre} {mov.usuario.apellidos}</td>
-                              <td className="p-3 text-right text-slate-400 text-xs">{new Date(mov.createdAt).toLocaleDateString()}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </div>
+                <MovimientosTab inventario="formacion" />
               )}
             </div>
           </div>

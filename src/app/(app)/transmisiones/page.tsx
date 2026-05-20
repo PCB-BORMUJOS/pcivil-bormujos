@@ -1,5 +1,6 @@
 'use client'
 import { usePermisos } from '@/lib/permisos'
+import PeticionesTab, { MovimientosTab } from '@/components/PeticionesTab'
 
 import { useState, useEffect, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
@@ -165,7 +166,10 @@ function BateriaIndicador({ nivel }: { nivel?: number }) {
 }
 
 export default function TransmisionesPage() {
-  const { canCreate, canEdit, canDelete, canCreatePeticion } = usePermisos()
+  const { canCreate, canEdit, canDelete, canCreatePeticion, isAdmin } = usePermisos()
+  const [peticiones, setPeticiones] = useState<any[]>([])
+  const [filtroPeticiones, setFiltroPeticiones] = useState('all')
+  const [showNuevaPeticion, setShowNuevaPeticion] = useState(false)
   const { data: session } = useSession()
   const [mainTab, setMainTab] = useState<'inventario' | 'equipos' | 'config_rf' | 'cobertura' | 'codigos'>('inventario')
   const [inventoryTab, setInventoryTab] = useState<'stock' | 'peticiones' | 'movimientos'>('stock')
@@ -175,19 +179,16 @@ export default function TransmisionesPage() {
   const [saving, setSaving] = useState(false)
   const [articulos, setArticulos] = useState<Articulo[]>([])
   const [familias, setFamilias] = useState<Familia[]>([])
-  const [peticiones, setPeticiones] = useState<any[]>([])
   const [equipos, setEquipos] = useState<EquipoRadio[]>([])
   const [mantenimientos, setMantenimientos] = useState<MantenimientoEquipo[]>([])
   const [ciclosCarga, setCiclosCarga] = useState<CicloCarga[]>([])
   const [categoriaArea, setCategoriaArea] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedFamiliaFilter, setSelectedFamiliaFilter] = useState('all')
-  const [filtroPeticiones, setFiltroPeticiones] = useState('all')
   const [filtroEstadoEquipo, setFiltroEstadoEquipo] = useState('all')
   const [filtroTipoEquipo, setFiltroTipoEquipo] = useState('all')
   const [showNuevoArticulo, setShowNuevoArticulo] = useState(false)
   const [showEditarArticulo, setShowEditarArticulo] = useState(false)
-  const [showNuevaPeticion, setShowNuevaPeticion] = useState(false)
   const [showGestionFamilias, setShowGestionFamilias] = useState(false)
   const [showNuevoEquipo, setShowNuevoEquipo] = useState(false)
   const [showEditarEquipo, setShowEditarEquipo] = useState(false)
@@ -217,12 +218,10 @@ export default function TransmisionesPage() {
       if (dataCat.categoria) setCategoriaArea(dataCat.categoria.id)
     } catch (error) { console.error("Error en operación:", error) } finally { setLoading(false) }
   }, [])
-  const cargarPeticiones = useCallback(async () => { try { const r = await fetch('/api/logistica/peticiones?area=transmisiones'); const d = await r.json(); setPeticiones(d.peticiones || []) } catch (e) { console.error("Error en operación:", e) } }, [])
   const cargarMantenimientos = useCallback(async (eqId: string) => { try { const r = await fetch(`/api/logistica?tipo=mantenimientos-equipo&equipoId=${eqId}`); const d = await r.json(); setMantenimientos(d.mantenimientos || []) } catch (e) { console.error("Error en operación:", e) } }, [])
   const cargarCiclos = useCallback(async (eqId: string) => { try { const r = await fetch(`/api/logistica?tipo=ciclos-carga&equipoId=${eqId}`); const d = await r.json(); setCiclosCarga(d.ciclos || []) } catch (e) { console.error("Error en operación:", e) } }, [])
 
   useEffect(() => { cargarDatos() }, [cargarDatos])
-  useEffect(() => { if (inventoryTab === 'peticiones') cargarPeticiones() }, [inventoryTab, cargarPeticiones])
   useEffect(() => { if (equipoSeleccionado && showDetalleEquipo) { cargarMantenimientos(equipoSeleccionado.id); cargarCiclos(equipoSeleccionado.id) } }, [equipoSeleccionado, showDetalleEquipo, cargarMantenimientos, cargarCiclos])
 
 
@@ -244,7 +243,6 @@ export default function TransmisionesPage() {
 
   const handleCrearArticulo = async (e: React.FormEvent<HTMLFormElement>) => { e.preventDefault(); const f = new FormData(e.currentTarget); try { setSaving(true); const r = await fetch('/api/logistica', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'articulo', codigo: f.get('codigo'), nombre: f.get('nombre'), descripcion: f.get('descripcion'), stockActual: parseInt(f.get('stockActual') as string) || 0, stockMinimo: parseInt(f.get('stockMinimo') as string) || 0, unidad: f.get('unidad') || 'unidades', familiaId: f.get('familiaId') }) }); if (r.ok) { setShowNuevoArticulo(false); cargarDatos() } } catch (e) { console.error("Error en operación:", e) } finally { setSaving(false) } }
   const handleEditarArticulo = async (e: React.FormEvent<HTMLFormElement>) => { e.preventDefault(); if (!articuloSeleccionado) return; const f = new FormData(e.currentTarget); try { setSaving(true); const r = await fetch('/api/logistica', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'articulo', id: articuloSeleccionado.id, codigo: f.get('codigo'), nombre: f.get('nombre'), descripcion: f.get('descripcion'), stockActual: parseInt(f.get('stockActual') as string) || 0, stockMinimo: parseInt(f.get('stockMinimo') as string) || 0, unidad: f.get('unidad') || 'unidades', familiaId: f.get('familiaId') }) }); if (r.ok) { setShowEditarArticulo(false); setArticuloSeleccionado(null); cargarDatos() } } catch (e) { console.error("Error en operación:", e) } finally { setSaving(false) } }
-  const handleCrearPeticion = async (e: React.FormEvent<HTMLFormElement>) => { e.preventDefault(); const f = new FormData(e.currentTarget); try { setSaving(true); const r = await fetch('/api/logistica', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'peticion', articuloId: f.get('articuloId') || null, nombreArticulo: f.get('nombreArticulo'), cantidad: parseInt(f.get('cantidad') as string) || 1, unidad: f.get('unidad') || 'unidades', prioridad: f.get('prioridad') || 'normal', descripcion: f.get('descripcion'), areaOrigen: 'transmisiones' }) }); if (r.ok) { setShowNuevaPeticion(false); cargarPeticiones() } } catch (e) { console.error("Error en operación:", e) } finally { setSaving(false) } }
   const handleCrearFamilia = async () => { if (!nuevaFamilia.trim() || !categoriaArea) return; try { const r = await fetch('/api/logistica', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'familia', nombre: nuevaFamilia.trim(), categoriaId: categoriaArea }) }); if (r.ok) { setNuevaFamilia(''); cargarDatos() } } catch (e) { console.error("Error en operación:", e) } }
   const handleEditarFamilia = async (id: string) => { if (!familiaEditandoNombre.trim()) return; try { const r = await fetch('/api/logistica', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'familia', id, nombre: familiaEditandoNombre.trim() }) }); if (r.ok) { setFamiliaEditando(null); cargarDatos() } } catch (e) { console.error("Error en operación:", e) } }
   const handleEliminarFamilia = async (id: string) => { if (!confirm('¿Eliminar esta familia?')) return; try { await fetch(`/api/logistica?tipo=familia&id=${id}`, { method: 'DELETE' }); cargarDatos() } catch (e) { console.error("Error en operación:", e) } }
@@ -305,7 +303,6 @@ export default function TransmisionesPage() {
   const abrirDetalleEquipo = (eq: EquipoRadio) => { setEquipoSeleccionado(eq); setDetalleTab('ficha'); setShowDetalleEquipo(true) }
 
   const articulosFiltrados = articulos.filter(a => { const ms = !searchTerm || a.nombre.toLowerCase().includes(searchTerm.toLowerCase()) || (a.codigo && a.codigo.toLowerCase().includes(searchTerm.toLowerCase())); return ms && (selectedFamiliaFilter === 'all' || a.familia?.id === selectedFamiliaFilter) })
-  const peticionesFiltradas = peticiones.filter(p => filtroPeticiones === 'all' || p.estado === filtroPeticiones)
   const equiposFiltrados = equipos.filter(eq => (filtroEstadoEquipo === 'all' || eq.estado === filtroEstadoEquipo) && (filtroTipoEquipo === 'all' || eq.tipo === filtroTipoEquipo))
   const stats = { totalArticulos: articulos.length, stockBajo: articulos.filter(a => a.stockActual <= a.stockMinimo).length, totalEquipos: equipos.length, bateriaBaja: equipos.filter(e => e.estadoBateria !== undefined && e.estadoBateria !== null && e.estadoBateria < 30).length, averiados: equipos.filter(e => e.estado === 'averiado').length }
 
@@ -415,26 +412,9 @@ export default function TransmisionesPage() {
             </div>
           )}
           {inventoryTab === 'peticiones' && (
-            <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
-              <div className="p-5 border-b border-slate-100 flex items-center gap-3 flex-wrap">
-                <span className="text-sm font-medium text-slate-600">Filtrar:</span>
-                <button onClick={() => setFiltroPeticiones('all')} className={`px-3.5 py-1.5 text-xs font-medium rounded-full transition-colors ${filtroPeticiones === 'all' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Todas</button>
-                {Object.entries(ESTADOS_PETICION).map(([k, v]) => (<button key={k} onClick={() => setFiltroPeticiones(k)} className={`px-3.5 py-1.5 text-xs font-medium rounded-full border transition-colors ${filtroPeticiones === k ? 'bg-slate-800 text-white border-slate-800' : v.color}`}>{v.label}</button>))}
-              </div>
-              <div className="divide-y divide-slate-50">
-                {peticionesFiltradas.length === 0 ? <div className="text-center py-16 text-slate-400"><ClipboardList className="w-12 h-12 mx-auto mb-3 opacity-30" /><p className="font-medium">No hay peticiones</p></div>
-                : peticionesFiltradas.map(pet => { const est = ESTADOS_PETICION[pet.estado] || ESTADOS_PETICION.pendiente; const pri = PRIORIDADES[pet.prioridad] || PRIORIDADES.normal; const EI = est.icon; return (
-                  <div key={pet.id} className="p-5 hover:bg-slate-50/50 transition-colors">
-                    <div className="flex items-center gap-2 mb-1"><span className="text-xs font-mono text-slate-400">{pet.numero}</span><span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium border ${est.color}`}><EI className="w-3 h-3" />{est.label}</span><span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${pri.color}`}>{pri.label}</span></div>
-                    <p className="font-medium text-slate-800">{pet.nombreArticulo}</p>
-                    <p className="text-sm text-slate-500 mt-0.5">{pet.cantidad} {pet.unidad} - {new Date(pet.fechaSolicitud).toLocaleDateString('es-ES')}</p>
-                    {pet.descripcion && <p className="text-sm text-slate-400 mt-1">{pet.descripcion}</p>}
-                  </div>
-                )})}
-              </div>
-            </div>
+            <PeticionesTab areaOrigen="transmisiones" isAdmin={isAdmin} accentColor="from-purple-600 to-purple-700" />
           )}
-          {inventoryTab === 'movimientos' && <div className="bg-white border border-slate-200 rounded-2xl p-12 text-center text-slate-400"><History className="w-12 h-12 mx-auto mb-3 opacity-30" /><p className="font-medium">Historial de movimientos</p><p className="text-sm mt-1">Los movimientos de stock se registrarán aquí</p></div>}
+          {inventoryTab === 'movimientos' && <MovimientosTab inventario="transmisiones" />}
         </div>
       )}
 
@@ -736,22 +716,6 @@ export default function TransmisionesPage() {
               <div><label className="block text-xs font-semibold text-slate-500 uppercase mb-1.5">Familia *</label><select name="familiaId" required defaultValue={articuloSeleccionado?.familia?.id || ''} className="w-full border border-slate-200 rounded-xl py-2.5 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20"><option value="">Seleccionar...</option>{familias.map(f => <option key={f.id} value={f.id}>{f.nombre}</option>)}</select></div>
               <div className="grid grid-cols-2 gap-4"><div><label className="block text-xs font-semibold text-slate-500 uppercase mb-1.5">Stock Actual</label><input name="stockActual" type="number" defaultValue={articuloSeleccionado?.stockActual || 0} className="w-full border border-slate-200 rounded-xl py-2.5 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20" /></div><div><label className="block text-xs font-semibold text-slate-500 uppercase mb-1.5">Stock Mínimo</label><input name="stockMinimo" type="number" defaultValue={articuloSeleccionado?.stockMinimo || 0} className="w-full border border-slate-200 rounded-xl py-2.5 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20" /></div></div>
               <div className="flex gap-3 pt-2"><button type="button" onClick={() => { setShowNuevoArticulo(false); setShowEditarArticulo(false); setArticuloSeleccionado(null) }} className="flex-1 py-2.5 border border-slate-300 text-slate-700 rounded-xl font-semibold hover:bg-slate-50">Cancelar</button><button type="submit" disabled={saving} className="flex-1 py-2.5 bg-purple-600 text-white rounded-xl font-semibold hover:bg-purple-700 disabled:opacity-50">{saving ? 'Guardando...' : 'Guardar'}</button></div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL: NUEVA PETICIÓN */}
-      {showNuevaPeticion && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000] p-4" onClick={() => setShowNuevaPeticion(false)}>
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between p-6 border-b border-slate-100"><h3 className="text-lg font-semibold text-slate-800">Nueva Petición de Material</h3><button onClick={() => setShowNuevaPeticion(false)} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5" /></button></div>
-            <form onSubmit={handleCrearPeticion} className="p-6 space-y-4">
-              <div><label className="block text-xs font-semibold text-slate-500 uppercase mb-1.5">Artículo existente</label><select name="articuloId" className="w-full border border-slate-200 rounded-xl py-2.5 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20"><option value="">Material no inventariado</option>{articulos.map(a => <option key={a.id} value={a.id}>{a.nombre} (Stock: {a.stockActual})</option>)}</select></div>
-              <div><label className="block text-xs font-semibold text-slate-500 uppercase mb-1.5">Nombre del Material *</label><input name="nombreArticulo" required className="w-full border border-slate-200 rounded-xl py-2.5 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20" /></div>
-              <div className="grid grid-cols-3 gap-4"><div><label className="block text-xs font-semibold text-slate-500 uppercase mb-1.5">Cantidad *</label><input name="cantidad" type="number" min={1} defaultValue={1} required className="w-full border border-slate-200 rounded-xl py-2.5 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20" /></div><div><label className="block text-xs font-semibold text-slate-500 uppercase mb-1.5">Unidad</label><select name="unidad" defaultValue="unidades" className="w-full border border-slate-200 rounded-xl py-2.5 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20"><option value="unidades">Unidades</option><option value="cajas">Cajas</option></select></div><div><label className="block text-xs font-semibold text-slate-500 uppercase mb-1.5">Prioridad</label><select name="prioridad" defaultValue="normal" className="w-full border border-slate-200 rounded-xl py-2.5 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20"><option value="baja">Baja</option><option value="normal">Normal</option><option value="alta">Alta</option><option value="urgente">Urgente</option></select></div></div>
-              <div><label className="block text-xs font-semibold text-slate-500 uppercase mb-1.5">Motivo</label><textarea name="descripcion" rows={3} className="w-full border border-slate-200 rounded-xl py-2.5 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20" /></div>
-              <div className="flex gap-3 pt-2"><button type="button" onClick={() => setShowNuevaPeticion(false)} className="flex-1 py-2.5 border border-slate-300 text-slate-700 rounded-xl font-semibold hover:bg-slate-50">Cancelar</button><button type="submit" disabled={saving} className="flex-1 py-2.5 bg-purple-600 text-white rounded-xl font-semibold hover:bg-purple-700 disabled:opacity-50">{saving ? 'Creando...' : 'Crear Petición'}</button></div>
             </form>
           </div>
         </div>
