@@ -48,38 +48,34 @@ export async function GET(request: NextRequest) {
     if (areaUsuario) condicionesGrupo.push({ destinatarioGrupo: 'area:' + areaUsuario })
     if (areaSecundaria) condicionesGrupo.push({ destinatarioGrupo: 'area:' + areaSecundaria })
 
-    // Cargar estados personales del usuario para mensajes grupales
-    const estadosUsuario = await prisma.mensajeEstado.findMany({
-      where: { usuarioId: usuario.id }
-    })
-    const estadoMap = new Map(estadosUsuario.map(e => [e.mensajeId, e]))
-
     let mensajes: any[] = []
 
     if (tipo === 'recibidos') {
-      // Mensajes individuales dirigidos al usuario (sin archivar)
-      const individuales = await prisma.mensaje.findMany({
-        where: { destinatarioId: usuario.id, archivado: false, mensajePadreId: null },
-        include: {
-          remitente: { select: { id: true, nombre: true, apellidos: true, avatar: true } },
-          destinatario: { select: { id: true, nombre: true, apellidos: true } },
-          respuestas: { select: { id: true } }
-        },
-        orderBy: { createdAt: 'desc' },
-        take: 100
-      })
-
-      // Mensajes grupales (sin tener en cuenta archivado del registro compartido)
-      const grupales = await prisma.mensaje.findMany({
-        where: { OR: condicionesGrupo, mensajePadreId: null },
-        include: {
-          remitente: { select: { id: true, nombre: true, apellidos: true, avatar: true } },
-          destinatario: { select: { id: true, nombre: true, apellidos: true } },
-          respuestas: { select: { id: true } }
-        },
-        orderBy: { createdAt: 'desc' },
-        take: 100
-      })
+      // Lanzar las tres consultas en paralelo para reducir latencia total
+      const [estadosUsuario, individuales, grupales] = await Promise.all([
+        prisma.mensajeEstado.findMany({ where: { usuarioId: usuario.id } }),
+        prisma.mensaje.findMany({
+          where: { destinatarioId: usuario.id, archivado: false, mensajePadreId: null },
+          include: {
+            remitente: { select: { id: true, nombre: true, apellidos: true, avatar: true } },
+            destinatario: { select: { id: true, nombre: true, apellidos: true } },
+            respuestas: { select: { id: true } }
+          },
+          orderBy: { createdAt: 'desc' },
+          take: 100
+        }),
+        prisma.mensaje.findMany({
+          where: { OR: condicionesGrupo, mensajePadreId: null },
+          include: {
+            remitente: { select: { id: true, nombre: true, apellidos: true, avatar: true } },
+            destinatario: { select: { id: true, nombre: true, apellidos: true } },
+            respuestas: { select: { id: true } }
+          },
+          orderBy: { createdAt: 'desc' },
+          take: 100
+        }),
+      ])
+      const estadoMap = new Map(estadosUsuario.map(e => [e.mensajeId, e]))
 
       // Filtrar grupales archivados POR ESTE USUARIO y fusionar estado personal
       const grupalesFiltrados = grupales
@@ -117,24 +113,26 @@ export async function GET(request: NextRequest) {
         take: 100
       })
     } else if (tipo === 'archivados') {
-      // Individuales archivados
-      const individualesArchivados = await prisma.mensaje.findMany({
-        where: {
-          OR: [{ destinatarioId: usuario.id }, { remitenteId: usuario.id }],
-          archivado: true,
-          mensajePadreId: null
-        },
-        include: {
-          remitente: { select: { id: true, nombre: true, apellidos: true, avatar: true } },
-          destinatario: { select: { id: true, nombre: true, apellidos: true } },
-          respuestas: { select: { id: true } }
-        },
-        orderBy: { createdAt: 'desc' },
-        take: 50
-      })
+      const [individualesArchivados, estadosUsuarioArch] = await Promise.all([
+        prisma.mensaje.findMany({
+          where: {
+            OR: [{ destinatarioId: usuario.id }, { remitenteId: usuario.id }],
+            archivado: true,
+            mensajePadreId: null
+          },
+          include: {
+            remitente: { select: { id: true, nombre: true, apellidos: true, avatar: true } },
+            destinatario: { select: { id: true, nombre: true, apellidos: true } },
+            respuestas: { select: { id: true } }
+          },
+          orderBy: { createdAt: 'desc' },
+          take: 50
+        }),
+        prisma.mensajeEstado.findMany({ where: { usuarioId: usuario.id, archivado: true } }),
+      ])
 
       // Grupales archivados por este usuario
-      const idsArchivadosGrupales = estadosUsuario
+      const idsArchivadosGrupales = estadosUsuarioArch
         .filter(e => e.archivado)
         .map(e => e.mensajeId)
 
