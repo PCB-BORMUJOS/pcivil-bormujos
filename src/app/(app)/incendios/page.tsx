@@ -582,7 +582,7 @@ export default function IncendiosPage() {
           {/* Desktop */}
           <div className="hidden sm:flex items-center gap-2">
             <button onClick={cargarDatos} className="flex items-center justify-center p-2.5 text-slate-600 hover:bg-slate-100 rounded-lg border border-slate-200" title="Recargar"><RefreshCw size={18} /></button>
-            <button disabled={!canCreatePeticion} onClick={() => setShowNuevaPeticion(true)} className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm disabled:opacity-40 disabled:cursor-not-allowed"><ShoppingCart size={18} />Petición</button>
+            <button disabled={!canCreatePeticion} onClick={() => { setInventoryTab('peticiones'); setShowNuevaPeticion(true); }} className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm disabled:opacity-40 disabled:cursor-not-allowed"><ShoppingCart size={18} />Petición</button>
             <button disabled={!canCreate} onClick={() => setShowNuevoArticulo(true)} className="flex items-center gap-2 px-4 py-2.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-400 font-medium text-sm disabled:opacity-40 disabled:cursor-not-allowed"><Package size={18} />Artículo</button>
             <button disabled={!canCreate} onClick={() => setShowNuevoHidrante(true)} className="flex items-center gap-2 px-4 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium text-sm disabled:opacity-40 disabled:cursor-not-allowed"><HidranteIcon size={18} />Hidrante</button>
           </div>
@@ -590,7 +590,7 @@ export default function IncendiosPage() {
         {/* Móvil */}
         <div className="flex sm:hidden gap-2 mt-3">
           <button onClick={cargarDatos} className="flex-1 flex items-center justify-center p-2.5 text-slate-600 hover:bg-slate-100 rounded-lg border border-slate-200"><RefreshCw size={18} /></button>
-          <button disabled={!canCreatePeticion} onClick={() => setShowNuevaPeticion(true)} className="flex-1 flex items-center justify-center px-2 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-40"><ShoppingCart size={18} /></button>
+          <button disabled={!canCreatePeticion} onClick={() => { setInventoryTab('peticiones'); setShowNuevaPeticion(true); }} className="flex-1 flex items-center justify-center px-2 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-40"><ShoppingCart size={18} /></button>
           <button disabled={!canCreate} onClick={() => setShowNuevoArticulo(true)} className="flex-1 flex items-center justify-center px-2 py-2.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-400 disabled:opacity-40"><Package size={18} /></button>
           <button disabled={!canCreate} onClick={() => setShowNuevoHidrante(true)} className="flex-1 flex items-center justify-center px-2 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-40"><HidranteIcon size={18} /></button>
         </div>
@@ -829,7 +829,7 @@ export default function IncendiosPage() {
               )}
 
               {inventoryTab === 'peticiones' && (
-                <PeticionesTab areaOrigen="incendios" isAdmin={isAdmin} accentColor="from-orange-600 to-orange-700" />
+                <PeticionesTab areaOrigen="incendios" isAdmin={isAdmin} accentColor="from-orange-600 to-orange-700" openNew={showNuevaPeticion} onOpenNewConsumed={() => setShowNuevaPeticion(false)} />
               )}
 
               {inventoryTab === 'movimientos' && (
@@ -1248,78 +1248,6 @@ export default function IncendiosPage() {
       </div>
 
       {/* ======================================== MODAL: NUEVO ARTÍCULO ======================================== */}
-
-      {/* MODAL: NUEVA PETICIÓN */}
-      {showNuevaPeticion && (
-        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/60" onClick={() => setShowNuevaPeticion(false)}>
-          <div className="bg-white rounded-xl w-full max-w-2xl" onClick={e => e.stopPropagation()}>
-            <div className="bg-blue-600 p-5 text-white flex justify-between items-center">
-              <h2 className="text-xl font-bold">Nueva Petición</h2>
-              <button onClick={() => setShowNuevaPeticion(false)}><X size={24} /></button>
-            </div>
-            <form onSubmit={async (e) => {
-              e.preventDefault()
-              const form = e.target as HTMLFormElement
-              const articuloIdInput = (form.elements.namedItem('articuloId') as HTMLSelectElement)
-              const articuloSelec = articulos.find(a => a.id === articuloIdInput.value)
-              const formData = {
-                articuloId: articuloIdInput.value || null,
-                nombreArticulo: articuloSelec?.nombre || 'Material solicitado',
-                cantidad: parseInt((form.elements.namedItem('cantidad') as HTMLInputElement).value),
-                unidad: articuloSelec?.unidad || 'Unidad',
-                prioridad: (form.elements.namedItem('prioridad') as HTMLSelectElement).value,
-                descripcion: (form.elements.namedItem('motivo') as HTMLTextAreaElement).value,
-                areaOrigen: 'incendios'
-              }
-              try {
-                const res = await fetch('/api/logistica', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ tipo: 'peticion', ...formData })
-                })
-                if (res.ok) {
-                  setShowNuevaPeticion(false)
-                  form.reset()
-                  alert('Petición creada correctamente')
-                  if (inventoryTab === 'peticiones') cargarPeticiones()
-                }
-              } catch (error) { /* error silenciado */ }
-            }} className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Artículo</label>
-                <select name="articuloId" className="w-full border border-slate-300 rounded-lg p-2.5">
-                  <option value="">Seleccionar artículo...</option>
-                  {articulos.map(art => (
-                    <option key={art.id} value={art.id}>{art.nombre} (Stock: {art.stockActual})</option>
-                  ))}
-                </select>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Cantidad *</label>
-                  <input name="cantidad" type="number" min="1" defaultValue="1" className="w-full border border-slate-300 rounded-lg p-2.5" required />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Prioridad</label>
-                  <select name="prioridad" className="w-full border border-slate-300 rounded-lg p-2.5">
-                    <option value="normal">Normal</option>
-                    <option value="alta">Alta</option>
-                    <option value="urgente">Urgente</option>
-                  </select>
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Motivo</label>
-                <textarea name="motivo" className="w-full border border-slate-300 rounded-lg p-2.5" rows={3} placeholder="Razón de la petición..."></textarea>
-              </div>
-              <div className="flex justify-end gap-3 pt-4 border-t">
-                <button type="button" onClick={() => setShowNuevaPeticion(false)} className="px-5 py-2.5 text-slate-600 hover:bg-slate-100 rounded-lg font-medium">Cancelar</button>
-                <button type="submit" className="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">Crear Petición</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
       {/* MODAL: GESTIÓN DE FAMILIAS */}
       {showGestionFamilias && (

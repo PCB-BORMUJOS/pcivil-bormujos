@@ -263,7 +263,7 @@ export default function VehiculosPage() {
           {/* Desktop */}
           <div className="hidden sm:flex items-center gap-2">
             <button onClick={cargarDatos} className="flex items-center justify-center p-2.5 text-slate-600 hover:bg-slate-100 rounded-lg border border-slate-200" title="Recargar"><RefreshCw className="w-5 h-5" /></button>
-            <button onClick={() => setShowNuevaPeticion(true)} className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm"><ShoppingCart size={18} />Petición</button>
+            <button onClick={() => { setInventoryTab('peticiones'); setShowNuevaPeticion(true) }} className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm"><ShoppingCart size={18} />Petición</button>
             <button disabled={!canCreate} onClick={() => setShowNuevoArticulo(true)} className="flex items-center gap-2 px-4 py-2.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-400 font-medium text-sm disabled:opacity-40 disabled:cursor-not-allowed"><Package size={18} />Artículo</button>
             <button onClick={() => setMainTab("localizacion")} className="flex items-center gap-2 px-4 py-2.5 bg-blue-700 text-white rounded-lg hover:bg-blue-800 font-medium text-sm"><MapPin size={18} />Localización</button>
           </div>
@@ -271,7 +271,7 @@ export default function VehiculosPage() {
         {/* Móvil */}
         <div className="flex sm:hidden gap-2 mt-3">
           <button onClick={cargarDatos} className="flex-1 flex items-center justify-center p-2.5 text-slate-600 hover:bg-slate-100 rounded-lg border border-slate-200"><RefreshCw className="w-5 h-5" /></button>
-          <button onClick={() => setShowNuevaPeticion(true)} className="flex-1 flex items-center justify-center px-2 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700"><ShoppingCart size={18} /></button>
+          <button onClick={() => { setInventoryTab('peticiones'); setShowNuevaPeticion(true) }} className="flex-1 flex items-center justify-center px-2 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700"><ShoppingCart size={18} /></button>
           <button disabled={!canCreate} onClick={() => setShowNuevoArticulo(true)} className="flex-1 flex items-center justify-center px-2 py-2.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-400 disabled:opacity-40"><Package size={18} /></button>
           <button onClick={() => setMainTab("localizacion")} className="flex-1 flex items-center justify-center px-2 py-2.5 bg-blue-700 text-white rounded-lg hover:bg-blue-800"><MapPin size={18} /></button>
         </div>
@@ -368,7 +368,7 @@ export default function VehiculosPage() {
 
           {/* PETICIONES */}
           {inventoryTab === 'peticiones' && (
-            <PeticionesTab areaOrigen="vehiculos" isAdmin={isAdmin} accentColor="from-blue-600 to-blue-700" />
+            <PeticionesTab areaOrigen="vehiculos" isAdmin={isAdmin} accentColor="from-blue-600 to-blue-700" openNew={showNuevaPeticion} onOpenNewConsumed={() => setShowNuevaPeticion(false)} />
           )}
 
           {inventoryTab === 'movimientos' && (

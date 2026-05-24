@@ -1217,7 +1217,7 @@ export default function FormacionPage() {
         {/* Botones desktop */}
         <div className="hidden sm:flex items-center gap-2">
           <button onClick={() => cargarDatos()} className="flex items-center justify-center p-2.5 text-slate-600 hover:bg-slate-100 rounded-lg border border-slate-200 flex-shrink-0" title="Recargar datos"><RefreshCw size={18} className={loading ? 'animate-spin' : ''} /></button>
-          <button onClick={() => setShowNuevaPeticion(true)} className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm"><ShoppingCart size={18} />Petición</button>
+          <button onClick={() => { setInventoryTab('peticiones'); setShowNuevaPeticion(true) }} className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm"><ShoppingCart size={18} />Petición</button>
           <button onClick={() => setShowNuevoArticulo(true)} className="flex items-center gap-2 px-4 py-2.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-400 font-medium text-sm"><Package size={18} />Artículo</button>
           <button onClick={() => setShowNuevoCurso(true)} className="flex items-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium text-sm"><BookOpen size={18} />Nuevo Curso</button>
         </div>
@@ -1225,7 +1225,7 @@ export default function FormacionPage() {
       {/* Botones móvil: fila completa */}
       <div className="flex sm:hidden gap-2">
         <button onClick={() => cargarDatos()} className="flex-1 flex items-center justify-center p-2.5 text-slate-600 hover:bg-slate-100 rounded-lg border border-slate-200"><RefreshCw size={18} className={loading ? 'animate-spin' : ''} /></button>
-        <button onClick={() => setShowNuevaPeticion(true)} className="flex-1 flex items-center justify-center gap-1 px-2 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm"><ShoppingCart size={18} /></button>
+        <button onClick={() => { setInventoryTab('peticiones'); setShowNuevaPeticion(true) }} className="flex-1 flex items-center justify-center gap-1 px-2 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm"><ShoppingCart size={18} /></button>
         <button onClick={() => setShowNuevoArticulo(true)} className="flex-1 flex items-center justify-center gap-1 px-2 py-2.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-400 font-medium text-sm"><Package size={18} /></button>
         <button onClick={() => setShowNuevoCurso(true)} className="flex-1 flex items-center justify-center gap-1 px-2 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium text-sm"><BookOpen size={18} /></button>
       </div>
@@ -1393,7 +1393,7 @@ export default function FormacionPage() {
 
               {/* === TAB PETICIONES === */}
               {inventoryTab === 'peticiones' && (
-                <PeticionesTab areaOrigen="formacion" isAdmin={isAdmin} accentColor="from-blue-600 to-blue-700" />
+                <PeticionesTab areaOrigen="formacion" isAdmin={isAdmin} accentColor="from-blue-600 to-blue-700" openNew={showNuevaPeticion} onOpenNewConsumed={() => setShowNuevaPeticion(false)} />
               )}
 
               {/* === TAB MOVIMIENTOS === */}
@@ -2166,71 +2166,6 @@ export default function FormacionPage() {
             <div className="flex justify-end gap-2 pt-4 bg-slate-50 -mx-6 -mb-6 p-4 mt-4 border-t">
               <button onClick={() => setShowNuevoArticulo(false)} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg font-medium">Cancelar</button>
               <button onClick={handleGuardarArticulo} className="px-6 py-2 bg-yellow-500 text-black rounded-lg hover:bg-yellow-400 font-medium text-sm flex-shrink-0 text-white rounded-lg hover:bg-purple-700 shadow-sm font-medium">Crear Artículo</button>
-            </div>
-          </div>
-        </Modal>
-      )}
-
-      {/* MODAL: Nueva Petición */}
-      {showNuevaPeticion && (
-        <Modal title="Nueva Petición de Material" onClose={() => setShowNuevaPeticion(false)} size="lg">
-          <div className="space-y-4">
-            <div className="bg-blue-50 p-4 rounded-xl text-sm text-blue-800 flex items-start gap-3 border border-blue-100">
-              <AlertCircle size={20} className="mt-0.5 shrink-0 text-blue-600" />
-              <div>
-                <p className="font-bold mb-1">Petición desde Área de Formación</p>
-                <p>Estás solicitando material que se cargará al presupuesto/inventario de Formación. Esta petición será revisada por el responsable de Logística.</p>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Material / Artículo <span className="text-red-500">*</span></label>
-                <input type="text" className="w-full border rounded-lg p-2" value={nuevaPeticion.nombreArticulo} onChange={e => setNuevaPeticion({ ...nuevaPeticion, nombreArticulo: e.target.value })} placeholder="¿Qué necesitas?" />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Cantidad <span className="text-red-500">*</span></label>
-                  <input type="number" min="1" className="w-full border rounded-lg p-2" value={nuevaPeticion.cantidad} onChange={e => setNuevaPeticion({ ...nuevaPeticion, cantidad: parseInt(e.target.value) || 1 })} />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Prioridad</label>
-                  <select className="w-full border rounded-lg p-2" value={nuevaPeticion.prioridad} onChange={e => setNuevaPeticion({ ...nuevaPeticion, prioridad: e.target.value })}>
-                    <option value="baja">Baja (Sin urgencia)</option>
-                    <option value="normal">Normal</option>
-                    <option value="alta">Alta</option>
-                    <option value="urgente">Urgente (Crítico)</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Motivo de la solicitud <span className="text-red-500">*</span></label>
-                <select className="w-full border rounded-lg p-2 mb-2" value={nuevaPeticion.motivo} onChange={e => setNuevaPeticion({ ...nuevaPeticion, motivo: e.target.value })}>
-                  <option value="">Seleccionar motivo...</option>
-                  <option value="reposicion">Reposición de stock agotado</option>
-                  <option value="nuevo_material">Necesidad de nuevo material</option>
-                  <option value="curso_especifico">Material para curso específico</option>
-                  <option value="deterioro">Sustitución por deterioro/rotura</option>
-                  <option value="otro">Otro motivo</option>
-                </select>
-                {nuevaPeticion.motivo === 'otro' && (
-                  <input type="text" className="w-full border rounded-lg p-2 mt-2" placeholder="Especificar otro motivo..." />
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Observaciones / Detalles adicionales</label>
-                <textarea className="w-full border rounded-lg p-2 h-24" value={nuevaPeticion.descripcion} onChange={e => setNuevaPeticion({ ...nuevaPeticion, descripcion: e.target.value })} placeholder="Explica detalladamente para qué es necesario, si hay alguna preferencia de marca, etc." />
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-2 pt-4 bg-slate-50 -mx-6 -mb-6 p-4 mt-4 border-t">
-              <button onClick={() => setShowNuevaPeticion(false)} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg font-medium">Cancelar</button>
-              <button onClick={handleGuardarPeticion} className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-sm font-medium flex items-center gap-2">
-                <Send size={18} /> Enviar Petición
-              </button>
             </div>
           </div>
         </Modal>

@@ -559,7 +559,7 @@ export default function PMAPage() {
           <div className="hidden sm:flex items-center gap-2">
             <button onClick={cargarDatos} className="flex items-center justify-center p-2.5 text-slate-600 hover:bg-slate-100 rounded-lg border border-slate-200"><RefreshCw size={18} /></button>
             {mainTab === 'inventario' && (<>
-              <button onClick={() => setShowNuevaPeticion(true)} className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm"><ShoppingCart size={18} />Petición</button>
+              <button onClick={() => { setInventoryTab('peticiones'); setShowNuevaPeticion(true) }} className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm"><ShoppingCart size={18} />Petición</button>
               <button onClick={() => setShowNuevoArticulo(true)} className="flex items-center gap-2 px-4 py-2.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-400 font-medium text-sm"><Package size={18} />Artículo</button>
               <button onClick={() => setShowNuevoItemRemolque(true)} className="flex items-center gap-2 px-4 py-2.5 bg-orange-500 text-white rounded-lg hover:bg-orange-600 font-medium text-sm"><Tent size={18} />Item PMA</button>
             </>)}
@@ -572,7 +572,7 @@ export default function PMAPage() {
         <div className="flex sm:hidden gap-2 mt-3">
           <button onClick={cargarDatos} className="flex-1 flex items-center justify-center p-2.5 text-slate-600 hover:bg-slate-100 rounded-lg border border-slate-200"><RefreshCw size={18} /></button>
           {mainTab === 'inventario' && (<>
-            <button onClick={() => setShowNuevaPeticion(true)} className="flex-1 flex items-center justify-center px-2 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700"><ShoppingCart size={18} /></button>
+            <button onClick={() => { setInventoryTab('peticiones'); setShowNuevaPeticion(true) }} className="flex-1 flex items-center justify-center px-2 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700"><ShoppingCart size={18} /></button>
             <button onClick={() => setShowNuevoArticulo(true)} className="flex-1 flex items-center justify-center px-2 py-2.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-400"><Package size={18} /></button>
             <button onClick={() => setShowNuevoItemRemolque(true)} className="flex-1 flex items-center justify-center px-2 py-2.5 bg-orange-500 text-white rounded-lg hover:bg-orange-600"><Tent size={18} /></button>
           </>)}
@@ -676,7 +676,7 @@ export default function PMAPage() {
           )}
 
           {inventoryTab === 'peticiones' && (
-            <PeticionesTab areaOrigen="pma" isAdmin={isAdmin} accentColor="from-lime-600 to-lime-700" />
+            <PeticionesTab areaOrigen="pma" isAdmin={isAdmin} accentColor="from-lime-600 to-lime-700" openNew={showNuevaPeticion} onOpenNewConsumed={() => setShowNuevaPeticion(false)} />
           )}
 
           {inventoryTab === 'movimientos' && <MovimientosTab inventario="pma" />}

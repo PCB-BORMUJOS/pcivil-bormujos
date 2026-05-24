@@ -505,7 +505,7 @@ export default function AccionSocialPage() {
           {/* Botones desktop */}
           <div className="hidden sm:flex items-center gap-2">
             <button onClick={cargarDatos} className="flex items-center justify-center p-2.5 text-slate-600 hover:bg-slate-100 rounded-lg border border-slate-200 flex-shrink-0" title="Recargar"><RefreshCw size={18} /></button>
-            <button onClick={() => setShowNuevaPeticion(true)} className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm" title="Nueva Petición"><ShoppingCart size={18} />Petición</button>
+            <button onClick={() => { setInventoryTab('peticiones'); setShowNuevaPeticion(true) }} className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm" title="Nueva Petición"><ShoppingCart size={18} />Petición</button>
             <button onClick={() => setShowNuevoArticulo(true)} className="flex items-center gap-2 px-4 py-2.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-400 font-medium text-sm" title="Nuevo Artículo"><Package size={18} />Artículo</button>
             {canVerViogen && <button onClick={() => setShowNuevoCaso(true)} className="flex items-center gap-2 px-4 py-2.5 bg-violet-600 text-white rounded-lg hover:bg-violet-700 font-medium text-sm" title="Nuevo Caso VIOGEN"><Shield size={18} />VIOGEN</button>}
           </div>
@@ -513,7 +513,7 @@ export default function AccionSocialPage() {
         {/* Botones móvil: fila completa */}
         <div className="flex sm:hidden gap-2 mt-3">
           <button onClick={cargarDatos} className="flex-1 flex items-center justify-center p-2.5 text-slate-600 hover:bg-slate-100 rounded-lg border border-slate-200" title="Recargar"><RefreshCw size={18} /></button>
-          <button onClick={() => setShowNuevaPeticion(true)} className="flex-1 flex items-center justify-center gap-1.5 px-2 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm"><ShoppingCart size={18} /><span className="sr-only">Petición</span></button>
+          <button onClick={() => { setInventoryTab('peticiones'); setShowNuevaPeticion(true) }} className="flex-1 flex items-center justify-center gap-1.5 px-2 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm"><ShoppingCart size={18} /><span className="sr-only">Petición</span></button>
           <button onClick={() => setShowNuevoArticulo(true)} className="flex-1 flex items-center justify-center gap-1.5 px-2 py-2.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-400 font-medium text-sm"><Package size={18} /><span className="sr-only">Artículo</span></button>
           <button onClick={() => setShowNuevoCaso(true)} className="flex-1 flex items-center justify-center gap-1.5 px-2 py-2.5 bg-violet-600 text-white rounded-lg hover:bg-violet-700 font-medium text-sm"><Shield size={18} /><span className="sr-only">VIOGEN</span></button>
         </div>
@@ -654,7 +654,7 @@ export default function AccionSocialPage() {
               )}
 
               {inventoryTab === 'peticiones' && (
-                <PeticionesTab areaOrigen="accion_social" isAdmin={isAdmin} accentColor="from-rose-600 to-rose-700" />
+                <PeticionesTab areaOrigen="accion_social" isAdmin={isAdmin} accentColor="from-rose-600 to-rose-700" openNew={showNuevaPeticion} onOpenNewConsumed={() => setShowNuevaPeticion(false)} />
               )}
 
               {inventoryTab === 'movimientos' && (

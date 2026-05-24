@@ -167,6 +167,10 @@ interface PeticionesTabProps {
   isAdmin: boolean
   /** Color de acento para el modal (tailwind gradient) */
   accentColor?: string
+  /** Si true, abre automáticamente el modal de nueva petición (lo gestiona el padre) */
+  openNew?: boolean
+  /** Callback para que el padre sepa que el modal ya fue abierto y puede resetear su flag */
+  onOpenNewConsumed?: () => void
 }
 
 type ItemForm = { nombreArticulo: string; cantidad: number; unidad: string; articuloId?: string }
@@ -175,7 +179,7 @@ const ITEM_VACIO: ItemForm = { nombreArticulo: '', cantidad: 1, unidad: 'unidad'
 // ============================================
 // COMPONENTE PRINCIPAL
 // ============================================
-export default function PeticionesTab({ areaOrigen, isAdmin, accentColor = 'from-purple-600 to-purple-700' }: PeticionesTabProps) {
+export default function PeticionesTab({ areaOrigen, isAdmin, accentColor = 'from-purple-600 to-purple-700', openNew, onOpenNewConsumed }: PeticionesTabProps) {
   const [peticiones, setPeticiones] = useState<Peticion[]>([])
   const [stats, setStats] = useState({ total: 0, pendientes: 0, aprobadas: 0, enCompra: 0, recibidas: 0, rechazadas: 0 })
   const [loading, setLoading] = useState(false)
@@ -202,6 +206,15 @@ export default function PeticionesTab({ areaOrigen, isAdmin, accentColor = 'from
     comentario: '', proveedor: '', costeEstimado: '', costeFinal: '',
     numeroFactura: '', numeroRc: '', numeroAlbaran: '', urlRc: '', urlAlbaran: ''
   })
+
+  // Abre el modal si el padre lo solicita desde fuera (botón dashboard)
+  useEffect(() => {
+    if (openNew) {
+      resetForm()
+      setShowNueva(true)
+      onOpenNewConsumed?.()
+    }
+  }, [openNew]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ──────────────────────────────────────────
   const cargar = useCallback(async () => {
@@ -634,7 +647,7 @@ export default function PeticionesTab({ areaOrigen, isAdmin, accentColor = 'from
                         <div>
                           <h4 className="text-xs font-bold text-slate-500 uppercase mb-2 flex items-center gap-1"><History size={12} /> Historial</h4>
                           <div className="flex gap-2 overflow-x-auto pb-1">
-                            {[...peticion.historial].reverse().map((h, i) => (
+                            {[...peticion.historial].reverse().map((h) => (
                               <div key={h.id} className="flex-shrink-0 bg-white border border-slate-200 rounded-lg p-2 text-xs min-w-[140px]">
                                 <div className="font-bold text-slate-700">{h.estadoNuevo.replace('_', ' ').toUpperCase()}</div>
                                 {h.comentario && <div className="text-slate-500 truncate max-w-[130px]">{h.comentario}</div>}

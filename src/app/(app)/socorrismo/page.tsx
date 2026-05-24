@@ -324,7 +324,7 @@ export default function SocorrismoPage() {
           {/* Desktop */}
           <div className="hidden sm:flex items-center gap-2">
             <button onClick={cargarDatos} className="flex items-center justify-center p-2.5 text-slate-600 hover:bg-slate-100 rounded-lg border border-slate-200"><RefreshCw size={18} className={loading ? 'animate-spin' : ''} /></button>
-            <button onClick={() => setShowNuevaPeticion(true)} className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm"><ShoppingCart size={18} />Petición</button>
+            <button onClick={() => { setInventoryTab('peticiones'); setShowNuevaPeticion(true) }} className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm"><ShoppingCart size={18} />Petición</button>
             <button disabled={!canCreate} onClick={() => setShowNuevoArticulo(true)} className="flex items-center gap-2 px-4 py-2.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-400 font-medium text-sm disabled:opacity-40 disabled:cursor-not-allowed"><Package size={18} />Artículo</button>
             <button disabled={!canCreate} onClick={() => setShowNuevoDEA(true)} className="flex items-center gap-2 px-4 py-2.5 bg-pink-500 text-white rounded-lg hover:bg-pink-600 font-medium text-sm disabled:opacity-40 disabled:cursor-not-allowed"><HeartPulse size={18} />Nuevo DEA</button>
           </div>
@@ -332,7 +332,7 @@ export default function SocorrismoPage() {
         {/* Móvil */}
         <div className="flex sm:hidden gap-2 mt-3">
           <button onClick={cargarDatos} className="flex-1 flex items-center justify-center p-2.5 text-slate-600 hover:bg-slate-100 rounded-lg border border-slate-200"><RefreshCw size={18} className={loading ? 'animate-spin' : ''} /></button>
-          <button onClick={() => setShowNuevaPeticion(true)} className="flex-1 flex items-center justify-center px-2 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700"><ShoppingCart size={18} /></button>
+          <button onClick={() => { setInventoryTab('peticiones'); setShowNuevaPeticion(true) }} className="flex-1 flex items-center justify-center px-2 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700"><ShoppingCart size={18} /></button>
           <button disabled={!canCreate} onClick={() => setShowNuevoArticulo(true)} className="flex-1 flex items-center justify-center px-2 py-2.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-400 disabled:opacity-40"><Package size={18} /></button>
           <button disabled={!canCreate} onClick={() => setShowNuevoDEA(true)} className="flex-1 flex items-center justify-center px-2 py-2.5 bg-pink-500 text-white rounded-lg hover:bg-pink-600 disabled:opacity-40"><HeartPulse size={18} /></button>
         </div>
@@ -575,7 +575,7 @@ export default function SocorrismoPage() {
 
               {/* Tab Peticiones */}
               {inventoryTab === 'peticiones' && (
-                <PeticionesTab areaOrigen="socorrismo" isAdmin={isAdmin} accentColor="from-red-600 to-red-700" />
+                <PeticionesTab areaOrigen="socorrismo" isAdmin={isAdmin} accentColor="from-red-600 to-red-700" openNew={showNuevaPeticion} onOpenNewConsumed={() => setShowNuevaPeticion(false)} />
               )}
 
               {/* Tab Movimientos */}
