@@ -1,8 +1,11 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { PsiFormState, INITIAL_PSI_STATE, TimeKey } from '@/types/psi'
 import { toast } from 'react-hot-toast'
 import { validarPartePSI, validarBorradorPSI } from '@/lib/psi-validation'
+import { registerInactivitySaveCallback } from '@/components/InactivityGuard'
+
+const LOCALSTORAGE_KEY = 'psi_form_draft'
 
 // Simple type for images (no longer using ImagenParte model)
 type ImagenParte = {
@@ -23,11 +26,45 @@ export function usePsiForm() {
     const [form, setForm] = useState<PsiFormState>(INITIAL_PSI_STATE)
     const [imagenes, setImagenes] = useState<ImagenParte[]>([])
     const [hasChanges, setHasChanges] = useState(false)
+    const [draftRestored, setDraftRestored] = useState(false)
+    const idRef = useRef<string | null>(initialId || null)
+
+    // Sync idRef with id state
+    useEffect(() => { idRef.current = id }, [id])
+
+    // Guardar en localStorage en cada cambio como respaldo ante pérdida de sesión
+    useEffect(() => {
+        if (!hasChanges) return
+        try {
+            const key = `${LOCALSTORAGE_KEY}_${idRef.current || 'new'}`
+            localStorage.setItem(key, JSON.stringify({ form, savedAt: Date.now() }))
+        } catch { /* ignorar errores de cuota */ }
+    }, [form, hasChanges])
 
     // Cargar datos al montar si hay ID
     useEffect(() => {
         if (initialId) {
             loadParte(initialId)
+        } else {
+            // Parte nuevo: intentar restaurar borrador de localStorage
+            try {
+                const raw = localStorage.getItem(`${LOCALSTORAGE_KEY}_new`)
+                if (raw) {
+                    const { form: saved, savedAt } = JSON.parse(raw)
+                    const ageMinutes = (Date.now() - savedAt) / 60000
+                    if (ageMinutes < 120) { // solo restaurar si tiene menos de 2 horas
+                        setForm(saved)
+                        setHasChanges(true)
+                        setDraftRestored(true)
+                        toast('Borrador recuperado de la sesión anterior', {
+                            icon: '💾',
+                            duration: 5000,
+                        })
+                    } else {
+                        localStorage.removeItem(`${LOCALSTORAGE_KEY}_new`)
+                    }
+                }
+            } catch { /* ignorar */ }
         }
     }, [initialId])
 
@@ -328,6 +365,10 @@ export function usePsiForm() {
             }
 
             setHasChanges(false)
+            // Limpiar respaldo de localStorage tras guardar con éxito
+            try {
+                localStorage.removeItem(`${LOCALSTORAGE_KEY}_${newId || id || 'new'}`)
+            } catch { /* ignorar */ }
             toast.success(finalizar ? 'Parte finalizado correctamente' : 'Parte guardado correctamente')
 
             if (finalizar) {
@@ -345,22 +386,41 @@ export function usePsiForm() {
         }
     }, [id, form, hasChanges, router])
 
-    // Auto-save disabled or less aggressive to avoid validation spam?
-    // Let's keep it but check validation silently? Or just remove auto-save for mandatory fields?
-    // Better to keep auto-save OFF for now if validation is strict, 
-    // OR only auto-save if validation passes.
+    // Registrar callback de guardado para que InactivityGuard guarde antes de cerrar sesión
     useEffect(() => {
-        const timer = setTimeout(() => {
-            if (id && hasChanges) {
-                // Silent validation check? 
-                // Currently saveParte shows toasts. 
-                // Maybe simplified auto-save logic needed or just rely on manual save to avoid annoyance.
-                // For now, let's comment out auto-save to prevent error spam while typing
-                // saveParte() 
-            }
-        }, 5000)
+        const save = async () => {
+            if (!hasChanges) return
+            const tipologias = [
+                ...Object.entries(form.prevencion).filter(([, v]) => v).map(([k]) => `prevencion.${k}`),
+                ...Object.entries(form.intervencion).filter(([, v]) => v).map(([k]) => `intervencion.${k}`),
+                ...Object.entries(form.otros).filter(([, v]) => v).map(([k]) => `otros.${k}`)
+            ]
+            const { valido } = validarBorradorPSI({ ...form, tipologias })
+            if (valido) await saveParte(false)
+        }
+        return registerInactivitySaveCallback(save)
+    }, [form, hasChanges, saveParte])
+
+    // Auto-save silencioso cada 30s si hay cambios y pasa la validación mínima de borrador
+    useEffect(() => {
+        const timer = setTimeout(async () => {
+            if (!hasChanges) return
+            const tipologias = [
+                ...Object.entries(form.prevencion).filter(([, v]) => v).map(([k]) => `prevencion.${k}`),
+                ...Object.entries(form.intervencion).filter(([, v]) => v).map(([k]) => `intervencion.${k}`),
+                ...Object.entries(form.otros).filter(([, v]) => v).map(([k]) => `otros.${k}`)
+            ]
+            const { valido } = validarBorradorPSI({ ...form, tipologias })
+            if (!valido) return // no guardar si ni siquiera tiene lugar
+            await saveParte(false)
+            // Al guardar con éxito, limpiar el borrador de localStorage
+            try {
+                const key = `${LOCALSTORAGE_KEY}_${idRef.current || 'new'}`
+                localStorage.removeItem(key)
+            } catch { /* ignorar */ }
+        }, 30000)
         return () => clearTimeout(timer)
-    }, [form, hasChanges, id, saveParte])
+    }, [form, hasChanges, saveParte])
 
     // Setters
     const updateForm = (updater: (prev: PsiFormState) => PsiFormState) => {
@@ -433,6 +493,7 @@ export function usePsiForm() {
         loading,
         saving,
         hasChanges,
+        draftRestored,
         saveParte,
         setField,
         setTiempo,

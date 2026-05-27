@@ -5,6 +5,16 @@ import { signOut, useSession } from 'next-auth/react'
 const INACTIVITY_MS = 5 * 60 * 1000
 const WARNING_MS = 4 * 60 * 1000
 
+// Registro global de callbacks de guardado para que los formularios puedan
+// registrar su función de guardado y sea invocada antes de cerrar la sesión.
+type SaveCallback = () => Promise<void>
+const saveCallbacks = new Set<SaveCallback>()
+
+export function registerInactivitySaveCallback(fn: SaveCallback): () => void {
+  saveCallbacks.add(fn)
+  return () => saveCallbacks.delete(fn)
+}
+
 export default function InactivityGuard() {
   const { data: session } = useSession()
   const timerRef = useRef<NodeJS.Timeout | null>(null)
@@ -20,9 +30,11 @@ export default function InactivityGuard() {
     if (countdownRef.current) clearInterval(countdownRef.current)
   }
 
-  const doSignOut = () => {
+  const doSignOut = async () => {
     clearAllTimers()
     setShowWarning(false)
+    // Intentar guardar todos los formularios abiertos antes de cerrar sesión
+    await Promise.allSettled(Array.from(saveCallbacks).map(fn => fn()))
     signOut({ callbackUrl: '/login' })
   }
 
