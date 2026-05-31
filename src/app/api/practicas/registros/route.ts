@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
         responsable: { select: { nombre: true, apellidos: true, numeroVoluntario: true } }
       },
       orderBy: { fecha: 'desc' },
-      take: 50
+      take: 200
     })
     return NextResponse.json({ registros })
   } catch (error) {

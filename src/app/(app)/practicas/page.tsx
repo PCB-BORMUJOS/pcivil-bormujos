@@ -98,6 +98,10 @@ export default function PracticasPage() {
   const [nuevaFamiliaColor, setNuevaFamiliaColor] = useState('#f97316')
   const [guardandoFamilia, setGuardandoFamilia] = useState(false)
   const [errorNumero, setErrorNumero] = useState('')
+  const [vistaActual, setVistaActual] = useState<'catalogo' | 'historial'>('catalogo')
+  const [filtroHFamilia, setFiltroHFamilia] = useState('all')
+  const [filtroHResultado, setFiltroHResultado] = useState('all')
+  const [busquedaH, setBusquedaH] = useState('')
 
   const cargarDatos = async () => {
     try {
@@ -219,8 +223,10 @@ export default function PracticasPage() {
     setFirmaJefe('')
     setParticipantesSeleccionados([])
     setPasoRegistro(1)
+    const resRegs = await fetch('/api/practicas/registros')
+    const dataRegs = await resRegs.json()
+    setRegistros(dataRegs.registros || [])
     alert('Registro guardado correctamente')
-    // Ofrecer PDF automáticamente tras guardar
   }
 
 
@@ -860,8 +866,15 @@ export default function PracticasPage() {
             ))}
           </div>
         </div>
+        <div className="px-8 flex gap-1 border-b border-white/10">
+          {([{ id: 'catalogo', label: 'Catálogo' }, { id: 'historial', label: `Historial (${registros.length})` }] as const).map(t => (
+            <button key={t.id} onClick={() => setVistaActual(t.id as 'catalogo' | 'historial')} className={`px-5 py-3 text-sm font-bold transition-colors border-b-2 -mb-px ${vistaActual === t.id ? 'text-white border-orange-500' : 'text-slate-400 border-transparent hover:text-slate-200'}`}>
+              {t.label}
+            </button>
+          ))}
+        </div>
       </div>
-      <div className="px-8 py-6 space-y-6">
+      {vistaActual === 'catalogo' && <div className="px-8 py-6 space-y-6">
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4">
           <div className="flex items-center gap-4 flex-wrap">
             <div className="relative flex-1 min-w-72">
@@ -1090,7 +1103,90 @@ export default function PracticasPage() {
             })}
           </div>
         )}
-      </div>
+      </div>}
+      {vistaActual === 'historial' && (
+        <div className="px-8 py-6 space-y-4">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 flex items-center gap-4 flex-wrap">
+            <div className="relative flex-1 min-w-64">
+              <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input value={busquedaH} onChange={e => setBusquedaH(e.target.value)} placeholder="Buscar por práctica..." className="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-orange-400 transition-all" />
+              {busquedaH && <button onClick={() => setBusquedaH('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"><X size={14} /></button>}
+            </div>
+            <select value={filtroHFamilia} onChange={e => setFiltroHFamilia(e.target.value)} className="border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:border-orange-400 bg-white min-w-44">
+              <option value="all">Todas las familias</option>
+              {FAMILIAS.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
+            </select>
+            <select value={filtroHResultado} onChange={e => setFiltroHResultado(e.target.value)} className="border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:border-orange-400 bg-white">
+              <option value="all">Todos los resultados</option>
+              <option value="completado">Completado</option>
+              <option value="pendiente_jefe">Pendiente VB Jefe</option>
+              <option value="parcial">Parcial</option>
+            </select>
+          </div>
+          {(() => {
+            const regs = registros
+              .filter(r => filtroHFamilia === 'all' || r.practica?.familia === filtroHFamilia)
+              .filter(r => filtroHResultado === 'all' || r.resultado === filtroHResultado)
+              .filter(r => !busquedaH || r.practica?.titulo?.toLowerCase().includes(busquedaH.toLowerCase()) || r.practica?.numero?.toLowerCase().includes(busquedaH.toLowerCase()))
+            if (regs.length === 0) return (
+              <div className="flex flex-col items-center justify-center py-24 bg-white rounded-2xl border border-slate-200">
+                <ClipboardList size={48} className="text-slate-200 mb-4" />
+                <p className="text-lg font-bold text-slate-500">No hay realizaciones registradas</p>
+                <p className="text-sm text-slate-400 mt-1">Usa el botón "Registrar realización" en el Catálogo para añadir una</p>
+              </div>
+            )
+            return (
+              <div className="space-y-3">
+                {regs.map(reg => {
+                  const familiaInfo = FAMILIAS.find(f => f.id === reg.practica?.familia)
+                  const turnoLabel = reg.turno === 'manana' ? 'Mañana' : reg.turno === 'tarde' ? 'Tarde' : 'Noche'
+                  const fechaStr = new Date(reg.fecha).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })
+                  const horaStr = new Date(reg.fecha).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
+                  const practicaFull = practicas.find(p => p.id === reg.practicaId)
+                  return (
+                    <div key={reg.id} className="bg-white rounded-2xl border-2 border-slate-100 shadow-sm hover:border-orange-200 hover:shadow-md transition-all p-5">
+                      <div className="flex items-start gap-4">
+                        <div className="flex-shrink-0 pt-0.5">
+                          <span className="font-mono text-sm font-black text-white px-3 py-1.5 rounded-xl bg-slate-800">{reg.practica?.numero || '—'}</span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap mb-1.5">
+                            <p className="text-sm font-black text-slate-800">{reg.practica?.titulo || 'Práctica'}</p>
+                            {familiaInfo && <span className={`text-xs font-bold px-2 py-0.5 rounded-full border ${familiaInfo.color}`}>{familiaInfo.label}</span>}
+                          </div>
+                          <div className="flex items-center gap-4 text-xs text-slate-500 flex-wrap">
+                            <span>{fechaStr} · {horaStr}</span>
+                            <span>Turno {turnoLabel}</span>
+                            {reg.duracionReal && <span>{reg.duracionReal} min</span>}
+                            <span>{reg.participantes.length} participante/s</span>
+                            {reg.responsable && <span>Resp: {reg.responsable.nombre} {reg.responsable.apellidos}</span>}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <span className={`text-xs font-black px-3 py-1.5 rounded-full ${reg.resultado === 'completado' ? 'bg-green-100 text-green-700' : reg.resultado === 'pendiente_jefe' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'}`}>
+                            {reg.resultado === 'completado' ? 'Completado' : reg.resultado === 'pendiente_jefe' ? 'Pend. VB Jefe' : 'Parcial'}
+                          </span>
+                          {practicaFull && (
+                            <button onClick={() => generarPDFPractica(practicaFull, reg)} className="flex items-center gap-1.5 px-3 py-1.5 border-2 border-slate-200 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors">
+                              <FileText size={13} />PDF
+                            </button>
+                          )}
+                          {isAdmin && reg.resultado === 'pendiente_jefe' && (
+                            <button onClick={() => setRegistroParaFirma(reg)} className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-500 text-white rounded-xl text-xs font-bold hover:bg-orange-600 transition-colors">
+                              Firmar VB
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                      {reg.observaciones && <p className="mt-3 text-xs text-slate-500 bg-slate-50 rounded-xl px-4 py-2.5 border border-slate-100">{reg.observaciones}</p>}
+                    </div>
+                  )
+                })}
+              </div>
+            )
+          })()}
+        </div>
+      )}
       {(showNueva || practicaEditando) && <FormularioPractica />}
       {showRegistro && practicaParaRegistro && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[1000] p-4">
