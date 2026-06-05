@@ -10,6 +10,8 @@ export async function GET(req: NextRequest) {
     return new Response(JSON.stringify({ error: 'No autorizado' }), { status: 401 })
   }
 
+  const esAdmin = ['superadmin', 'admin', 'coordinador'].includes((session.user as any).rol)
+
     try {
         const { searchParams } = new URL(req.url);
         const fecha = searchParams.get('fecha'); // YYYY-MM-DD
@@ -36,11 +38,21 @@ export async function GET(req: NextRequest) {
         const nombresDias = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
         const diaSemanaNombre = nombresDias[diaSemana];
 
-        // Buscar disponibilidades para esa semana
+        // Comprobar si el cuadrante de esa semana está publicado (existen guardias)
+        const finSemana = new Date(semanaInicio + 'T00:00:00.000Z')
+        finSemana.setDate(finSemana.getDate() + 6)
+        finSemana.setHours(23, 59, 59, 999)
+        const guardiasSemana = await prisma.guardia.count({
+          where: { fecha: { gte: semanaInicioDate, lte: finSemana } }
+        })
+        const cuadrantePublicado = guardiasSemana > 0
+
+        // Buscar disponibilidades para esa semana (excluir B-12)
         const disponibilidades = await prisma.disponibilidad.findMany({
             where: {
                 semanaInicio: { gte: semanaInicioDate, lte: semanaInicioDateFin },
-                noDisponible: false, // Excluir los que marcaron "no disponible"
+                noDisponible: false,
+                usuario: { numeroVoluntario: { not: 'B-12' } },
             },
             include: {
                 usuario: {
@@ -63,7 +75,6 @@ export async function GET(req: NextRequest) {
                 const detalles = disp.detalles as Record<string, string[]>;
                 const turnosDelDia = detalles[diaSemanaNombre] || [];
 
-                // Verificar si el voluntario marcó ese turno específico
                 if (turno === 'mañana') {
                     return turnosDelDia.includes('Mañana') || turnosDelDia.includes('mañana');
                 } else {
@@ -82,7 +93,6 @@ export async function GET(req: NextRequest) {
                 turnosDeseados: disp.turnosDeseados,
             }));
 
-        // Calcular stats
         const stats = {
             total: voluntariosDisponibles.length,
             responsablesTurno: voluntariosDisponibles.filter((v) => v.responsableTurno).length,
@@ -90,9 +100,24 @@ export async function GET(req: NextRequest) {
             experienciaAlta: voluntariosDisponibles.filter((v) => v.experiencia === 'ALTA').length,
         };
 
+        // No-admin + cuadrante no publicado: devolver solo el conteo, sin datos personales
+        if (!esAdmin && !cuadrantePublicado) {
+            return NextResponse.json({
+                voluntarios: [],
+                stats: { ...stats },
+                disponibles: voluntariosDisponibles.length,
+                publicado: false,
+                fecha,
+                turno,
+                diaSemanaNombre,
+            });
+        }
+
         return NextResponse.json({
             voluntarios: voluntariosDisponibles,
             stats,
+            disponibles: voluntariosDisponibles.length,
+            publicado: cuadrantePublicado,
             fecha,
             turno,
             diaSemanaNombre,
