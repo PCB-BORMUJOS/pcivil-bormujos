@@ -1712,24 +1712,26 @@ export default function DashboardPage() {
                 )
               })()}
             </div>
-            {/* Todos los Activos */}
-            <div>
-              <h4 className="text-xs font-bold text-slate-500 uppercase mb-2 flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-orange-500 inline-block"></span>
-                Personal Activo ({stats.total})
-              </h4>
-              <div className="space-y-1.5">
-                {[...voluntarios].sort((a: any, b: any) => sortInd(a.numeroVoluntario, b.numeroVoluntario)).map((v: any) => (
-                  <div key={v.id} className="flex items-center gap-3 p-2 bg-slate-50 rounded-lg border border-slate-100">
-                    <div className="w-9 h-9 rounded-full bg-orange-500 text-white flex items-center justify-center font-bold text-sm">{v.nombre?.charAt(0)}{v.apellidos?.charAt(0)}</div>
-                    <div className="flex-1 min-w-0">
-                      <span className="font-bold text-slate-800 text-sm">{v.numeroVoluntario}</span>
-                      <p className="text-xs text-slate-600 truncate">{v.nombre} {v.apellidos}</p>
+            {/* Todos los Activos — solo visible para admins */}
+            {esAdmin && (
+              <div>
+                <h4 className="text-xs font-bold text-slate-500 uppercase mb-2 flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-orange-500 inline-block"></span>
+                  Personal Activo ({stats.total})
+                </h4>
+                <div className="space-y-1.5">
+                  {[...voluntarios].sort((a: any, b: any) => sortInd(a.numeroVoluntario, b.numeroVoluntario)).map((v: any) => (
+                    <div key={v.id} className="flex items-center gap-3 p-2 bg-slate-50 rounded-lg border border-slate-100">
+                      <div className="w-9 h-9 rounded-full bg-orange-500 text-white flex items-center justify-center font-bold text-sm">{v.nombre?.charAt(0)}{v.apellidos?.charAt(0)}</div>
+                      <div className="flex-1 min-w-0">
+                        <span className="font-bold text-slate-800 text-sm">{v.numeroVoluntario}</span>
+                        <p className="text-xs text-slate-600 truncate">{v.nombre} {v.apellidos}</p>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </Modal>
       )}
