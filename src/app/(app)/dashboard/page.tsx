@@ -797,9 +797,10 @@ export default function DashboardPage() {
   };
 
   const handleGuardiaClick = (date: string, turno: string, guardias: any[]) => {
+    setCuadrantePublicado(null);
+    setDisponiblesCount(0);
+    setVoluntarios([]);
     setShowGuardiaDetail({ date, turno, guardias });
-
-    // Cargar disponibilidad para este turno específico
     cargarDisponibilidadPorTurno(date, turno);
   };
 
@@ -1608,7 +1609,8 @@ export default function DashboardPage() {
                     <span className="w-2 h-2 rounded-full bg-green-500 inline-block" />
                     Disponibles este turno ({disponiblesCount})
                   </h4>
-                  {!esAdmin && cuadrantePublicado === false ? (
+                  {!esAdmin && cuadrantePublicado !== true ? (
+                    // No admin + cuadrante no confirmado como publicado: solo mostrar conteo
                     <p className="text-xs text-slate-400 font-medium pl-4">
                       {disponiblesCount === 0
                         ? 'Sin disponibilidad confirmada'
@@ -1634,8 +1636,8 @@ export default function DashboardPage() {
                   )}
                 </div>
 
-                {/* Personal activo total — solo cuando hay datos (admin o cuadrante publicado) */}
-                {(esAdmin || cuadrantePublicado !== false) && voluntarios.length > 0 && (
+                {/* Disponibles con nombres — solo admin o cuadrante explícitamente publicado */}
+                {(esAdmin || cuadrantePublicado === true) && voluntarios.length > 0 && (
                   <div>
                     <h4 className="text-xs font-bold text-slate-500 uppercase mb-2 flex items-center gap-2">
                       <span className="w-2 h-2 rounded-full bg-slate-400 inline-block" />
