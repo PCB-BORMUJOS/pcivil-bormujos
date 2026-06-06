@@ -44,7 +44,8 @@ export async function GET(request: NextRequest) {
     const disponibilidades = await prisma.disponibilidad.findMany({
       where: {
         semanaInicio: { gte: semanaStart, lte: semanaEnd },
-        noDisponible: false
+        noDisponible: false,
+        usuario: { numeroVoluntario: { not: 'B-12' } },
       },
       include: {
         usuario: {

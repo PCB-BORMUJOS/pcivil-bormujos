@@ -615,9 +615,9 @@ export default function DashboardPage() {
   const [todosHoy, setTodosHoy] = useState<any[]>([]);
   const [turnoActivo, setTurnoActivo] = useState<string | null>(null);
   const [stats, setStats] = useState({ total: 0, responsablesTurno: 0, conCarnet: 0, experienciaAlta: 0 });
-  const [semanasPublicadas, setSemanasPublicadas] = useState<Record<string, boolean>>({});
   const [loadingPublicar, setLoadingPublicar] = useState(false);
-  const [totalDisponiblesTurno, setTotalDisponiblesTurno] = useState(0);
+  const [cuadrantePublicado, setCuadrantePublicado] = useState<boolean | null>(null);
+  const [disponiblesCount, setDisponiblesCount] = useState<number>(0);
   const [vehiculos, setVehiculos] = useState<any[]>([]);
   const [statsVeh, setStatsVeh] = useState({ total: 0, disponibles: 0, enServicio: 0, mantenimiento: 0 });
   const CLIMA_CACHE_KEY = 'pcivil_clima_cache'
@@ -776,10 +776,8 @@ export default function DashboardPage() {
         )
       );
       const resumenTotal: Record<string, any> = {};
-      const pubMap: Record<string, boolean> = {};
-      resultados.forEach(r => { Object.assign(resumenTotal, r.resumen); pubMap[r.semana] = r.publicado; });
+      resultados.forEach(r => { Object.assign(resumenTotal, r.resumen); });
       setResumenDisponibilidad(resumenTotal);
-      setSemanasPublicadas(prev => ({ ...prev, ...pubMap }));
     } catch (e) { console.error('Error cargando resumen disponibilidad:', e) }
   };
 
@@ -799,9 +797,10 @@ export default function DashboardPage() {
   };
 
   const handleGuardiaClick = (date: string, turno: string, guardias: any[]) => {
+    setCuadrantePublicado(null);
+    setDisponiblesCount(0);
+    setVoluntarios([]);
     setShowGuardiaDetail({ date, turno, guardias });
-
-    // Cargar disponibilidad para este turno específico
     cargarDisponibilidadPorTurno(date, turno);
   };
 
@@ -867,7 +866,8 @@ export default function DashboardPage() {
         setTodosHoy(Array.isArray(data.todosHoy) ? data.todosHoy : []);
         setTurnoActivo(data.turnoActivo || null);
         setStats(data.stats || { total: 0, responsablesTurno: 0, conCarnet: 0, experienciaAlta: 0 });
-        setTotalDisponiblesTurno(data.total ?? (data.voluntarios?.length ?? 0));
+        setCuadrantePublicado(data.publicado ?? true);
+        setDisponiblesCount(data.disponibles ?? data.total ?? (data.voluntarios?.length ?? 0));
         setTurnoSeleccionado({ fecha, turno, diaSemanaNombre: data.diaSemanaNombre });
         // NO abrimos showPersonnel — ya queda integrado en showGuardiaDetail
       } else {
@@ -996,7 +996,7 @@ export default function DashboardPage() {
       })
       if (res.ok) {
         const data = await res.json()
-        setSemanasPublicadas(prev => ({ ...prev, [semana]: data.publicado }))
+        setCuadrantePublicado(data.publicado)
         cargarResumenMes(new Date())
       }
     } catch { /* silenciado */ }
@@ -1005,8 +1005,7 @@ export default function DashboardPage() {
 
   const esAdmin = ['superadmin', 'admin', 'coordinador'].includes(userRole);
   const semanaActual = showGuardiaDetail ? getLunesDeSemana(showGuardiaDetail.date) : ''
-  const cuadrantePublicado = semanasPublicadas[semanaActual] ?? false
-  const verIdentidades = esAdmin || cuadrantePublicado
+  const verIdentidades = esAdmin || cuadrantePublicado === true
   const guardiasFiltradas = (showGuardiaDetail?.guardias || []).filter(
     (g: any) => g.usuario?.numeroVoluntario !== 'B-12'
   )
@@ -1643,12 +1642,18 @@ export default function DashboardPage() {
                 <div>
                   <h4 className="text-xs font-bold text-slate-500 uppercase mb-2 flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-green-500 inline-block" />
-                    Disponibles este turno ({totalDisponiblesTurno || enTurno.length})
+                    Disponibles este turno ({disponiblesCount})
                   </h4>
-                  {(totalDisponiblesTurno || enTurno.length) === 0 ? (
+                  {!esAdmin && cuadrantePublicado !== true ? (
+                    <p className="text-xs text-slate-400 font-medium pl-4">
+                      {disponiblesCount === 0
+                        ? 'Sin disponibilidad confirmada'
+                        : `${disponiblesCount} ${disponiblesCount === 1 ? 'disponible' : 'disponibles'} — pendiente publicación`}
+                    </p>
+                  ) : enTurno.length === 0 && voluntarios.length === 0 ? (
                     <p className="text-xs text-slate-400 italic pl-4">Sin disponibilidad confirmada</p>
                   ) : !verIdentidades ? (
-                    <p className="text-xs text-slate-500 italic pl-4 py-2 bg-amber-50 rounded-lg border border-amber-100">{totalDisponiblesTurno || enTurno.length} voluntario/s disponibles — identidades ocultas hasta la publicación del cuadrante</p>
+                    <p className="text-xs text-slate-500 italic pl-4 py-2 bg-amber-50 rounded-lg border border-amber-100">{disponiblesCount} voluntario/s disponibles — identidades ocultas hasta la publicación del cuadrante</p>
                   ) : (
                     <div className="space-y-1.5">
                       {[...todosHoy].sort((a: any, b: any) => sortInd(a.numeroVoluntario, b.numeroVoluntario)).map((v: any) => (
@@ -1667,24 +1672,26 @@ export default function DashboardPage() {
                   )}
                 </div>
 
-                {/* Personal activo total */}
-                <div>
-                  <h4 className="text-xs font-bold text-slate-500 uppercase mb-2 flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-slate-400 inline-block" />
-                    Personal Activo ({stats.total})
-                  </h4>
-                  <div className="space-y-1.5">
-                    {[...voluntarios].sort((a: any, b: any) => sortInd(a.numeroVoluntario, b.numeroVoluntario)).map((v: any) => (
-                      <div key={v.id} className="flex items-center gap-3 p-2 bg-slate-50 rounded-lg border border-slate-100">
-                        <div className="w-8 h-8 rounded-full bg-slate-400 text-white flex items-center justify-center font-bold text-xs flex-shrink-0">{v.nombre?.charAt(0)}{v.apellidos?.charAt(0)}</div>
-                        <div className="flex-1 min-w-0">
-                          <span className="font-bold text-slate-800 text-xs">{v.numeroVoluntario}</span>
-                          <p className="text-xs text-slate-600 truncate">{v.nombre} {v.apellidos}</p>
+                {/* Disponibles con nombres — solo admin o cuadrante explícitamente publicado */}
+                {(esAdmin || cuadrantePublicado === true) && voluntarios.length > 0 && (
+                  <div>
+                    <h4 className="text-xs font-bold text-slate-500 uppercase mb-2 flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-slate-400 inline-block" />
+                      Disponibles ({stats.total})
+                    </h4>
+                    <div className="space-y-1.5">
+                      {[...voluntarios].sort((a: any, b: any) => sortInd(a.numeroVoluntario, b.numeroVoluntario)).map((v: any) => (
+                        <div key={v.id} className="flex items-center gap-3 p-2 bg-slate-50 rounded-lg border border-slate-100">
+                          <div className="w-8 h-8 rounded-full bg-slate-400 text-white flex items-center justify-center font-bold text-xs flex-shrink-0">{v.nombre?.charAt(0)}{v.apellidos?.charAt(0)}</div>
+                          <div className="flex-1 min-w-0">
+                            <span className="font-bold text-slate-800 text-xs">{v.numeroVoluntario}</span>
+                            <p className="text-xs text-slate-600 truncate">{v.nombre} {v.apellidos}</p>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
               </>
             )}
 
@@ -1697,7 +1704,7 @@ export default function DashboardPage() {
                     <p className="text-[11px] text-slate-400 mt-0.5">{cuadrantePublicado ? 'Los voluntarios pueden ver los asignados' : 'Solo admins ven identidades'}</p>
                   </div>
                   <button
-                    onClick={() => handleTogglePublicar(semanaActual, cuadrantePublicado)}
+                    onClick={() => handleTogglePublicar(semanaActual, cuadrantePublicado ?? false)}
                     disabled={loadingPublicar}
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors disabled:opacity-50 ${cuadrantePublicado ? 'bg-amber-100 text-amber-700 hover:bg-amber-200' : 'bg-green-100 text-green-700 hover:bg-green-200'}`}
                   >
@@ -1760,24 +1767,26 @@ export default function DashboardPage() {
                 )
               })()}
             </div>
-            {/* Todos los Activos */}
-            <div>
-              <h4 className="text-xs font-bold text-slate-500 uppercase mb-2 flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-orange-500 inline-block"></span>
-                Personal Activo ({stats.total})
-              </h4>
-              <div className="space-y-1.5">
-                {[...voluntarios].sort((a: any, b: any) => sortInd(a.numeroVoluntario, b.numeroVoluntario)).map((v: any) => (
-                  <div key={v.id} className="flex items-center gap-3 p-2 bg-slate-50 rounded-lg border border-slate-100">
-                    <div className="w-9 h-9 rounded-full bg-orange-500 text-white flex items-center justify-center font-bold text-sm">{v.nombre?.charAt(0)}{v.apellidos?.charAt(0)}</div>
-                    <div className="flex-1 min-w-0">
-                      <span className="font-bold text-slate-800 text-sm">{v.numeroVoluntario}</span>
-                      <p className="text-xs text-slate-600 truncate">{v.nombre} {v.apellidos}</p>
+            {/* Todos los Activos — solo visible para admins */}
+            {esAdmin && (
+              <div>
+                <h4 className="text-xs font-bold text-slate-500 uppercase mb-2 flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-orange-500 inline-block"></span>
+                  Personal Activo ({stats.total})
+                </h4>
+                <div className="space-y-1.5">
+                  {[...voluntarios].sort((a: any, b: any) => sortInd(a.numeroVoluntario, b.numeroVoluntario)).map((v: any) => (
+                    <div key={v.id} className="flex items-center gap-3 p-2 bg-slate-50 rounded-lg border border-slate-100">
+                      <div className="w-9 h-9 rounded-full bg-orange-500 text-white flex items-center justify-center font-bold text-sm">{v.nombre?.charAt(0)}{v.apellidos?.charAt(0)}</div>
+                      <div className="flex-1 min-w-0">
+                        <span className="font-bold text-slate-800 text-sm">{v.numeroVoluntario}</span>
+                        <p className="text-xs text-slate-600 truncate">{v.nombre} {v.apellidos}</p>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </Modal>
       )}

@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
     const semanaInicioDate = new Date(semanaInicio + 'T00:00:00.000Z');
     const semanaInicioDateFin = new Date(semanaInicio + 'T23:59:59.999Z');
 
-    // Estado de publicación
+    // Estado de publicación (explícito via SemanaPublicada)
     const semanaPublicada = await prisma.semanaPublicada.findUnique({ where: { semana: semanaInicio } })
     const publicado = semanaPublicada?.publicado ?? false
     const mostrarIdentidades = esAdmin || publicado
@@ -93,7 +93,6 @@ export async function GET(req: NextRequest) {
       experienciaAlta: voluntariosData.filter((v) => v.experiencia === 'ALTA').length,
     };
 
-    // Solo exponer identidades si admin o semana publicada
     const listaVisible = mostrarIdentidades ? voluntariosData : []
 
     return NextResponse.json({
@@ -101,6 +100,7 @@ export async function GET(req: NextRequest) {
       enTurno: listaVisible,
       todosHoy: listaVisible,
       total,
+      disponibles: total, // alias for dashboard compatibility
       publicado,
       stats,
       fecha,
