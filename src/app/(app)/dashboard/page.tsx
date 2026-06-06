@@ -2,6 +2,8 @@
 import { isToday as isTodaySpain, getTodayParts, getTodaySpain } from '@/lib/date-utils';
 
 import React, { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
+import { usePermisos } from '@/lib/permisos';
 import {
   Users, Car, MapPin, Sun, Wind,
   ChevronLeft, ChevronRight, Clock,
@@ -312,7 +314,7 @@ function AvailabilityForm({ onClose }: { onClose: () => void }) {
 }
 
 // Calendar Component with Events, Guardias and Drag & Drop
-function CalendarView({ eventos, guardias, resumenDisponibilidad, onEventClick, onDayClick, onGuardiaClick, onEventDrop, onMesChange, userRole }: {
+function CalendarView({ eventos, guardias, resumenDisponibilidad, onEventClick, onDayClick, onGuardiaClick, onEventDrop, onMesChange, esAdmin }: {
   eventos: any[];
   guardias: any[];
   resumenDisponibilidad: Record<string, any>;
@@ -321,7 +323,7 @@ function CalendarView({ eventos, guardias, resumenDisponibilidad, onEventClick, 
   onGuardiaClick: (date: string, turno: string, guardias: any[]) => void;
   onEventDrop: (eventoId: string, nuevaFecha: string) => void;
   onMesChange: (fecha: Date) => void;
-  userRole: string;
+  esAdmin: boolean;
 }) {
   const [currentDate, setCurrentDate] = useState<Date | null>(null)
   const [draggedEvent, setDraggedEvent] = useState<any>(null);
@@ -417,7 +419,7 @@ function CalendarView({ eventos, guardias, resumenDisponibilidad, onEventClick, 
   };
 
   const canDragEvent = (evento: any) => {
-    return ['superadmin', 'admin', 'coordinador'].includes(userRole) || evento.privado;
+    return esAdmin || evento.privado;
   };
 
   return (
@@ -607,8 +609,9 @@ export default function DashboardPage() {
   const [participantesEvento, setParticipantesEvento] = useState<any[]>([]);
   const [showGuardiaDetail, setShowGuardiaDetail] = useState<{ date: string, turno: string, guardias: any[] } | null>(null);
   const [selectedDate, setSelectedDate] = useState<string>('');
-  const [userRole, setUserRole] = useState<string>('');
-  const [userId, setUserId] = useState<string>('');
+  const { data: session } = useSession();
+  const { isCoordinador: esAdmin } = usePermisos();
+  const userId = (session?.user as any)?.id ?? '';
   const [voluntarios, setVoluntarios] = useState<any[]>([]);
   const [todosVoluntarios, setTodosVoluntarios] = useState<any[]>([]);  // lista completa, nunca sobreescrita
   const [enTurno, setEnTurno] = useState<any[]>([]);
@@ -739,12 +742,6 @@ export default function DashboardPage() {
       });
   }, []);
 
-  useEffect(() => {
-    fetch('/api/auth/session').then(res => res.json()).then(data => {
-      if (data?.user?.rol) setUserRole(data.user.rol);
-      if (data?.user?.id) setUserId(data.user.id);
-    }).catch(() => { });
-  }, []);
 
   // Carga el resumen de disponibilidad de todas las semanas del mes visible
   const cargarResumenMes = async (fecha: Date) => {
@@ -784,7 +781,7 @@ export default function DashboardPage() {
   const handleEventClick = (evento: any) => setShowEventDetail(evento);
 
   const handleDayClick = (date: string) => {
-    if (userRole) {
+    if (session) {
       setSelectedDate(date);
       setNewEvent({
         titulo: '', descripcion: '', tipo: 'preventivo', horaInicio: '09:00', horaFin: '14:00',
@@ -1003,7 +1000,6 @@ export default function DashboardPage() {
     setLoadingPublicar(false)
   }
 
-  const esAdmin = ['superadmin', 'admin', 'coordinador'].includes(userRole);
   const semanaActual = showGuardiaDetail ? getLunesDeSemana(showGuardiaDetail.date) : ''
   const verIdentidades = esAdmin || cuadrantePublicado === true
   const guardiasFiltradas = (showGuardiaDetail?.guardias || []).filter(
@@ -1097,7 +1093,7 @@ export default function DashboardPage() {
         onGuardiaClick={handleGuardiaClick}
         onEventDrop={handleEventDrop}
         onMesChange={cargarResumenMes}
-        userRole={userRole}
+        esAdmin={esAdmin}
       />
 
       {/* Bottom Row */}
@@ -1280,7 +1276,7 @@ export default function DashboardPage() {
             {showEventDetail.descripcion && <div><h4 className="text-sm font-bold text-slate-500 uppercase mb-2">Descripción</h4><p className="text-slate-700">{showEventDetail.descripcion}</p></div>}
 
             {/* Acciones admin: Editar / Eliminar */}
-            {['superadmin', 'admin'].includes(userRole) && (
+            {esAdmin && (
               <div className="flex gap-3 pt-4 border-t border-slate-200">
                 <button
                   onClick={() => {
