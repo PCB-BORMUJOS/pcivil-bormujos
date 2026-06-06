@@ -205,7 +205,7 @@ export default function PresupuestoPage() {
   )
   const facFiltradas = facturas.filter(f => filtroFac === 'all' || f.estado === filtroFac)
 
-  if (status === 'loading' || loading) return (
+  if (loading) return (
     <div className="flex items-center justify-center min-h-[400px]">
       <RefreshCw className="w-8 h-8 text-emerald-600 animate-spin" />
     </div>
