@@ -5,6 +5,7 @@ import PeticionesTab, { MovimientosTab } from '@/components/PeticionesTab';
 
 import React, { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
+import { usePermisos } from '@/lib/permisos';
 import {
   Plus, Search, RefreshCw, Package, Users, Calendar, BookOpen,
   Award, AlertCircle, Layers, Edit, Trash2, X, ClipboardList,
@@ -275,8 +276,8 @@ function Modal({ title, children, onClose, size = 'md' }: {
 // ============================================
 export default function FormacionPage() {
   const { data: session } = useSession();
+  const { isCoordinador: isAdmin } = usePermisos();
   const [currentUser, setCurrentUser] = useState<any>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
   const [isFormacionMember, setIsFormacionMember] = useState(false);
 
   // Estados principales
@@ -408,19 +409,12 @@ export default function FormacionPage() {
   useEffect(() => {
     const fetchCurrentUser = async () => {
       try {
-        const res = await fetch('/api/auth/session');
-        const sessionData = await res.json();
-        if (sessionData?.user?.email) {
-          // Get full user with role
-          const userRes = await fetch('/api/mi-area');
-          const userData = await userRes.json();
-          if (userData?.usuario) {
-            // Guardamos ficha junto al usuario para comprobar área asignada
-            setCurrentUser({ ...userData.usuario, ficha: userData.ficha || null });
-            setIsAdmin(userData.usuario.rol?.nombre === 'ADMIN' || userData.usuario.rol?.nombre === 'admin' || userData.usuario.rol?.nombre === 'superadmin');
-            const area = (userData.ficha && userData.ficha.areaAsignada) || '';
-            setIsFormacionMember(area.toLowerCase() === 'formación' || area.toLowerCase() === 'formacion');
-          }
+        const userRes = await fetch('/api/mi-area');
+        const userData = await userRes.json();
+        if (userData?.usuario) {
+          setCurrentUser({ ...userData.usuario, ficha: userData.ficha || null });
+          const area = (userData.ficha && userData.ficha.areaAsignada) || '';
+          setIsFormacionMember(area.toLowerCase() === 'formación' || area.toLowerCase() === 'formacion');
         }
       } catch (e) { console.error("Error en operación:", e) }
     };
