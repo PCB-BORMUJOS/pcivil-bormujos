@@ -2113,6 +2113,16 @@ model PlanoEdificio {
   @@map("planos_edificio")
 }
 
+model SemanaPublicada {
+  id        String   @id @default(cuid())
+  semana    String   @unique  // YYYY-MM-DD (lunes de la semana)
+  publicado Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("semanas_publicadas")
+}
+
 model UbicacionVehiculo {
   id         String   @id @default(cuid())
   vehiculoId String

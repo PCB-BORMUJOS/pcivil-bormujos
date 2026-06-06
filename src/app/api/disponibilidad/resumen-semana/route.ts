@@ -20,6 +20,12 @@ export async function GET(request: NextRequest) {
     const semanaInicioBD = new Date(semana + 'T00:00:00.000Z')
     const semanaFinBD = new Date(semana + 'T23:59:59.999Z')
 
+    // Estado de publicación de la semana
+    const semanaPublicada = await prisma.semanaPublicada.findUnique({
+      where: { semana }
+    })
+    const publicado = semanaPublicada?.publicado ?? false
+
     const disponibilidades = await prisma.disponibilidad.findMany({
       where: {
         semanaInicio: { gte: semanaInicioBD, lte: semanaFinBD },
@@ -31,11 +37,15 @@ export async function GET(request: NextRequest) {
             id: true, nombre: true, apellidos: true,
             numeroVoluntario: true, responsableTurno: true,
             carnetConducir: true, experiencia: true,
-            
           }
         }
       }
     })
+
+    // Excluir B-12 de conteos y listas operativas
+    const dispFiltradas = disponibilidades.filter(
+      d => d.usuario.numeroVoluntario !== 'B-12'
+    )
 
     const dias = ['lunes','martes','miercoles','jueves','viernes','sabado','domingo']
     const turnos = ['mañana','tarde']
@@ -53,7 +63,7 @@ export async function GET(request: NextRequest) {
       resumen[fechaStr] = {}
 
       for (const turno of turnos) {
-        const disponibles = disponibilidades.filter(d => {
+        const disponibles = dispFiltradas.filter(d => {
           const detalles = d.detalles as Record<string, string[]>
           const turnosDia = detalles[dia] || []
           return turnosDia.includes(turno)
@@ -66,13 +76,15 @@ export async function GET(request: NextRequest) {
         else if (total === 3) color = 'naranja'
         else color = turno === 'mañana' ? 'verde' : 'azul'
 
+        // Identidades solo para admin o semana publicada
+        const mostrarIdentidades = esAdmin || publicado
         resumen[fechaStr][turno] = {
           total,
           responsables,
           conCarnet,
           color,
           criteriosCubiertos: total >= 4 && responsables >= 1 && conCarnet >= 2,
-          voluntarios: esAdmin ? disponibles.map(d => ({
+          voluntarios: mostrarIdentidades ? disponibles.map(d => ({
             id: d.usuario.id,
             nombre: d.usuario.nombre,
             apellidos: d.usuario.apellidos,
@@ -85,7 +97,7 @@ export async function GET(request: NextRequest) {
         }
       }
     }
-    return NextResponse.json({ resumen, semana })
+    return NextResponse.json({ resumen, semana, publicado })
   } catch (error) {
     console.error('Error en resumen-semana:', error)
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
