@@ -314,7 +314,7 @@ function AvailabilityForm({ onClose }: { onClose: () => void }) {
 }
 
 // Calendar Component with Events, Guardias and Drag & Drop
-function CalendarView({ eventos, guardias, resumenDisponibilidad, onEventClick, onDayClick, onGuardiaClick, onEventDrop, onMesChange, esAdmin }: {
+function CalendarView({ eventos, guardias, resumenDisponibilidad, onEventClick, onDayClick, onGuardiaClick, onEventDrop, onMesChange, esAdmin, publicadoPorSemana }: {
   eventos: any[];
   guardias: any[];
   resumenDisponibilidad: Record<string, any>;
@@ -324,6 +324,7 @@ function CalendarView({ eventos, guardias, resumenDisponibilidad, onEventClick, 
   onEventDrop: (eventoId: string, nuevaFecha: string) => void;
   onMesChange: (fecha: Date) => void;
   esAdmin: boolean;
+  publicadoPorSemana: Record<string, boolean>;
 }) {
   const [currentDate, setCurrentDate] = useState<Date | null>(null)
   const [draggedEvent, setDraggedEvent] = useState<any>(null);
@@ -495,38 +496,45 @@ function CalendarView({ eventos, guardias, resumenDisponibilidad, onEventClick, 
                     return 'bg-red-100 text-red-700 border-red-500';
                   };
 
+                  // Determinar si esta semana está publicada para decidir qué mostrar
+                  const ds = new Date(day.date + 'T12:00:00Z');
+                  const dow = ds.getUTCDay();
+                  ds.setUTCDate(ds.getUTCDate() + (dow === 0 ? -6 : 1 - dow));
+                  const semanaKey = ds.toISOString().slice(0, 10);
+                  const mostrarGuardias = esAdmin || (publicadoPorSemana[semanaKey] ?? false);
+
                   return (
                     <>
-                      {guardiasMañana.length > 0 ? (
+                      {mostrarGuardias && guardiasMañana.length > 0 ? (
                         <div
                           className={`text-[9px] px-1.5 py-1 rounded border-l-2 cursor-pointer ${colorPorCount('mañana', guardiasMañana.length)}`}
                           onClick={(e) => { e.stopPropagation(); onGuardiaClick(day.date, 'mañana', guardiasMañana); }}
                         >
                           <span className="font-bold">T. Mañana</span> ({guardiasMañana.length})
                         </div>
-                      ) : resMañana ? (
+                      ) : guardiasMañana.length > 0 || resMañana ? (
                         <div
-                          className={`text-[9px] px-1.5 py-1 rounded border-l-2 cursor-pointer ${colorDisponibilidad('mañana', resMañana.total)}`}
-                          onClick={(e) => { e.stopPropagation(); e.preventDefault(); onGuardiaClick(day.date, 'mañana', []); }}
-                          title={`Mañana: ${resMañana.total} disponibles | Resp: ${resMañana.responsables} | Carnet: ${resMañana.conCarnet}`}
+                          className={`text-[9px] px-1.5 py-1 rounded border-l-2 cursor-pointer ${colorDisponibilidad('mañana', resMañana?.total ?? 0)}`}
+                          onClick={(e) => { e.stopPropagation(); e.preventDefault(); onGuardiaClick(day.date, 'mañana', guardiasMañana); }}
+                          title={resMañana ? `Mañana: ${resMañana.total} disponibles | Resp: ${resMañana.responsables} | Carnet: ${resMañana.conCarnet}` : 'Turno asignado — pendiente publicación'}
                         >
-                          <span className="font-bold">Mañana</span> <span className="font-semibold">{resMañana.total}</span>
+                          <span className="font-bold">Mañana</span> <span className="font-semibold">{resMañana?.total ?? 0}</span>
                         </div>
                       ) : null}
-                      {guardiasTarde.length > 0 ? (
+                      {mostrarGuardias && guardiasTarde.length > 0 ? (
                         <div
                           className={`text-[9px] px-1.5 py-1 rounded border-l-2 cursor-pointer ${colorPorCount('tarde', guardiasTarde.length)}`}
                           onClick={(e) => { e.stopPropagation(); onGuardiaClick(day.date, 'tarde', guardiasTarde); }}
                         >
                           <span className="font-bold">T. Tarde</span> ({guardiasTarde.length})
                         </div>
-                      ) : resTarde ? (
+                      ) : guardiasTarde.length > 0 || resTarde ? (
                         <div
-                          className={`text-[9px] px-1.5 py-1 rounded border-l-2 cursor-pointer ${colorDisponibilidad('tarde', resTarde.total)}`}
-                          onClick={(e) => { e.stopPropagation(); e.preventDefault(); onGuardiaClick(day.date, 'tarde', []); }}
-                          title={`Tarde: ${resTarde.total} disponibles | Resp: ${resTarde.responsables} | Carnet: ${resTarde.conCarnet}`}
+                          className={`text-[9px] px-1.5 py-1 rounded border-l-2 cursor-pointer ${colorDisponibilidad('tarde', resTarde?.total ?? 0)}`}
+                          onClick={(e) => { e.stopPropagation(); e.preventDefault(); onGuardiaClick(day.date, 'tarde', guardiasTarde); }}
+                          title={resTarde ? `Tarde: ${resTarde.total} disponibles | Resp: ${resTarde.responsables} | Carnet: ${resTarde.conCarnet}` : 'Turno asignado — pendiente publicación'}
                         >
-                          <span className="font-bold">Tarde</span> <span className="font-semibold">{resTarde.total}</span>
+                          <span className="font-bold">Tarde</span> <span className="font-semibold">{resTarde?.total ?? 0}</span>
                         </div>
                       ) : null}
                     </>
@@ -620,6 +628,7 @@ export default function DashboardPage() {
   const [stats, setStats] = useState({ total: 0, responsablesTurno: 0, conCarnet: 0, experienciaAlta: 0 });
   const [loadingPublicar, setLoadingPublicar] = useState(false);
   const [cuadrantePublicado, setCuadrantePublicado] = useState<boolean | null>(null);
+  const [publicadoPorSemana, setPublicadoPorSemana] = useState<Record<string, boolean>>({});
   const [disponiblesCount, setDisponiblesCount] = useState<number>(0);
   const [vehiculos, setVehiculos] = useState<any[]>([]);
   const [statsVeh, setStatsVeh] = useState({ total: 0, disponibles: 0, enServicio: 0, mantenimiento: 0 });
@@ -773,8 +782,13 @@ export default function DashboardPage() {
         )
       );
       const resumenTotal: Record<string, any> = {};
-      resultados.forEach(r => { Object.assign(resumenTotal, r.resumen); });
+      const publicadoMap: Record<string, boolean> = {};
+      resultados.forEach(r => {
+        Object.assign(resumenTotal, r.resumen);
+        publicadoMap[r.semana] = r.publicado ?? false;
+      });
       setResumenDisponibilidad(resumenTotal);
+      setPublicadoPorSemana(publicadoMap);
     } catch (e) { console.error('Error cargando resumen disponibilidad:', e) }
   };
 
@@ -794,7 +808,8 @@ export default function DashboardPage() {
   };
 
   const handleGuardiaClick = (date: string, turno: string, guardias: any[]) => {
-    setCuadrantePublicado(null);
+    const semana = getLunesDeSemana(date);
+    setCuadrantePublicado(publicadoPorSemana[semana] ?? false);
     setDisponiblesCount(0);
     setVoluntarios([]);
     setShowGuardiaDetail({ date, turno, guardias });
@@ -994,6 +1009,7 @@ export default function DashboardPage() {
       if (res.ok) {
         const data = await res.json()
         setCuadrantePublicado(data.publicado)
+        setPublicadoPorSemana(prev => ({ ...prev, [semana]: data.publicado }))
         cargarResumenMes(new Date())
       }
     } catch { /* silenciado */ }
@@ -1094,6 +1110,7 @@ export default function DashboardPage() {
         onEventDrop={handleEventDrop}
         onMesChange={cargarResumenMes}
         esAdmin={esAdmin}
+        publicadoPorSemana={publicadoPorSemana}
       />
 
       {/* Bottom Row */}
