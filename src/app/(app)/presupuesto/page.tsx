@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
-import { useSession } from 'next-auth/react'
+import { usePermisos } from '@/lib/permisos'
 import { useRouter } from 'next/navigation'
 import {
   RefreshCw, Plus, Search, Edit, Trash2, X,
@@ -114,9 +114,8 @@ function pct(part: number, total: number) {
 }
 
 export default function PresupuestoPage() {
-  const { data: session, status } = useSession()
   const router = useRouter()
-  const isAdmin = ['superadmin', 'admin'].includes(session?.user?.rol || '')
+  const { isAdmin } = usePermisos()
 
   const [mainTab, setMainTab] = useState<'resumen'|'presupuesto'|'expedientes'|'proveedores'|'facturas'>('resumen')
   const [ejercicio, setEjercicio] = useState(new Date().getFullYear())
@@ -194,11 +193,8 @@ export default function PresupuestoPage() {
   }
 
   useEffect(() => {
-    if (status === 'authenticated') {
-      if (!isAdmin) { router.push('/dashboard'); return }
-      cargarTodo()
-    }
-  }, [status, ejercicio])
+    cargarTodo()
+  }, [ejercicio])
 
   const expFiltrados = expedientes.filter(e =>
     (!searchExp || e.titulo.toLowerCase().includes(searchExp.toLowerCase()) || e.numero.toLowerCase().includes(searchExp.toLowerCase())) &&
