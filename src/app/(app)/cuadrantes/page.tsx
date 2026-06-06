@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useCallback } from 'react'
-import { useSession } from 'next-auth/react'
+import { usePermisos } from '@/lib/permisos'
 import {
   Calendar, ChevronLeft, ChevronRight, RefreshCw, Save,
   Shield, Car, Minus, Plus, Clock, AlertTriangle, CheckCircle2, Info
@@ -123,8 +123,7 @@ export default function CuadrantesPage() {
   // Slot cuyo horario se está editando actualmente
   const [editandoHorario, setEditandoHorario] = useState<string | null>(null)
   const [guardandoHorario, setGuardandoHorario] = useState<Record<string, boolean>>({})
-  const { data: session } = useSession()
-  const isAdmin = ['superadmin', 'admin'].includes((session?.user as any)?.rol ?? '')
+  const { isAdmin } = usePermisos()
 
   const calcularSugerencias = (
     dispMap: Record<string, UsuarioDisponible[]>,
