@@ -39,28 +39,29 @@ interface NavItem {
   name: string
   href: string
   icon: React.ElementType
-  /** Nivel mínimo requerido para ver este elemento (0 = todos incluido visor) */
+  /** Nivel mínimo para usuarios normales (no visor). Default: 1 */
   minNivel?: number
+  /** El visor puede ver este ítem aunque minNivel > 0. Default: true */
+  visibleVisor?: boolean
   submenu?: Array<{ name: string; href: string }>
 }
 
 const navigation: NavItem[] = [
-  { name: 'Dashboard',          href: '/dashboard',      icon: LayoutDashboard, minNivel: 0 },
-  { name: 'Cuadrantes',         href: '/cuadrantes',     icon: Calendar,        minNivel: 0 },
-  { name: 'Manuales',           href: '/manuales',       icon: BookOpen,        minNivel: 0 },
-  { name: 'Mi Área',            href: '/mi-area',        icon: User,            minNivel: 1 },
-  { name: 'CECOPAL',            href: '/cecopal',        icon: RadioIcon,       minNivel: 1 },
-  { name: 'Incendios',          href: '/incendios',      icon: Flame,           minNivel: 1 },
-  { name: 'Socorrismo',         href: '/socorrismo',     icon: Heart,           minNivel: 1 },
-  { name: 'Logística',          href: '/logistica',      icon: Package,         minNivel: 1 },
-  { name: 'Vehículos',          href: '/vehiculos',      icon: Truck,           minNivel: 1 },
-  { name: 'Transmisiones',      href: '/transmisiones',  icon: Radio,           minNivel: 1 },
-  { name: 'PMA',                href: '/pma',            icon: AlertTriangle,   minNivel: 1 },
-  { name: 'Formación',          href: '/formacion',      icon: GraduationCap,   minNivel: 1 },
-  { name: 'Acción Social',      href: '/accion-social',  icon: Users,           minNivel: 1 },
-  { name: 'Drones',             href: '/drones',         icon: GiDeliveryDrone, minNivel: 1 },
-  { name: 'Prácticas',          href: '/practicas',      icon: FlaskConical,    minNivel: 1 },
-  { name: 'Megacode',           href: '/megacode',       icon: Zap,             minNivel: 1 },
+  { name: 'Dashboard',         href: '/dashboard',      icon: LayoutDashboard, minNivel: 0 },
+  { name: 'Mi Área',           href: '/mi-area',        icon: User,            minNivel: 1 },
+  { name: 'CECOPAL',           href: '/cecopal',        icon: RadioIcon,       minNivel: 1 },
+  { name: 'Incendios',         href: '/incendios',      icon: Flame,           minNivel: 1 },
+  { name: 'Socorrismo',        href: '/socorrismo',     icon: Heart,           minNivel: 1 },
+  { name: 'Logística',         href: '/logistica',      icon: Package,         minNivel: 1 },
+  { name: 'Vehículos',         href: '/vehiculos',      icon: Truck,           minNivel: 1 },
+  { name: 'Transmisiones',     href: '/transmisiones',  icon: Radio,           minNivel: 1 },
+  { name: 'PMA',               href: '/pma',            icon: AlertTriangle,   minNivel: 1 },
+  { name: 'Formación',         href: '/formacion',      icon: GraduationCap,   minNivel: 1 },
+  { name: 'Acción Social',     href: '/accion-social',  icon: Users,           minNivel: 1 },
+  { name: 'Drones',            href: '/drones',         icon: GiDeliveryDrone, minNivel: 1 },
+  { name: 'Prácticas',         href: '/practicas',      icon: FlaskConical,    minNivel: 1 },
+  { name: 'Megacode',          href: '/megacode',       icon: Zap,             minNivel: 1 },
+  { name: 'Manuales',          href: '/manuales',       icon: BookOpen,        minNivel: 1 },
   {
     name: 'Partes',
     href: '/partes',
@@ -79,10 +80,12 @@ const navigation: NavItem[] = [
       { name: 'PRMB - Revisión Botiquín',       href: '/partes/prmb' },
     ]
   },
-  { name: 'Administración',     href: '/administracion', icon: ShieldCheck, minNivel: 4 },
-  { name: 'Estadísticas',       href: '/estadisticas',   icon: BarChart2,   minNivel: 4 },
-  { name: 'Gestión Económica',  href: '/presupuesto',    icon: Wallet,      minNivel: 4 },
-  { name: 'Configuración',      href: '/configuracion',  icon: Settings,    minNivel: 4 },
+  // Solo coordinador+ Y visor (bloqueado para voluntario/responsable/jefe_area)
+  { name: 'Cuadrantes',        href: '/cuadrantes',     icon: Calendar,    minNivel: 4, visibleVisor: true },
+  { name: 'Administración',    href: '/administracion', icon: ShieldCheck, minNivel: 4, visibleVisor: true },
+  { name: 'Estadísticas',      href: '/estadisticas',   icon: BarChart2,   minNivel: 4, visibleVisor: true },
+  { name: 'Gestión Económica', href: '/presupuesto',    icon: Wallet,      minNivel: 4, visibleVisor: true },
+  { name: 'Configuración',     href: '/configuracion',  icon: Settings,    minNivel: 4, visibleVisor: false },
 ]
 
 export default function Sidebar() {
@@ -135,9 +138,12 @@ export default function Sidebar() {
     return name.substring(0, 2).toUpperCase()
   }
 
-  const filteredNavigation = navigation.filter(item =>
-    nivelUsuario >= (item.minNivel ?? 1)
-  )
+  const isVisor = userRol === 'visor'
+
+  const filteredNavigation = navigation.filter(item => {
+    if (isVisor) return item.visibleVisor !== false
+    return nivelUsuario >= (item.minNivel ?? 1)
+  })
 
   return (
     <>

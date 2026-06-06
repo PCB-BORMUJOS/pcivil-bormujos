@@ -16,8 +16,10 @@ function getNivel(rol: string): number {
   return NIVEL[rol] ?? 1
 }
 
-// Rutas que requieren nivel mínimo 4 (coordinador / superadmin)
-const RUTAS_COORD: string[] = [
+// Rutas ocultas para niveles intermedios (1-3: voluntario, responsable, jefe_area)
+// Accesibles para coordinador+ (>=4) Y para visor (0)
+const RUTAS_SOLO_COORD_O_VISOR: string[] = [
+  '/cuadrantes',
   '/administracion',
   '/estadisticas',
   '/presupuesto',
@@ -26,13 +28,6 @@ const RUTAS_COORD: string[] = [
 
 // Rutas que requieren nivel mínimo 5 (solo superadmin)
 const RUTAS_SUPERADMIN: string[] = []
-
-// Rutas accesibles para visor (nivel 0) — solo lectura pública
-const RUTAS_VISOR_PERMITIDAS: string[] = [
-  '/dashboard',
-  '/cuadrantes',
-  '/manuales',
-]
 
 // Todas las rutas protegidas (requieren autenticación mínima)
 const RUTAS_PROTEGIDAS: string[] = [
@@ -84,22 +79,17 @@ export async function middleware(request: NextRequest) {
     const rol = ((token as any).rol as string) ?? 'voluntario'
     const nivel = getNivel(rol)
 
-    // Visor: solo puede acceder a rutas explícitamente permitidas
-    if (nivel === 0) {
-      const permitida = RUTAS_VISOR_PERMITIDAS.some(r => pathname.startsWith(r))
-      if (!permitida) {
-        return NextResponse.redirect(new URL('/dashboard', request.url))
-      }
-    }
-
     // Rutas solo superadmin
     if (RUTAS_SUPERADMIN.some(r => pathname.startsWith(r)) && nivel < 5) {
       return NextResponse.redirect(new URL('/dashboard', request.url))
     }
 
-    // Rutas de coordinador+
-    if (RUTAS_COORD.some(r => pathname.startsWith(r)) && nivel < 4) {
-      return NextResponse.redirect(new URL('/dashboard', request.url))
+    // Rutas bloqueadas para niveles intermedios (voluntario/responsable/jefe_area)
+    // visor (0) y coordinador+ (>=4) sí pueden acceder
+    if (RUTAS_SOLO_COORD_O_VISOR.some(r => pathname.startsWith(r))) {
+      if (nivel >= 1 && nivel < 4) {
+        return NextResponse.redirect(new URL('/dashboard', request.url))
+      }
     }
   }
 
