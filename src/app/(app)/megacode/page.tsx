@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { useSession } from 'next-auth/react'
+import { usePermisos } from '@/lib/permisos'
 import {
   Zap, RefreshCw, Users, Clock, ChevronDown, Plus,
   CheckCircle2, Circle, X, BookOpen, AlertTriangle,
@@ -62,7 +62,6 @@ const inp = "w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:o
 const lbl = "block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2"
 
 export default function MegacodePage() {
-  const { data: session } = useSession()
   const [megacodes, setMegacodes] = useState<Megacode[]>([])
   const [voluntarios, setVoluntarios] = useState<Voluntario[]>([])
   const [practicasDisponibles, setPracticasDisponibles] = useState<PracticaDisponible[]>([])
@@ -178,7 +177,7 @@ export default function MegacodePage() {
     })
   }
 
-  const isAdmin = ['superadmin', 'admin', 'coordinador'].includes(((session?.user as any)?.rol || '').toLowerCase())
+  const { isAdmin } = usePermisos()
   const megacodesFiltrados = filtroTipo === 'all' ? megacodes : megacodes.filter(m => m.tipo === filtroTipo)
 
   return (
