@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
     return new Response(JSON.stringify({ error: 'No autorizado' }), { status: 401 })
   }
   const rol = (session.user as any)?.rol?.toLowerCase() || ''
-  if (!['superadministrador', 'superadmin', 'admin', 'coordinador'].includes(rol)) {
+  if (!['superadmin', 'admin', 'coordinador'].includes(rol)) {
     return new Response(JSON.stringify({ error: 'Sin permisos suficientes' }), { status: 403 })
   }
 
@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
     return new Response(JSON.stringify({ error: 'No autorizado' }), { status: 401 })
   }
   const rol = (session.user as any)?.rol?.toLowerCase() || ''
-  if (!['superadministrador', 'superadmin', 'admin', 'coordinador'].includes(rol)) {
+  if (!['superadmin', 'admin', 'coordinador'].includes(rol)) {
     return new Response(JSON.stringify({ error: 'Sin permisos suficientes' }), { status: 403 })
   }
 
@@ -80,7 +80,7 @@ export async function PUT(request: NextRequest) {
     return new Response(JSON.stringify({ error: 'No autorizado' }), { status: 401 })
   }
   const rol = (session.user as any)?.rol?.toLowerCase() || ''
-  if (!['superadministrador', 'superadmin', 'admin', 'coordinador'].includes(rol)) {
+  if (!['superadmin', 'admin', 'coordinador'].includes(rol)) {
     return new Response(JSON.stringify({ error: 'Sin permisos suficientes' }), { status: 403 })
   }
 
@@ -123,7 +123,7 @@ export async function DELETE(request: NextRequest) {
     return new Response(JSON.stringify({ error: 'No autorizado' }), { status: 401 })
   }
   const rol = (session.user as any)?.rol?.toLowerCase() || ''
-  if (!['superadministrador', 'superadmin', 'admin', 'coordinador'].includes(rol)) {
+  if (!['superadmin', 'admin', 'coordinador'].includes(rol)) {
     return new Response(JSON.stringify({ error: 'Sin permisos suficientes' }), { status: 403 })
   }
 

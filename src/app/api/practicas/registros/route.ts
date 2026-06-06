@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
       const jefes = await prisma.usuario.findMany({
         where: {
           activo: true,
-          rol: { nombre: { in: ['superadmin', 'superadministrador', 'admin', 'coordinador'] } }
+          rol: { nombre: { in: ['superadmin', 'admin', 'coordinador'] } }
         },
         select: { id: true }
       })

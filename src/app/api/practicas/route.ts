@@ -45,6 +45,9 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  const _rol4 = (session.user as any)?.rol ?? 'voluntario'
+  const _niv4 = ({ superadmin: 5, coordinador: 4, admin: 4, jefe_area: 3, responsable_turno: 2, voluntario: 1, visor: 0 } as Record<string,number>)[_rol4] ?? 1
+  if (_niv4 < 4) return NextResponse.json({ error: 'Sin permisos suficientes' }, { status: 403 })
   try {
     const body = await request.json()
 
@@ -97,6 +100,9 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  const _rol4 = (session.user as any)?.rol ?? 'voluntario'
+  const _niv4 = ({ superadmin: 5, coordinador: 4, admin: 4, jefe_area: 3, responsable_turno: 2, voluntario: 1, visor: 0 } as Record<string,number>)[_rol4] ?? 1
+  if (_niv4 < 4) return NextResponse.json({ error: 'Sin permisos suficientes' }, { status: 403 })
   try {
     const body = await request.json()
 
@@ -152,6 +158,9 @@ export async function PUT(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  const _rol4 = (session.user as any)?.rol ?? 'voluntario'
+  const _niv4 = ({ superadmin: 5, coordinador: 4, admin: 4, jefe_area: 3, responsable_turno: 2, voluntario: 1, visor: 0 } as Record<string,number>)[_rol4] ?? 1
+  if (_niv4 < 4) return NextResponse.json({ error: 'Sin permisos suficientes' }, { status: 403 })
   const { searchParams } = new URL(request.url)
   const id = searchParams.get('id')
   const tipo = searchParams.get('tipo')

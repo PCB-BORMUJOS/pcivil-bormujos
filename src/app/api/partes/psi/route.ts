@@ -260,15 +260,11 @@ export async function DELETE(request: NextRequest) {
             return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
         }
 
-        // Verificar rol superadministrador
-        const usuario = await prisma.usuario.findUnique({
-            where: { email: session.user.email },
-            include: { rol: true }
-        })
-
-        if (usuario?.rol?.nombre !== 'superadministrador') {
+        const rol = (session.user as any).rol ?? ''
+        const nivelRol: Record<string, number> = { superadmin: 5, coordinador: 4, admin: 4, jefe_area: 3, responsable_turno: 2, voluntario: 1, visor: 0 }
+        if ((nivelRol[rol] ?? 1) < 5) {
             return NextResponse.json(
-                { error: 'Solo superadministradores pueden eliminar partes' },
+                { error: 'Solo el Jefe del Servicio puede eliminar partes' },
                 { status: 403 }
             )
         }

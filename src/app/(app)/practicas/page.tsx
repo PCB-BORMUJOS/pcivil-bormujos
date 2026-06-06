@@ -642,7 +642,7 @@ export default function PracticasPage() {
     return acc
   }, {} as Record<string, Practica[]>)
 
-  const isAdmin = ['superadministrador', 'superadmin', 'admin', 'coordinador'].includes(
+  const isAdmin = ['superadmin', 'admin', 'coordinador'].includes(
     ((session?.user as any)?.rol || '').toLowerCase()
   )
 

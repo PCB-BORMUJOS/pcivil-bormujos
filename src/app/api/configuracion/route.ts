@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   const rol = (session.user as any)?.rol?.toLowerCase() || ''
-  if (!['superadministrador', 'superadmin', 'admin'].includes(rol)) {
+  if (!['superadmin', 'admin'].includes(rol)) {
     return NextResponse.json({ error: 'Sin permisos' }, { status: 403 })
   }
   try {

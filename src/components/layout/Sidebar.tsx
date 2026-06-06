@@ -33,71 +33,72 @@ import {
   BarChart2,
   Wallet,
 } from 'lucide-react'
+import { getNivel, ROLES_LABEL } from '@/lib/permisos'
 
 interface NavItem {
   name: string
   href: string
   icon: React.ElementType
-  adminOnly?: boolean
+  /** Nivel mínimo requerido para ver este elemento (0 = todos incluido visor) */
+  minNivel?: number
   submenu?: Array<{ name: string; href: string }>
 }
 
 const navigation: NavItem[] = [
-  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'CECOPAL', href: '/cecopal', icon: RadioIcon },
-  { name: 'Cuadrantes', href: '/cuadrantes', icon: Calendar, adminOnly: true },
-  { name: 'Administración', href: '/administracion', icon: ShieldCheck, adminOnly: true },
-  { name: 'Mi Área', href: '/mi-area', icon: User },
-  { name: 'Logística', href: '/logistica', icon: Package },
-  { name: 'Incendios', href: '/incendios', icon: Flame },
-  { name: 'Socorrismo', href: '/socorrismo', icon: Heart },
-  { name: 'Vehículos', href: '/vehiculos', icon: Truck },
-  { name: 'Transmisiones', href: '/transmisiones', icon: Radio },
-  { name: 'PMA', href: '/pma', icon: AlertTriangle },
-  { name: 'Formación', href: '/formacion', icon: GraduationCap },
-  { name: 'Acción Social', href: '/accion-social', icon: Users },
-  { name: "Drones", href: "/drones", icon: GiDeliveryDrone },
-  { name: 'Gestión Económica', href: '/presupuesto', icon: Wallet, adminOnly: true },
-  { name: 'Configuración', href: '/configuracion', icon: Settings, adminOnly: true },
+  { name: 'Dashboard',          href: '/dashboard',      icon: LayoutDashboard, minNivel: 0 },
+  { name: 'Cuadrantes',         href: '/cuadrantes',     icon: Calendar,        minNivel: 0 },
+  { name: 'Manuales',           href: '/manuales',       icon: BookOpen,        minNivel: 0 },
+  { name: 'Mi Área',            href: '/mi-area',        icon: User,            minNivel: 1 },
+  { name: 'CECOPAL',            href: '/cecopal',        icon: RadioIcon,       minNivel: 1 },
+  { name: 'Incendios',          href: '/incendios',      icon: Flame,           minNivel: 1 },
+  { name: 'Socorrismo',         href: '/socorrismo',     icon: Heart,           minNivel: 1 },
+  { name: 'Logística',          href: '/logistica',      icon: Package,         minNivel: 1 },
+  { name: 'Vehículos',          href: '/vehiculos',      icon: Truck,           minNivel: 1 },
+  { name: 'Transmisiones',      href: '/transmisiones',  icon: Radio,           minNivel: 1 },
+  { name: 'PMA',                href: '/pma',            icon: AlertTriangle,   minNivel: 1 },
+  { name: 'Formación',          href: '/formacion',      icon: GraduationCap,   minNivel: 1 },
+  { name: 'Acción Social',      href: '/accion-social',  icon: Users,           minNivel: 1 },
+  { name: 'Drones',             href: '/drones',         icon: GiDeliveryDrone, minNivel: 1 },
+  { name: 'Prácticas',          href: '/practicas',      icon: FlaskConical,    minNivel: 1 },
+  { name: 'Megacode',           href: '/megacode',       icon: Zap,             minNivel: 1 },
   {
     name: 'Partes',
     href: '/partes',
     icon: FileText,
+    minNivel: 1,
     submenu: [
       { name: 'PSI - Servicio e Intervención', href: '/partes' },
-      { name: 'PRV FSV - Revisión FSV', href: '/partes/prv-fsv' },
-      { name: 'PRV VIR - Revisión VIR', href: '/partes/prv-vir' },
-      { name: 'POT - Orden de Trabajo', href: '/partes/pot' },
-      { name: 'PRD - Revisión DEA', href: '/partes/prd' },
-      { name: 'PAS SVB - Asistencia SVB', href: '/partes/pas-svb' },
-      { name: 'PRH - Revisión Hidrantes', href: '/partes/prh' },
-      { name: 'RPAS - Libro de Vuelo', href: '/partes/rpas' },
-      { name: 'PCR - Carga Remolque', href: '/partes/pcr' },
-      { name: 'PRMB - Revisión Botiquín', href: '/partes/prmb' },
+      { name: 'PRV FSV - Revisión FSV',        href: '/partes/prv-fsv' },
+      { name: 'PRV VIR - Revisión VIR',        href: '/partes/prv-vir' },
+      { name: 'POT - Orden de Trabajo',         href: '/partes/pot' },
+      { name: 'PRD - Revisión DEA',             href: '/partes/prd' },
+      { name: 'PAS SVB - Asistencia SVB',       href: '/partes/pas-svb' },
+      { name: 'PRH - Revisión Hidrantes',       href: '/partes/prh' },
+      { name: 'RPAS - Libro de Vuelo',          href: '/partes/rpas' },
+      { name: 'PCR - Carga Remolque',           href: '/partes/pcr' },
+      { name: 'PRMB - Revisión Botiquín',       href: '/partes/prmb' },
     ]
   },
-  { name: 'Manuales', href: '/manuales', icon: BookOpen },
-  { name: 'Prácticas', href: '/practicas', icon: FlaskConical },
-  { name: 'Megacode', href: '/megacode', icon: Zap },
-  { name: 'Estadísticas', href: '/estadisticas', icon: BarChart2, adminOnly: true },
+  { name: 'Administración',     href: '/administracion', icon: ShieldCheck, minNivel: 4 },
+  { name: 'Estadísticas',       href: '/estadisticas',   icon: BarChart2,   minNivel: 4 },
+  { name: 'Gestión Económica',  href: '/presupuesto',    icon: Wallet,      minNivel: 4 },
+  { name: 'Configuración',      href: '/configuracion',  icon: Settings,    minNivel: 4 },
 ]
 
 export default function Sidebar() {
   const pathname = usePathname()
   const { data: session, status } = useSession()
-  const userRole = session?.user?.rol || ''
-  const isAdmin = ['superadmin', 'admin'].includes(userRole)
+  const userRol = (session?.user as any)?.rol ?? 'voluntario'
+  const nivelUsuario = getNivel(userRol)
 
   const [collapsed, setCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [openSubmenu, setOpenSubmenu] = useState<string | null>(null)
 
-  // Cerrar sidebar móvil al cambiar de ruta
   useEffect(() => {
     setMobileOpen(false)
   }, [pathname])
 
-  // Cerrar sidebar móvil con Escape
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setMobileOpen(false)
@@ -106,7 +107,6 @@ export default function Sidebar() {
     return () => document.removeEventListener('keydown', handleEscape)
   }, [])
 
-  // Prevenir scroll del body cuando el sidebar móvil está abierto
   useEffect(() => {
     if (mobileOpen) {
       document.body.style.overflow = 'hidden'
@@ -118,7 +118,6 @@ export default function Sidebar() {
     }
   }, [mobileOpen])
 
-  // Abrir submenú si estamos en una de sus rutas
   useEffect(() => {
     const item = navigation.find(nav =>
       nav.submenu?.some(sub => pathname.startsWith(sub.href))
@@ -136,24 +135,9 @@ export default function Sidebar() {
     return name.substring(0, 2).toUpperCase()
   }
 
-  const getRolLabel = (rol: string) => {
-    const roles: Record<string, string> = {
-      superadmin: 'SUPERADMINISTRADOR',
-      admin: 'ADMINISTRADOR',
-      coordinador: 'COORDINADOR',
-      voluntario: 'VOLUNTARIO',
-    }
-    return roles[rol] || rol.toUpperCase()
-  }
-
-  const handleLogout = () => {
-    signOut({ callbackUrl: '/login' })
-  }
-
-  const filteredNavigation = navigation.filter(item => {
-    if (item.adminOnly && !isAdmin) return false
-    return true
-  })
+  const filteredNavigation = navigation.filter(item =>
+    nivelUsuario >= (item.minNivel ?? 1)
+  )
 
   return (
     <>
@@ -295,11 +279,13 @@ export default function Sidebar() {
                 </div>
                 <div className="sidebar-user-info flex-1 min-w-0">
                   <p className="text-sm font-medium text-white truncate">{session.user.name}</p>
-                  <p className="text-xs text-pc-primary-500 truncate">{getRolLabel(session.user.rol)}</p>
+                  <p className="text-xs text-pc-primary-500 truncate">
+                    {ROLES_LABEL[userRol] ?? userRol.toUpperCase()}
+                  </p>
                 </div>
               </div>
               <button
-                onClick={handleLogout}
+                onClick={() => signOut({ callbackUrl: '/login' })}
                 className={cn(
                   "flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-400 hover:text-white hover:bg-pc-dark-800 rounded-lg transition-colors",
                   collapsed && "justify-center px-0"

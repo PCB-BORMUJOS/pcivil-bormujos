@@ -6,7 +6,7 @@ import { prisma } from '@/lib/db'
 
 function puedeVerViogen(session: any): boolean {
   const rol = session?.user?.rol?.toLowerCase() ?? ''
-  if (['superadministrador','superadmin','admin'].includes(rol)) return true
+  if (['superadmin','admin'].includes(rol)) return true
   const permisosExtra: string[] = session?.user?.permisosExtra ?? []
   const permisos: string[] = session?.user?.permisos ?? []
   return [...permisosExtra, ...permisos].includes('viogen.ver')

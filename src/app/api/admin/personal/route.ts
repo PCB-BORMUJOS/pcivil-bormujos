@@ -12,8 +12,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
     const rol = (session.user as any).rol as string ?? 'voluntario'
-    const nivelRol = ({ superadmin: 4, admin: 3, coordinador: 2, voluntario: 1 } as Record<string,number>)[rol] ?? 1
-    if (nivelRol < 2) {
+    const nivelRol = ({ superadmin: 5, coordinador: 4, admin: 4, jefe_area: 3, responsable_turno: 2, voluntario: 1, visor: 0 } as Record<string,number>)[rol] ?? 1
+    if (nivelRol < 4) {
       return NextResponse.json({ error: 'Sin permisos suficientes' }, { status: 403 })
     }
 

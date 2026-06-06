@@ -143,7 +143,7 @@ export async function DELETE(
         }
 
         const rolNombre = (session.user as any).rol as string || ''
-        if (!['superadmin', 'superadministrador', 'admin'].includes(rolNombre)) {
+        if (!['superadmin', 'admin'].includes(rolNombre)) {
             return NextResponse.json({ error: 'Sin permisos para eliminar partes' }, { status: 403 })
         }
 

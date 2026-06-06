@@ -2,65 +2,103 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { getToken } from 'next-auth/jwt'
 
-const ADMIN_ONLY_ROUTES = [
+const NIVEL: Record<string, number> = {
+  superadmin:        5,
+  coordinador:       4,
+  admin:             4,
+  jefe_area:         3,
+  responsable_turno: 2,
+  voluntario:        1,
+  visor:             0,
+}
+
+function getNivel(rol: string): number {
+  return NIVEL[rol] ?? 1
+}
+
+// Rutas que requieren nivel mínimo 4 (coordinador / superadmin)
+const RUTAS_COORD: string[] = [
   '/administracion',
   '/estadisticas',
   '/presupuesto',
   '/configuracion',
+]
+
+// Rutas que requieren nivel mínimo 5 (solo superadmin)
+const RUTAS_SUPERADMIN: string[] = []
+
+// Rutas accesibles para visor (nivel 0) — solo lectura pública
+const RUTAS_VISOR_PERMITIDAS: string[] = [
+  '/dashboard',
   '/cuadrantes',
+  '/manuales',
+]
+
+// Todas las rutas protegidas (requieren autenticación mínima)
+const RUTAS_PROTEGIDAS: string[] = [
+  '/dashboard',
+  '/cuadrantes',
+  '/mi-area',
+  '/logistica',
+  '/inventario',
+  '/vehiculos',
+  '/transmisiones',
+  '/pma',
+  '/configuracion',
+  '/incendios',
+  '/socorrismo',
+  '/administracion',
+  '/partes',
+  '/manuales',
+  '/formacion',
+  '/accion-social',
+  '/buscar',
+  '/estadisticas',
+  '/presupuesto',
+  '/drones',
+  '/practicas',
+  '/cecopal',
+  '/megacode',
 ]
 
 export async function middleware(request: NextRequest) {
-  const token = await getToken({
-    req: request,
-    secret: process.env.NEXTAUTH_SECRET
-  })
-
+  const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET })
   const pathname = request.nextUrl.pathname
   const isAuthPage = pathname === '/login'
 
-  const isProtectedRoute = [
-    '/dashboard',
-    '/cuadrantes',
-    '/mi-area',
-    '/logistica',
-    '/inventario',
-    '/vehiculos',
-    '/transmisiones',
-    '/pma',
-    '/configuracion',
-    '/incendios',
-    '/socorrismo',
-    '/administracion',
-    '/partes',
-    '/manuales',
-    '/formacion',
-    '/accion-social',
-    '/buscar',
-    '/estadisticas',
-    '/presupuesto',
-    '/drones',
-    '/practicas',
-    '/cecopal',
-    '/megacode',
-  ].some(route => pathname.startsWith(route))
+  const esRutaProtegida = RUTAS_PROTEGIDAS.some(r => pathname.startsWith(r))
 
-  if (!token && isProtectedRoute) {
+  // Sin token → redirigir a login
+  if (!token && esRutaProtegida) {
     const loginUrl = new URL('/login', request.url)
     loginUrl.searchParams.set('callbackUrl', pathname)
     return NextResponse.redirect(loginUrl)
   }
 
+  // Con token en página de login → redirigir a dashboard
   if (token && isAuthPage) {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
-  if (token && isProtectedRoute) {
-    const userRole = (token as any).rol as string ?? 'voluntario'
-    const isAdmin = ['superadmin', 'admin'].includes(userRole)
-    const isAdminRoute = ADMIN_ONLY_ROUTES.some(route => pathname.startsWith(route))
+  if (token && esRutaProtegida) {
+    const rol = ((token as any).rol as string) ?? 'voluntario'
+    const nivel = getNivel(rol)
 
-    if (isAdminRoute && !isAdmin) {
+    // Visor: solo puede acceder a rutas explícitamente permitidas
+    if (nivel === 0) {
+      const permitida = RUTAS_VISOR_PERMITIDAS.some(r => pathname.startsWith(r))
+      if (!permitida) {
+        return NextResponse.redirect(new URL('/dashboard', request.url))
+      }
+    }
+
+    // Rutas solo superadmin
+    if (RUTAS_SUPERADMIN.some(r => pathname.startsWith(r)) && nivel < 5) {
+      return NextResponse.redirect(new URL('/dashboard', request.url))
+    }
+
+    // Rutas de coordinador+
+    if (RUTAS_COORD.some(r => pathname.startsWith(r)) && nivel < 4) {
       return NextResponse.redirect(new URL('/dashboard', request.url))
     }
   }

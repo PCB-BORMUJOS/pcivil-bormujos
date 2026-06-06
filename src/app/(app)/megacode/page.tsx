@@ -178,7 +178,7 @@ export default function MegacodePage() {
     })
   }
 
-  const isAdmin = ['superadministrador', 'superadmin', 'admin', 'coordinador'].includes(((session?.user as any)?.rol || '').toLowerCase())
+  const isAdmin = ['superadmin', 'admin', 'coordinador'].includes(((session?.user as any)?.rol || '').toLowerCase())
   const megacodesFiltrados = filtroTipo === 'all' ? megacodes : megacodes.filter(m => m.tipo === filtroTipo)
 
   return (

@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
     const session = await getServerSession(authOptions)
     if (!session?.user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     const rol = (session.user as any).rol as string ?? 'voluntario'
-    if (!['superadmin', 'admin'].includes(rol)) {
+    if (!['superadmin', 'coordinador', 'admin'].includes(rol)) {
       return NextResponse.json({ error: 'Sin permisos suficientes' }, { status: 403 })
     }
 
