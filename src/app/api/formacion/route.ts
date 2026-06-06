@@ -4,18 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { registrarAudit, getUsuarioAudit } from '@/lib/audit'
 
-// Verifica que el usuario autenticado tiene rol de admin/coordinador
-async function getAdminUser(session: any) {
-    if (!session?.user?.email) return null
-    const u = await (prisma as any).usuario.findUnique({
-        where: { email: session.user.email },
-        include: { rol: true }
-    })
-    if (!u) return null
-    const rolNombre = u.rol?.nombre?.toLowerCase() ?? ''
-    if (!['superadmin', 'admin', 'coordinador'].includes(rolNombre)) return null
-    return u
-}
+
 
 // Genera número de certificado secuencial único: CERT-YYYY-NNNNN
 async function generarNumeroCertificado(): Promise<string> {
@@ -283,6 +272,9 @@ export async function POST(request: NextRequest) {
         if (!session?.user?.email) {
             return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
         }
+        const _rolF = (session?.user as any)?.rol ?? 'voluntario'
+        const _nivF = ({ superadmin: 5, coordinador: 4, admin: 4, jefe_area: 3, responsable_turno: 2, voluntario: 1, visor: 0 } as Record<string,number>)[_rolF] ?? 1
+        if (_nivF < 4) return NextResponse.json({ error: 'Sin permisos suficientes' }, { status: 403 })
 
         const body = await request.json()
         const { tipo, ...data } = body
@@ -313,8 +305,6 @@ export async function POST(request: NextRequest) {
                 return NextResponse.json({ success: true, curso })
 
             case 'convocatoria': {
-                const adminConv = await getAdminUser(session)
-                if (!adminConv) return NextResponse.json({ error: 'Sin permisos para crear convocatorias' }, { status: 403 })
 
                 const fechaInicioConv = new Date(data.fechaInicio)
                 const fechaFinConv = new Date(data.fechaFin)
@@ -384,8 +374,6 @@ export async function POST(request: NextRequest) {
                 const { action, id: inscripcionId } = data
 
                 if (action === 'aprobar') {
-                    const adminApr = await getAdminUser(session)
-                    if (!adminApr) return NextResponse.json({ error: 'Sin permisos para aprobar inscripciones' }, { status: 403 })
 
                     let inscripcionAprobada: any
                     try {
@@ -502,8 +490,6 @@ export async function POST(request: NextRequest) {
                 return NextResponse.json({ success: true, necesidad })
 
             case 'cerrar-acta':
-                const adminActa = await getAdminUser(session)
-                if (!adminActa) return NextResponse.json({ error: 'Sin permisos para cerrar actas' }, { status: 403 })
 
                 const { convocatoriaId } = data
                 if (!convocatoriaId) return NextResponse.json({ error: 'Convocatoria ID requerido' }, { status: 400 })
@@ -577,8 +563,6 @@ export async function POST(request: NextRequest) {
                 return NextResponse.json({ success: true, certificadosGenerados, certificadosSaltados })
 
             case 'jornada': {
-                const adminJ = await getAdminUser(session)
-                if (!adminJ) return NextResponse.json({ error: 'Sin permisos para crear jornadas' }, { status: 403 })
                 const { convocatoriaId: convIdJ, fecha, numeroJornada, titulo, horaInicio, horaFin } = body
                 if (!convIdJ || !fecha || !numeroJornada) {
                     return NextResponse.json({ error: 'convocatoriaId, fecha y numeroJornada requeridos' }, { status: 400 })
@@ -617,8 +601,6 @@ export async function POST(request: NextRequest) {
                 return NextResponse.json({ jornada, registrosCreados: inscripciones.length + externosJ.length })
             }
             case 'participante-externo': {
-                const adminExt = await getAdminUser(session)
-                if (!adminExt) return NextResponse.json({ error: 'Sin permisos' }, { status: 403 })
                 const { convocatoriaId: convIdE, nombre, apellidos, dni, email, telefono, organizacion, cargo } = body
                 if (!convIdE || !nombre || !apellidos) {
                     return NextResponse.json({ error: 'convocatoriaId, nombre y apellidos requeridos' }, { status: 400 })
@@ -653,6 +635,9 @@ export async function PUT(request: NextRequest) {
         if (!session?.user?.email) {
             return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
         }
+        const _rolF = (session?.user as any)?.rol ?? 'voluntario'
+        const _nivF = ({ superadmin: 5, coordinador: 4, admin: 4, jefe_area: 3, responsable_turno: 2, voluntario: 1, visor: 0 } as Record<string,number>)[_rolF] ?? 1
+        if (_nivF < 4) return NextResponse.json({ error: 'Sin permisos suficientes' }, { status: 403 })
 
         const body = await request.json()
         const { tipo, id, ...data } = body
@@ -701,8 +686,6 @@ export async function PUT(request: NextRequest) {
                 const { action } = data
 
                 if (action === 'aprobar') {
-                    const adminAprPut = await getAdminUser(session)
-                    if (!adminAprPut) return NextResponse.json({ error: 'Sin permisos para aprobar inscripciones' }, { status: 403 })
 
                     let inscripcionAprobada: any
                     try {
@@ -731,8 +714,6 @@ export async function PUT(request: NextRequest) {
                 }
 
                 if (action === 'rechazar') {
-                    const adminRech = await getAdminUser(session)
-                    if (!adminRech) return NextResponse.json({ error: 'Sin permisos para rechazar inscripciones' }, { status: 403 })
                     const orginsc2 = await (prisma as any).inscripcion.findUnique({ where: { id }, include: { convocatoria: true } })
                     if (!orginsc2) return NextResponse.json({ error: 'Inscripción no encontrada' }, { status: 404 })
                     const inscripcionRechazada = await (prisma as any).inscripcion.update({ where: { id }, data: { estado: 'rechazada' } })
@@ -794,6 +775,9 @@ export async function DELETE(request: NextRequest) {
         if (!session?.user?.email) {
             return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
         }
+        const _rolF = (session?.user as any)?.rol ?? 'voluntario'
+        const _nivF = ({ superadmin: 5, coordinador: 4, admin: 4, jefe_area: 3, responsable_turno: 2, voluntario: 1, visor: 0 } as Record<string,number>)[_rolF] ?? 1
+        if (_nivF < 4) return NextResponse.json({ error: 'Sin permisos suficientes' }, { status: 403 })
 
         const { searchParams } = new URL(request.url)
         const tipo = searchParams.get('tipo')
@@ -805,8 +789,6 @@ export async function DELETE(request: NextRequest) {
 
         switch (tipo) {
             case 'curso': {
-                const adminDelC = await getAdminUser(session)
-                if (!adminDelC) return NextResponse.json({ error: 'Sin permisos para eliminar cursos' }, { status: 403 })
                 const cursoDel = await (prisma as any).curso.findUnique({ where: { id } })
                 if (!cursoDel) return NextResponse.json({ error: 'Curso no encontrado' }, { status: 404 })
                 await (prisma as any).curso.delete({ where: { id } })
@@ -824,8 +806,6 @@ export async function DELETE(request: NextRequest) {
             }
 
             case 'convocatoria': {
-                const adminDelConv = await getAdminUser(session)
-                if (!adminDelConv) return NextResponse.json({ error: 'Sin permisos para eliminar convocatorias' }, { status: 403 })
                 const convDel = await (prisma as any).convocatoria.findUnique({ where: { id } })
                 if (!convDel) return NextResponse.json({ error: 'Convocatoria no encontrada' }, { status: 404 })
                 await (prisma as any).convocatoria.delete({ where: { id } })
@@ -863,8 +843,6 @@ export async function DELETE(request: NextRequest) {
             }
 
             case 'certificacion': {
-                const adminDelCert = await getAdminUser(session)
-                if (!adminDelCert) return NextResponse.json({ error: 'Sin permisos' }, { status: 403 })
                 await (prisma as any).certificacion.delete({ where: { id } })
                 return NextResponse.json({ success: true })
             }

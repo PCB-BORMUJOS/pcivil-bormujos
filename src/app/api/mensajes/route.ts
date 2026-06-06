@@ -7,10 +7,11 @@ export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.email) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    const rolJwt = (session.user as any)?.rol ?? 'voluntario'
 
     const usuario = await prisma.usuario.findUnique({
       where: { email: session.user.email },
-      include: { rol: true, fichaVoluntario: { select: { areaAsignada: true, areaSecundaria: true } } }
+      select: { id: true, fichaVoluntario: { select: { areaAsignada: true, areaSecundaria: true } } }
     })
     if (!usuario) return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
 
@@ -43,7 +44,7 @@ export async function GET(request: NextRequest) {
 
     const condicionesGrupo: any[] = [
       { destinatarioGrupo: 'todos' },
-      { destinatarioGrupo: 'rol:' + usuario.rol.nombre },
+      { destinatarioGrupo: 'rol:' + rolJwt },
     ]
     if (areaUsuario) condicionesGrupo.push({ destinatarioGrupo: 'area:' + areaUsuario })
     if (areaSecundaria) condicionesGrupo.push({ destinatarioGrupo: 'area:' + areaSecundaria })
@@ -163,10 +164,11 @@ export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.email) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    const rolJwt = (session.user as any)?.rol ?? 'voluntario'
 
     const usuario = await prisma.usuario.findUnique({
       where: { email: session.user.email },
-      include: { rol: true }
+      select: { id: true, nombre: true, apellidos: true }
     })
     if (!usuario) return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
 
@@ -176,9 +178,8 @@ export async function POST(request: NextRequest) {
     if (!asunto || !contenido) return NextResponse.json({ error: 'Asunto y contenido requeridos' }, { status: 400 })
     if (!destinatarioId && !destinatarioGrupo) return NextResponse.json({ error: 'Especifica destinatario' }, { status: 400 })
 
-    const esAdmin = ['superadmin', 'admin'].includes(usuario.rol.nombre)
-    const esCoordinador = usuario.rol.nombre === 'coordinador'
-    if (destinatarioGrupo && !esAdmin && !esCoordinador) {
+    const _nivMsg = ({ superadmin: 5, coordinador: 4, admin: 4, jefe_area: 3, responsable_turno: 2, voluntario: 1, visor: 0 } as Record<string,number>)[rolJwt] ?? 1
+    if (destinatarioGrupo && _nivMsg < 4) {
       return NextResponse.json({ error: 'Sin permisos para enviar a grupos' }, { status: 403 })
     }
 
@@ -259,6 +260,7 @@ export async function PUT(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.email) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    const rolJwt = (session.user as any)?.rol ?? 'voluntario'
 
     const usuario = await prisma.usuario.findUnique({ where: { email: session.user.email } })
     if (!usuario) return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
@@ -271,12 +273,11 @@ export async function PUT(request: NextRequest) {
         where: { destinatarioId: usuario.id, leido: false },
         data: { leido: true }
       })
-      const usuarioConRol = await prisma.usuario.findUnique({ where: { id: usuario.id }, include: { rol: true } })
       const grupales = await prisma.mensaje.findMany({
         where: {
           OR: [
             { destinatarioGrupo: 'todos' },
-            { destinatarioGrupo: 'rol:' + usuarioConRol?.rol.nombre }
+            { destinatarioGrupo: 'rol:' + rolJwt }
           ]
         },
         select: { id: true }
@@ -348,7 +349,7 @@ export async function PUT(request: NextRequest) {
         where: {
           OR: [
             { destinatarioGrupo: 'todos' },
-            { destinatarioGrupo: 'rol:' + (await prisma.usuario.findUnique({ where: { id: usuario.id }, include: { rol: true } }))?.rol.nombre }
+            { destinatarioGrupo: 'rol:' + rolJwt }
           ]
         },
         select: { id: true }
