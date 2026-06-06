@@ -8,6 +8,9 @@ export async function GET() {
   if (!session) {
     return new Response(JSON.stringify({ error: 'No autorizado' }), { status: 401 })
   }
+  const _rol = (session?.user as any)?.rol ?? 'voluntario'
+  const _niv = ({ superadmin: 5, coordinador: 4, admin: 4, jefe_area: 3, responsable_turno: 2, voluntario: 1, visor: 0 } as Record<string,number>)[_rol] ?? 1
+  if (_niv < 4) return NextResponse.json({ error: 'Sin permisos' }, { status: 403 })
 
   try {
     const voluntarios = await prisma.usuario.findMany({

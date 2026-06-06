@@ -6,6 +6,9 @@ import { prisma } from "@/lib/db"
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session?.user?.email) return NextResponse.json({ error: "No autorizado" }, { status: 401 })
+  const _rol = (session?.user as any)?.rol ?? 'voluntario'
+  const _niv = ({ superadmin: 5, coordinador: 4, admin: 4, jefe_area: 3, responsable_turno: 2, voluntario: 1, visor: 0 } as Record<string,number>)[_rol] ?? 1
+  if (_niv < 1) return NextResponse.json({ error: 'Sin permisos' }, { status: 403 })
 
   try {
     const { searchParams } = new URL(req.url)
@@ -47,9 +50,12 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session?.user?.email) return NextResponse.json({ error: "No autorizado" }, { status: 401 })
+  const _rol = (session?.user as any)?.rol ?? 'voluntario'
+  const _niv = ({ superadmin: 5, coordinador: 4, admin: 4, jefe_area: 3, responsable_turno: 2, voluntario: 1, visor: 0 } as Record<string,number>)[_rol] ?? 1
+  if (_niv < 4) return NextResponse.json({ error: 'Sin permisos' }, { status: 403 })
 
   try {
-    const body = await req.json()
+        const body = await req.json()
     const { tipo } = body
 
     if (tipo === "categoria") {
@@ -78,9 +84,12 @@ export async function POST(req: NextRequest) {
 export async function PUT(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session?.user?.email) return NextResponse.json({ error: "No autorizado" }, { status: 401 })
+  const _rol = (session?.user as any)?.rol ?? 'voluntario'
+  const _niv = ({ superadmin: 5, coordinador: 4, admin: 4, jefe_area: 3, responsable_turno: 2, voluntario: 1, visor: 0 } as Record<string,number>)[_rol] ?? 1
+  if (_niv < 4) return NextResponse.json({ error: 'Sin permisos' }, { status: 403 })
 
   try {
-    const body = await req.json()
+        const body = await req.json()
     const { tipo, id } = body
 
     if (tipo === "categoria") {
@@ -107,9 +116,12 @@ export async function PUT(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session?.user?.email) return NextResponse.json({ error: "No autorizado" }, { status: 401 })
+  const _rol = (session?.user as any)?.rol ?? 'voluntario'
+  const _niv = ({ superadmin: 5, coordinador: 4, admin: 4, jefe_area: 3, responsable_turno: 2, voluntario: 1, visor: 0 } as Record<string,number>)[_rol] ?? 1
+  if (_niv < 4) return NextResponse.json({ error: 'Sin permisos' }, { status: 403 })
 
   try {
-    const { searchParams } = new URL(req.url)
+        const { searchParams } = new URL(req.url)
     const id = searchParams.get("id")
     const tipo = searchParams.get("tipo") || ""
     if (!id) return NextResponse.json({ error: "ID requerido" }, { status: 400 })

@@ -6,7 +6,7 @@ import { registrarAudit, getUsuarioAudit } from '@/lib/audit'
 import { safeParseFloat, safeParseInt } from '@/lib/utils'
 
 function isAdmin(session: any) {
-  return ['superadmin', 'admin'].includes(session?.user?.rol || '')
+  return ['superadmin', 'coordinador', 'admin'].includes(session?.user?.rol || '')
 }
 
 export async function GET(request: NextRequest) {

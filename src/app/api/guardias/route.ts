@@ -9,6 +9,9 @@ export async function GET(request: NextRequest) {
   if (!session?.user) {
     return new Response(JSON.stringify({ error: 'No autorizado' }), { status: 401 })
   }
+  const _rol = (session?.user as any)?.rol ?? 'voluntario'
+  const _niv = ({ superadmin: 5, coordinador: 4, admin: 4, jefe_area: 3, responsable_turno: 2, voluntario: 1, visor: 0 } as Record<string,number>)[_rol] ?? 1
+  if (_niv < 1) return new Response(JSON.stringify({ error: 'Sin permisos' }), { status: 403 })
   try {
     const { searchParams } = new URL(request.url)
     const mes = searchParams.get('mes')

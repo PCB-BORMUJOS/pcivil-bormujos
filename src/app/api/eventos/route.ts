@@ -8,6 +8,9 @@ export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    const _rol = (session?.user as any)?.rol ?? 'voluntario'
+    const _niv = ({ superadmin: 5, coordinador: 4, admin: 4, jefe_area: 3, responsable_turno: 2, voluntario: 1, visor: 0 } as Record<string,number>)[_rol] ?? 1
+    if (_niv < 1) return NextResponse.json({ error: 'Sin permisos' }, { status: 403 })
     const { searchParams } = new URL(request.url)
     const mes = searchParams.get('mes')
     const incluirPrivados = searchParams.get('privados') === 'true'
@@ -103,6 +106,9 @@ export async function POST(request: NextRequest) {
     if (!session?.user) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
+    const _rol = (session?.user as any)?.rol ?? 'voluntario'
+    const _niv = ({ superadmin: 5, coordinador: 4, admin: 4, jefe_area: 3, responsable_turno: 2, voluntario: 1, visor: 0 } as Record<string,number>)[_rol] ?? 1
+    if (_niv < 1) return NextResponse.json({ error: 'Sin permisos' }, { status: 403 })
 
     const usuario = await prisma.usuario.findUnique({
       where: { email: session.user.email },
