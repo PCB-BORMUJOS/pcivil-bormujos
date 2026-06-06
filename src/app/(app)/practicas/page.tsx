@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
+import { usePermisos } from '@/lib/permisos'
 import {
   Plus, Search, Edit, Trash2, X, ChevronDown,
   BookOpen, Users, Clock, AlertTriangle, Shield,
@@ -642,9 +643,7 @@ export default function PracticasPage() {
     return acc
   }, {} as Record<string, Practica[]>)
 
-  const isAdmin = ['superadmin', 'admin', 'coordinador'].includes(
-    ((session?.user as any)?.rol || '').toLowerCase()
-  )
+  const { isAdmin } = usePermisos()
 
   const FormularioPractica = () => (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000] p-4">
