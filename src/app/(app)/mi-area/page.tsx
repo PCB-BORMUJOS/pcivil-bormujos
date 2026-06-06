@@ -4,6 +4,7 @@ export const dynamic = 'force-dynamic';
 import NotificacionesTab from '@/components/NotificacionesTab'
 import React, { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react'
+import { usePermisos } from '@/lib/permisos'
 import { useSearchParams } from 'next/navigation';
 import {
   User, GraduationCap, Clock, FileText, Bell, Save, Edit, Upload,
@@ -238,8 +239,7 @@ export default function MiAreaPage() {
   });
 
   // Determinar rol del usuario
-  const userRole = session?.user?.rol || 'voluntario';
-  const isAdmin = ['superadmin', 'admin'].includes(userRole);
+  const { isAdmin } = usePermisos()
   const canEdit = isAdmin || permisoEdicion;
 
   // Cargar datos del usuario
