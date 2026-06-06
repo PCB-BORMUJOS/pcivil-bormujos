@@ -649,10 +649,7 @@ export default function DashboardPage() {
     try { localStorage.setItem(CLIMA_CACHE_KEY, JSON.stringify({ ts: Date.now(), data })) } catch { /* quota */ }
   }
 
-  const [clima, setClima] = useState<any>(() => {
-    if (typeof window === 'undefined') return null
-    return getClimaCache()
-  });
+  const [clima, setClima] = useState<any>(null);
   const [loadingVol, setLoadingVol] = useState(true);
   const [eventos, setEventos] = useState<any[]>([]);
   const [guardias, setGuardias] = useState<any[]>([]);
@@ -687,6 +684,10 @@ export default function DashboardPage() {
   };
 
   useEffect(() => {
+    // Restaurar clima desde caché al montar (después de hidratación, sin mismatch SSR)
+    const cached = getClimaCache();
+    if (cached) setClima(cached);
+
     const fetchTimeout = (url: string, ms: number) => {
       return new Promise((resolve, reject) => {
         const timeout = setTimeout(() => reject(new Error(`Timeout: ${url}`)), ms);
