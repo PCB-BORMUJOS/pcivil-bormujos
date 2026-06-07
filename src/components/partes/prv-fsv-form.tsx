@@ -291,59 +291,12 @@ const ESTADO_CONFIG: Record<string, { label: string; cls: string }> = {
 
 function usePdfViewerCss() {
     useEffect(() => {
-        if (document.querySelector('style[data-prv-fsv]')) return
-        import('pdfjs-dist/web/pdf_viewer.css' as any).catch(() => {
-            // Fallback: inject minimal annotation layer styles
-            const style = document.createElement('style')
-            style.setAttribute('data-prv-fsv', '1')
-            style.textContent = `
-                .annotationLayer { position: absolute; top: 0; left: 0; }
-                .annotationLayer section { position: absolute; }
-                .annotationLayer .linkAnnotation > a,
-                .annotationLayer .buttonWidgetAnnotation.pushButton > a {
-                    position: absolute; font-size: 1em;
-                    top: 0; left: 0; width: 100%; height: 100%;
-                }
-                .annotationLayer .textWidgetAnnotation input,
-                .annotationLayer .textWidgetAnnotation textarea,
-                .annotationLayer .choiceWidgetAnnotation select,
-                .annotationLayer .buttonWidgetAnnotation.checkBox input,
-                .annotationLayer .buttonWidgetAnnotation.radioButton input {
-                    background-color: rgba(0,54,255,0.13);
-                    border: 1px solid transparent;
-                    box-sizing: border-box;
-                    font-size: 9px;
-                    height: 100%;
-                    margin: 0;
-                    padding: 0 2px;
-                    width: 100%;
-                    vertical-align: top;
-                }
-                .annotationLayer .textWidgetAnnotation input[disabled],
-                .annotationLayer .textWidgetAnnotation textarea[disabled],
-                .annotationLayer .choiceWidgetAnnotation select[disabled] {
-                    background: none;
-                    border: none;
-                    cursor: not-allowed;
-                }
-                .annotationLayer .textWidgetAnnotation input:focus,
-                .annotationLayer .textWidgetAnnotation textarea:focus,
-                .annotationLayer .choiceWidgetAnnotation select:focus {
-                    background: rgba(0,54,255,0.2);
-                    outline: 2px solid #1a56db;
-                }
-                .annotationLayer .buttonWidgetAnnotation.checkBox input,
-                .annotationLayer .buttonWidgetAnnotation.radioButton input {
-                    -webkit-appearance: auto;
-                    appearance: auto;
-                    cursor: pointer;
-                }
-                .annotationLayer section {
-                    pointer-events: all;
-                }
-            `
-            document.head.appendChild(style)
-        })
+        if (document.querySelector('link[data-prv-fsv-css]')) return
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = '/prv-fsv-annot.css'
+        link.setAttribute('data-prv-fsv-css', '1')
+        document.head.appendChild(link)
     }, [])
 }
 
