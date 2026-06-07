@@ -164,8 +164,8 @@ export async function DELETE(
             return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
         }
 
-        const rolNombre = (session.user as any).rol as string || ''
-        if (!['superadmin', 'admin'].includes(rolNombre)) {
+        const nivel = getNivel((session.user as any).rol ?? '')
+        if (nivel < 2) {
             return NextResponse.json({ error: 'Sin permisos para eliminar partes' }, { status: 403 })
         }
 
