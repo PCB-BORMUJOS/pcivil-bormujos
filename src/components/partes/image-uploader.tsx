@@ -1,8 +1,7 @@
 'use client'
 
 import { useState, useRef } from 'react'
-import { Upload, X, Image as ImageIcon, Loader2 } from 'lucide-react'
-import Image from 'next/image'
+import { Upload, Loader2 } from 'lucide-react'
 
 interface ImageUploaderProps {
     parteId: string
@@ -39,27 +38,43 @@ export function ImageUploader({ parteId, onUploadComplete }: ImageUploaderProps)
         }
     }
 
+    const compressImage = (file: File, maxPx = 1920, quality = 0.8): Promise<Blob> =>
+        new Promise((resolve, reject) => {
+            const img = new window.Image()
+            img.onload = () => {
+                const scale = Math.min(1, maxPx / Math.max(img.width, img.height))
+                const canvas = document.createElement('canvas')
+                canvas.width = Math.round(img.width * scale)
+                canvas.height = Math.round(img.height * scale)
+                canvas.getContext('2d')?.drawImage(img, 0, 0, canvas.width, canvas.height)
+                canvas.toBlob(
+                    blob => blob ? resolve(blob) : reject(new Error('Canvas toBlob failed')),
+                    'image/jpeg',
+                    quality
+                )
+            }
+            img.onerror = reject
+            img.src = URL.createObjectURL(file)
+        })
+
     const uploadFiles = async (files: FileList) => {
-        console.log('Uploading files:', files)
         setIsUploading(true)
 
         for (const file of Array.from(files)) {
             if (!file.type.startsWith('image/')) continue
 
-            const formData = new FormData()
-            formData.append('file', file)
-
             try {
-                console.log(`Uploading ${file.name} to /api/partes/psi/${parteId}/imagenes`)
+                const compressed = await compressImage(file)
+                const formData = new FormData()
+                formData.append('file', new File([compressed], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' }))
+
                 const res = await fetch(`/api/partes/psi/${parteId}/imagenes`, {
                     method: 'POST',
                     body: formData
                 })
 
                 if (res.ok) {
-                    const newImage = await res.json()
-                    console.log('Upload success:', newImage)
-                    onUploadComplete(newImage)
+                    onUploadComplete(await res.json())
                 } else {
                     console.error('Upload failed with status:', res.status)
                 }
