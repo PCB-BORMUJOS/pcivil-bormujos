@@ -11,7 +11,7 @@ import { usePsiForm } from '@/hooks/use-psi-form'
 import { ImageUploader } from './image-uploader'
 import SignatureCanvas from './SignatureCanvas'
 import { Toaster, toast } from 'react-hot-toast'
-import { Loader2, Save, FileDown, Plus, ChevronDown, ChevronUp, Trash2, ChevronLeft } from 'lucide-react'
+import { Loader2, Save, FileDown, Plus, Trash2, ChevronLeft } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 
@@ -23,7 +23,6 @@ export function PsiForm() {
         addImage, removeImage
     } = usePsiForm()
 
-    const [expandedExtras, setExpandedExtras] = useState(false) // Deprecated, will remove
     const [activeTab, setActiveTab] = useState<1 | 2 | 3>(1)
 
     // Structured Text State
