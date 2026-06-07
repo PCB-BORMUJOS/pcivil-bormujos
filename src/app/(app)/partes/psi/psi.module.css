@@ -660,6 +660,29 @@ select.tableCell {
   .timeBox {
     width: 100px;
   }
+
+  /* Touch targets ≥44px, font-size 16px evita zoom en iOS */
+  .inputFull,
+  .inputSmall,
+  .inputInforme,
+  .inputMatricula,
+  .inputMid,
+  .tableCell,
+  .footerDropdown {
+    height: 44px;
+    font-size: 16px;
+    padding: 0 8px;
+  }
+
+  .timeInput {
+    height: 44px;
+    font-size: 18px;
+  }
+
+  .typCheck input {
+    width: 20px;
+    height: 20px;
+  }
 }
 
 /* Small phones */
