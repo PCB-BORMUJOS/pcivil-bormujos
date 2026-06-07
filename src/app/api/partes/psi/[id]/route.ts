@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { authOptions } from '@/lib/auth'
 import { getServerSession } from 'next-auth'
+import { getNivel } from '@/lib/permisos'
 
 export async function GET(
     _req: Request,
@@ -41,6 +42,20 @@ export async function PUT(
         const session = await getServerSession(authOptions)
         if (!session?.user) {
             return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+        }
+
+        // Verificar que el parte existe y que el usuario es el creador o tiene nivel >= 2 (coordinador/admin)
+        const parteExistente = await prisma.partePSI.findUnique({
+            where: { id: params.id },
+            select: { id: true, creadoPorId: true }
+        })
+        if (!parteExistente) {
+            return NextResponse.json({ error: 'Parte no encontrado' }, { status: 404 })
+        }
+        const nivel = getNivel((session.user as any).rol ?? '')
+        const esCreador = parteExistente.creadoPorId === session.user.id
+        if (!esCreador && nivel < 2) {
+            return NextResponse.json({ error: 'Sin permisos para editar este parte' }, { status: 403 })
         }
 
         const body = await req.json()
