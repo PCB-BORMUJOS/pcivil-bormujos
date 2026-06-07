@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Save, CheckCircle, Loader2, X, Image as ImageIcon } from 'lucide-react'
 import { usePrvFsvForm } from '@/hooks/use-prv-fsv-form'
+import { FSV_FIELDS, PAGE_HEIGHT } from '@/data/prv-fsv-fields'
 
 // ─── Photo upload overlay ─────────────────────────────────────────────────────
 
@@ -106,170 +107,35 @@ function PhotoOverlay({
     )
 }
 
-// ─── PDF Page ─────────────────────────────────────────────────────────────────
+// ─── PDF Page canvas ──────────────────────────────────────────────────────────
 
-const PHOTO_ANNOT_NAMES = new Set(['FRONTAL', 'TRASERA', 'LATERAL IZQUIERDO', 'LATERAL DERECHO'])
-
-type PhotoSlot = {
-    annotName: string
-    value: string | null
-    onChange: (url: string | null) => void
-}
-
-type PageProps = {
+type PdfCanvasProps = {
     pdfDoc: any
     pageNum: number
     scale: number
-    annotStorageRef: React.MutableRefObject<any>
-    onFieldChange: (fieldName: string, value: string | boolean) => void
-    photoSlots?: PhotoSlot[]
-    camposFormulario: Record<string, string | boolean>
+    onReady: (width: number, height: number) => void
 }
 
-function PdfPage({ pdfDoc, pageNum, scale, annotStorageRef, onFieldChange, photoSlots, camposFormulario }: PageProps) {
-    const containerRef = useRef<HTMLDivElement>(null)
-    const [photoOverlays, setPhotoOverlays] = useState<Array<{ name: string; style: React.CSSProperties }>>([])
+function PdfCanvas({ pdfDoc, pageNum, scale, onReady }: PdfCanvasProps) {
+    const canvasRef = useRef<HTMLCanvasElement>(null)
 
     useEffect(() => {
-        if (!pdfDoc || !containerRef.current) return
+        if (!pdfDoc || !canvasRef.current) return
         let cancelled = false
 
         async function render() {
             try {
-                const pdfjsLib = await import('pdfjs-dist')
                 const page = await pdfDoc.getPage(pageNum)
                 const viewport = page.getViewport({ scale })
                 if (cancelled) return
 
-                const container = containerRef.current!
-                container.innerHTML = ''
-                container.style.position = 'relative'
-                container.style.width = `${viewport.width}px`
-                container.style.height = `${viewport.height}px`
-                container.style.overflow = 'hidden'
-
-                // Canvas
-                const canvas = document.createElement('canvas')
+                const canvas = canvasRef.current!
                 canvas.width = viewport.width
                 canvas.height = viewport.height
-                Object.assign(canvas.style, { position: 'absolute', top: '0', left: '0' })
-                container.appendChild(canvas)
                 await page.render({ canvasContext: canvas.getContext('2d')!, viewport }).promise
-                if (cancelled) return
-
-                // Annotations
-                const allAnnots: any[] = await page.getAnnotations({ intent: 'display' })
-                const regularAnnots = allAnnots.filter(a => !PHOTO_ANNOT_NAMES.has(a.fieldName))
-                const photoAnnots   = allAnnots.filter(a => PHOTO_ANNOT_NAMES.has(a.fieldName))
-
-                // Compute photo overlay styles from annotation rects (PDF coords → CSS pixels)
-                const overlays = photoAnnots.map(a => {
-                    const [x1, y1, x2, y2] = a.rect as number[]
-                    return {
-                        name: a.fieldName as string,
-                        style: {
-                            position: 'absolute' as const,
-                            left:   `${x1 * scale}px`,
-                            bottom: `${y1 * scale}px`,
-                            width:  `${(x2 - x1) * scale}px`,
-                            height: `${(y2 - y1) * scale}px`,
-                        },
-                    }
-                })
-                setPhotoOverlays(overlays)
-
-                // Annotation layer for regular fields
-                const annotDiv = document.createElement('div')
-                annotDiv.className = 'annotationLayer'
-                Object.assign(annotDiv.style, {
-                    position: 'absolute', top: '0', left: '0',
-                    width: `${viewport.width}px`, height: `${viewport.height}px`,
-                })
-                container.appendChild(annotDiv)
-
-                // pdfjs-dist 3.x: constructor takes {div,page,viewport,...}, render() takes full params
-                const AnnotationLayerCls = pdfjsLib.AnnotationLayer as any
-                const annotLayer = new AnnotationLayerCls({
-                    div: annotDiv,
-                    accessibilityManager: null,
-                    annotationCanvasMap: null,
-                    l10n: null,
-                    page,
-                    viewport,
-                })
-                const minimalLinkService = {
-                    addLinkAttributes() {},
-                    getDestinationHash: () => '#',
-                    getAnchorUrl: () => '#',
-                    setHash() {},
-                    executeNamedAction() {},
-                    executeSetOCGState() {},
-                    cachePageRef() {},
-                    isPageVisible: () => true,
-                    isPageCached: () => false,
-                    pagesCount: 4,
-                    page: pageNum,
-                    rotation: 0,
-                }
-                await annotLayer.render({
-                    viewport,
-                    div: annotDiv,
-                    annotations: regularAnnots,
-                    page,
-                    linkService: minimalLinkService,
-                    downloadManager: null,
-                    annotationStorage: annotStorageRef.current,
-                    imageResourcesPath: '',
-                    renderForms: true,
-                    enableScripting: false,
-                    hasJSActions: false,
-                    fieldObjects: null,
-                    annotationCanvasMap: null,
-                })
-
-                if (cancelled) return
-
-                // Restore saved field values into DOM elements
-                for (const annot of regularAnnots) {
-                    const savedVal = camposFormulario[annot.fieldName]
-                    if (savedVal === undefined) continue
-                    const section = annotDiv.querySelector(`[data-annotation-id="${annot.id}"]`)
-                    if (!section) continue
-                    const input = section.querySelector('input, select, textarea') as HTMLInputElement | null
-                    if (!input) continue
-                    if (input.type === 'checkbox') {
-                        input.checked = savedVal as boolean
-                    } else {
-                        input.value = savedVal as string
-                    }
-                }
-
-                // Event delegation: capture field changes
-                const handleChange = (e: Event) => {
-                    const target = e.target as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
-                    if (!target || !('value' in target)) return
-                    // Walk up to find the annotation wrapper with data-annotation-id
-                    let el: Element | null = target
-                    let annotId = ''
-                    while (el && el !== annotDiv) {
-                        annotId = el.getAttribute('data-annotation-id') || ''
-                        if (annotId) break
-                        el = el.parentElement
-                    }
-                    // Find field name from annotation list
-                    const annot = regularAnnots.find(a => a.id === annotId)
-                    const fieldName = annot?.fieldName || target.getAttribute('name') || ''
-                    if (!fieldName) return
-                    const value = target.type === 'checkbox'
-                        ? (target as HTMLInputElement).checked
-                        : target.value
-                    onFieldChange(fieldName, value as string | boolean)
-                }
-                annotDiv.addEventListener('change', handleChange)
-                annotDiv.addEventListener('input', handleChange)
-
+                if (!cancelled) onReady(viewport.width, viewport.height)
             } catch (err) {
-                console.error(`Error rendering PRV-FSV page ${pageNum}:`, err)
+                console.error(`Error rendering PDF page ${pageNum}:`, err)
             }
         }
 
@@ -278,19 +144,181 @@ function PdfPage({ pdfDoc, pageNum, scale, annotStorageRef, onFieldChange, photo
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [pdfDoc, pageNum, scale])
 
+    return <canvas ref={canvasRef} style={{ display: 'block' }} />
+}
+
+// ─── React field overlay ──────────────────────────────────────────────────────
+
+type FieldOverlayProps = {
+    pageNum: number
+    scale: number
+    pageWidth: number
+    pageHeight: number
+    camposFormulario: Record<string, string | boolean>
+    onFieldChange: (name: string, value: string | boolean) => void
+    photoSlots: Array<{ annotName: string; value: string | null; onChange: (u: string | null) => void }>
+}
+
+function FieldOverlay({
+    pageNum, scale, pageWidth, pageHeight, camposFormulario, onFieldChange, photoSlots
+}: FieldOverlayProps) {
+    const pageFields = FSV_FIELDS.filter(f => f.page === pageNum)
+
     return (
-        <div style={{ position: 'relative', display: 'inline-block', lineHeight: '0', boxShadow: '0 4px 24px rgba(0,0,0,0.18)' }}>
-            <div ref={containerRef} />
-            {/* Photo overlays — positioned in PDF coordinate space (bottom-left origin) */}
-            {photoOverlays.map(ov => {
-                const slot = photoSlots?.find(s => s.annotName === ov.name)
-                if (!slot) return null
-                return (
-                    <div key={ov.name} style={ov.style}>
-                        <PhotoOverlay label={ov.name} value={slot.value} onChange={slot.onChange} />
-                    </div>
-                )
+        <div
+            style={{
+                position: 'absolute', top: 0, left: 0,
+                width: `${pageWidth}px`, height: `${pageHeight}px`,
+                pointerEvents: 'none',
+            }}
+        >
+            {pageFields.map(field => {
+                const [x1, y1, x2, y2] = field.rect
+                const cssTop    = (PAGE_HEIGHT - y2) * scale
+                const cssLeft   = x1 * scale
+                const cssWidth  = (x2 - x1) * scale
+                const cssHeight = (y2 - y1) * scale
+
+                const style: React.CSSProperties = {
+                    position: 'absolute',
+                    top:    `${cssTop}px`,
+                    left:   `${cssLeft}px`,
+                    width:  `${cssWidth}px`,
+                    height: `${cssHeight}px`,
+                    pointerEvents: 'auto',
+                }
+
+                // Photo fields
+                if (field.photo) {
+                    const slot = photoSlots.find(s => s.annotName === field.name)
+                    if (!slot) return null
+                    return (
+                        <div key={field.name} style={style}>
+                            <PhotoOverlay label={field.name} value={slot.value} onChange={slot.onChange} />
+                        </div>
+                    )
+                }
+
+                // Checkbox (Btn)
+                if (field.type === 'Btn') {
+                    const checked = camposFormulario[field.name] === true
+                    return (
+                        <div key={field.name} style={{ ...style, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={e => onFieldChange(field.name, e.target.checked)}
+                                style={{
+                                    width: '100%',
+                                    height: '100%',
+                                    margin: 0,
+                                    cursor: 'pointer',
+                                    accentColor: '#1d4ed8',
+                                    opacity: 0.85,
+                                }}
+                            />
+                        </div>
+                    )
+                }
+
+                // Text input (Tx)
+                if (field.type === 'Tx') {
+                    const val = (camposFormulario[field.name] as string) ?? ''
+                    const fontSize = Math.max(8, Math.min(cssHeight * 0.65, 14))
+                    return (
+                        <input
+                            key={field.name}
+                            type="text"
+                            value={val}
+                            onChange={e => onFieldChange(field.name, e.target.value)}
+                            style={{
+                                ...style,
+                                fontSize: `${fontSize}px`,
+                                padding: '0 4px',
+                                background: 'rgba(255,255,255,0.85)',
+                                border: '1px solid rgba(100,100,200,0.4)',
+                                borderRadius: '2px',
+                                outline: 'none',
+                                boxSizing: 'border-box',
+                                fontFamily: 'inherit',
+                            }}
+                        />
+                    )
+                }
+
+                // Select (Ch) — INDICATIVO INFORMA / RESPONSABLE TURNO
+                if (field.type === 'Ch') {
+                    const val = (camposFormulario[field.name] as string) ?? ''
+                    const fontSize = Math.max(8, Math.min(cssHeight * 0.65, 12))
+                    return (
+                        <select
+                            key={field.name}
+                            value={val}
+                            onChange={e => onFieldChange(field.name, e.target.value)}
+                            style={{
+                                ...style,
+                                fontSize: `${fontSize}px`,
+                                padding: '0 2px',
+                                background: 'rgba(255,255,255,0.85)',
+                                border: '1px solid rgba(100,100,200,0.4)',
+                                borderRadius: '2px',
+                                outline: 'none',
+                                boxSizing: 'border-box',
+                                cursor: 'pointer',
+                                appearance: 'none' as const,
+                            }}
+                        >
+                            <option value=""></option>
+                        </select>
+                    )
+                }
+
+                return null
             })}
+        </div>
+    )
+}
+
+// ─── PDF Page (canvas + overlay) ─────────────────────────────────────────────
+
+type PageProps = {
+    pdfDoc: any
+    pageNum: number
+    scale: number
+    camposFormulario: Record<string, string | boolean>
+    onFieldChange: (name: string, value: string | boolean) => void
+    photoSlots: Array<{ annotName: string; value: string | null; onChange: (u: string | null) => void }>
+}
+
+function PdfPage({ pdfDoc, pageNum, scale, camposFormulario, onFieldChange, photoSlots }: PageProps) {
+    const [dims, setDims] = useState<{ w: number; h: number } | null>(null)
+
+    return (
+        <div
+            style={{
+                position: 'relative',
+                display: 'inline-block',
+                lineHeight: '0',
+                boxShadow: '0 4px 24px rgba(0,0,0,0.18)',
+            }}
+        >
+            <PdfCanvas
+                pdfDoc={pdfDoc}
+                pageNum={pageNum}
+                scale={scale}
+                onReady={(w, h) => setDims({ w, h })}
+            />
+            {dims && (
+                <FieldOverlay
+                    pageNum={pageNum}
+                    scale={scale}
+                    pageWidth={dims.w}
+                    pageHeight={dims.h}
+                    camposFormulario={camposFormulario}
+                    onFieldChange={onFieldChange}
+                    photoSlots={photoSlots}
+                />
+            )}
         </div>
     )
 }
@@ -303,32 +331,16 @@ const ESTADO_CONFIG: Record<string, { label: string; cls: string }> = {
     completo:     { label: 'Completo',     cls: 'bg-green-100 text-green-800 border border-green-300' },
 }
 
-// ─── CSS injection ─────────────────────────────────────────────────────────────
-
-function usePdfViewerCss() {
-    useEffect(() => {
-        if (document.querySelector('link[data-prv-fsv-css]')) return
-        const link = document.createElement('link')
-        link.rel = 'stylesheet'
-        link.href = '/prv-fsv-annot.css'
-        link.setAttribute('data-prv-fsv-css', '1')
-        document.head.appendChild(link)
-    }, [])
-}
-
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export function PrvFsvForm() {
-    const { id, form, loading, saving, draftRestored, estadoParte, saveParte, setField, setCampo } = usePrvFsvForm()
-    usePdfViewerCss()
+    const { form, loading, saving, draftRestored, estadoParte, saveParte, setField, setCampo, id } = usePrvFsvForm()
 
     const [pdfDoc, setPdfDoc]     = useState<any>(null)
     const [pdfError, setPdfError] = useState<string | null>(null)
-    const annotStorageRef         = useRef<any>(null)
 
     const SCALE = typeof window !== 'undefined' && window.innerWidth < 900 ? 1.0 : 1.5
 
-    // ── Load PDF ──────────────────────────────────────────────────────────────
     useEffect(() => {
         let cancelled = false
         async function loadPdf() {
@@ -337,29 +349,27 @@ export function PrvFsvForm() {
                 pdfjsLib.GlobalWorkerOptions.workerSrc =
                     'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'
                 const doc = await pdfjsLib.getDocument('/partes/fsv/prv-fsv.pdf').promise
-                if (cancelled) return
-                annotStorageRef.current = doc.annotationStorage
-                setPdfDoc(doc)
+                if (!cancelled) setPdfDoc(doc)
             } catch (err) {
                 console.error('Error cargando PDF PRV-FSV:', err)
-                setPdfError('No se pudo cargar el formulario PDF.')
+                if (!cancelled) setPdfError('No se pudo cargar el formulario PDF.')
             }
         }
         loadPdf()
         return () => { cancelled = true }
     }, [])
 
-    const handleFieldChange = useCallback((fieldName: string, value: string | boolean) => {
-        setCampo(fieldName, value)
+    const handleFieldChange = useCallback((name: string, value: string | boolean) => {
+        setCampo(name, value)
     }, [setCampo])
 
     const estadoInfo = ESTADO_CONFIG[estadoParte] ?? ESTADO_CONFIG.borrador
 
-    const photoSlots: PhotoSlot[] = [
-        { annotName: 'FRONTAL',           value: form.fotoFrontal,    onChange: (u) => setField('fotoFrontal', u) },
-        { annotName: 'TRASERA',           value: form.fotoTrasera,    onChange: (u) => setField('fotoTrasera', u) },
-        { annotName: 'LATERAL IZQUIERDO', value: form.fotoLateralIzq, onChange: (u) => setField('fotoLateralIzq', u) },
-        { annotName: 'LATERAL DERECHO',   value: form.fotoLateralDer, onChange: (u) => setField('fotoLateralDer', u) },
+    const photoSlots = [
+        { annotName: 'FRONTAL',           value: form.fotoFrontal,    onChange: (u: string | null) => setField('fotoFrontal', u) },
+        { annotName: 'TRASERA',           value: form.fotoTrasera,    onChange: (u: string | null) => setField('fotoTrasera', u) },
+        { annotName: 'LATERAL IZQUIERDO', value: form.fotoLateralIzq, onChange: (u: string | null) => setField('fotoLateralIzq', u) },
+        { annotName: 'LATERAL DERECHO',   value: form.fotoLateralDer, onChange: (u: string | null) => setField('fotoLateralDer', u) },
     ]
 
     if (loading) {
@@ -434,10 +444,9 @@ export function PrvFsvForm() {
                                 pdfDoc={pdfDoc}
                                 pageNum={pageNum}
                                 scale={SCALE}
-                                annotStorageRef={annotStorageRef}
+                                camposFormulario={form.camposFormulario}
                                 onFieldChange={handleFieldChange}
                                 photoSlots={photoSlots}
-                                camposFormulario={form.camposFormulario}
                             />
                         ))}
                     </div>

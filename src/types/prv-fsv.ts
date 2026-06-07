@@ -1,3 +1,13 @@
+// ─── Campos AcroForm del PDF ───────────────────────────────────────────────────
+
+export type FsvField = {
+    name: string
+    type: 'Btn' | 'Tx' | 'Ch'
+    page: number
+    rect: [number, number, number, number]  // [x1, y1, x2, y2] PDF user space
+    photo?: boolean
+}
+
 // ─── Estado del formulario ────────────────────────────────────────────────────
 
 export type PrvFsvFormState = {
