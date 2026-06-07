@@ -123,9 +123,10 @@ type PageProps = {
     annotStorageRef: React.MutableRefObject<any>
     onFieldChange: (fieldName: string, value: string | boolean) => void
     photoSlots?: PhotoSlot[]
+    camposFormulario: Record<string, string | boolean>
 }
 
-function PdfPage({ pdfDoc, pageNum, scale, annotStorageRef, onFieldChange, photoSlots }: PageProps) {
+function PdfPage({ pdfDoc, pageNum, scale, annotStorageRef, onFieldChange, photoSlots, camposFormulario }: PageProps) {
     const containerRef = useRef<HTMLDivElement>(null)
     const [photoOverlays, setPhotoOverlays] = useState<Array<{ name: string; style: React.CSSProperties }>>([])
 
@@ -227,6 +228,21 @@ function PdfPage({ pdfDoc, pageNum, scale, annotStorageRef, onFieldChange, photo
                 })
 
                 if (cancelled) return
+
+                // Restore saved field values into DOM elements
+                for (const annot of regularAnnots) {
+                    const savedVal = camposFormulario[annot.fieldName]
+                    if (savedVal === undefined) continue
+                    const section = annotDiv.querySelector(`[data-annotation-id="${annot.id}"]`)
+                    if (!section) continue
+                    const input = section.querySelector('input, select, textarea') as HTMLInputElement | null
+                    if (!input) continue
+                    if (input.type === 'checkbox') {
+                        input.checked = savedVal as boolean
+                    } else {
+                        input.value = savedVal as string
+                    }
+                }
 
                 // Event delegation: capture field changes
                 const handleChange = (e: Event) => {
@@ -421,6 +437,7 @@ export function PrvFsvForm() {
                                 annotStorageRef={annotStorageRef}
                                 onFieldChange={handleFieldChange}
                                 photoSlots={photoSlots}
+                                camposFormulario={form.camposFormulario}
                             />
                         ))}
                     </div>
