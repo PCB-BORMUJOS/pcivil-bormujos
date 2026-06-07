@@ -306,24 +306,25 @@ ${textComponents.conclusion}`.trim()
                                         <div className="flex flex-col gap-1">
                                             {/* FECHA with Box */}
                                             <div className="flex items-center gap-2">
-                                                <label className={styles.labelSmall} style={{ width: '45px' }}>FECHA</label>
+                                                <label htmlFor="psi-fecha" className={styles.labelSmall} style={{ width: '45px' }}>FECHA</label>
                                                 <div className={styles.boxFrame}>
-                                                    <input type="date" className={styles.inputReset} style={{ textAlign: 'center' }} value={form.fecha} onChange={(e) => setField('fecha', e.target.value)} />
+                                                    <input id="psi-fecha" type="date" className={styles.inputReset} style={{ textAlign: 'center' }} value={form.fecha} onChange={(e) => setField('fecha', e.target.value)} />
                                                 </div>
                                             </div>
                                             {/* HORA with Box */}
                                             <div className="flex items-center gap-2">
-                                                <label className={styles.labelSmall} style={{ width: '45px' }}>HORA</label>
+                                                <label htmlFor="psi-hora" className={styles.labelSmall} style={{ width: '45px' }}>HORA</label>
                                                 <div className={styles.boxFrame}>
-                                                    <input type="time" className={styles.inputReset} style={{ textAlign: 'center' }} value={form.hora} onChange={(e) => setField('hora', e.target.value)} />
+                                                    <input id="psi-hora" type="time" className={styles.inputReset} style={{ textAlign: 'center' }} value={form.hora} onChange={(e) => setField('hora', e.target.value)} />
                                                 </div>
                                             </div>
                                         </div>
 
                                         <div className="flex items-center gap-2 ml-4">
-                                            <label className={styles.labelSmall} style={{ whiteSpace: 'nowrap' }}>Nº INFORME</label>
+                                            <label htmlFor="psi-numero" className={styles.labelSmall} style={{ whiteSpace: 'nowrap' }}>Nº INFORME</label>
                                             <div className={styles.informeWrapFrame}>
                                                 <input
+                                                    id="psi-numero"
                                                     className={styles.inputReset}
                                                     value={form.numero || ''}
                                                     onChange={(e) => setField('numero', e.target.value)}
@@ -336,20 +337,21 @@ ${textComponents.conclusion}`.trim()
 
                                     {/* Row 2: LUGAR */}
                                     <div className={styles.fieldFull}>
-                                        <label className={styles.labelSmall} style={{ width: '70px' }}>LUGAR</label>
-                                        <input className={styles.inputFull} value={form.lugar} onChange={(e) => setField('lugar', e.target.value)} />
+                                        <label htmlFor="psi-lugar" className={styles.labelSmall} style={{ width: '70px' }}>LUGAR</label>
+                                        <input id="psi-lugar" className={styles.inputFull} value={form.lugar} onChange={(e) => setField('lugar', e.target.value)} />
                                     </div>
 
                                     {/* Row 3: MOTIVO */}
                                     <div className={styles.fieldFull}>
-                                        <label className={styles.labelSmall} style={{ width: '70px' }}>MOTIVO</label>
-                                        <input className={styles.inputFull} value={form.motivo} onChange={(e) => setField('motivo', e.target.value)} />
+                                        <label htmlFor="psi-motivo" className={styles.labelSmall} style={{ width: '70px' }}>MOTIVO</label>
+                                        <input id="psi-motivo" className={styles.inputFull} value={form.motivo} onChange={(e) => setField('motivo', e.target.value)} />
                                     </div>
 
                                     {/* Row 4: ALERTANTE */}
                                     <div className={styles.fieldFull}>
-                                        <label className={styles.labelSmall} style={{ width: '70px' }}>ALERTANTE</label>
+                                        <label htmlFor="psi-alertante" className={styles.labelSmall} style={{ width: '70px' }}>ALERTANTE</label>
                                         <input
+                                            id="psi-alertante"
                                             className={styles.inputFull}
                                             value={form.alertante}
                                             onChange={(e) => setField('alertante', e.target.value)}
@@ -593,8 +595,9 @@ ${textComponents.conclusion}`.trim()
                             {/* Columna 1: Indicativo Informante */}
                             <div className={styles.footerContent}>
                                 <div>
-                                    <label className={styles.footerLabel}>INDICATIVO</label>
+                                    <label htmlFor="psi-indicativo" className={styles.footerLabel}>INDICATIVO</label>
                                     <select
+                                        id="psi-indicativo"
                                         className={styles.footerDropdown}
                                         value={form.indicativosInforman}
                                         onChange={(e) => setField('indicativosInforman', e.target.value)}
@@ -619,8 +622,9 @@ ${textComponents.conclusion}`.trim()
                             {/* Columna 2: Responsable Turno */}
                             <div className={styles.footerContent}>
                                 <div>
-                                    <label className={styles.footerLabel}>RESPONSABLE DE TURNO</label>
+                                    <label htmlFor="psi-responsable" className={styles.footerLabel}>RESPONSABLE DE TURNO</label>
                                     <select
+                                        id="psi-responsable"
                                         className={styles.footerDropdown}
                                         value={form.responsableTurno}
                                         onChange={(e) => setField('responsableTurno', e.target.value)}
