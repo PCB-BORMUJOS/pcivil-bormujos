@@ -197,9 +197,8 @@ ${textComponents.conclusion}`.trim()
                     <ChevronLeft className="w-5 h-5" />
                 </Link>
                 <div className="h-4 w-px bg-gray-300" />
-                <span className="text-sm font-semibold text-gray-600 flex items-center gap-2">
+                <span className="text-sm font-semibold text-gray-600">
                     {id ? `Ref: ${form.numero || '...'}` : 'Nuevo Parte'}
-                    <span className="bg-yellow-100 text-yellow-800 text-xs px-2 py-0.5 rounded-full border border-yellow-300">v2.0 Beta</span>
                 </span>
                 <div className="h-4 w-px bg-gray-300" />
                 <button
