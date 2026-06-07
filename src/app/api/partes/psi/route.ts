@@ -180,7 +180,7 @@ export async function POST(request: NextRequest) {
         const parte = await prisma.partePSI.create({
             data: {
                 numeroParte,
-                fecha: body.fecha ? new Date(body.fecha) : new Date(),
+                fecha: body.fecha ? new Date(body.fecha + 'T12:00:00+02:00') : new Date(),
                 estado,
                 horaLlamada: body.horaLlamada,
                 horaSalida: body.horaSalida,
