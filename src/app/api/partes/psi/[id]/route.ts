@@ -27,6 +27,13 @@ export async function GET(
             return NextResponse.json({ error: 'Parte no encontrado' }, { status: 404 })
         }
 
+        // Voluntarios solo pueden ver sus propios partes; coordinador+ ve todos
+        const nivel = getNivel((session.user as any).rol ?? '')
+        const esCreador = parte.creadoPorId === session.user.id
+        if (!esCreador && nivel < 2) {
+            return NextResponse.json({ error: 'Sin permisos para ver este parte' }, { status: 403 })
+        }
+
         return NextResponse.json(parte)
     } catch (error) {
         console.error('Error obteniendo parte PSI:', error)
