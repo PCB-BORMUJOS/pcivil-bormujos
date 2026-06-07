@@ -15,6 +15,8 @@ import { Loader2, Save, FileDown, Plus, Trash2, ChevronLeft } from 'lucide-react
 import Image from 'next/image'
 import Link from 'next/link'
 
+let _indicativosCache: string[] | null = null
+
 export function PsiForm() {
     const {
         id, form, imagenes, loading, saving, hasChanges, estadoParte,
@@ -98,28 +100,26 @@ ${textComponents.conclusion}`.trim()
     const WALKIES_LIST = ['WJ01', 'WJ02', ...Array.from({ length: 25 }, (_, i) => `W${String(i + 1).padStart(2, '0')}`)]
 
     useEffect(() => {
-        // Fetch indicativos
+        if (_indicativosCache) {
+            setIndicativosList(_indicativosCache)
+            return
+        }
         fetch('/api/indicativos')
             .then(res => res.json())
             .then(data => {
                 if (data.indicativos) {
                     const sorted = (data.indicativos as string[]).sort((a, b) => {
-                        // J-44 first
                         if (a === 'J-44') return -1
                         if (b === 'J-44') return 1
-                        // S-xx second
-                        const aS = a.startsWith('S-')
-                        const bS = b.startsWith('S-')
+                        const aS = a.startsWith('S-'), bS = b.startsWith('S-')
                         if (aS && !bS) return -1
                         if (!aS && bS) return 1
-                        // B-xx third
-                        const aB = a.startsWith('B-')
-                        const bB = b.startsWith('B-')
+                        const aB = a.startsWith('B-'), bB = b.startsWith('B-')
                         if (aB && !bB) return -1
                         if (!aB && bB) return 1
-                        // Default sort
                         return a.localeCompare(b)
                     })
+                    _indicativosCache = sorted
                     setIndicativosList(sorted)
                 }
             })
