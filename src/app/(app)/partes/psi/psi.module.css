@@ -1,6 +1,7 @@
 /* Página con medidas fijas estilo documento */
 .page {
-  width: 860px;
+  width: 100%;
+  max-width: 860px;
   margin: 20px auto;
   background: #fff;
   color: #0f172a;
@@ -630,4 +631,50 @@ select.tableCell {
   display: flex;
   align-items: flex-start;
   margin-bottom: 5px;
+}
+
+/* iPad vertical (768px) and below */
+@media (max-width: 800px) {
+  .page {
+    margin: 0 auto;
+    box-shadow: none;
+  }
+
+  .topGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .resourceGrid {
+    grid-template-columns: 80px 1fr 1fr;
+  }
+
+  .trafficRow2 {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .timeGrid {
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .timeBox {
+    width: 100px;
+  }
+}
+
+/* Small phones */
+@media (max-width: 640px) {
+  .footerGrid3Col {
+    grid-template-columns: 1fr;
+  }
+
+  .footerHeader {
+    border-right: none;
+    border-bottom: 1px solid #0f172a;
+  }
+
+  .footerContent {
+    border-right: none;
+    border-top: 1px solid #0f172a;
+  }
 }
