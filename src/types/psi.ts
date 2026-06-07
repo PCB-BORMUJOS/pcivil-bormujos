@@ -27,12 +27,10 @@ export type PsiFormState = {
     otrosDescripcion: string
     posiblesCausas: string
 
-    heridosSi: boolean
-    heridosNo: boolean
+    heridos: 'si' | 'no' | ''
     heridosNum: string
 
-    fallecidosSi: boolean
-    fallecidosNo: boolean
+    fallecidos: 'si' | 'no' | ''
     fallecidosNum: string
 
     // Accidentes de tráfico
@@ -84,8 +82,8 @@ export const INITIAL_PSI_STATE: PsiFormState = {
     posiblesCausas: '',
 
     // Casualties
-    heridosSi: false, heridosNo: false, heridosNum: '',
-    fallecidosSi: false, fallecidosNo: false, fallecidosNum: '',
+    heridos: '', heridosNum: '',
+    fallecidos: '', fallecidosNum: '',
 
     // Tráfico
     matriculasImplicados: Array(3).fill(''),

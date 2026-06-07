@@ -406,9 +406,9 @@ function drawPage1(doc: jsPDF, data: PsiFormState) {
     // Heridos row
     drawRect(doc, MARGIN, y, halfW, casualtyH, undefined, BORDER)
     textInBox(doc, 'SI', MARGIN + 2, y, 8, casualtyH, { size: 8, bold: true })
-    drawCheckbox(doc, MARGIN + 11, y + 0.8, data.heridosSi)
+    drawCheckbox(doc, MARGIN + 11, y + 0.8, data.heridos === 'si')
     textInBox(doc, 'NO', MARGIN + 18, y, 8, casualtyH, { size: 8, bold: true })
-    drawCheckbox(doc, MARGIN + 27, y + 0.8, data.heridosNo)
+    drawCheckbox(doc, MARGIN + 27, y + 0.8, data.heridos === 'no')
     textInBox(doc, 'Nº', MARGIN + 34, y, 6, casualtyH, { size: 8, bold: true })
     drawRect(doc, MARGIN + 40, y + 0.5, 16, casualtyH - 1, undefined, BORDER)
     textInBox(doc, data.heridosNum || '', MARGIN + 40, y, 16, casualtyH, { size: 9 })
@@ -416,9 +416,9 @@ function drawPage1(doc: jsPDF, data: PsiFormState) {
     // Fallecidos row
     drawRect(doc, MARGIN + halfW, y, halfW, casualtyH, undefined, BORDER)
     textInBox(doc, 'SI', MARGIN + halfW + 2, y, 8, casualtyH, { size: 8, bold: true })
-    drawCheckbox(doc, MARGIN + halfW + 11, y + 0.8, data.fallecidosSi)
+    drawCheckbox(doc, MARGIN + halfW + 11, y + 0.8, data.fallecidos === 'si')
     textInBox(doc, 'NO', MARGIN + halfW + 18, y, 8, casualtyH, { size: 8, bold: true })
-    drawCheckbox(doc, MARGIN + halfW + 27, y + 0.8, data.fallecidosNo)
+    drawCheckbox(doc, MARGIN + halfW + 27, y + 0.8, data.fallecidos === 'no')
     textInBox(doc, 'Nº', MARGIN + halfW + 34, y, 6, casualtyH, { size: 8, bold: true })
     drawRect(doc, MARGIN + halfW + 40, y + 0.5, 16, casualtyH - 1, undefined, BORDER)
     textInBox(doc, data.fallecidosNum || '', MARGIN + halfW + 40, y, 16, casualtyH, { size: 9 })

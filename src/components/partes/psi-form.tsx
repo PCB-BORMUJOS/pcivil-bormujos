@@ -512,9 +512,9 @@ ${textComponents.conclusion}`.trim()
                                     <div className={styles.casualtyTitle}>HERIDOS</div>
                                     <div className={styles.casualtyControls}>
                                         <span className={styles.smallText}>SI</span>
-                                        <input type="checkbox" checked={form.heridosSi} onChange={() => setField('heridosSi', !form.heridosSi)} />
+                                        <input type="radio" name="heridos" value="si" checked={form.heridos === 'si'} onChange={() => setField('heridos', 'si')} />
                                         <span className={styles.smallText}>NO</span>
-                                        <input type="checkbox" checked={form.heridosNo} onChange={() => setField('heridosNo', !form.heridosNo)} />
+                                        <input type="radio" name="heridos" value="no" checked={form.heridos === 'no'} onChange={() => setField('heridos', 'no')} />
                                         <span className={styles.smallText}>Nº</span>
                                         <input className={styles.inputTiny} value={form.heridosNum} onChange={(e) => setField('heridosNum', e.target.value)} />
                                     </div>
@@ -524,9 +524,9 @@ ${textComponents.conclusion}`.trim()
                                     <div className={styles.casualtyTitle}>FALLECIDOS</div>
                                     <div className={styles.casualtyControls}>
                                         <span className={styles.smallText}>SI</span>
-                                        <input type="checkbox" checked={form.fallecidosSi} onChange={() => setField('fallecidosSi', !form.fallecidosSi)} />
+                                        <input type="radio" name="fallecidos" value="si" checked={form.fallecidos === 'si'} onChange={() => setField('fallecidos', 'si')} />
                                         <span className={styles.smallText}>NO</span>
-                                        <input type="checkbox" checked={form.fallecidosNo} onChange={() => setField('fallecidosNo', !form.fallecidosNo)} />
+                                        <input type="radio" name="fallecidos" value="no" checked={form.fallecidos === 'no'} onChange={() => setField('fallecidos', 'no')} />
                                         <span className={styles.smallText}>Nº</span>
                                         <input className={styles.inputTiny} value={form.fallecidosNum} onChange={(e) => setField('fallecidosNum', e.target.value)} />
                                     </div>

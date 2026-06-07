@@ -184,11 +184,13 @@ export function usePsiForm() {
                         : (parte.matriculasImplicados
                             ? String(parte.matriculasImplicados).split(',').map((s: string) => s.trim()).slice(0, 5).concat(Array(5).fill('')).slice(0, 5)
                             : INITIAL_PSI_STATE.matriculasImplicados),
-                    heridosSi: tieneExtra ? (extra.heridosSi ?? parte.tieneHeridos) : parte.tieneHeridos,
-                    heridosNo: tieneExtra ? (extra.heridosNo ?? !parte.tieneHeridos) : !parte.tieneHeridos,
+                    heridos: tieneExtra
+                        ? (extra.heridos ?? (parte.tieneHeridos ? 'si' : ''))
+                        : (parte.tieneHeridos ? 'si' : '') as 'si' | 'no' | '',
                     heridosNum: tieneExtra ? (extra.heridosNum ?? String(parte.numeroHeridos || '')) : String(parte.numeroHeridos || ''),
-                    fallecidosSi: tieneExtra ? (extra.fallecidosSi ?? parte.tieneFallecidos) : parte.tieneFallecidos,
-                    fallecidosNo: tieneExtra ? (extra.fallecidosNo ?? !parte.tieneFallecidos) : !parte.tieneFallecidos,
+                    fallecidos: tieneExtra
+                        ? (extra.fallecidos ?? (parte.tieneFallecidos ? 'si' : ''))
+                        : (parte.tieneFallecidos ? 'si' : '') as 'si' | 'no' | '',
                     fallecidosNum: tieneExtra ? (extra.fallecidosNum ?? String(parte.numeroFallecidos || '')) : String(parte.numeroFallecidos || ''),
                     indicativosInforman: parte.indicativoCumplimenta || extra.indicativosInforman || '',
                     responsableTurno: parte.responsableTurno || extra.responsableTurno || '',
@@ -287,9 +289,9 @@ export function usePsiForm() {
 
                 // Accidente
                 posiblesCausas: form.posiblesCausas,
-                tieneHeridos: form.heridosSi,
+                tieneHeridos: form.heridos === 'si',
                 numeroHeridos: parseInt(form.heridosNum) || 0,
-                tieneFallecidos: form.fallecidosSi,
+                tieneFallecidos: form.fallecidos === 'si',
                 numeroFallecidos: parseInt(form.fallecidosNum) || 0,
 
                 // Contenido

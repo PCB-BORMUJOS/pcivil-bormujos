@@ -78,11 +78,9 @@ function parteAFormState(parte: any): PsiFormState {
     matriculasImplicados: parte.matriculasImplicados
       ? String(parte.matriculasImplicados).split(',').map((s: string) => s.trim()).slice(0, 5).concat(Array(5).fill('')).slice(0, 5)
       : INITIAL_PSI_STATE.matriculasImplicados,
-    heridosSi: !!parte.tieneHeridos,
-    heridosNo: !parte.tieneHeridos,
+    heridos: (parte.tieneHeridos ? 'si' : '') as 'si' | 'no' | '',
     heridosNum: String(parte.numeroHeridos || ''),
-    fallecidosSi: !!parte.tieneFallecidos,
-    fallecidosNo: !parte.tieneFallecidos,
+    fallecidos: (parte.tieneFallecidos ? 'si' : '') as 'si' | 'no' | '',
     fallecidosNum: String(parte.numeroFallecidos || ''),
     posiblesCausas: parte.posiblesCausas || '',
     policiaLocalDe: parte.policiaLocal || '',
