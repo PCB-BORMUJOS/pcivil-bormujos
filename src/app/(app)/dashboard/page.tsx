@@ -1055,7 +1055,8 @@ export default function DashboardPage() {
   }
 
   const semanaActual = showGuardiaDetail ? getLunesDeSemana(showGuardiaDetail.date) : ''
-  const verIdentidades = esAdmin || cuadrantePublicado === true
+  const publicadoSemanaModal = semanaActual ? (publicadoPorSemana[semanaActual] ?? false) : (cuadrantePublicado === true)
+  const verIdentidades = esAdmin || publicadoSemanaModal
   const guardiasFiltradas = (showGuardiaDetail?.guardias || []).filter(
     (g: any) => g.usuario?.numeroVoluntario !== 'B-12'
   )
@@ -1695,7 +1696,7 @@ export default function DashboardPage() {
                     <span className="w-2 h-2 rounded-full bg-green-500 inline-block" />
                     Disponibles este turno ({disponiblesCount})
                   </h4>
-                  {!esAdmin && cuadrantePublicado !== true ? (
+                  {!esAdmin && !publicadoSemanaModal ? (
                     <p className="text-xs text-slate-400 font-medium pl-4">
                       {disponiblesCount === 0
                         ? 'Sin disponibilidad confirmada'
@@ -1724,7 +1725,7 @@ export default function DashboardPage() {
                 </div>
 
                 {/* Disponibles con nombres — solo admin o cuadrante explícitamente publicado */}
-                {(esAdmin || cuadrantePublicado === true) && voluntarios.length > 0 && (
+                {(esAdmin || publicadoSemanaModal) && voluntarios.length > 0 && (
                   <div>
                     <h4 className="text-xs font-bold text-slate-500 uppercase mb-2 flex items-center gap-2">
                       <span className="w-2 h-2 rounded-full bg-slate-400 inline-block" />
@@ -1752,14 +1753,14 @@ export default function DashboardPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs font-bold text-slate-700">Visibilidad del cuadrante</p>
-                    <p className="text-[11px] text-slate-400 mt-0.5">{cuadrantePublicado ? 'Los voluntarios pueden ver los asignados' : 'Solo admins ven identidades'}</p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">{publicadoSemanaModal ? 'Los voluntarios pueden ver los asignados' : 'Solo admins ven identidades'}</p>
                   </div>
                   <button
-                    onClick={() => handleTogglePublicar(semanaActual, cuadrantePublicado ?? false)}
+                    onClick={() => handleTogglePublicar(semanaActual, publicadoSemanaModal)}
                     disabled={loadingPublicar}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors disabled:opacity-50 ${cuadrantePublicado ? 'bg-amber-100 text-amber-700 hover:bg-amber-200' : 'bg-green-100 text-green-700 hover:bg-green-200'}`}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors disabled:opacity-50 ${publicadoSemanaModal ? 'bg-amber-100 text-amber-700 hover:bg-amber-200' : 'bg-green-100 text-green-700 hover:bg-green-200'}`}
                   >
-                    {loadingPublicar ? '...' : cuadrantePublicado ? 'Despublicar' : 'Publicar semana'}
+                    {loadingPublicar ? '...' : publicadoSemanaModal ? 'Despublicar' : 'Publicar semana'}
                   </button>
                 </div>
               </div>
