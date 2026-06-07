@@ -25,6 +25,16 @@ export function PsiForm() {
 
     const [activeTab, setActiveTab] = useState<1 | 2 | 3>(1)
 
+    const handleTabKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'ArrowRight') {
+            e.preventDefault()
+            setActiveTab(prev => prev === 3 ? 1 : (prev + 1) as 1 | 2 | 3)
+        } else if (e.key === 'ArrowLeft') {
+            e.preventDefault()
+            setActiveTab(prev => prev === 1 ? 3 : (prev - 1) as 1 | 2 | 3)
+        }
+    }
+
     // Structured Text State
     const [textComponents, setTextComponents] = useState({
         introduccion: '',
@@ -226,9 +236,14 @@ ${textComponents.conclusion}`.trim()
             <div className={styles.page}>
                 <form onSubmit={handleSubmit}>
                     {/* TABS NAVIGATION */}
-                    <div className={styles.tabsContainer}>
+                    <div role="tablist" aria-label="Secciones del parte PSI" className={styles.tabsContainer} onKeyDown={handleTabKeyDown}>
                         <button
                             type="button"
+                            role="tab"
+                            id="psi-tabid-1"
+                            aria-selected={activeTab === 1}
+                            aria-controls="psi-tab-1"
+                            tabIndex={activeTab === 1 ? 0 : -1}
                             onClick={() => setActiveTab(1)}
                             className={`${styles.tabButton} ${activeTab === 1 ? styles.activeTab : ''}`}
                         >
@@ -236,6 +251,11 @@ ${textComponents.conclusion}`.trim()
                         </button>
                         <button
                             type="button"
+                            role="tab"
+                            id="psi-tabid-2"
+                            aria-selected={activeTab === 2}
+                            aria-controls="psi-tab-2"
+                            tabIndex={activeTab === 2 ? 0 : -1}
                             onClick={() => setActiveTab(2)}
                             className={`${styles.tabButton} ${activeTab === 2 ? styles.activeTab : ''}`}
                         >
@@ -243,6 +263,11 @@ ${textComponents.conclusion}`.trim()
                         </button>
                         <button
                             type="button"
+                            role="tab"
+                            id="psi-tabid-3"
+                            aria-selected={activeTab === 3}
+                            aria-controls="psi-tab-3"
+                            tabIndex={activeTab === 3 ? 0 : -1}
                             onClick={() => setActiveTab(3)}
                             className={`${styles.tabButton} ${activeTab === 3 ? styles.activeTab : ''}`}
                         >
@@ -269,7 +294,7 @@ ${textComponents.conclusion}`.trim()
                     </header>
 
                     {/* TAB 1: DATOS PRINCIPALES (Grid Layout) */}
-                    <div style={{ display: activeTab === 1 ? 'block' : 'none' }}>
+                    <div role="tabpanel" id="psi-tab-1" aria-labelledby="psi-tabid-1" style={{ display: activeTab === 1 ? 'block' : 'none' }}>
 
                         {/* BLOQUE SUPERIOR */}
                         <section className={styles.topBlock}>
@@ -638,7 +663,7 @@ ${textComponents.conclusion}`.trim()
                     </div>
 
                     {/* TAB 2: DESARROLLO DETALLADO */}
-                    <div style={{ display: activeTab === 2 ? 'block' : 'none' }}>
+                    <div role="tabpanel" id="psi-tab-2" aria-labelledby="psi-tabid-2" style={{ display: activeTab === 2 ? 'block' : 'none' }}>
                         <section className="p-6">
                             <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
                                 <div className="p-1.5 bg-indigo-100 rounded-lg">
@@ -681,7 +706,7 @@ ${textComponents.conclusion}`.trim()
                     </div>
 
                     {/* TAB 3: FOTOGRAFÍAS */}
-                    <div style={{ display: activeTab === 3 ? 'block' : 'none' }}>
+                    <div role="tabpanel" id="psi-tab-3" aria-labelledby="psi-tabid-3" style={{ display: activeTab === 3 ? 'block' : 'none' }}>
                         <section className="p-6">
                             <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
                                 <div className="p-1.5 bg-indigo-100 rounded-lg">
