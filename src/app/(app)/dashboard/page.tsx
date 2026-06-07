@@ -502,7 +502,7 @@ function CalendarView({ eventos, guardias, resumenDisponibilidad, onEventClick, 
                   const dow = ds.getUTCDay();
                   ds.setUTCDate(ds.getUTCDate() + (dow === 0 ? -6 : 1 - dow));
                   const semanaKey = ds.toISOString().slice(0, 10);
-                  const mostrarGuardias = esAdmin || (publicadoPorSemana[semanaKey] ?? false);
+                  const mostrarGuardias = publicadoPorSemana[semanaKey] ?? false;
 
                   return (
                     <>
@@ -510,32 +510,34 @@ function CalendarView({ eventos, guardias, resumenDisponibilidad, onEventClick, 
                         <div
                           className={`text-[9px] px-1.5 py-1 rounded border-l-2 cursor-pointer ${colorPorCount('mañana', guardiasMañana.length)}`}
                           onClick={(e) => { e.stopPropagation(); onGuardiaClick(day.date, 'mañana', guardiasMañana); }}
+                          title={`Asignados: ${guardiasMañana.length}${resMañana ? ` | Disponibles: ${resMañana.total}` : ''}`}
                         >
                           <span className="font-bold">T. Mañana</span> ({guardiasMañana.length})
                         </div>
-                      ) : guardiasMañana.length > 0 || resMañana ? (
+                      ) : resMañana ? (
                         <div
-                          className={`text-[9px] px-1.5 py-1 rounded border-l-2 cursor-pointer ${colorDisponibilidad('mañana', resMañana?.total ?? 0)}`}
+                          className={`text-[9px] px-1.5 py-1 rounded border-l-2 cursor-pointer ${colorDisponibilidad('mañana', resMañana.total)}`}
                           onClick={(e) => { e.stopPropagation(); e.preventDefault(); onGuardiaClick(day.date, 'mañana', guardiasMañana); }}
-                          title={resMañana ? `Mañana: ${resMañana.total} disponibles | Resp: ${resMañana.responsables} | Carnet: ${resMañana.conCarnet}` : 'Turno asignado — pendiente publicación'}
+                          title={`Mañana: ${resMañana.total} disponibles | Resp: ${resMañana.responsables} | Carnet: ${resMañana.conCarnet}`}
                         >
-                          <span className="font-bold">Mañana</span> <span className="font-semibold">{resMañana?.total ?? 0}</span>
+                          <span className="font-bold">Mañana</span> <span className="font-semibold">{resMañana.total}</span>
                         </div>
                       ) : null}
                       {mostrarGuardias && guardiasTarde.length > 0 ? (
                         <div
                           className={`text-[9px] px-1.5 py-1 rounded border-l-2 cursor-pointer ${colorPorCount('tarde', guardiasTarde.length)}`}
                           onClick={(e) => { e.stopPropagation(); onGuardiaClick(day.date, 'tarde', guardiasTarde); }}
+                          title={`Asignados: ${guardiasTarde.length}${resTarde ? ` | Disponibles: ${resTarde.total}` : ''}`}
                         >
                           <span className="font-bold">T. Tarde</span> ({guardiasTarde.length})
                         </div>
-                      ) : guardiasTarde.length > 0 || resTarde ? (
+                      ) : resTarde ? (
                         <div
-                          className={`text-[9px] px-1.5 py-1 rounded border-l-2 cursor-pointer ${colorDisponibilidad('tarde', resTarde?.total ?? 0)}`}
+                          className={`text-[9px] px-1.5 py-1 rounded border-l-2 cursor-pointer ${colorDisponibilidad('tarde', resTarde.total)}`}
                           onClick={(e) => { e.stopPropagation(); e.preventDefault(); onGuardiaClick(day.date, 'tarde', guardiasTarde); }}
-                          title={resTarde ? `Tarde: ${resTarde.total} disponibles | Resp: ${resTarde.responsables} | Carnet: ${resTarde.conCarnet}` : 'Turno asignado — pendiente publicación'}
+                          title={`Tarde: ${resTarde.total} disponibles | Resp: ${resTarde.responsables} | Carnet: ${resTarde.conCarnet}`}
                         >
-                          <span className="font-bold">Tarde</span> <span className="font-semibold">{resTarde?.total ?? 0}</span>
+                          <span className="font-bold">Tarde</span> <span className="font-semibold">{resTarde.total}</span>
                         </div>
                       ) : null}
                     </>
