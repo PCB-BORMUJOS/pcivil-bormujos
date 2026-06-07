@@ -426,13 +426,8 @@ export function usePsiForm() {
 
     // Setters
     const updateForm = (updater: (prev: PsiFormState) => PsiFormState) => {
-        setForm(prev => {
-            const next = updater(prev)
-            if (JSON.stringify(prev) !== JSON.stringify(next)) {
-                setHasChanges(true)
-            }
-            return next
-        })
+        setForm(prev => updater(prev))
+        setHasChanges(true)
     }
 
     const setField = <K extends keyof PsiFormState>(key: K, value: PsiFormState[K]) => {
