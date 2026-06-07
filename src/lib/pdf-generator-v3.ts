@@ -507,33 +507,86 @@ function drawPage1(doc: jsPDF, data: PsiFormState) {
 }
 
 // ═══════════════════════════════════════════════════
-//  PÁGINA 2: Desarrollo Detallado – texto continuo
+//  PÁGINA 2: Desarrollo Detallado – paginación automática
 // ═══════════════════════════════════════════════════
 function drawPage2(doc: jsPDF, data: PsiFormState) {
+    const LINE_H = 4.5        // mm por línea a 8pt
+    const FONT_SIZE = 8
+    const FOOTER_TOP = PAGE_H - 20  // Y donde empieza el footer (18mm) + margen
+
+    // ── Parsear las 3 secciones del texto ──
+    const rawText = data.desarrolloDetallado || ''
+    let introduccion = ''
+    let desarrollo = ''
+    let conclusion = ''
+
+    if (rawText.includes('INTRODUCCIÓN:') || rawText.includes('DESARROLLO:') || rawText.includes('CONCLUSIÓN:')) {
+        const introMatch = rawText.match(/INTRODUCCIÓN:\s*([\s\S]*?)(?=\n\nDESARROLLO:|$)/)
+        const bodyMatch  = rawText.match(/DESARROLLO:\s*([\s\S]*?)(?=\n\nCONCLUSIÓN:|$)/)
+        const concMatch  = rawText.match(/CONCLUSIÓN:\s*([\s\S]*?)$/)
+        introduccion = introMatch?.[1]?.trim() ?? ''
+        desarrollo   = bodyMatch?.[1]?.trim()  ?? ''
+        conclusion   = concMatch?.[1]?.trim()  ?? ''
+    } else {
+        // Texto legacy sin cabeceras: todo va a desarrollo
+        desarrollo = rawText
+    }
+
+    const sections: Array<{ label: string; text: string }> = [
+        { label: 'INTRODUCCIÓN',         text: introduccion },
+        { label: 'DESARROLLO DETALLADO', text: desarrollo   },
+        { label: 'CONCLUSIÓN',           text: conclusion   },
+    ]
+
     let y = drawHeader(doc)
 
-    // No section title, no headers. Just continuous text.
-    const rawText = data.desarrolloDetallado || ''
+    for (const { label, text } of sections) {
+        // Asegurar espacio para la barra de sección + al menos una línea
+        if (y + 8 > FOOTER_TOP) {
+            drawFooter(doc)
+            doc.addPage()
+            y = drawHeader(doc)
+        }
 
-    // Strip section headers (INTRODUCCIÓN, DESARROLLO DETALLADO, CONCLUSIÓN) if present
-    const cleanText = rawText
-        .replace(/INTRODUCCIÓN[:\s]*/gi, '')
-        .replace(/DESARROLLO\s*DETALLADO[:\s]*/gi, '')
-        .replace(/CONCLUSIÓN[:\s]*/gi, '')
-        .trim()
+        y = sectionBar(doc, label, y)
+        y += 2
 
-    if (cleanText) {
-        // Draw text box with border
-        const maxTextH = PAGE_H - y - 14  // leave room for footer
-        drawRect(doc, MARGIN, y, CONTENT_W, maxTextH, undefined, BORDER)
-        doc.setTextColor(...TEXT_DARK)
-        doc.setFontSize(8)
+        if (!text) {
+            // Caja vacía mínima
+            if (y + 8 > FOOTER_TOP) {
+                drawFooter(doc)
+                doc.addPage()
+                y = drawHeader(doc)
+            }
+            drawRect(doc, MARGIN, y, CONTENT_W, 8, undefined, BORDER)
+            y += 10
+            continue
+        }
+
+        // Dividir texto en líneas (respeta saltos de línea y wrap)
+        doc.setFontSize(FONT_SIZE)
         doc.setFont('helvetica', 'normal')
-        doc.text(cleanText, MARGIN + 3, y + 5, { maxWidth: CONTENT_W - 6 })
-    } else {
-        // Empty box
-        const emptyH = PAGE_H - y - 14
-        drawRect(doc, MARGIN, y, CONTENT_W, emptyH, undefined, BORDER)
+        const rawLines = text.split('\n')
+        const lines: string[] = []
+        for (const rl of rawLines) {
+            const wrapped = doc.splitTextToSize(rl || ' ', CONTENT_W - 6) as string[]
+            lines.push(...wrapped)
+        }
+
+        for (const line of lines) {
+            if (y + LINE_H > FOOTER_TOP) {
+                drawFooter(doc)
+                doc.addPage()
+                y = drawHeader(doc)
+            }
+            doc.setTextColor(...TEXT_DARK)
+            doc.setFontSize(FONT_SIZE)
+            doc.setFont('helvetica', 'normal')
+            doc.text(line, MARGIN + 3, y + LINE_H * 0.78)
+            y += LINE_H
+        }
+
+        y += 5  // separación entre secciones
     }
 
     drawFooter(doc)

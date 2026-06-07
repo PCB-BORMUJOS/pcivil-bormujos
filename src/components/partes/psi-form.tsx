@@ -138,10 +138,29 @@ ${textComponents.conclusion}`.trim()
             const { generatePsiPdfV3 } = await import('@/lib/pdf-generator-v3')
             toast.loading('Generando y subiendo PDF...', { id: 'pdf-gen' })
 
-            // Map current images to form.fotos
+            // Convertir URLs de Vercel Blob a base64 para jsPDF
+            const photoBase64s = await Promise.all(
+                imagenes.map(async (img) => {
+                    if (!img.url) return ''
+                    if (img.url.startsWith('data:')) return img.url
+                    try {
+                        const res = await fetch(img.url)
+                        const blob = await res.blob()
+                        return await new Promise<string>((resolve, reject) => {
+                            const reader = new FileReader()
+                            reader.onload = () => resolve(reader.result as string)
+                            reader.onerror = reject
+                            reader.readAsDataURL(blob)
+                        })
+                    } catch {
+                        return ''
+                    }
+                })
+            )
+
             const formDataWithPhotos = {
                 ...savedForm,
-                fotos: imagenes.map(img => img.url)
+                fotos: photoBase64s.filter(Boolean) as string[]
             }
 
             // Generate PDF Blob
