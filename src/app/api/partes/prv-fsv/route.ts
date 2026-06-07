@@ -6,34 +6,22 @@ import { getNivel } from '@/lib/permisos'
 import { registrarAudit, getUsuarioAudit } from '@/lib/audit'
 import { getTodaySpain } from '@/lib/date-utils'
 
-// ─── Genera el próximo número de referencia PRV-FSV-YYYY-NNNN ────────────────
 async function generarNumeroReferencia(): Promise<string> {
     const year = new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Madrid' }).slice(0, 4)
     const prefix = `PRV-FSV-${year}-`
-
     const ultimo = await prisma.partePRVFSV.findFirst({
         where: { numeroReferencia: { startsWith: prefix } },
         orderBy: { numeroReferencia: 'desc' },
         select: { numeroReferencia: true },
     })
-
-    const siguiente = ultimo
-        ? parseInt(ultimo.numeroReferencia.slice(prefix.length), 10) + 1
-        : 1
-
+    const siguiente = ultimo ? parseInt(ultimo.numeroReferencia.slice(prefix.length), 10) + 1 : 1
     return `${prefix}${String(siguiente).padStart(4, '0')}`
 }
 
-/**
- * GET /api/partes/prv-fsv
- * Lista de partes con paginación y filtros opcionales
- */
 export async function GET(request: NextRequest) {
     try {
         const session = await getServerSession(authOptions)
-        if (!session?.user) {
-            return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
-        }
+        if (!session?.user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
         const { searchParams } = new URL(request.url)
         const page  = parseInt(searchParams.get('page')  || '1')
@@ -43,11 +31,7 @@ export async function GET(request: NextRequest) {
 
         const nivel = getNivel((session.user as any).rol ?? '')
         const where: Record<string, unknown> = {}
-
-        // Voluntarios solo ven sus propios partes
-        if (nivel < 2) {
-            where.creadoPorId = session.user.id
-        }
+        if (nivel < 2) where.creadoPorId = session.user.id
         if (fecha)  where.fecha  = new Date(fecha + 'T12:00:00+02:00')
         if (estado) where.estado = estado
 
@@ -58,13 +42,8 @@ export async function GET(request: NextRequest) {
                 skip: (page - 1) * limit,
                 take: limit,
                 select: {
-                    id: true,
-                    numeroReferencia: true,
-                    fecha: true,
-                    hora: true,
-                    km: true,
-                    estado: true,
-                    createdAt: true,
+                    id: true, numeroReferencia: true, fecha: true,
+                    hora: true, km: true, estado: true, createdAt: true,
                     creadoPor: { select: { nombre: true, apellidos: true } },
                 },
             }),
@@ -78,19 +57,12 @@ export async function GET(request: NextRequest) {
     }
 }
 
-/**
- * POST /api/partes/prv-fsv
- * Crear nuevo parte PRV-FSV
- */
 export async function POST(request: NextRequest) {
     try {
         const session = await getServerSession(authOptions)
-        if (!session?.user) {
-            return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
-        }
+        if (!session?.user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
         const body = await request.json()
-
         const numeroReferencia = await generarNumeroReferencia()
         const fechaStr = body.fecha || getTodaySpain()
         const fecha = new Date(fechaStr + 'T12:00:00+02:00')
@@ -99,43 +71,23 @@ export async function POST(request: NextRequest) {
             data: {
                 numeroReferencia,
                 fecha,
-                hora:                  body.hora                  ?? '',
-                km:                    body.km                    ? parseInt(body.km) : null,
-                checklistPrincipal:    body.checklistPrincipal    ?? [],
-                danosDiagrama:         body.danosDiagrama         ?? [],
-                nivelDiesel:           body.nivelDiesel            ?? '4/4',
-                tieneDiesel:           body.tieneDiesel            ?? true,
-                nivelAceite:           body.nivelAceite            ?? '4/4',
-                nivelAgua:             body.nivelAgua              ?? '4/4',
-                nivelLimpiaparabrisas: body.nivelLimpiaparabrisas  ?? '4/4',
-                observaciones:         body.observaciones          ?? '',
-                indicativo1:           body.indicativo1            ?? '',
-                indicativo2:           body.indicativo2            ?? '',
-                indicativo3:           body.indicativo3            ?? '',
-                firmaJefeServicio:     body.firmaJefeServicio      ?? null,
-                checklistMaterial:     body.checklistMaterial      ?? [],
-                fotoFrontal:           body.fotoFrontal            ?? null,
-                fotoTrasera:           body.fotoTrasera            ?? null,
-                fotoLateralIzq:        body.fotoLateralIzq         ?? null,
-                fotoLateralDer:        body.fotoLateralDer         ?? null,
-                fotoDetalle1:          body.fotoDetalle1           ?? null,
-                fotoDetalle2:          body.fotoDetalle2           ?? null,
-                fotoDetalle3:          body.fotoDetalle3           ?? null,
-                fotoDetalle4:          body.fotoDetalle4           ?? null,
-                estado:                'borrador',
-                creadoPorId:           session.user.id,
+                hora:             body.hora             ?? '',
+                km:               body.km               ? parseInt(body.km) : null,
+                camposFormulario: body.camposFormulario  ?? {},
+                fotoFrontal:      body.fotoFrontal       ?? null,
+                fotoTrasera:      body.fotoTrasera       ?? null,
+                fotoLateralIzq:   body.fotoLateralIzq    ?? null,
+                fotoLateralDer:   body.fotoLateralDer    ?? null,
+                estado:           'borrador',
+                creadoPorId:      session.user.id,
             },
         })
 
         const { usuarioId, usuarioNombre } = getUsuarioAudit(session)
         await registrarAudit({
-            accion: 'CREATE',
-            entidad: 'PartePRVFSV',
-            entidadId: parte.id,
+            accion: 'CREATE', entidad: 'PartePRVFSV', entidadId: parte.id,
             descripcion: `Parte PRV-FSV creado: ${numeroReferencia}`,
-            usuarioId,
-            usuarioNombre,
-            modulo: 'Partes',
+            usuarioId, usuarioNombre, modulo: 'Partes',
         })
 
         return NextResponse.json(parte, { status: 201 })

@@ -1138,53 +1138,27 @@ model PartePSI {
 }
 
 model PartePRVFSV {
-  id                    String   @id @default(cuid())
-  numeroReferencia      String   @unique // PRV-FSV-2026-0001
-  fecha                 DateTime @db.Date
-  hora                  String
-  km                    Int?
+  id               String   @id @default(cuid())
+  numeroReferencia String   @unique
+  fecha            DateTime @db.Date
+  hora             String   @default("")
+  km               Int?
 
-  // Tab 1 — Checklist principal (18 ítems, valores 1-5)
-  checklistPrincipal    Json     @default("[]") // [{item:string, valor:number}]
+  // Todos los campos del formulario PDF (checkboxes, texto, niveles, firma...)
+  camposFormulario Json     @default("{}")
 
-  // Tab 1 — Diagrama de daños sobre SVG del vehículo
-  danosDiagrama         Json     @default("[]") // [{x:number, y:number, descripcion:string}]
-
-  // Tab 1 — Niveles de líquidos
-  nivelDiesel           String?  // "0/0" | "1/4" | "1/2" | "3/4" | "4/4"
-  tieneDiesel           Boolean  @default(true)
-  nivelAceite           String?  // "0/0" | "1/2" | "4/4"
-  nivelAgua             String?
-  nivelLimpiaparabrisas String?
-
-  // Tab 1 — Observaciones y firmantes
-  observaciones         String?  @db.Text
-  indicativo1           String?
-  indicativo2           String?
-  indicativo3           String?
-  firmaJefeServicio     String?  @db.Text // base64 PNG
-
-  // Tab 2 — Checklist material extendido (53 ítems en 6 grupos, valores 1-5)
-  checklistMaterial     Json     @default("[]") // [{item:string, grupo:string, valor:number}]
-
-  // Tab 3 — Fotos vistas principales (Vercel Blob URLs)
-  fotoFrontal           String?
-  fotoTrasera           String?
-  fotoLateralIzq        String?
-  fotoLateralDer        String?
-
-  // Tab 4 — Fotos detalles
-  fotoDetalle1          String?
-  fotoDetalle2          String?
-  fotoDetalle3          String?
-  fotoDetalle4          String?
+  // Fotos vehículo (Vercel Blob URLs — manejo especial fuera del PDF)
+  fotoFrontal      String?
+  fotoTrasera      String?
+  fotoLateralIzq   String?
+  fotoLateralDer   String?
 
   // Estado y auditoría
-  estado                String   @default("borrador") // borrador | pendiente_vb | completo
-  creadoPorId           String
-  creadoPor             Usuario  @relation(fields: [creadoPorId], references: [id])
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  estado           String   @default("borrador")
+  creadoPorId      String
+  creadoPor        Usuario  @relation(fields: [creadoPorId], references: [id])
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   @@index([numeroReferencia])
   @@index([fecha])

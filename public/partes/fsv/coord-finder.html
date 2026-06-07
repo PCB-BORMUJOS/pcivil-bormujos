@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Buscador de coordenadas PRV-FSV</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: monospace; background: #111; color: #eee; }
+  #toolbar {
+    position: sticky; top: 0; z-index: 100;
+    background: #222; padding: 8px 12px;
+    display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+    border-bottom: 2px solid #444;
+  }
+  #toolbar h2 { font-size: 14px; color: #7cf; flex: none; }
+  #info {
+    background: #1a1a2e; border: 1px solid #444; padding: 4px 10px;
+    border-radius: 4px; font-size: 13px; color: #0f0; min-width: 300px;
+  }
+  #coords-list {
+    background: #1a1a2e; border: 1px solid #444; padding: 4px 10px;
+    border-radius: 4px; font-size: 11px; color: #ff9; max-height: 120px;
+    overflow-y: auto; min-width: 400px;
+  }
+  button {
+    background: #333; border: 1px solid #666; color: #eee;
+    padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 12px;
+  }
+  button:hover { background: #555; }
+  .page-selector { display: flex; gap: 4px; }
+  .page-btn { background: #333; border: 1px solid #666; color: #aaa; }
+  .page-btn.active { background: #0066cc; color: #fff; border-color: #0af; }
+
+  #main {
+    display: flex; flex-direction: column; align-items: center;
+    padding: 20px;
+  }
+  .svg-wrapper {
+    position: relative; cursor: crosshair;
+    border: 2px solid #555; display: none;
+  }
+  .svg-wrapper.active { display: block; }
+  .svg-wrapper img { display: block; width: 800px; height: auto; }
+  .crosshair-h, .crosshair-v {
+    position: absolute; background: rgba(255,0,0,0.5); pointer-events: none;
+  }
+  .crosshair-h { height: 1px; left: 0; right: 0; }
+  .crosshair-v { width: 1px; top: 0; bottom: 0; }
+  .dot {
+    position: absolute; width: 8px; height: 8px;
+    background: rgba(255,255,0,0.8); border-radius: 50%;
+    transform: translate(-4px, -4px); pointer-events: none;
+  }
+  .dot-label {
+    position: absolute; font-size: 9px; color: #ff0;
+    white-space: nowrap; pointer-events: none; background: rgba(0,0,0,0.7);
+    padding: 1px 3px; border-radius: 2px;
+  }
+</style>
+</head>
+<body>
+<div id="toolbar">
+  <h2>Buscador coordenadas PRV-FSV</h2>
+  <div class="page-selector">
+    <button class="page-btn active" onclick="showPage(1)">Pág 1</button>
+    <button class="page-btn" onclick="showPage(2)">Pág 2</button>
+    <button class="page-btn" onclick="showPage(3)">Pág 3</button>
+    <button class="page-btn" onclick="showPage(4)">Pág 4</button>
+  </div>
+  <div id="info">Haz clic sobre un campo del formulario</div>
+  <button onclick="clearDots()">Limpiar puntos</button>
+  <button onclick="copyAll()">Copiar lista</button>
+  <div id="coords-list">(sin clics)</div>
+</div>
+
+<div id="main">
+  <div id="page1" class="svg-wrapper active">
+    <img src="fsv-pagina1.svg" alt="Página 1">
+    <div class="crosshair-h" id="ch1"></div>
+    <div class="crosshair-v" id="cv1"></div>
+  </div>
+  <div id="page2" class="svg-wrapper">
+    <img src="fsv-pagina2.svg" alt="Página 2">
+    <div class="crosshair-h" id="ch2"></div>
+    <div class="crosshair-v" id="cv2"></div>
+  </div>
+  <div id="page3" class="svg-wrapper">
+    <img src="fsv-pagina3.svg" alt="Página 3">
+    <div class="crosshair-h" id="ch3"></div>
+    <div class="crosshair-v" id="cv3"></div>
+  </div>
+  <div id="page4" class="svg-wrapper">
+    <img src="fsv-pagina4.svg" alt="Página 4">
+    <div class="crosshair-h" id="ch4"></div>
+    <div class="crosshair-v" id="cv4"></div>
+  </div>
+</div>
+
+<script>
+let currentPage = 1;
+const allCoords = [];
+
+function showPage(n) {
+  currentPage = n;
+  document.querySelectorAll('.svg-wrapper').forEach((el, i) => {
+    el.classList.toggle('active', i + 1 === n);
+  });
+  document.querySelectorAll('.page-btn').forEach((el, i) => {
+    el.classList.toggle('active', i + 1 === n);
+  });
+}
+
+document.querySelectorAll('.svg-wrapper').forEach((wrapper, pageIdx) => {
+  const pageNum = pageIdx + 1;
+  const ch = wrapper.querySelector('.crosshair-h');
+  const cv = wrapper.querySelector('.crosshair-v');
+
+  wrapper.addEventListener('mousemove', (e) => {
+    const rect = wrapper.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const xPct = (x / rect.width * 100).toFixed(2);
+    const yPct = (y / rect.height * 100).toFixed(2);
+    ch.style.top = y + 'px';
+    cv.style.left = x + 'px';
+    document.getElementById('info').textContent =
+      `Pág ${pageNum} → x: ${xPct}%  y: ${yPct}%  (px: ${Math.round(x)}, ${Math.round(y)})`;
+  });
+
+  wrapper.addEventListener('click', (e) => {
+    const rect = wrapper.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const xPct = (x / rect.width * 100).toFixed(2);
+    const yPct = (y / rect.height * 100).toFixed(2);
+
+    const label = prompt(`Nombre de este campo (pág ${pageNum}):`, '');
+    if (!label) return;
+
+    const coord = { page: pageNum, label, x: xPct, y: yPct };
+    allCoords.push(coord);
+    renderList();
+
+    // Draw dot
+    const dot = document.createElement('div');
+    dot.className = 'dot';
+    dot.style.left = x + 'px';
+    dot.style.top = y + 'px';
+    wrapper.appendChild(dot);
+
+    const lbl = document.createElement('div');
+    lbl.className = 'dot-label';
+    lbl.style.left = (x + 6) + 'px';
+    lbl.style.top = (y - 8) + 'px';
+    lbl.textContent = `${allCoords.length}. ${label}`;
+    wrapper.appendChild(lbl);
+  });
+});
+
+function renderList() {
+  const el = document.getElementById('coords-list');
+  el.innerHTML = allCoords.map((c, i) =>
+    `${i+1}. [P${c.page}] ${c.label}: x=${c.x}% y=${c.y}%`
+  ).join('<br>');
+  el.scrollTop = el.scrollHeight;
+}
+
+function clearDots() {
+  document.querySelectorAll('.dot, .dot-label').forEach(e => e.remove());
+  allCoords.length = 0;
+  renderList();
+}
+
+function copyAll() {
+  const text = allCoords.map((c, i) =>
+    `${i+1}. [Pág ${c.page}] ${c.label}: x=${c.x}% y=${c.y}%`
+  ).join('\n');
+  navigator.clipboard.writeText(text).then(() => {
+    document.getElementById('info').textContent = '✓ Copiado al portapapeles';
+    setTimeout(() => document.getElementById('info').textContent = 'Haz clic sobre un campo del formulario', 2000);
+  });
+}
+</script>
+</body>
+</html>

@@ -2,16 +2,11 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
-import {
-    PrvFsvFormState,
-    INITIAL_PRV_FSV_STATE,
-    ChecklistItem,
-    MaterialItem,
-    DanoDiagrama,
-} from '@/types/prv-fsv'
+import { PrvFsvFormState, INITIAL_PRV_FSV_STATE } from '@/types/prv-fsv'
+import { getTodaySpain } from '@/lib/date-utils'
 
 const LOCALSTORAGE_KEY = 'prv-fsv-draft'
-const DRAFT_MAX_AGE_MS = 2 * 60 * 60 * 1000 // 2 horas
+const DRAFT_MAX_AGE_MS = 2 * 60 * 60 * 1000
 
 export function usePrvFsvForm() {
     const searchParams = useSearchParams()
@@ -24,7 +19,10 @@ export function usePrvFsvForm() {
     const [hasChanges, setHasChanges] = useState(false)
     const [draftRestored, setDraftRestored] = useState(false)
     const [estadoParte, setEstadoParte] = useState<string>('borrador')
-    const [form, setForm] = useState<PrvFsvFormState>(INITIAL_PRV_FSV_STATE)
+    const [form, setForm] = useState<PrvFsvFormState>({
+        ...INITIAL_PRV_FSV_STATE,
+        fecha: getTodaySpain(),
+    })
 
     const idRef = useRef<string | null>(initialId || null)
     useEffect(() => { idRef.current = id }, [id])
@@ -61,41 +59,22 @@ export function usePrvFsvForm() {
         setLoading(true)
         try {
             const res = await fetch(`/api/partes/prv-fsv/${parteId}`)
-            if (!res.ok) {
-                console.error('Error cargando parte PRV-FSV')
-                return
-            }
+            if (!res.ok) return
             const parte = await res.json()
             setId(parte.id)
             setEstadoParte(parte.estado || 'borrador')
             setForm({
-                id:                    parte.id,
-                numeroReferencia:      parte.numeroReferencia || '',
-                fecha:                 parte.fecha ? new Date(parte.fecha).toISOString().split('T')[0] : '',
-                hora:                  parte.hora || '',
-                km:                    parte.km?.toString() || '',
-                checklistPrincipal:    Array.isArray(parte.checklistPrincipal)    ? parte.checklistPrincipal    : INITIAL_PRV_FSV_STATE.checklistPrincipal,
-                danosDiagrama:         Array.isArray(parte.danosDiagrama)         ? parte.danosDiagrama         : [],
-                nivelDiesel:           parte.nivelDiesel           ?? '4/4',
-                tieneDiesel:           parte.tieneDiesel           ?? true,
-                nivelAceite:           parte.nivelAceite           ?? '4/4',
-                nivelAgua:             parte.nivelAgua             ?? '4/4',
-                nivelLimpiaparabrisas: parte.nivelLimpiaparabrisas ?? '4/4',
-                observaciones:         parte.observaciones         || '',
-                indicativo1:           parte.indicativo1           || '',
-                indicativo2:           parte.indicativo2           || '',
-                indicativo3:           parte.indicativo3           || '',
-                firmaJefeServicio:     parte.firmaJefeServicio     || null,
-                checklistMaterial:     Array.isArray(parte.checklistMaterial)     ? parte.checklistMaterial     : INITIAL_PRV_FSV_STATE.checklistMaterial,
-                fotoFrontal:           parte.fotoFrontal    || null,
-                fotoTrasera:           parte.fotoTrasera    || null,
-                fotoLateralIzq:        parte.fotoLateralIzq || null,
-                fotoLateralDer:        parte.fotoLateralDer || null,
-                fotoDetalle1:          parte.fotoDetalle1   || null,
-                fotoDetalle2:          parte.fotoDetalle2   || null,
-                fotoDetalle3:          parte.fotoDetalle3   || null,
-                fotoDetalle4:          parte.fotoDetalle4   || null,
-                estado:                parte.estado         || 'borrador',
+                id:               parte.id,
+                numeroReferencia: parte.numeroReferencia || '',
+                fecha:            parte.fecha ? new Date(parte.fecha).toISOString().split('T')[0] : getTodaySpain(),
+                hora:             parte.hora || '',
+                km:               parte.km?.toString() || '',
+                camposFormulario: parte.camposFormulario || {},
+                fotoFrontal:      parte.fotoFrontal  || null,
+                fotoTrasera:      parte.fotoTrasera  || null,
+                fotoLateralIzq:   parte.fotoLateralIzq || null,
+                fotoLateralDer:   parte.fotoLateralDer || null,
+                estado:           parte.estado || 'borrador',
             })
         } catch (err) {
             console.error('Error cargando parte PRV-FSV:', err)
@@ -109,31 +88,15 @@ export function usePrvFsvForm() {
         setSaving(true)
         try {
             const payload = {
-                fecha:                 form.fecha,
-                hora:                  form.hora,
-                km:                    form.km,
-                checklistPrincipal:    form.checklistPrincipal,
-                danosDiagrama:         form.danosDiagrama,
-                nivelDiesel:           form.nivelDiesel,
-                tieneDiesel:           form.tieneDiesel,
-                nivelAceite:           form.nivelAceite,
-                nivelAgua:             form.nivelAgua,
-                nivelLimpiaparabrisas: form.nivelLimpiaparabrisas,
-                observaciones:         form.observaciones,
-                indicativo1:           form.indicativo1,
-                indicativo2:           form.indicativo2,
-                indicativo3:           form.indicativo3,
-                firmaJefeServicio:     form.firmaJefeServicio,
-                checklistMaterial:     form.checklistMaterial,
-                fotoFrontal:           form.fotoFrontal,
-                fotoTrasera:           form.fotoTrasera,
-                fotoLateralIzq:        form.fotoLateralIzq,
-                fotoLateralDer:        form.fotoLateralDer,
-                fotoDetalle1:          form.fotoDetalle1,
-                fotoDetalle2:          form.fotoDetalle2,
-                fotoDetalle3:          form.fotoDetalle3,
-                fotoDetalle4:          form.fotoDetalle4,
-                estado:                finalizar ? 'completo' : undefined,
+                fecha:            form.fecha,
+                hora:             form.hora,
+                km:               form.km,
+                camposFormulario: form.camposFormulario,
+                fotoFrontal:      form.fotoFrontal,
+                fotoTrasera:      form.fotoTrasera,
+                fotoLateralIzq:   form.fotoLateralIzq,
+                fotoLateralDer:   form.fotoLateralDer,
+                estado:           finalizar ? 'completo' : undefined,
             }
 
             let res: Response
@@ -161,7 +124,6 @@ export function usePrvFsvForm() {
             const saved = await res.json()
 
             if (!currentId) {
-                // Nuevo parte — actualizar URL y estado
                 currentId = saved.id
                 setId(saved.id)
                 idRef.current = saved.id
@@ -191,42 +153,25 @@ export function usePrvFsvForm() {
         return () => clearTimeout(t)
     }, [form, hasChanges, saveParte])
 
-    // ── Setters ──────────────────────────────────────────────────────────────
-    const updateForm = (updater: (prev: PrvFsvFormState) => PrvFsvFormState) => {
-        setForm(prev => updater(prev))
+    const setField = <K extends keyof PrvFsvFormState>(key: K, value: PrvFsvFormState[K]) => {
+        setForm(prev => ({ ...prev, [key]: value }))
         setHasChanges(true)
     }
 
-    const setField = <K extends keyof PrvFsvFormState>(key: K, value: PrvFsvFormState[K]) => {
-        updateForm(p => ({ ...p, [key]: value }))
+    const setCampo = (fieldName: string, value: string | boolean) => {
+        setForm(prev => ({
+            ...prev,
+            camposFormulario: { ...prev.camposFormulario, [fieldName]: value },
+        }))
+        setHasChanges(true)
     }
 
-    const setChecklistPrincipal = (index: number, valor: number) => {
-        updateForm(prev => {
-            const copy = [...prev.checklistPrincipal] as ChecklistItem[]
-            copy[index] = { ...copy[index], valor }
-            return { ...prev, checklistPrincipal: copy }
-        })
-    }
-
-    const setChecklistMaterial = (index: number, valor: number) => {
-        updateForm(prev => {
-            const copy = [...prev.checklistMaterial] as MaterialItem[]
-            copy[index] = { ...copy[index], valor }
-            return { ...prev, checklistMaterial: copy }
-        })
-    }
-
-    const addDano = (dano: DanoDiagrama) => {
-        updateForm(prev => ({ ...prev, danosDiagrama: [...prev.danosDiagrama, dano] }))
-    }
-
-    const removeDano = (index: number) => {
-        updateForm(prev => {
-            const copy = [...prev.danosDiagrama]
-            copy.splice(index, 1)
-            return { ...prev, danosDiagrama: copy }
-        })
+    const setCampos = (campos: Record<string, string | boolean>) => {
+        setForm(prev => ({
+            ...prev,
+            camposFormulario: { ...prev.camposFormulario, ...campos },
+        }))
+        setHasChanges(true)
     }
 
     return {
@@ -239,9 +184,7 @@ export function usePrvFsvForm() {
         estadoParte,
         saveParte,
         setField,
-        setChecklistPrincipal,
-        setChecklistMaterial,
-        addDano,
-        removeDano,
+        setCampo,
+        setCampos,
     }
 }
