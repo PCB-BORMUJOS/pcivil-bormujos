@@ -533,6 +533,14 @@ export default function CuadrantesPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ asignaciones: asigParaNotif, semanaLabel: formatRange(semanaStart) })
       })
+
+      // Marcar la semana como publicada en BD para que el calendario lo refleje
+      await fetch('/api/cuadrantes/publicar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ semana: toDateStr(semanaStart), publicado: true })
+      })
+
       if (totalAsig > 0) alert('Cuadrante publicado correctamente')
       await cargarDatos()
     } catch (e) {

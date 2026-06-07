@@ -1006,16 +1006,49 @@ export default function DashboardPage() {
   const handleTogglePublicar = async (semana: string, publicadoActual: boolean) => {
     setLoadingPublicar(true)
     try {
+      const publicarAhora = !publicadoActual
       const res = await fetch('/api/cuadrantes/publicar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ semana, publicado: !publicadoActual })
+        body: JSON.stringify({ semana, publicado: publicarAhora })
       })
       if (res.ok) {
         const data = await res.json()
         setCuadrantePublicado(data.publicado)
         setPublicadoPorSemana(prev => ({ ...prev, [semana]: data.publicado }))
         cargarResumenMes(new Date())
+
+        // Enviar notificaciones cuando se publica (no cuando se despublica)
+        if (publicarAhora) {
+          const [year, month] = semana.split('-')
+          const guardiasRes = await fetch(`/api/guardias?mes=${year}-${month}`)
+          if (guardiasRes.ok) {
+            const { guardias: todasGuardias } = await guardiasRes.json()
+            const semanaDate = new Date(semana + 'T12:00:00Z')
+            const finSemana = new Date(semanaDate)
+            finSemana.setUTCDate(finSemana.getUTCDate() + 6)
+            const guardiasSemanales = (todasGuardias || []).filter((g: any) => {
+              const f = new Date(g.fecha)
+              return f >= semanaDate && f <= finSemana
+            })
+            if (guardiasSemanales.length > 0) {
+              const asigParaNotif = guardiasSemanales.map((g: any) => ({
+                usuarioId: g.usuarioId,
+                fecha: g.fecha.slice(0, 10),
+                turno: g.turno,
+              }))
+              const lunesDate = semanaDate
+              const viernesDate = new Date(semanaDate)
+              viernesDate.setUTCDate(viernesDate.getUTCDate() + 4)
+              const semanaLabel = `${lunesDate.getUTCDate()}/${lunesDate.getUTCMonth() + 1} – ${viernesDate.getUTCDate()}/${viernesDate.getUTCMonth() + 1}`
+              await fetch('/api/cuadrantes/notificar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ asignaciones: asigParaNotif, semanaLabel }),
+              })
+            }
+          }
+        }
       }
     } catch { /* silenciado */ }
     setLoadingPublicar(false)
