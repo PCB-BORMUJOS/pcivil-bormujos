@@ -572,6 +572,7 @@ export default function CuadrantesPage() {
           <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-lg shadow-sm">
             <button
               onClick={() => { const d = new Date(semanaStart); d.setDate(d.getDate() - 7); setSemanaStart(d) }}
+              aria-label="Semana anterior"
               className="p-2 hover:bg-slate-100 rounded-l-lg"
             >
               <ChevronLeft size={17} />
@@ -581,6 +582,7 @@ export default function CuadrantesPage() {
             </span>
             <button
               onClick={() => { const d = new Date(semanaStart); d.setDate(d.getDate() + 7); setSemanaStart(d) }}
+              aria-label="Semana siguiente"
               className="p-2 hover:bg-slate-100 rounded-r-lg"
             >
               <ChevronRight size={17} />
@@ -609,6 +611,7 @@ export default function CuadrantesPage() {
           <button
             onClick={cargarDatos}
             disabled={loading}
+            aria-label="Recargar cuadrante"
             className="p-2 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 shadow-sm"
           >
             <RefreshCw size={15} className={loading ? 'animate-spin text-orange-500' : 'text-slate-500'} />
@@ -675,8 +678,8 @@ export default function CuadrantesPage() {
                         <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded ${slotOk ? 'bg-green-100 text-green-700' : slotParcial ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-400'}`}>
                           {asignadosOp.length}/{cap}
                         </span>
-                        <button onClick={() => setCapacidad(p => ({ ...p, [sk]: Math.max(1, (p[sk] || 4) - 1) }))} className="w-4 h-4 flex items-center justify-center hover:bg-slate-200 rounded text-slate-400"><Minus size={7} /></button>
-                        <button onClick={() => setCapacidad(p => ({ ...p, [sk]: (p[sk] || 4) + 1 }))} className="w-4 h-4 flex items-center justify-center hover:bg-slate-200 rounded text-slate-400"><Plus size={7} /></button>
+                        <button onClick={() => setCapacidad(p => ({ ...p, [sk]: Math.max(1, (p[sk] || 4) - 1) }))} aria-label="Reducir capacidad" className="w-4 h-4 flex items-center justify-center hover:bg-slate-200 rounded text-slate-400"><Minus size={7} /></button>
+                        <button onClick={() => setCapacidad(p => ({ ...p, [sk]: (p[sk] || 4) + 1 }))} aria-label="Aumentar capacidad" className="w-4 h-4 flex items-center justify-center hover:bg-slate-200 rounded text-slate-400"><Plus size={7} /></button>
                       </div>
                     </div>
                     {/* Fila de controles: extensiones de jornada + ajuste de horario */}
@@ -1098,7 +1101,7 @@ export default function CuadrantesPage() {
                 <h2 className="text-xl font-bold">Nuevo Servicio Extraordinario</h2>
                 <p className="text-xs opacity-80 mt-0.5">Turnos de mas de 8h o 12h con dieta extraordinaria</p>
               </div>
-              <button onClick={() => setShowExtraordinario(false)}><X size={17} /></button>
+              <button onClick={() => setShowExtraordinario(false)} aria-label="Cerrar"><X size={17} /></button>
             </div>
             <form onSubmit={async (e) => {
               e.preventDefault()

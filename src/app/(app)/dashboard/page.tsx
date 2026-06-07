@@ -23,7 +23,7 @@ function Modal({ title, children, onClose, wide }: { title: string; children: Re
       <div className={`bg-white rounded-xl shadow-2xl w-full ${wide ? 'max-w-2xl' : 'max-w-md'} max-h-[90vh] overflow-hidden`} onClick={e => e.stopPropagation()}>
         <div className="bg-slate-50 p-4 border-b border-slate-100 flex justify-between items-center">
           <h3 className="font-bold text-slate-800">{title}</h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
+          <button onClick={onClose} aria-label="Cerrar" className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
         </div>
         <div className="p-4 overflow-y-auto max-h-[70vh]">{children}</div>
       </div>
@@ -440,16 +440,17 @@ function CalendarView({ eventos, guardias, resumenDisponibilidad, onEventClick, 
             <span className="flex items-center gap-1.5"><Lock size={13} className="text-slate-400" /> <span className="font-medium text-slate-600">Privado</span></span>
           </div>
           <div className="flex items-center gap-2 bg-slate-50 rounded-lg p-1">
-            <button onClick={() => changeMonth('prev')} className="p-1.5 hover:bg-white rounded-lg transition-colors"><ChevronLeft size={18} className="text-slate-500" /></button>
+            <button onClick={() => changeMonth('prev')} aria-label="Mes anterior" className="p-1.5 hover:bg-white rounded-lg transition-colors"><ChevronLeft size={18} className="text-slate-500" /></button>
             <span className="text-sm font-semibold text-slate-700 px-3 capitalize min-w-[160px] text-center">{monthName}</span>
-            <button onClick={() => changeMonth('next')} className="p-1.5 hover:bg-white rounded-lg transition-colors"><ChevronRight size={18} className="text-slate-500" /></button>
+            <button onClick={() => changeMonth('next')} aria-label="Mes siguiente" className="p-1.5 hover:bg-white rounded-lg transition-colors"><ChevronRight size={18} className="text-slate-500" /></button>
           </div>
         </div>
       </div>
-      <div className="grid grid-cols-7 bg-slate-50 border-b border-slate-100">
+      <div className="overflow-x-auto">
+      <div className="grid grid-cols-7 bg-slate-50 border-b border-slate-100 min-w-[560px]">
         {daysOfWeek.map(d => <div key={d} className="py-3 text-center text-xs font-bold text-slate-500 tracking-wider">{d}</div>)}
       </div>
-      <div className="grid grid-cols-7">
+      <div className="grid grid-cols-7 min-w-[560px]">
         {days.map((day, idx) => {
           const eventosDelDia = day.current ? getEventosDelDia(day.date) : [];
           const guardiasDelDia = day.current ? getGuardiasDelDia(day.date) : [];
@@ -590,6 +591,7 @@ function CalendarView({ eventos, guardias, resumenDisponibilidad, onEventClick, 
             </div>
           );
         })}
+      </div>
       </div>
     </div>
   );

@@ -655,7 +655,7 @@ export default function PracticasPage() {
             </h3>
             <p className="text-xs text-slate-500">Ficha del Libro de Prácticas PCB</p>
           </div>
-          <button onClick={() => { setShowNueva(false); setPracticaEditando(null) }}>
+          <button onClick={() => { setShowNueva(false); setPracticaEditando(null) }} aria-label="Cerrar">
             <X size={20} className="text-slate-400" />
           </button>
         </div>
@@ -879,7 +879,7 @@ export default function PracticasPage() {
             <div className="relative flex-1 min-w-72">
               <Search size={17} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
               <input value={searchTerm} onChange={e => setSearchTerm(e.target.value)} placeholder="Buscar por título, número u objetivo..." className="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-orange-400 transition-all" />
-              {searchTerm && <button onClick={() => setSearchTerm('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"><X size={15} /></button>}
+              {searchTerm && <button onClick={() => setSearchTerm('')} aria-label="Limpiar búsqueda" className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"><X size={15} /></button>}
             </div>
             <select value={filtroFamilia} onChange={e => setFiltroFamilia(e.target.value)} className="border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:border-orange-400 bg-white min-w-44">
               <option value="all">Todas las familias</option>

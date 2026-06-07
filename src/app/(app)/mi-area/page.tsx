@@ -163,7 +163,7 @@ function Modal({ title, children, onClose, size = 'md' }: {
       <div className={`bg-white rounded-2xl shadow-2xl w-full ${sizeClasses[size]} max-h-[90vh] overflow-hidden`} onClick={e => e.stopPropagation()}>
         <div className="bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-4 flex justify-between items-center">
           <h3 className="font-bold text-white text-lg">{title}</h3>
-          <button onClick={onClose} className="text-white/80 hover:text-white"><X size={24} /></button>
+          <button onClick={onClose} aria-label="Cerrar" className="text-white/80 hover:text-white"><X size={24} /></button>
         </div>
         <div className="p-6 overflow-y-auto max-h-[calc(90vh-80px)]">{children}</div>
       </div>

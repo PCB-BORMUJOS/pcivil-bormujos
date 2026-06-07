@@ -427,7 +427,7 @@ export default function MegacodePage() {
                 <div className="w-9 h-9 rounded-xl bg-purple-600 flex items-center justify-center"><Zap size={18} className="text-white" /></div>
                 <div><h3 className="font-black text-white">Generador Automático</h3><p className="text-xs text-purple-300">El algoritmo selecciona prácticas balanceadas</p></div>
               </div>
-              <button onClick={() => setShowGenerador(false)}><X size={20} className="text-purple-300 hover:text-white" /></button>
+              <button onClick={() => setShowGenerador(false)} aria-label="Cerrar"><X size={20} className="text-purple-300 hover:text-white" /></button>
             </div>
             <div className="p-6 space-y-5">
               <div className="grid grid-cols-3 gap-4">
@@ -497,7 +497,7 @@ export default function MegacodePage() {
                 <div className="w-9 h-9 rounded-xl bg-orange-500 flex items-center justify-center"><AlertTriangle size={18} className="text-white" /></div>
                 <div><h3 className="font-black text-white">Nuevo Megacode</h3><p className="text-xs text-purple-300">Manual o basado en incidente real</p></div>
               </div>
-              <button onClick={() => setShowManual(false)}><X size={20} className="text-purple-300 hover:text-white" /></button>
+              <button onClick={() => setShowManual(false)} aria-label="Cerrar"><X size={20} className="text-purple-300 hover:text-white" /></button>
             </div>
             <div className="p-6 space-y-6">
 

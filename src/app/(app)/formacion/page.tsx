@@ -261,7 +261,7 @@ function Modal({ title, children, onClose, size = 'md' }: {
       <div className={`bg-white rounded-2xl shadow-2xl w-full ${sizeClasses[size]} max-h-[90vh] overflow-hidden flex flex-col`} onClick={e => e.stopPropagation()}>
         <div className="bg-gradient-to-r from-purple-600 to-purple-700 px-6 py-4 flex justify-between items-center shrink-0">
           <h3 className="font-bold text-white text-lg">{title}</h3>
-          <button onClick={onClose} className="text-white/80 hover:text-white"><X size={24} /></button>
+          <button onClick={onClose} aria-label="Cerrar" className="text-white/80 hover:text-white"><X size={24} /></button>
         </div>
         <div className="p-6 overflow-y-auto grow custom-scrollbar">
           {children}
@@ -2000,7 +2000,7 @@ export default function FormacionPage() {
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
             <div className="flex items-center justify-between p-5 border-b">
               <h3 className="text-lg font-bold text-slate-800">Nueva Jornada</h3>
-              <button onClick={() => setShowNuevaJornada(false)} className="p-2 hover:bg-slate-100 rounded-lg"><X size={20} /></button>
+              <button onClick={() => setShowNuevaJornada(false)} aria-label="Cerrar" className="p-2 hover:bg-slate-100 rounded-lg"><X size={20} /></button>
             </div>
             <div className="p-5 space-y-4">
               <div className="grid grid-cols-2 gap-4">
