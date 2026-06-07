@@ -1,0 +1,247 @@
+'use client'
+
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
+import {
+    PrvFsvFormState,
+    INITIAL_PRV_FSV_STATE,
+    ChecklistItem,
+    MaterialItem,
+    DanoDiagrama,
+} from '@/types/prv-fsv'
+
+const LOCALSTORAGE_KEY = 'prv-fsv-draft'
+const DRAFT_MAX_AGE_MS = 2 * 60 * 60 * 1000 // 2 horas
+
+export function usePrvFsvForm() {
+    const searchParams = useSearchParams()
+    const router = useRouter()
+    const initialId = searchParams?.get('id')
+
+    const [id, setId] = useState<string | null>(initialId || null)
+    const [loading, setLoading] = useState(false)
+    const [saving, setSaving] = useState(false)
+    const [hasChanges, setHasChanges] = useState(false)
+    const [draftRestored, setDraftRestored] = useState(false)
+    const [estadoParte, setEstadoParte] = useState<string>('borrador')
+    const [form, setForm] = useState<PrvFsvFormState>(INITIAL_PRV_FSV_STATE)
+
+    const idRef = useRef<string | null>(initialId || null)
+    useEffect(() => { idRef.current = id }, [id])
+
+    // ── Auto-save borrador en localStorage ──────────────────────────────────
+    useEffect(() => {
+        if (!hasChanges) return
+        try {
+            const key = `${LOCALSTORAGE_KEY}_${idRef.current || 'new'}`
+            localStorage.setItem(key, JSON.stringify({ form, savedAt: Date.now() }))
+        } catch { /* cuota ignorada */ }
+    }, [form, hasChanges])
+
+    // ── Cargar parte existente o restaurar borrador ──────────────────────────
+    useEffect(() => {
+        if (initialId) {
+            loadParte(initialId)
+        } else {
+            try {
+                const raw = localStorage.getItem(`${LOCALSTORAGE_KEY}_new`)
+                if (raw) {
+                    const { form: saved, savedAt } = JSON.parse(raw)
+                    if (Date.now() - savedAt < DRAFT_MAX_AGE_MS) {
+                        setForm(saved)
+                        setDraftRestored(true)
+                    }
+                }
+            } catch { /* ignorar */ }
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [])
+
+    const loadParte = async (parteId: string) => {
+        setLoading(true)
+        try {
+            const res = await fetch(`/api/partes/prv-fsv/${parteId}`)
+            if (!res.ok) {
+                console.error('Error cargando parte PRV-FSV')
+                return
+            }
+            const parte = await res.json()
+            setId(parte.id)
+            setEstadoParte(parte.estado || 'borrador')
+            setForm({
+                id:                    parte.id,
+                numeroReferencia:      parte.numeroReferencia || '',
+                fecha:                 parte.fecha ? new Date(parte.fecha).toISOString().split('T')[0] : '',
+                hora:                  parte.hora || '',
+                km:                    parte.km?.toString() || '',
+                checklistPrincipal:    Array.isArray(parte.checklistPrincipal)    ? parte.checklistPrincipal    : INITIAL_PRV_FSV_STATE.checklistPrincipal,
+                danosDiagrama:         Array.isArray(parte.danosDiagrama)         ? parte.danosDiagrama         : [],
+                nivelDiesel:           parte.nivelDiesel           ?? '4/4',
+                tieneDiesel:           parte.tieneDiesel           ?? true,
+                nivelAceite:           parte.nivelAceite           ?? '4/4',
+                nivelAgua:             parte.nivelAgua             ?? '4/4',
+                nivelLimpiaparabrisas: parte.nivelLimpiaparabrisas ?? '4/4',
+                observaciones:         parte.observaciones         || '',
+                indicativo1:           parte.indicativo1           || '',
+                indicativo2:           parte.indicativo2           || '',
+                indicativo3:           parte.indicativo3           || '',
+                firmaJefeServicio:     parte.firmaJefeServicio     || null,
+                checklistMaterial:     Array.isArray(parte.checklistMaterial)     ? parte.checklistMaterial     : INITIAL_PRV_FSV_STATE.checklistMaterial,
+                fotoFrontal:           parte.fotoFrontal    || null,
+                fotoTrasera:           parte.fotoTrasera    || null,
+                fotoLateralIzq:        parte.fotoLateralIzq || null,
+                fotoLateralDer:        parte.fotoLateralDer || null,
+                fotoDetalle1:          parte.fotoDetalle1   || null,
+                fotoDetalle2:          parte.fotoDetalle2   || null,
+                fotoDetalle3:          parte.fotoDetalle3   || null,
+                fotoDetalle4:          parte.fotoDetalle4   || null,
+                estado:                parte.estado         || 'borrador',
+            })
+        } catch (err) {
+            console.error('Error cargando parte PRV-FSV:', err)
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    // ── Guardar parte ────────────────────────────────────────────────────────
+    const saveParte = useCallback(async (finalizar = false): Promise<PrvFsvFormState | null> => {
+        setSaving(true)
+        try {
+            const payload = {
+                fecha:                 form.fecha,
+                hora:                  form.hora,
+                km:                    form.km,
+                checklistPrincipal:    form.checklistPrincipal,
+                danosDiagrama:         form.danosDiagrama,
+                nivelDiesel:           form.nivelDiesel,
+                tieneDiesel:           form.tieneDiesel,
+                nivelAceite:           form.nivelAceite,
+                nivelAgua:             form.nivelAgua,
+                nivelLimpiaparabrisas: form.nivelLimpiaparabrisas,
+                observaciones:         form.observaciones,
+                indicativo1:           form.indicativo1,
+                indicativo2:           form.indicativo2,
+                indicativo3:           form.indicativo3,
+                firmaJefeServicio:     form.firmaJefeServicio,
+                checklistMaterial:     form.checklistMaterial,
+                fotoFrontal:           form.fotoFrontal,
+                fotoTrasera:           form.fotoTrasera,
+                fotoLateralIzq:        form.fotoLateralIzq,
+                fotoLateralDer:        form.fotoLateralDer,
+                fotoDetalle1:          form.fotoDetalle1,
+                fotoDetalle2:          form.fotoDetalle2,
+                fotoDetalle3:          form.fotoDetalle3,
+                fotoDetalle4:          form.fotoDetalle4,
+                estado:                finalizar ? 'completo' : undefined,
+            }
+
+            let res: Response
+            let currentId = idRef.current
+
+            if (currentId) {
+                res = await fetch(`/api/partes/prv-fsv/${currentId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                })
+            } else {
+                res = await fetch('/api/partes/prv-fsv', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                })
+            }
+
+            if (!res.ok) {
+                console.error('Error guardando parte PRV-FSV:', res.status)
+                return null
+            }
+
+            const saved = await res.json()
+
+            if (!currentId) {
+                // Nuevo parte — actualizar URL y estado
+                currentId = saved.id
+                setId(saved.id)
+                idRef.current = saved.id
+                router.replace(`/partes/prv-fsv?id=${saved.id}`, { scroll: false })
+                try { localStorage.removeItem(`${LOCALSTORAGE_KEY}_new`) } catch { /* ignorar */ }
+            }
+
+            setEstadoParte(saved.estado || 'borrador')
+            setForm(prev => ({ ...prev, numeroReferencia: saved.numeroReferencia, estado: saved.estado }))
+            setHasChanges(false)
+
+            return { ...form, id: saved.id, numeroReferencia: saved.numeroReferencia }
+        } catch (err) {
+            console.error('Error guardando parte PRV-FSV:', err)
+            return null
+        } finally {
+            setSaving(false)
+        }
+    }, [form, router])
+
+    // ── Auto-save cada 30s ───────────────────────────────────────────────────
+    useEffect(() => {
+        if (!hasChanges) return
+        const t = setTimeout(() => {
+            if (form.fecha) saveParte(false)
+        }, 30_000)
+        return () => clearTimeout(t)
+    }, [form, hasChanges, saveParte])
+
+    // ── Setters ──────────────────────────────────────────────────────────────
+    const updateForm = (updater: (prev: PrvFsvFormState) => PrvFsvFormState) => {
+        setForm(prev => updater(prev))
+        setHasChanges(true)
+    }
+
+    const setField = <K extends keyof PrvFsvFormState>(key: K, value: PrvFsvFormState[K]) => {
+        updateForm(p => ({ ...p, [key]: value }))
+    }
+
+    const setChecklistPrincipal = (index: number, valor: number) => {
+        updateForm(prev => {
+            const copy = [...prev.checklistPrincipal] as ChecklistItem[]
+            copy[index] = { ...copy[index], valor }
+            return { ...prev, checklistPrincipal: copy }
+        })
+    }
+
+    const setChecklistMaterial = (index: number, valor: number) => {
+        updateForm(prev => {
+            const copy = [...prev.checklistMaterial] as MaterialItem[]
+            copy[index] = { ...copy[index], valor }
+            return { ...prev, checklistMaterial: copy }
+        })
+    }
+
+    const addDano = (dano: DanoDiagrama) => {
+        updateForm(prev => ({ ...prev, danosDiagrama: [...prev.danosDiagrama, dano] }))
+    }
+
+    const removeDano = (index: number) => {
+        updateForm(prev => {
+            const copy = [...prev.danosDiagrama]
+            copy.splice(index, 1)
+            return { ...prev, danosDiagrama: copy }
+        })
+    }
+
+    return {
+        id,
+        form,
+        loading,
+        saving,
+        hasChanges,
+        draftRestored,
+        estadoParte,
+        saveParte,
+        setField,
+        setChecklistPrincipal,
+        setChecklistMaterial,
+        addDano,
+        removeDano,
+    }
+}
