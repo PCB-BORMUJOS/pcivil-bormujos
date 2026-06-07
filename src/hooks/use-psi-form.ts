@@ -27,6 +27,7 @@ export function usePsiForm() {
     const [imagenes, setImagenes] = useState<ImagenParte[]>([])
     const [hasChanges, setHasChanges] = useState(false)
     const [draftRestored, setDraftRestored] = useState(false)
+    const [estadoParte, setEstadoParte] = useState<string>('borrador')
     const idRef = useRef<string | null>(initialId || null)
 
     // Sync idRef with id state
@@ -102,6 +103,7 @@ export function usePsiForm() {
             if (res.ok) {
                 const parte = await res.json()
                 setId(parte.id)
+                setEstadoParte(parte.estado || 'borrador')
                 // Fotos guardadas en Vercel Blob (URLs, no base64)
                 setImagenes(
                     Array.isArray(parte.fotosUrls)
@@ -491,6 +493,7 @@ export function usePsiForm() {
         saving,
         hasChanges,
         draftRestored,
+        estadoParte,
         saveParte,
         setField,
         setTiempo,

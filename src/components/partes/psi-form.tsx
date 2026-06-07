@@ -17,11 +17,18 @@ import Link from 'next/link'
 
 export function PsiForm() {
     const {
-        id, form, imagenes, loading, saving, hasChanges,
+        id, form, imagenes, loading, saving, hasChanges, estadoParte,
         saveParte, setField, setTiempo, setPrevencion,
         setIntervencion, setOtros, setRow1, setRow2, setMatricula,
         addImage, removeImage
     } = usePsiForm()
+
+    const estadoConfig: Record<string, { label: string; className: string }> = {
+        borrador:     { label: 'Borrador',     className: 'bg-yellow-100 text-yellow-800 border border-yellow-300' },
+        pendiente_vb: { label: 'Pendiente VB', className: 'bg-blue-100 text-blue-800 border border-blue-300' },
+        completo:     { label: 'Completo',     className: 'bg-green-100 text-green-800 border border-green-300' },
+    }
+    const estadoInfo = estadoConfig[estadoParte] ?? estadoConfig.borrador
 
     const [activeTab, setActiveTab] = useState<1 | 2 | 3>(1)
 
@@ -208,6 +215,9 @@ ${textComponents.conclusion}`.trim()
                 <div className="h-4 w-px bg-gray-300" />
                 <span className="text-sm font-semibold text-gray-600">
                     {id ? `Ref: ${form.numero || '...'}` : 'Nuevo Parte'}
+                </span>
+                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${estadoInfo.className}`}>
+                    {estadoInfo.label}
                 </span>
                 <div className="h-4 w-px bg-gray-300" />
                 <button
