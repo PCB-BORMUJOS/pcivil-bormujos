@@ -67,6 +67,17 @@ export async function PUT(
 
         const body = await req.json()
 
+        // Validación básica de campos requeridos
+        if (body.fecha !== undefined && !body.fecha) {
+            return NextResponse.json({ error: 'La fecha es requerida' }, { status: 400 })
+        }
+        if (body.lugar !== undefined && typeof body.lugar === 'string' && body.lugar.trim() === '') {
+            return NextResponse.json({ error: 'El lugar es requerido' }, { status: 400 })
+        }
+        if (body.motivo !== undefined && typeof body.motivo === 'string' && body.motivo.trim() === '') {
+            return NextResponse.json({ error: 'El motivo es requerido' }, { status: 400 })
+        }
+
         // Determinar estado
         let estado: string | undefined = undefined
         if (body.estado) {
