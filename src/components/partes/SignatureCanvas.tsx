@@ -15,11 +15,9 @@ export default function SignatureCanvas({
     const canvasRef = useRef<HTMLCanvasElement>(null)
     const [hasSignature, setHasSignature] = useState(false)
 
-    // Refs for state that changes frequently or during events to avoid re-binding listeners
     const isDrawingRef = useRef(false)
     const onSaveRef = useRef(onSave)
 
-    // Update onSaveRef when prop changes
     useEffect(() => {
         onSaveRef.current = onSave
     }, [onSave])
@@ -36,129 +34,90 @@ export default function SignatureCanvas({
         }
     }, [initialSignature])
 
-    const getCoordinates = (e: React.MouseEvent | React.TouchEvent | MouseEvent | TouchEvent) => {
-        const canvas = canvasRef.current
-        if (!canvas) return { x: 0, y: 0 }
-
-        const rect = canvas.getBoundingClientRect()
-        const scaleX = canvas.width / rect.width
-        const scaleY = canvas.height / rect.height
-
-        if ('touches' in e && (e as TouchEvent).touches && (e as TouchEvent).touches.length > 0) {
-            const touch = (e as TouchEvent).touches[0]
-            return {
-                x: (touch.clientX - rect.left) * scaleX,
-                y: (touch.clientY - rect.top) * scaleY
-            }
-        } else if ('clientX' in e) {
-            return {
-                x: ((e as MouseEvent).clientX - rect.left) * scaleX,
-                y: ((e as MouseEvent).clientY - rect.top) * scaleY
-            }
-        }
-        return { x: 0, y: 0 }
-    }
-
-    // Helper to save current canvas state
     const saveCanvas = () => {
         const canvas = canvasRef.current
         if (!canvas) return
-
-        const dataUrl = canvas.toDataURL('image/png')
-        if (onSaveRef.current) {
-            onSaveRef.current(dataUrl)
-        }
-    }
-
-    const startDrawing = (e: React.MouseEvent | React.TouchEvent | TouchEvent) => {
-        // Prevent default only if cancelable to avoid scrolling
-        if (e.cancelable && e.type !== 'mousedown') e.preventDefault()
-
-        isDrawingRef.current = true
-        setHasSignature(true)
-
-        const canvas = canvasRef.current
-        if (!canvas) return
-
-        const ctx = canvas.getContext('2d')
-        if (!ctx) return
-
-        ctx.lineWidth = 2
-        ctx.lineCap = 'round'
-        ctx.strokeStyle = '#000'
-
-        const { x, y } = getCoordinates(e as any)
-
-        ctx.beginPath()
-        ctx.moveTo(x, y)
-        ctx.lineTo(x, y)
-        ctx.stroke()
-    }
-
-    const draw = (e: React.MouseEvent | React.TouchEvent | TouchEvent) => {
-        // Prevent default for scroll safety
-        if (e.cancelable && e.type !== 'mousemove') e.preventDefault()
-
-        if (!isDrawingRef.current) return
-
-        const canvas = canvasRef.current
-        if (!canvas) return
-
-        const ctx = canvas.getContext('2d')
-        if (!ctx) return
-
-        const { x, y } = getCoordinates(e as any)
-
-        ctx.lineTo(x, y)
-        ctx.stroke()
-    }
-
-    const stopDrawing = () => {
-        if (isDrawingRef.current) {
-            isDrawingRef.current = false
-            // Auto-save
-            setTimeout(() => {
-                saveCanvas()
-            }, 300)
-        }
+        onSaveRef.current(canvas.toDataURL('image/png'))
     }
 
     const clear = () => {
         const canvas = canvasRef.current
         if (!canvas) return
-
         const ctx = canvas.getContext('2d')
         if (!ctx) return
-
         ctx.clearRect(0, 0, canvas.width, canvas.height)
         setHasSignature(false)
-        if (onSaveRef.current) {
-            onSaveRef.current('')
-        }
+        onSaveRef.current('')
     }
 
-    // Native event listeners for touch (passive: false)
+    // PointerEvent API — covers mouse, touch, and Apple Pencil in one flow
     useEffect(() => {
         const canvas = canvasRef.current
         if (!canvas) return
 
-        const handleTouchStart = (e: TouchEvent) => startDrawing(e)
-        const handleTouchMove = (e: TouchEvent) => draw(e)
-        const handleTouchEnd = (e: TouchEvent) => {
-            if (e.cancelable) e.preventDefault()
-            stopDrawing()
+        const getPos = (e: PointerEvent) => {
+            const rect = canvas.getBoundingClientRect()
+            return {
+                x: (e.clientX - rect.left) * (canvas.width / rect.width),
+                y: (e.clientY - rect.top) * (canvas.height / rect.height)
+            }
         }
 
-        canvas.addEventListener('touchstart', handleTouchStart, { passive: false })
-        canvas.addEventListener('touchmove', handleTouchMove, { passive: false })
-        canvas.addEventListener('touchend', handleTouchEnd, { passive: false })
+        const handlePointerDown = (e: PointerEvent) => {
+            e.preventDefault()
+            canvas.setPointerCapture(e.pointerId)
+            isDrawingRef.current = true
+            setHasSignature(true)
+
+            const ctx = canvas.getContext('2d')
+            if (!ctx) return
+
+            ctx.lineWidth = e.pointerType === 'pen' ? Math.max(1, e.pressure * 3) : 2
+            ctx.lineCap = 'round'
+            ctx.strokeStyle = '#000'
+
+            const { x, y } = getPos(e)
+            ctx.beginPath()
+            ctx.moveTo(x, y)
+            ctx.lineTo(x, y)
+            ctx.stroke()
+        }
+
+        const handlePointerMove = (e: PointerEvent) => {
+            e.preventDefault()
+            if (!isDrawingRef.current) return
+
+            const ctx = canvas.getContext('2d')
+            if (!ctx) return
+
+            if (e.pointerType === 'pen' && e.pressure > 0) {
+                ctx.lineWidth = Math.max(1, e.pressure * 3)
+            }
+
+            const { x, y } = getPos(e)
+            ctx.lineTo(x, y)
+            ctx.stroke()
+        }
+
+        const handlePointerUp = () => {
+            if (isDrawingRef.current) {
+                isDrawingRef.current = false
+                setTimeout(() => saveCanvas(), 300)
+            }
+        }
+
+        canvas.addEventListener('pointerdown', handlePointerDown, { passive: false })
+        canvas.addEventListener('pointermove', handlePointerMove, { passive: false })
+        canvas.addEventListener('pointerup', handlePointerUp)
+        canvas.addEventListener('pointercancel', handlePointerUp)
 
         return () => {
-            canvas.removeEventListener('touchstart', handleTouchStart)
-            canvas.removeEventListener('touchmove', handleTouchMove)
-            canvas.removeEventListener('touchend', handleTouchEnd)
+            canvas.removeEventListener('pointerdown', handlePointerDown)
+            canvas.removeEventListener('pointermove', handlePointerMove)
+            canvas.removeEventListener('pointerup', handlePointerUp)
+            canvas.removeEventListener('pointercancel', handlePointerUp)
         }
-    }, []) // Empty dependencies = listeners bind ONCE and never detach during life of component
+    }, [])
 
     return (
         <div className="space-y-3">
@@ -170,14 +129,9 @@ export default function SignatureCanvas({
                     ref={canvasRef}
                     width={400}
                     height={150}
-                    onMouseDown={startDrawing}
-                    onMouseMove={draw}
-                    onMouseUp={stopDrawing}
-                    onMouseLeave={stopDrawing}
                     className="cursor-crosshair w-full h-auto touch-none"
                     style={{ touchAction: 'none' }}
                 />
-
             </div>
             <div className="flex gap-2">
                 <button
