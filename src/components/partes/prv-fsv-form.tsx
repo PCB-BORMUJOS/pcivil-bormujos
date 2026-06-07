@@ -161,17 +161,17 @@ function PdfPage({ pdfDoc, pageNum, scale, annotStorageRef, onFieldChange, photo
                 const regularAnnots = allAnnots.filter(a => !PHOTO_ANNOT_NAMES.has(a.fieldName))
                 const photoAnnots   = allAnnots.filter(a => PHOTO_ANNOT_NAMES.has(a.fieldName))
 
-                // Compute photo overlay styles from annotation rects
+                // Compute photo overlay styles from annotation rects (PDF coords → CSS pixels)
                 const overlays = photoAnnots.map(a => {
                     const [x1, y1, x2, y2] = a.rect as number[]
                     return {
                         name: a.fieldName as string,
                         style: {
                             position: 'absolute' as const,
-                            left:   `${x1}px`,
-                            bottom: `${y1}px`,
-                            width:  `${x2 - x1}px`,
-                            height: `${y2 - y1}px`,
+                            left:   `${x1 * scale}px`,
+                            bottom: `${y1 * scale}px`,
+                            width:  `${(x2 - x1) * scale}px`,
+                            height: `${(y2 - y1) * scale}px`,
                         },
                     }
                 })
