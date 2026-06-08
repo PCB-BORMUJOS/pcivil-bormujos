@@ -498,6 +498,7 @@ function CalendarView({ eventos, guardias, resumenDisponibilidad, onEventClick, 
                   };
 
                   // Determinar si esta semana está publicada para decidir qué mostrar
+                  if (!day.current || !day.date) return null;
                   const ds = new Date(day.date + 'T12:00:00Z');
                   const dow = ds.getUTCDay();
                   ds.setUTCDate(ds.getUTCDate() + (dow === 0 ? -6 : 1 - dow));
