@@ -633,6 +633,7 @@ export default function DashboardPage() {
   const [loadingPublicar, setLoadingPublicar] = useState(false);
   const [cuadrantePublicado, setCuadrantePublicado] = useState<boolean | null>(null);
   const [publicadoPorSemana, setPublicadoPorSemana] = useState<Record<string, boolean>>({});
+  const [modalPublicado, setModalPublicado] = useState<boolean>(false);
   const [disponiblesCount, setDisponiblesCount] = useState<number>(0);
   const [vehiculos, setVehiculos] = useState<any[]>([]);
   const [statsVeh, setStatsVeh] = useState({ total: 0, disponibles: 0, enServicio: 0, mantenimiento: 0 });
@@ -815,6 +816,7 @@ export default function DashboardPage() {
   const handleGuardiaClick = (date: string, turno: string, guardias: any[]) => {
     const semana = getLunesDeSemana(date);
     setCuadrantePublicado(publicadoPorSemana[semana] ?? false);
+    setModalPublicado(publicadoPorSemana[semana] ?? false);
     setDisponiblesCount(0);
     setVoluntarios([]);
     setShowGuardiaDetail({ date, turno, guardias });
@@ -884,6 +886,7 @@ export default function DashboardPage() {
         setTurnoActivo(data.turnoActivo || null);
         setStats(data.stats || { total: 0, responsablesTurno: 0, conCarnet: 0, experienciaAlta: 0 });
         setCuadrantePublicado(data.publicado ?? true);
+        setModalPublicado(data.publicado ?? false);
         setDisponiblesCount(data.disponibles ?? data.total ?? (data.voluntarios?.length ?? 0));
         setTurnoSeleccionado({ fecha, turno, diaSemanaNombre: data.diaSemanaNombre });
         // NO abrimos showPersonnel — ya queda integrado en showGuardiaDetail
@@ -1055,8 +1058,7 @@ export default function DashboardPage() {
   }
 
   const semanaActual = showGuardiaDetail ? getLunesDeSemana(showGuardiaDetail.date) : ''
-  const publicadoSemanaModal = semanaActual ? (publicadoPorSemana[semanaActual] ?? false) : (cuadrantePublicado === true)
-  const verIdentidades = esAdmin || publicadoSemanaModal
+  const verIdentidades = esAdmin || modalPublicado
   const guardiasFiltradas = (showGuardiaDetail?.guardias || []).filter(
     (g: any) => g.usuario?.numeroVoluntario !== 'B-12'
   )
@@ -1696,7 +1698,7 @@ export default function DashboardPage() {
                     <span className="w-2 h-2 rounded-full bg-green-500 inline-block" />
                     Disponibles este turno ({disponiblesCount})
                   </h4>
-                  {!esAdmin && !publicadoSemanaModal ? (
+                  {!esAdmin && !modalPublicado ? (
                     <p className="text-xs text-slate-400 font-medium pl-4">
                       {disponiblesCount === 0
                         ? 'Sin disponibilidad confirmada'
@@ -1725,7 +1727,7 @@ export default function DashboardPage() {
                 </div>
 
                 {/* Disponibles con nombres — solo admin o cuadrante explícitamente publicado */}
-                {(esAdmin || publicadoSemanaModal) && voluntarios.length > 0 && (
+                {(esAdmin || modalPublicado) && voluntarios.length > 0 && (
                   <div>
                     <h4 className="text-xs font-bold text-slate-500 uppercase mb-2 flex items-center gap-2">
                       <span className="w-2 h-2 rounded-full bg-slate-400 inline-block" />
@@ -1753,14 +1755,14 @@ export default function DashboardPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs font-bold text-slate-700">Visibilidad del cuadrante</p>
-                    <p className="text-[11px] text-slate-400 mt-0.5">{publicadoSemanaModal ? 'Los voluntarios pueden ver los asignados' : 'Solo admins ven identidades'}</p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">{modalPublicado ? 'Los voluntarios pueden ver los asignados' : 'Solo admins ven identidades'}</p>
                   </div>
                   <button
-                    onClick={() => handleTogglePublicar(semanaActual, publicadoSemanaModal)}
+                    onClick={() => handleTogglePublicar(semanaActual, modalPublicado)}
                     disabled={loadingPublicar}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors disabled:opacity-50 ${publicadoSemanaModal ? 'bg-amber-100 text-amber-700 hover:bg-amber-200' : 'bg-green-100 text-green-700 hover:bg-green-200'}`}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors disabled:opacity-50 ${modalPublicado ? 'bg-amber-100 text-amber-700 hover:bg-amber-200' : 'bg-green-100 text-green-700 hover:bg-green-200'}`}
                   >
-                    {loadingPublicar ? '...' : publicadoSemanaModal ? 'Despublicar' : 'Publicar semana'}
+                    {loadingPublicar ? '...' : modalPublicado ? 'Despublicar' : 'Publicar semana'}
                   </button>
                 </div>
               </div>
