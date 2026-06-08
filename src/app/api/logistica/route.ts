@@ -198,9 +198,17 @@ export async function GET(request: NextRequest) {
     if (tipo === 'categoria') {
       const slug = searchParams.get('slug')
       if (!slug) return NextResponse.json({ error: 'Slug requerido' }, { status: 400 })
-      const categoria = await prisma.categoriaInventario.findFirst({
-        where: { slug, activa: true }
-      })
+      let categoria = await prisma.categoriaInventario.findFirst({ where: { slug, activa: true } })
+      // Auto-crear la categoría si no existe (necesario para áreas como vehiculos, drones, etc.)
+      if (!categoria) {
+        const nombreMap: Record<string, string> = {
+          vehiculos: 'Vehículos', drones: 'Drones', socorrismo: 'Socorrismo',
+          transmisiones: 'Transmisiones', pma: 'PMA', incendios: 'Incendios',
+        }
+        categoria = await prisma.categoriaInventario.create({
+          data: { slug, nombre: nombreMap[slug] || slug, activa: true, esGeneral: false, orden: 99 }
+        })
+      }
       return NextResponse.json({ categoria })
     }
 

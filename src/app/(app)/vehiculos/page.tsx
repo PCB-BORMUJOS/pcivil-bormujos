@@ -266,6 +266,7 @@ export default function VehiculosPage() {
             <button onClick={cargarDatos} className="flex items-center justify-center p-2.5 text-slate-600 hover:bg-slate-100 rounded-lg border border-slate-200" title="Recargar"><RefreshCw className="w-5 h-5" /></button>
             <button onClick={() => { setInventoryTab('peticiones'); setShowNuevaPeticion(true) }} className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm"><ShoppingCart size={18} />Petición</button>
             <button disabled={!canCreate} onClick={() => setShowNuevoArticulo(true)} className="flex items-center gap-2 px-4 py-2.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-400 font-medium text-sm disabled:opacity-40 disabled:cursor-not-allowed"><Package size={18} />Artículo</button>
+            {canEdit && <button onClick={() => { setMainTab('flota'); setShowNuevoVehiculo(true) }} className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-medium text-sm"><Car size={18} />Vehículo</button>}
             <button onClick={() => setMainTab("localizacion")} className="flex items-center gap-2 px-4 py-2.5 bg-blue-700 text-white rounded-lg hover:bg-blue-800 font-medium text-sm"><MapPin size={18} />Localización</button>
           </div>
         </div>
@@ -274,6 +275,7 @@ export default function VehiculosPage() {
           <button onClick={cargarDatos} className="flex-1 flex items-center justify-center p-2.5 text-slate-600 hover:bg-slate-100 rounded-lg border border-slate-200"><RefreshCw className="w-5 h-5" /></button>
           <button onClick={() => { setInventoryTab('peticiones'); setShowNuevaPeticion(true) }} className="flex-1 flex items-center justify-center px-2 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700"><ShoppingCart size={18} /></button>
           <button disabled={!canCreate} onClick={() => setShowNuevoArticulo(true)} className="flex-1 flex items-center justify-center px-2 py-2.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-400 disabled:opacity-40"><Package size={18} /></button>
+          {canEdit && <button onClick={() => { setMainTab('flota'); setShowNuevoVehiculo(true) }} className="flex-1 flex items-center justify-center px-2 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"><Car size={18} /></button>}
           <button onClick={() => setMainTab("localizacion")} className="flex-1 flex items-center justify-center px-2 py-2.5 bg-blue-700 text-white rounded-lg hover:bg-blue-800"><MapPin size={18} /></button>
         </div>
       </div>
@@ -381,13 +383,6 @@ export default function VehiculosPage() {
       {/* TAB: GESTIÓN DE FLOTA */}
       {mainTab === 'flota' && (
         <div className="space-y-4">
-          {canCreate && (
-            <div className="flex justify-end px-1">
-              <button onClick={() => setShowNuevoVehiculo(true)} className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-medium text-sm">
-                <Plus size={18} />Nuevo Vehículo
-              </button>
-            </div>
-          )}
           <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden" style={{ height: '350px' }}>
             <MapContainer center={[37.3710, -6.0710]} zoom={14} style={{ height: '100%', width: '100%' }} scrollWheelZoom={true}>
               <TileLayer attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
