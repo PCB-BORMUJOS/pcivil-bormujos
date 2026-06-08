@@ -153,6 +153,7 @@ export default function VehiculosPage() {
   const [horaInicio, setHoraInicio] = useState('')
   const [horaFin, setHoraFin] = useState('')
   const [showDetalleVehiculo, setShowDetalleVehiculo] = useState(false)
+  const [showNuevoVehiculo, setShowNuevoVehiculo] = useState(false)
   const [showEditarFicha, setShowEditarFicha] = useState(false)
   const [showNuevoArticulo, setShowNuevoArticulo] = useState(false)
   const [showEditarArticulo, setShowEditarArticulo] = useState(false)
@@ -380,6 +381,13 @@ export default function VehiculosPage() {
       {/* TAB: GESTIÓN DE FLOTA */}
       {mainTab === 'flota' && (
         <div className="space-y-4">
+          {canCreate && (
+            <div className="flex justify-end px-1">
+              <button onClick={() => setShowNuevoVehiculo(true)} className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-medium text-sm">
+                <Plus size={18} />Nuevo Vehículo
+              </button>
+            </div>
+          )}
           <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden" style={{ height: '350px' }}>
             <MapContainer center={[37.3710, -6.0710]} zoom={14} style={{ height: '100%', width: '100%' }} scrollWheelZoom={true}>
               <TileLayer attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
@@ -840,6 +848,79 @@ export default function VehiculosPage() {
         </div>
       )}
 
+
+      {/* MODAL: NUEVO VEHÍCULO */}
+      {showNuevoVehiculo && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000] p-4" onClick={() => setShowNuevoVehiculo(false)}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="bg-emerald-600 p-5 text-white flex items-center justify-between flex-shrink-0">
+              <div className="flex items-center gap-3"><Plus className="w-5 h-5" /><h3 className="text-lg font-bold">Nuevo Vehículo</h3></div>
+              <button onClick={() => setShowNuevoVehiculo(false)} className="hover:bg-emerald-700 rounded-lg p-1 transition-colors"><X className="w-5 h-5" /></button>
+            </div>
+            <form onSubmit={async (e) => {
+              e.preventDefault()
+              const f = new FormData(e.currentTarget)
+              try {
+                setSaving(true)
+                const res = await fetch('/api/vehiculos?tipo=vehiculo', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    matricula: f.get('matricula'),
+                    indicativo: f.get('indicativo'),
+                    tipoVehiculo: f.get('tipoVehiculo'),
+                    marca: f.get('marca'),
+                    modelo: f.get('modelo'),
+                    anio: f.get('anio') || null,
+                    color: f.get('color') || null,
+                    estado: f.get('estado') || 'disponible',
+                    plazas: f.get('plazas') || null,
+                    potencia: f.get('potencia') || null,
+                    cilindrada: f.get('cilindrada') || null,
+                    capacidadCombustible: f.get('capacidadCombustible') || null,
+                    capacidadCarga: f.get('capacidadCarga') || null,
+                    observaciones: f.get('observaciones') || null,
+                  })
+                })
+                if (res.ok) {
+                  setShowNuevoVehiculo(false)
+                  cargarDatos()
+                } else {
+                  const err = await res.json()
+                  alert(err.error || 'Error al crear el vehículo')
+                }
+              } catch { /* error silenciado */ } finally { setSaving(false) }
+            }} className="overflow-y-auto flex-1 p-6 space-y-4">
+              <div className="grid grid-cols-3 gap-4">
+                <div><label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Matrícula *</label><input name="matricula" required placeholder="1234ABC" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 uppercase" /></div>
+                <div><label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Indicativo</label><input name="indicativo" placeholder="UMJ" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400" /></div>
+                <div><label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Tipo *</label><select name="tipoVehiculo" required className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400"><option value="">Seleccionar...</option>{Object.entries(TIPOS_VEHICULO).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></div>
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                <div><label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Marca</label><input name="marca" placeholder="Renault" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400" /></div>
+                <div><label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Modelo</label><input name="modelo" placeholder="Master" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400" /></div>
+                <div><label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Año</label><input name="anio" type="number" min="1990" max="2030" placeholder="2022" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400" /></div>
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                <div><label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Color</label><input name="color" placeholder="Blanco" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400" /></div>
+                <div><label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Estado</label><select name="estado" defaultValue="disponible" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400">{Object.entries(ESTADOS_VEHICULO).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}</select></div>
+                <div><label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Plazas</label><input name="plazas" type="number" min="1" placeholder="5" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400" /></div>
+              </div>
+              <div className="grid grid-cols-4 gap-4">
+                <div><label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Potencia (CV)</label><input name="potencia" type="number" placeholder="125" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400" /></div>
+                <div><label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Cilindrada (cc)</label><input name="cilindrada" type="number" placeholder="2000" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400" /></div>
+                <div><label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Cap. Comb. (L)</label><input name="capacidadCombustible" type="number" step="0.1" placeholder="70" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400" /></div>
+                <div><label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Cap. Carga (kg)</label><input name="capacidadCarga" type="number" placeholder="1200" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400" /></div>
+              </div>
+              <div><label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Observaciones</label><textarea name="observaciones" rows={2} className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 resize-none" /></div>
+              <div className="flex justify-end gap-3 pt-2 border-t border-slate-100">
+                <button type="button" onClick={() => setShowNuevoVehiculo(false)} className="px-5 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-xl">Cancelar</button>
+                <button type="submit" disabled={saving} className="px-5 py-2.5 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl disabled:opacity-50">{saving ? 'Creando...' : 'Crear Vehículo'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Modal Editar Repostaje */}
       {showEditarRepostaje && repostajeSeleccionado && (

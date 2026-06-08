@@ -117,6 +117,44 @@ export async function POST(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const tipo = searchParams.get('tipo')
 
+    // POST Crear vehículo
+    if (tipo === 'vehiculo') {
+      const body = await request.json()
+      const { matricula, indicativo, tipoVehiculo, marca, modelo, anio, color, estado, plazas, potencia, cilindrada, capacidadCombustible, capacidadCarga, observaciones } = body
+
+      if (!matricula || !tipoVehiculo) {
+        return NextResponse.json({ error: 'Matrícula y tipo son obligatorios' }, { status: 400 })
+      }
+
+      const usuario = await prisma.usuario.findUnique({ where: { email: session.user.email! }, select: { servicioId: true } })
+      if (!usuario) return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
+
+      const vehiculo = await prisma.vehiculo.create({
+        data: {
+          matricula: matricula.toUpperCase().trim(),
+          indicativo: indicativo?.trim() || null,
+          tipo: tipoVehiculo,
+          marca: marca?.trim() || null,
+          modelo: modelo?.trim() || null,
+          anio: anio ? parseInt(String(anio)) : null,
+          color: color?.trim() || null,
+          estado: estado || 'disponible',
+          plazas: plazas ? parseInt(String(plazas)) : null,
+          potencia: potencia ? parseInt(String(potencia)) : null,
+          cilindrada: cilindrada ? parseInt(String(cilindrada)) : null,
+          capacidadCombustible: capacidadCombustible ? parseFloat(String(capacidadCombustible)) : null,
+          capacidadCarga: capacidadCarga ? parseFloat(String(capacidadCarga)) : null,
+          observaciones: observaciones?.trim() || null,
+          servicioId: usuario.servicioId,
+        }
+      })
+
+      const { usuarioId, usuarioNombre } = getUsuarioAudit(session)
+      await registrarAudit({ accion: 'CREATE', entidad: 'Vehículo', entidadId: vehiculo.id, descripcion: `Vehículo creado: ${vehiculo.indicativo || vehiculo.matricula}`, usuarioId, usuarioNombre, modulo: 'Vehículos' })
+
+      return NextResponse.json({ vehiculo })
+    }
+
     // POST Subir documento
     if (tipo === 'documento') {
       const formData = await request.formData()
