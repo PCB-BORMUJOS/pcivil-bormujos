@@ -6,14 +6,11 @@ import { prisma } from '@/lib/db'
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    if (!session?.user?.email) {
+    if (!session?.user) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
-    const usuario = await prisma.usuario.findUnique({
-      where: { email: session.user.email },
-      include: { rol: true }
-    })
-    if (!usuario || !['superadmin', 'admin', 'coordinador'].includes(usuario.rol.nombre.toLowerCase())) {
+    const esAdmin = ['superadmin', 'admin', 'coordinador'].includes((session.user as any).rol)
+    if (!esAdmin) {
       return NextResponse.json({ error: 'Sin permisos' }, { status: 403 })
     }
     const { semana, publicado } = await request.json()

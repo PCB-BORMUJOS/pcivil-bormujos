@@ -1015,7 +1015,11 @@ export default function DashboardPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ semana, publicado: publicarAhora })
       })
-      if (res.ok) {
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        console.error('Error al publicar semana:', err)
+        alert(`Error al publicar la semana: ${err.error || res.status}`)
+      } else {
         const data = await res.json()
         setCuadrantePublicado(data.publicado)
         setPublicadoPorSemana(prev => ({ ...prev, [semana]: data.publicado }))

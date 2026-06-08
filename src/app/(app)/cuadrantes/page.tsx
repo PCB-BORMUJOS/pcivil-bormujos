@@ -535,11 +535,18 @@ export default function CuadrantesPage() {
       })
 
       // Marcar la semana como publicada en BD para que el calendario lo refleje
-      await fetch('/api/cuadrantes/publicar', {
+      const pubRes = await fetch('/api/cuadrantes/publicar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ semana: toDateStr(semanaStart), publicado: true })
       })
+      if (!pubRes.ok) {
+        const err = await pubRes.json().catch(() => ({}))
+        console.error('Error al marcar semana como publicada:', err)
+        alert(`⚠ Cuadrante guardado pero no se pudo publicar: ${err.error || pubRes.status}`)
+        await cargarDatos()
+        return
+      }
 
       if (totalAsig > 0) alert('Cuadrante publicado correctamente')
       await cargarDatos()
