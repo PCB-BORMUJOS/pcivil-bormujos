@@ -15,11 +15,6 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const session = await getServerSession()
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
-    }
-
     const { searchParams } = new URL(request.url)
     const semana = searchParams.get('semana')
 
@@ -64,11 +59,6 @@ export async function PUT(request: NextRequest) {
   }
 
   try {
-    const session = await getServerSession()
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
-    }
-
     const body = await request.json()
     const { disponibilidadId, noDisponible, turnosDeseados, notas } = body
 

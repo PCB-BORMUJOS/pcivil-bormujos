@@ -25,7 +25,10 @@ export async function GET(request: NextRequest) {
     const disponibilidad = await prisma.disponibilidad.findFirst({
       where: {
         usuarioId: usuario.id,
-        semanaInicio: new Date(semana)
+        semanaInicio: {
+          gte: new Date(semana + 'T00:00:00.000Z'),
+          lte: new Date(semana + 'T23:59:59.999Z')
+        }
       }
     })
     if (disponibilidad) {
@@ -63,7 +66,10 @@ export async function POST(request: NextRequest) {
     const existente = await prisma.disponibilidad.findFirst({
       where: {
         usuarioId: usuario.id,
-        semanaInicio: new Date(semanaInicio)
+        semanaInicio: {
+          gte: new Date(semanaInicio + 'T00:00:00.000Z'),
+          lte: new Date(semanaInicio + 'T23:59:59.999Z')
+        }
       }
     })
     const data = {
