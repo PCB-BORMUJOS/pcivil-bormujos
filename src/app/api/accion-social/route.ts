@@ -6,9 +6,9 @@ import { prisma } from '@/lib/db'
 
 function puedeVerViogen(session: any): boolean {
   const rol = session?.user?.rol?.toLowerCase() ?? ''
-  if (['superadmin','admin'].includes(rol)) return true
-  const permisosExtra: string[] = session?.user?.permisosExtra ?? []
-  const permisos: string[] = session?.user?.permisos ?? []
+  if (['superadmin','admin','coordinador'].includes(rol)) return true
+  const permisosExtra: string[] = Array.isArray(session?.user?.permisosExtra) ? session.user.permisosExtra : []
+  const permisos: string[] = Array.isArray(session?.user?.permisos) ? session.user.permisos : []
   return [...permisosExtra, ...permisos].includes('viogen.ver')
 }
 
@@ -154,8 +154,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ espacio })
     }
     if (tipo === 'centro') {
-      const centro = await prisma.centroEmergencia.update({
-        where: { id: body.id },
+      if (!body.nombre || !body.tipoCentro || !body.direccion) {
+        return NextResponse.json({ error: 'Nombre, tipo y dirección son obligatorios' }, { status: 400 })
+      }
+      const centro = await prisma.centroEmergencia.create({
         data: {
           nombre: body.nombre, tipo: body.tipoCentro, direccion: body.direccion,
           telefono: body.telefono || null, responsable: body.responsable || null,
@@ -165,6 +167,8 @@ export async function POST(request: NextRequest) {
           descripcion: body.descripcion || null
         }
       })
+      const { usuarioId, usuarioNombre } = getUsuarioAudit(session)
+      await registrarAudit({ accion: 'CREATE', entidad: 'CentroEmergencia', entidadId: centro.id, descripcion: `Centro creado: ${centro.nombre}`, usuarioId, usuarioNombre, modulo: 'AccionSocial' })
       return NextResponse.json({ centro })
     }
     if (tipo === 'contacto') {
