@@ -545,7 +545,8 @@ export default function CecopalPage() {
                 <input type="color" value={nuevaCategoria.color} onChange={e => setNuevaCategoria(p => ({...p, color: e.target.value}))} className="w-10 h-9 rounded-lg border border-slate-600 bg-slate-700 cursor-pointer" />
                 <button onClick={async () => {
                   if (!nuevaCategoria.nombre.trim()) return
-                  await fetch('/api/directorio', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'categoria', ...nuevaCategoria }) })
+                  const res = await fetch('/api/directorio', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'categoria', ...nuevaCategoria }) })
+                  if (!res.ok) { const err = await res.json().catch(() => ({})); alert(err.error || 'Error al crear categoría'); return }
                   setNuevaCategoria({ nombre: '', color: '#6366f1' })
                   cargarContactos(busquedaDir, categoriaDir)
                 }} className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors">+</button>
