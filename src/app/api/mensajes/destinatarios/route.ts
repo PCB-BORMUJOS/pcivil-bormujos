@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
     if (!usuario) return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
 
     const esAdmin = ['superadmin', 'admin'].includes(usuario.rol.nombre)
-    const esCoordinador = usuario.rol.nombre === 'coordinador'
+    const esCoordinador = ['coordinador', 'jefe_area'].includes(usuario.rol.nombre)
 
     const usuarios = await prisma.usuario.findMany({
       where: { activo: true, NOT: { id: usuario.id } },

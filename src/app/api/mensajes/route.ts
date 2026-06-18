@@ -178,7 +178,7 @@ export async function POST(request: NextRequest) {
     if (!destinatarioId && !destinatarioGrupo) return NextResponse.json({ error: 'Especifica destinatario' }, { status: 400 })
 
     const _nivMsg = ({ superadmin: 5, coordinador: 4, admin: 4, jefe_area: 3, responsable_turno: 2, voluntario: 1, visor: 0 } as Record<string,number>)[rolJwt] ?? 1
-    if (destinatarioGrupo && _nivMsg < 4) {
+    if (destinatarioGrupo && _nivMsg < 3) {
       return NextResponse.json({ error: 'Sin permisos para enviar a grupos' }, { status: 403 })
     }
 
