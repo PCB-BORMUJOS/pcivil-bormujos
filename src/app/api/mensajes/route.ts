@@ -89,7 +89,6 @@ export async function GET(request: NextRequest) {
           return { ...m, leido: estado?.leido ?? false, leidoEn: estado?.leidoEn ?? null }
         })
 
-      const idsGrupales = new Set(grupalesFiltrados.map(m => m.id))
       mensajes = [
         ...individuales,
         ...grupalesFiltrados.filter(m => !individuales.some(i => i.id === m.id))
@@ -273,13 +272,20 @@ export async function PUT(request: NextRequest) {
         where: { destinatarioId: usuario.id, leido: false },
         data: { leido: true }
       })
+      const usuarioConFicha = await prisma.usuario.findUnique({
+        where: { id: usuario.id },
+        select: { fichaVoluntario: { select: { areaAsignada: true, areaSecundaria: true } } }
+      })
+      const areaAsig = usuarioConFicha?.fichaVoluntario?.areaAsignada?.toLowerCase()
+      const areaSec = usuarioConFicha?.fichaVoluntario?.areaSecundaria?.toLowerCase()
+      const condicionesGrup: any[] = [
+        { destinatarioGrupo: 'todos' },
+        { destinatarioGrupo: 'rol:' + rolJwt },
+      ]
+      if (areaAsig) condicionesGrup.push({ destinatarioGrupo: 'area:' + areaAsig })
+      if (areaSec) condicionesGrup.push({ destinatarioGrupo: 'area:' + areaSec })
       const grupales = await prisma.mensaje.findMany({
-        where: {
-          OR: [
-            { destinatarioGrupo: 'todos' },
-            { destinatarioGrupo: 'rol:' + rolJwt }
-          ]
-        },
+        where: { OR: condicionesGrup },
         select: { id: true }
       })
       if (grupales.length > 0) {

@@ -77,6 +77,7 @@ export default function NotificacionesTab({ initialSubTab = 'mensajes', initialM
   const [enviandoNuevo, setEnviandoNuevo] = useState(false)
   const [usuarios, setUsuarios] = useState<UsuarioDest[]>([])
   const [grupos, setGrupos] = useState<Grupo[]>([])
+  const [puedeEnviarGrupos, setPuedeEnviarGrupos] = useState(false)
   // Mobile: panel único — 'lista' muestra el listado, 'conversacion' la vista de hilo
   const [vistaMovil, setVistaMovil] = useState<'lista' | 'conversacion'>('lista')
 
@@ -156,10 +157,12 @@ export default function NotificacionesTab({ initialSubTab = 'mensajes', initialM
     setEnviandoResp(true)
     try {
       const root = hilo[0]
-      const destino = root.remitente.id === usuarioActualId ? root.destinatario?.id : root.remitente.id
+      // Para grupo: solo admins/coordinadores reenvían al grupo; resto responden al remitente individualmente
+      const destinoInd = root.remitente.id === usuarioActualId ? root.destinatario?.id : root.remitente.id
       const body: any = { asunto: `RE: ${root.asunto}`, contenido: respuesta, mensajePadreId: root.id }
-      if (root.destinatarioGrupo) body.destinatarioGrupo = root.destinatarioGrupo
-      else if (destino) body.destinatarioId = destino
+      if (root.destinatarioGrupo && puedeEnviarGrupos) body.destinatarioGrupo = root.destinatarioGrupo
+      else if (destinoInd) body.destinatarioId = destinoInd
+      else return
       const r = await fetch('/api/mensajes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
       if (r.ok) {
         setRespuesta('')
@@ -239,7 +242,7 @@ export default function NotificacionesTab({ initialSubTab = 'mensajes', initialM
 
   const abrirNuevo = async () => {
     const r = await fetch('/api/mensajes/destinatarios')
-    if (r.ok) { const d = await r.json(); setUsuarios(d.usuarios || []); setGrupos(d.grupos || []) }
+    if (r.ok) { const d = await r.json(); setUsuarios(d.usuarios || []); setGrupos(d.grupos || []); setPuedeEnviarGrupos(d.permisos?.puedeEnviarGrupos ?? false) }
     setShowNuevo(true)
   }
 
@@ -589,8 +592,8 @@ export default function NotificacionesTab({ initialSubTab = 'mensajes', initialM
               <div>
                 <label className="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">Destinatario</label>
                 <div className="flex gap-2 p-1 bg-slate-100 rounded-xl">
-                  {(['individual', 'grupo'] as const).map(t => (
-                    <button key={t} onClick={() => setTipoDest(t)}
+                  {(['individual', ...(puedeEnviarGrupos ? ['grupo'] : [])] as const).map(t => (
+                    <button key={t} onClick={() => setTipoDest(t as 'individual' | 'grupo')}
                       className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-semibold transition-all
                         ${tipoDest === t ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
                       {t === 'individual' ? <User size={12} /> : <Users size={12} />}
