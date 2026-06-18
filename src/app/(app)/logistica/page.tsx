@@ -268,6 +268,9 @@ export default function LogisticaPage() {
   const [showGestionFamilias, setShowGestionFamilias] = useState(false);
   const [familiaEditando, setFamiliaEditando] = useState<{id: string, nombre: string} | null>(null);
   const [nuevaFamiliaText, setNuevaFamiliaText] = useState('');
+  const [gestionTab, setGestionTab] = useState<'familias' | 'subfamilias'>('familias');
+  const [nuevaFamiliaCatText, setNuevaFamiliaCatText] = useState('');
+  const [subfamiliaParentId, setSubfamiliaParentId] = useState('');
 
   // Formularios
   const [nuevoArticulo, setNuevoArticulo] = useState({
@@ -399,7 +402,23 @@ export default function LogisticaPage() {
     }
   };
 
-  // ---- Gestión Familias ----
+  // ---- Gestión Familias (Familias = CategoriaInventario hija, Subfamilias = FamiliaArticulo) ----
+  const handleCrearFamiliaCat = async () => {
+    if (!nuevaFamiliaCatText.trim()) { alert('El nombre es requerido'); return; }
+    const catVestuario = categorias.find(c => c.slug === 'vestuario') || areas.find(a => a.slug === 'vestuario');
+    if (!catVestuario) { alert('No se encontró la categoría vestuario'); return; }
+    try {
+      const res = await fetch('/api/logistica', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tipo: 'familia-cat', nombre: nuevaFamiliaCatText.trim(), padreId: catVestuario.id })
+      });
+      const data = await res.json();
+      if (data.success || data.categoria) { setNuevaFamiliaCatText(''); cargarDatos(); }
+      else alert('Error: ' + (data.error || 'No se pudo crear'));
+    } catch { alert('Error al crear familia'); }
+  };
+
   const handleGuardarFamilia = async () => {
     const nombre = familiaEditando ? familiaEditando.nombre : nuevaFamiliaText;
     if (!nombre.trim()) { alert('El nombre es requerido'); return; }
@@ -416,13 +435,14 @@ export default function LogisticaPage() {
         if (data.success) { setFamiliaEditando(null); cargarDatos(); }
         else alert('Error: ' + (data.error || 'No se pudo actualizar'));
       } else {
-        // Obtener categoría vestuario
+        // Subfamilia: usar la familia (subcategoría) seleccionada, o vestuario como fallback
         const catVestuario = categorias.find(c => c.slug === 'vestuario') || areas.find(a => a.slug === 'vestuario');
-        if (!catVestuario) { alert('No se encontró la categoría vestuario'); return; }
+        const categoriaId = subfamiliaParentId || catVestuario?.id;
+        if (!categoriaId) { alert('Selecciona una familia o crea una primero'); return; }
         const res = await fetch('/api/logistica', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ tipo: 'familia', nombre: nuevaFamiliaText.trim(), categoriaId: catVestuario.id })
+          body: JSON.stringify({ tipo: 'familia', nombre: nuevaFamiliaText.trim(), categoriaId })
         });
         const data = await res.json();
         if (data.success || data.familia) { setNuevaFamiliaText(''); cargarDatos(); }
@@ -1276,60 +1296,105 @@ export default function LogisticaPage() {
         </Modal>
       )}
 
-      {/* Modal: Gestión de Familias */}
-      {showGestionFamilias && (
-        <Modal title="Gestión de Familias - Vestuario" onClose={() => { setShowGestionFamilias(false); setFamiliaEditando(null); setNuevaFamiliaText(''); }} size="lg">
-          <div className="space-y-4">
-            <div className="bg-slate-50 rounded-xl p-4">
-              <p className="text-sm font-bold text-slate-700 mb-3">{familiaEditando ? 'Editar familia' : 'Nueva familia'}</p>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={familiaEditando ? familiaEditando.nombre : nuevaFamiliaText}
-                  onChange={e => familiaEditando ? setFamiliaEditando({ ...familiaEditando, nombre: e.target.value }) : setNuevaFamiliaText(e.target.value)}
-                  placeholder="Nombre de la familia..."
-                  className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm"
-                />
-                <button onClick={handleGuardarFamilia} className="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700">
-                  {familiaEditando ? 'Actualizar' : 'Añadir'}
-                </button>
-                {familiaEditando && (
-                  <button onClick={() => { setFamiliaEditando(null); setNuevaFamiliaText(''); }} className="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-300">
-                    Cancelar
-                  </button>
-                )}
-              </div>
+      {/* Modal: Gestión de Familias / Subfamilias - Vestuario */}
+      {showGestionFamilias && (() => {
+        const vestuarioCat = categorias.find(c => c.slug === 'vestuario') || areas.find(a => a.slug === 'vestuario');
+        const familiasVestuario = categorias.filter(c => c.padreId === vestuarioCat?.id);
+        const subfamiliasVestuario = familias.filter(f => {
+          const catPadreId = categorias.find(c => c.id === f.categoria?.id)?.padreId;
+          return catPadreId === vestuarioCat?.id || f.categoria?.id === vestuarioCat?.id;
+        });
+        return (
+          <Modal title="Vestuario — Familias y Subfamilias" onClose={() => { setShowGestionFamilias(false); setFamiliaEditando(null); setNuevaFamiliaText(''); setNuevaFamiliaCatText(''); setGestionTab('familias'); }} size="lg">
+            {/* Tabs */}
+            <div className="flex border-b border-slate-200 mb-4">
+              <button onClick={() => setGestionTab('familias')} className={`px-5 py-2.5 text-sm font-medium border-b-2 transition-colors ${gestionTab === 'familias' ? 'border-purple-500 text-purple-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
+                Familias ({familiasVestuario.length})
+              </button>
+              <button onClick={() => setGestionTab('subfamilias')} className={`px-5 py-2.5 text-sm font-medium border-b-2 transition-colors ${gestionTab === 'subfamilias' ? 'border-purple-500 text-purple-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
+                Subfamilias ({subfamiliasVestuario.length})
+              </button>
             </div>
-            <div className="space-y-2 max-h-80 overflow-y-auto">
-              {familias.filter(f => f.categoria?.slug === 'vestuario' || inventarioActual === 'vestuario').map(fam => (
-                <div key={fam.id} className="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-lg">
+
+            {gestionTab === 'familias' && (
+              <div className="space-y-4">
+                <p className="text-xs text-slate-500">Las familias son los grupos principales (ej: EPI, Uniformidad, Calzado).</p>
+                <div className="bg-slate-50 rounded-xl p-4 flex gap-2">
+                  <input
+                    type="text"
+                    value={nuevaFamiliaCatText}
+                    onChange={e => setNuevaFamiliaCatText(e.target.value)}
+                    placeholder="Nombre de la familia..."
+                    className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm"
+                    onKeyDown={e => e.key === 'Enter' && handleCrearFamiliaCat()}
+                  />
+                  <button onClick={handleCrearFamiliaCat} className="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700">Añadir</button>
+                </div>
+                <div className="space-y-2 max-h-72 overflow-y-auto">
+                  {familiasVestuario.length === 0 ? (
+                    <p className="text-center py-8 text-slate-400 text-sm">No hay familias creadas</p>
+                  ) : familiasVestuario.map(fam => (
+                    <div key={fam.id} className="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-lg flex items-center justify-center text-white text-xs font-bold" style={{ backgroundColor: fam.color || '#8b5cf6' }}>{fam.nombre.charAt(0)}</div>
+                        <span className="font-medium text-slate-800">{fam.nombre}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {gestionTab === 'subfamilias' && (
+              <div className="space-y-4">
+                <p className="text-xs text-slate-500">Las subfamilias son tipos de artículo dentro de cada familia (ej: Pantalón de intervención, Botas de montaña).</p>
+                {familiasVestuario.length === 0 && (
+                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-700">Primero crea al menos una Familia en la pestaña anterior.</div>
+                )}
+                <div className="bg-slate-50 rounded-xl p-4 space-y-3">
                   <div>
-                    <p className="font-medium text-slate-800">{fam.nombre}</p>
-                    <p className="text-xs text-slate-400">{fam.categoria?.nombre}</p>
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Familia a la que pertenece *</label>
+                    <select value={subfamiliaParentId} onChange={e => setSubfamiliaParentId(e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm">
+                      <option value="">— Seleccionar familia —</option>
+                      {familiasVestuario.map(f => <option key={f.id} value={f.id}>{f.nombre}</option>)}
+                    </select>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => setFamiliaEditando({ id: fam.id, nombre: fam.nombre })}
-                      className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg"
-                    >
-                      <Pencil size={14} />
-                    </button>
-                    <button
-                      onClick={() => handleEliminarFamilia(fam.id)}
-                      className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg"
-                    >
-                      <Trash2 size={14} />
-                    </button>
+                  <div className="flex gap-2">
+                    {familiaEditando ? (
+                      <>
+                        <input type="text" value={familiaEditando.nombre} onChange={e => setFamiliaEditando({ ...familiaEditando, nombre: e.target.value })} className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+                        <button onClick={handleGuardarFamilia} className="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700">Actualizar</button>
+                        <button onClick={() => { setFamiliaEditando(null); setNuevaFamiliaText(''); }} className="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-300">Cancelar</button>
+                      </>
+                    ) : (
+                      <>
+                        <input type="text" value={nuevaFamiliaText} onChange={e => setNuevaFamiliaText(e.target.value)} placeholder="Nombre de la subfamilia..." className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm" onKeyDown={e => e.key === 'Enter' && handleGuardarFamilia()} />
+                        <button onClick={handleGuardarFamilia} className="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700">Añadir</button>
+                      </>
+                    )}
                   </div>
                 </div>
-              ))}
-              {familias.filter(f => f.categoria?.slug === 'vestuario').length === 0 && (
-                <p className="text-center py-8 text-slate-400 text-sm">No hay familias creadas</p>
-              )}
-            </div>
-          </div>
-        </Modal>
-      )}
+                <div className="space-y-2 max-h-60 overflow-y-auto">
+                  {subfamiliasVestuario.length === 0 ? (
+                    <p className="text-center py-8 text-slate-400 text-sm">No hay subfamilias creadas</p>
+                  ) : subfamiliasVestuario.map(fam => (
+                    <div key={fam.id} className="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-lg">
+                      <div>
+                        <p className="font-medium text-slate-800">{fam.nombre}</p>
+                        <p className="text-xs text-slate-400">{fam.categoria?.nombre}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button onClick={() => setFamiliaEditando({ id: fam.id, nombre: fam.nombre })} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg"><Pencil size={14} /></button>
+                        <button onClick={() => handleEliminarFamilia(fam.id)} className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg"><Trash2 size={14} /></button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </Modal>
+        );
+      })()}
 
       {/* Modal: Asignar Vestuario */}
       {showAsignarModal && (

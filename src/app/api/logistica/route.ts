@@ -587,6 +587,21 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json({ success: true, asignacion })
     }
+    // ===== FAMILIA-CAT: subcategoría de vestuario (crea CategoriaInventario hija) =====
+    if (tipo === 'familia-cat') {
+      const { nombre, padreId } = body
+      if (!nombre || !padreId) return NextResponse.json({ error: 'Nombre y padre son requeridos' }, { status: 400 })
+      const padre = await prisma.categoriaInventario.findUnique({ where: { id: padreId } })
+      if (!padre) return NextResponse.json({ error: 'Categoría padre no encontrada' }, { status: 404 })
+      const slug = nombre.toLowerCase().replace(/\s+/g, '-').replace(/[áàäâ]/g,'a').replace(/[éèëê]/g,'e').replace(/[íìïî]/g,'i').replace(/[óòöô]/g,'o').replace(/[úùüû]/g,'u') + '-' + Date.now()
+      const cat = await prisma.categoriaInventario.create({
+        data: { nombre, slug, padreId, color: padre.color || '#8b5cf6', orden: 99, activa: true, esGeneral: false }
+      })
+      const _a = getUsuarioAudit(session)
+      await registrarAudit({ accion: 'CREATE', entidad: 'CategoriaInventario', entidadId: cat.id, descripcion: `Familia creada: ${cat.nombre}`, usuarioId: _a.usuarioId, usuarioNombre: _a.usuarioNombre, modulo: 'Logística' })
+      return NextResponse.json({ success: true, categoria: cat })
+    }
+
     // ===== FAMILIA =====
     if (tipo === 'familia') {
       const { nombre, categoriaId } = body
