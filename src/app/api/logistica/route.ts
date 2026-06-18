@@ -264,6 +264,26 @@ export async function GET(request: NextRequest) {
     const busqueda = searchParams.get('busqueda')
     const soloAlertas = searchParams.get('alertas') === 'true'
 
+    // Auto-seed categorías base si no existen
+    const CATS_BASE = [
+      { slug: 'incendios',    nombre: 'Incendios',     color: '#ef4444', orden: 1 },
+      { slug: 'socorrismo',   nombre: 'Socorrismo',    color: '#3b82f6', orden: 2 },
+      { slug: 'vestuario',    nombre: 'Vestuario',     color: '#8b5cf6', orden: 3 },
+      { slug: 'vehiculos',    nombre: 'Vehículos',     color: '#f59e0b', orden: 4 },
+      { slug: 'transmisiones',nombre: 'Transmisiones', color: '#10b981', orden: 5 },
+      { slug: 'drones',       nombre: 'Drones',        color: '#06b6d4', orden: 6 },
+      { slug: 'pma',          nombre: 'PMA',           color: '#f97316', orden: 7 },
+      { slug: 'formacion',    nombre: 'Formación',     color: '#6366f1', orden: 8 },
+      { slug: 'accion-social',nombre: 'Acción Social', color: '#ec4899', orden: 9 },
+    ]
+    for (const cat of CATS_BASE) {
+      await prisma.categoriaInventario.upsert({
+        where: { slug: cat.slug },
+        update: {},
+        create: { slug: cat.slug, nombre: cat.nombre, color: cat.color, orden: cat.orden, activa: true, esGeneral: false }
+      })
+    }
+
     // Obtener todas las categorías
     const todasCategorias = await prisma.categoriaInventario.findMany({
       where: { activa: true },
