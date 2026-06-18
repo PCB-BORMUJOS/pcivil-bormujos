@@ -39,12 +39,11 @@ export async function GET(req: NextRequest) {
     const nombresDias = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
     const diaSemanaNombre = nombresDias[diaSemana];
 
-    // Disponibilidades para esa semana (excluye B-12 de la lista operativa)
+    // Disponibilidades para esa semana (B-12 incluida, se marca como ADM en cliente)
     const disponibilidades = await prisma.disponibilidad.findMany({
       where: {
         semanaInicio: { gte: semanaInicioDate, lte: semanaInicioDateFin },
         noDisponible: false,
-        usuario: { numeroVoluntario: { not: 'B-12' } },
       },
       include: {
         usuario: {
@@ -56,6 +55,7 @@ export async function GET(req: NextRequest) {
             responsableTurno: true,
             carnetConducir: true,
             experiencia: true,
+            esOperativo: true,
           },
         },
       },
@@ -80,17 +80,21 @@ export async function GET(req: NextRequest) {
       responsableTurno: disp.usuario.responsableTurno,
       carnetConducir: disp.usuario.carnetConducir,
       experiencia: disp.usuario.experiencia,
+      esOperativo: (disp.usuario as any).esOperativo !== false,
       puedeDobleturno: disp.puedeDobleturno,
       turnosDeseados: disp.turnosDeseados,
     }));
 
-    const total = voluntariosData.length;
+    // B-12 aparece en la lista pero no computa como operativo
+    const operativos = voluntariosData.filter((v) => v.esOperativo);
+    const total = operativos.length;
 
     const stats = {
       total,
-      responsablesTurno: voluntariosData.filter((v) => v.responsableTurno).length,
-      conCarnet: voluntariosData.filter((v) => v.carnetConducir).length,
-      experienciaAlta: voluntariosData.filter((v) => v.experiencia === 'ALTA').length,
+      totalConAdm: voluntariosData.length,
+      responsablesTurno: operativos.filter((v) => v.responsableTurno).length,
+      conCarnet: operativos.filter((v) => v.carnetConducir).length,
+      experienciaAlta: operativos.filter((v) => v.experiencia === 'ALTA').length,
     };
 
     const listaVisible = mostrarIdentidades ? voluntariosData : []

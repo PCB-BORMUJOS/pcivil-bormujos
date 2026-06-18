@@ -1064,9 +1064,7 @@ export default function DashboardPage() {
 
   const semanaActual = showGuardiaDetail ? getLunesDeSemana(showGuardiaDetail.date) : ''
   const verIdentidades = esAdmin || modalPublicado
-  const guardiasFiltradas = (showGuardiaDetail?.guardias || []).filter(
-    (g: any) => g.usuario?.numeroVoluntario !== 'B-12'
-  )
+  const guardiasFiltradas = showGuardiaDetail?.guardias || []
 
   return (
     <div className="space-y-6">

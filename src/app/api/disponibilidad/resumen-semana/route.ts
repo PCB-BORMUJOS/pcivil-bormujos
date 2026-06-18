@@ -30,23 +30,20 @@ export async function GET(request: NextRequest) {
       where: {
         semanaInicio: { gte: semanaInicioBD, lte: semanaFinBD },
         noDisponible: false,
-        usuario: { numeroVoluntario: { not: 'B-12' } },
       },
       include: {
         usuario: {
           select: {
             id: true, nombre: true, apellidos: true,
             numeroVoluntario: true, responsableTurno: true,
-            carnetConducir: true, experiencia: true,
+            carnetConducir: true, experiencia: true, esOperativo: true,
           }
         }
       }
     })
 
-    // Excluir B-12 de conteos y listas operativas
-    const dispFiltradas = disponibilidades.filter(
-      d => d.usuario.numeroVoluntario !== 'B-12'
-    )
+    // B-12 se incluye en listas pero no en conteos operativos
+    const dispFiltradas = disponibilidades
 
     const dias = ['lunes','martes','miercoles','jueves','viernes','sabado','domingo']
     const turnos = ['mañana','tarde']
@@ -69,9 +66,11 @@ export async function GET(request: NextRequest) {
           const turnosDia = detalles[dia] || []
           return turnosDia.includes(turno)
         })
-        const total = disponibles.length
-        const responsables = disponibles.filter(d => d.usuario.responsableTurno).length
-        const conCarnet = disponibles.filter(d => d.usuario.carnetConducir).length
+        // Conteos operativos excluyen B-12 (esOperativo: false)
+        const operativos = disponibles.filter(d => (d.usuario as any).esOperativo !== false)
+        const total = operativos.length
+        const responsables = operativos.filter(d => d.usuario.responsableTurno).length
+        const conCarnet = operativos.filter(d => d.usuario.carnetConducir).length
         let color: string
         if (total < 3) color = 'rojo'
         else if (total === 3) color = 'naranja'
@@ -93,6 +92,7 @@ export async function GET(request: NextRequest) {
             responsableTurno: d.usuario.responsableTurno,
             carnetConducir: d.usuario.carnetConducir,
             experiencia: d.usuario.experiencia,
+            esOperativo: (d.usuario as any).esOperativo !== false,
             turnosDeseados: (d as any).turnosDeseados,
           })) : []
         }

@@ -45,7 +45,6 @@ export async function GET(request: NextRequest) {
       where: {
         semanaInicio: { gte: semanaStart, lte: semanaEnd },
         noDisponible: false,
-        usuario: { numeroVoluntario: { not: 'B-12' } },
       },
       include: {
         usuario: {
