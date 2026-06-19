@@ -405,6 +405,116 @@ export default function AdministracionPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
+  // Exportar
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportCampos, setExportCampos] = useState<Set<string>>(new Set(['indicativo','nombre','apellidos','dniNie','fechaNacimiento','email','telefono','rol','areaAsignada']));
+  const [exportFormato, setExportFormato] = useState<'pdf' | 'sheets' | 'csv'>('pdf');
+  const [exportando, setExportando] = useState(false);
+
+  const EXPORT_CAMPOS_OPTIONS = [
+    { key: 'indicativo', label: 'Indicativo' },
+    { key: 'nombre', label: 'Nombre' },
+    { key: 'apellidos', label: 'Apellidos' },
+    { key: 'dniNie', label: 'DNI/NIE' },
+    { key: 'fechaNacimiento', label: 'F. Nacimiento' },
+    { key: 'email', label: 'Email' },
+    { key: 'telefono', label: 'Teléfono' },
+    { key: 'telefonoFijo', label: 'Teléfono Fijo' },
+    { key: 'rol', label: 'Rol' },
+    { key: 'areaAsignada', label: 'Área Asignada' },
+    { key: 'categoria', label: 'Categoría' },
+    { key: 'fechaAlta', label: 'Fecha Alta' },
+    { key: 'estado', label: 'Estado' },
+    { key: 'direccion', label: 'Dirección' },
+    { key: 'localidad', label: 'Localidad' },
+    { key: 'provincia', label: 'Provincia' },
+    { key: 'codigoPostal', label: 'Código Postal' },
+  ];
+
+  const toggleExportCampo = (key: string) => {
+    setExportCampos(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  };
+
+  const handleExportarPDF = () => {
+    const campos = Array.from(exportCampos);
+    const headers = EXPORT_CAMPOS_OPTIONS.filter(o => campos.includes(o.key)).map(o => o.label);
+    const rows = (voluntarios || []).map(v => {
+      const f = (v as any).fichaVoluntario;
+      return campos.map(c => {
+        switch(c) {
+          case 'indicativo': return (v as any).numeroVoluntario || '';
+          case 'nombre': return v.nombre || '';
+          case 'apellidos': return v.apellidos || '';
+          case 'dniNie': return f?.dniNie || '';
+          case 'fechaNacimiento': return f?.fechaNacimiento ? new Date(f.fechaNacimiento).toLocaleDateString('es-ES') : '';
+          case 'email': return v.email || '';
+          case 'telefono': return (v as any).telefono || '';
+          case 'telefonoFijo': return f?.telefonoFijo || '';
+          case 'rol': return (v as any).rol?.nombre || '';
+          case 'areaAsignada': return f?.areaAsignada || '';
+          case 'categoria': return f?.categoria || '';
+          case 'fechaAlta': return f?.fechaAlta ? new Date(f.fechaAlta).toLocaleDateString('es-ES') : '';
+          case 'estado': return (v as any).activo ? 'Activo' : 'Baja';
+          case 'direccion': return f ? [f.domicilio, f.numero].filter(Boolean).join(' ') : '';
+          case 'localidad': return f?.localidad || '';
+          case 'provincia': return f?.provincia || '';
+          case 'codigoPostal': return f?.codigoPostal || '';
+          default: return '';
+        }
+      });
+    });
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Personal PCB</title>
+    <style>body{font-family:Arial,sans-serif;font-size:11px}table{width:100%;border-collapse:collapse}
+    th{background:#003366;color:#fff;padding:6px 4px;text-align:left}
+    td{padding:4px;border-bottom:1px solid #ddd}tr:nth-child(even){background:#f5f5f5}
+    h2{color:#003366}@media print{button{display:none}}</style></head>
+    <body><h2>Listado Personal — Protección Civil Bormujos</h2>
+    <p style="color:#666;font-size:10px">Generado: ${new Date().toLocaleDateString('es-ES')}</p>
+    <table><thead><tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead>
+    <tbody>${rows.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('')}</tbody>
+    </table></body></html>`;
+    const win = window.open('', '_blank');
+    if (win) { win.document.write(html); win.document.close(); setTimeout(() => win.print(), 500); }
+    setShowExportModal(false);
+  };
+
+  const handleExportarSheets = async () => {
+    setExportando(true);
+    try {
+      const res = await fetch('/api/admin/exportar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ campos: Array.from(exportCampos), formato: 'sheets' }),
+      });
+      const data = await res.json();
+      if (data.url) { window.open(data.url, '_blank'); setShowExportModal(false); }
+      else alert(data.error || 'Error al exportar');
+    } catch { alert('Error al conectar con el servidor'); }
+    finally { setExportando(false); }
+  };
+
+  const handleExportarCSV = async () => {
+    setExportando(true);
+    try {
+      const res = await fetch('/api/admin/exportar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ campos: Array.from(exportCampos), formato: 'csv' }),
+      });
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = `personal-${new Date().toISOString().split('T')[0]}.csv`;
+      a.click(); URL.revokeObjectURL(url);
+      setShowExportModal(false);
+    } catch { alert('Error al exportar'); }
+    finally { setExportando(false); }
+  };
+
   // Estados para Personal
   const [voluntarios, setVoluntarios] = useState<Voluntario[]>([]);
   const [roles, setRoles] = useState<any[]>([]);
@@ -1323,7 +1433,7 @@ export default function AdministracionPage() {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <button
-            onClick={() => {/* Exportar */ }}
+            onClick={() => setShowExportModal(true)}
             className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-white border border-slate-200 rounded-lg text-slate-700 hover:bg-slate-50 transition-colors text-sm"
           >
             <Download size={16} />
@@ -3363,6 +3473,74 @@ export default function AdministracionPage() {
               <button type="button" onClick={() => { setShowNuevoAspirante(false); setAspiranteEditando(null); }} className="flex-1 py-2.5 border border-slate-300 text-slate-700 rounded-lg font-medium hover:bg-slate-50 transition-colors">Cancelar</button>
               <button type="button" onClick={aspiranteEditando ? () => handleActualizarAspirante(aspiranteEditando.id, aspiranteEditando) : handleGuardarAspirante} className="flex-1 py-2.5 bg-orange-500 text-white rounded-lg font-medium hover:bg-orange-600 transition-colors">
                 {aspiranteEditando ? 'Actualizar' : 'Guardar'}
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Modal Exportar Personal */}
+      {showExportModal && (
+        <Modal title="Exportar personal" onClose={() => setShowExportModal(false)}>
+          <div className="p-6 space-y-5 w-full max-w-md">
+            <h2 className="text-lg font-bold text-slate-800">Exportar listado de personal</h2>
+
+            <div>
+              <p className="text-xs font-bold text-slate-500 uppercase mb-2">Campos a incluir</p>
+              <div className="grid grid-cols-2 gap-1.5">
+                {EXPORT_CAMPOS_OPTIONS.map(opt => (
+                  <label key={opt.key} className="flex items-center gap-2 text-sm cursor-pointer hover:text-slate-900">
+                    <input
+                      type="checkbox"
+                      checked={exportCampos.has(opt.key)}
+                      onChange={() => toggleExportCampo(opt.key)}
+                      className="rounded"
+                    />
+                    {opt.label}
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <p className="text-xs font-bold text-slate-500 uppercase mb-2">Formato de exportación</p>
+              <div className="flex flex-col gap-2">
+                {[
+                  { value: 'pdf', label: 'PDF (impresión)' },
+                  { value: 'sheets', label: 'Google Sheets' },
+                  { value: 'csv', label: 'CSV (descarga)' },
+                ].map(f => (
+                  <label key={f.value} className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input
+                      type="radio"
+                      name="exportFormato"
+                      value={f.value}
+                      checked={exportFormato === f.value}
+                      onChange={() => setExportFormato(f.value as any)}
+                    />
+                    {f.label}
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={() => setShowExportModal(false)}
+                className="flex-1 py-2.5 border border-slate-300 text-slate-700 rounded-lg font-medium hover:bg-slate-50 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                disabled={exportCampos.size === 0 || exportando}
+                onClick={() => {
+                  if (exportFormato === 'pdf') handleExportarPDF();
+                  else if (exportFormato === 'sheets') handleExportarSheets();
+                  else handleExportarCSV();
+                }}
+                className="flex-1 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50"
+              >
+                {exportando ? 'Exportando...' : 'Exportar'}
               </button>
             </div>
           </div>
