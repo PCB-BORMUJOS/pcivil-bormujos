@@ -151,13 +151,16 @@ export async function GET(request: NextRequest) {
     }).catch(() => [])
 
     const kmGPSPorVehiculo: Record<string, number> = {}
+    const kmGPSPorMes: Record<number, number> = {}
     let prevGPS: { vid: string; lat: number; lon: number; ts: number } | null = null
     for (const pt of ubicacionesGPS as any[]) {
+      const date = new Date(pt.createdAt)
       const curr = {
-        vid: pt.vehiculoId as string,
-        lat: Number(pt.latitud),
-        lon: Number(pt.longitud),
-        ts:  new Date(pt.createdAt).getTime(),
+        vid:   pt.vehiculoId as string,
+        lat:   Number(pt.latitud),
+        lon:   Number(pt.longitud),
+        ts:    date.getTime(),
+        month: date.getMonth(),
       }
       if (prevGPS && prevGPS.vid === curr.vid) {
         const diffMin = (curr.ts - prevGPS.ts) / 60000
@@ -165,6 +168,7 @@ export async function GET(request: NextRequest) {
           const d = haversineKm(prevGPS.lat, prevGPS.lon, curr.lat, curr.lon)
           if (d <= 5) {
             kmGPSPorVehiculo[curr.vid] = (kmGPSPorVehiculo[curr.vid] || 0) + d
+            kmGPSPorMes[curr.month]    = (kmGPSPorMes[curr.month]    || 0) + d
           }
         }
       }
@@ -303,7 +307,7 @@ export async function GET(request: NextRequest) {
       const am = (asignaciones as any[]).filter(a => new Date(a.fechaInicio).getMonth() === i)
       const km = am.reduce((acc: number, a: any) =>
         (a.kmFin && a.kmInicio) ? acc + (a.kmFin - a.kmInicio) : acc, 0)
-      return { mes: MESES_ES[i], salidas: am.length, km }
+      return { mes: MESES_ES[i], salidas: am.length, km, kmGPS: +(kmGPSPorMes[i] || 0).toFixed(1) }
     })
 
     // ── Combustible por mes (repostajes + tickets SOLRED) ─────────────────────

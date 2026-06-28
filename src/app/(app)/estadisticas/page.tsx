@@ -703,10 +703,11 @@ export default function EstadisticasPage() {
                         <XAxis dataKey="mes" tick={{fontSize:11,fill:'#94a3b8'}} axisLine={false} tickLine={false}/>
                         <YAxis yAxisId="left"  tick={{fontSize:11,fill:'#94a3b8'}} axisLine={false} tickLine={false}/>
                         <YAxis yAxisId="right" orientation="right" tick={{fontSize:11,fill:'#94a3b8'}} axisLine={false} tickLine={false} tickFormatter={(v:number)=>v>0?fmtKm(v):'0'}/>
-                        <Tooltip content={<ChartTooltip formatter={(name:string,val:any)=>name==='Km recorridos'?[fmtKm(val),name]:[`${val}`,name]}/>}/>
+                        <Tooltip content={<ChartTooltip formatter={(name:string,val:any)=>(name==='Km odóm.'||name==='Km GPS')?[fmtKm(val),name]:[`${val}`,name]}/>}/>
                         <Legend wrapperStyle={{fontSize:11,color:'#64748b',paddingTop:8}}/>
                         <Bar yAxisId="left" dataKey="salidas" name="Salidas" fill={PALETTE.indigo} radius={[4,4,0,0]} barSize={16}/>
-                        <Line yAxisId="right" type="monotone" dataKey="km" name="Km recorridos" stroke={PALETTE.teal} strokeWidth={2.5} dot={{r:3.5,fill:PALETTE.teal,strokeWidth:0}}/>
+                        <Line yAxisId="right" type="monotone" dataKey="km"    name="Km odóm." stroke={PALETTE.teal} strokeWidth={2} strokeDasharray="4 2" dot={false}/>
+                        <Line yAxisId="right" type="monotone" dataKey="kmGPS" name="Km GPS"   stroke={PALETTE.cyan} strokeWidth={2.5} dot={{r:3,fill:PALETTE.cyan,strokeWidth:0}}/>
                       </ComposedChart>
                     </ResponsiveContainer>
                   </Panel>
