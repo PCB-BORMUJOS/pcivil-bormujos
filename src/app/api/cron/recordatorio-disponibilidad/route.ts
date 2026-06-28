@@ -1,36 +1,42 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { addDays, startOfWeek, endOfDay, format } from 'date-fns'
-import { es } from 'date-fns/locale'
 
 export async function GET(request: NextRequest) {
-  // Verificar que la llamada viene de Vercel Cron
+  const cronSecret = process.env.CRON_SECRET
+  if (!cronSecret) {
+    return NextResponse.json({ error: 'CRON_SECRET no configurado' }, { status: 500 })
+  }
   const authHeader = request.headers.get('authorization')
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (authHeader !== `Bearer ${cronSecret}`) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   }
 
   try {
-    // Calcular semana actual (lunes de esta semana)
     const ahora = new Date()
-    const lunesSemana = startOfWeek(ahora, { weekStartsOn: 1 })
-    const lunesSiguiente = addDays(lunesSemana, 7)
 
-    // Semana para la que se pide disponibilidad (la próxima semana)
-    const semanaObjetivo = lunesSiguiente
-    const semanaFin = addDays(semanaObjetivo, 6)
+    // Calcular el lunes de la semana siguiente (semana para la que se pide disponibilidad)
+    const diaSemana = ahora.getDay() // 5 = viernes
+    const diasHastaLunes = diaSemana === 0 ? 1 : 8 - diaSemana
+    const lunesSiguiente = new Date(ahora)
+    lunesSiguiente.setDate(ahora.getDate() + diasHastaLunes)
+    lunesSiguiente.setHours(0, 0, 0, 0)
 
-    const semanaTexto = `semana del ${format(semanaObjetivo, "d 'de' MMMM", { locale: es })} al ${format(semanaFin, "d 'de' MMMM", { locale: es })}`
+    const domingSiguiente = new Date(lunesSiguiente)
+    domingSiguiente.setDate(lunesSiguiente.getDate() + 6)
 
-    // Todos los voluntarios activos y operativos
-    const todosActivos = await prisma.usuario.findMany({
-      where: { activo: true },
+    const semanaStr = lunesSiguiente.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', timeZone: 'Europe/Madrid' })
+    const domingoStr = domingSiguiente.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', timeZone: 'Europe/Madrid' })
+    const semanaTexto = `semana del ${semanaStr} al ${domingoStr}`
+
+    // Solo voluntarios activos y OPERATIVOS (excluye B-12 y personal administrativo)
+    const todosOperativos = await prisma.usuario.findMany({
+      where: { activo: true, esOperativo: true },
       select: { id: true, nombre: true, apellidos: true, numeroVoluntario: true }
     })
 
-    // Los que ya han respondido para la semana objetivo (con o sin disponibilidad)
-    const semanaStart = new Date(format(semanaObjetivo, 'yyyy-MM-dd') + 'T00:00:00.000Z')
-    const semanaEnd = new Date(format(semanaObjetivo, 'yyyy-MM-dd') + 'T23:59:59.999Z')
+    // Quiénes ya han respondido para la semana objetivo
+    const semanaStart = new Date(lunesSiguiente.toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' }) + 'T00:00:00.000Z')
+    const semanaEnd = new Date(lunesSiguiente.toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' }) + 'T23:59:59.999Z')
 
     const yaRespondieron = await prisma.disponibilidad.findMany({
       where: { semanaInicio: { gte: semanaStart, lte: semanaEnd } },
@@ -38,45 +44,71 @@ export async function GET(request: NextRequest) {
     })
     const idsRespondieron = new Set(yaRespondieron.map(d => d.usuarioId))
 
-    // Los que NO han respondido nada
-    const sinRespuesta = todosActivos.filter(u => !idsRespondieron.has(u.id))
+    const sinRespuesta = todosOperativos.filter(u => !idsRespondieron.has(u.id))
 
     if (sinRespuesta.length === 0) {
-      return NextResponse.json({ success: true, mensaje: 'Todos han respondido', enviados: 0 })
+      return NextResponse.json({ success: true, mensaje: 'Todos los voluntarios operativos han respondido', enviados: 0 })
     }
 
-    // Enviar notificación in-app + mensaje interno a cada uno
-    await Promise.all(sinRespuesta.map(async (u) => {
-      // Notificación in-app (campana)
-      await prisma.notificacion.create({
-        data: {
-          usuarioId: u.id,
-          titulo: '⚠️ Disponibilidad no enviada',
-          mensaje: `No has enviado tu disponibilidad para la ${semanaTexto}. Accede a Mi Área y envíala lo antes posible para que podamos organizar los cuadrantes.`,
-          tipo: 'alerta',
-          leida: false,
-        }
-      })
+    // Coordinador como remitente de mensajes internos
+    const coordinador = await prisma.usuario.findFirst({
+      where: { activo: true, rol: { nombre: { in: ['coordinador', 'admin', 'superadmin'] } } },
+      select: { id: true }
+    })
 
-      // Mensaje interno
-      await prisma.mensaje.create({
-        data: {
-          remitenteId: u.id, // sistema — se usará el propio usuario como remitente
-          destinatarioId: u.id,
-          asunto: `Recordatorio: disponibilidad pendiente — ${semanaTexto}`,
-          contenido: `Hola ${u.nombre},\n\nHas superado el plazo del viernes por la mañana para enviar tu disponibilidad para la ${semanaTexto}.\n\nPor favor accede a Mi Área → Disponibilidad y envíala a la mayor brevedad posible para que el coordinador pueda configurar los cuadrantes.\n\nGracias.\n\nProtección Civil Bormujos`,
-          leido: false,
-        }
-      })
-    }))
+    const resultados: string[] = []
+    for (const u of sinRespuesta) {
+      try {
+        // Notificación in-app (campana)
+        await prisma.notificacion.create({
+          data: {
+            usuarioId: u.id,
+            titulo: '⚠ Disponibilidad pendiente de envío',
+            mensaje: `No has enviado tu disponibilidad para la ${semanaTexto}. Accede a Mi Área → Disponibilidad y envíala antes de que se confeccione el cuadrante.`,
+            tipo: 'alerta',
+            leida: false,
+          }
+        })
 
-    console.log(`[CRON] Recordatorio disponibilidad enviado a ${sinRespuesta.length} personas para ${semanaTexto}`)
+        // Mensaje interno desde el coordinador
+        if (coordinador) {
+          await prisma.mensaje.create({
+            data: {
+              remitenteId: coordinador.id,
+              destinatarioId: u.id,
+              asunto: `Recordatorio: disponibilidad pendiente — ${semanaTexto}`,
+              contenido: `Hola ${u.nombre},\n\nEstamos preparando el cuadrante de la ${semanaTexto} y aún no hemos recibido tu disponibilidad.\n\nPor favor accede a Mi Área → Disponibilidad y envíala cuanto antes para poder asignarte los turnos que quieres cubrir.\n\nGracias.\n\nCoordinación — Protección Civil Bormujos`,
+              leido: false,
+            }
+          })
+        }
+
+        // AuditLog para estadísticas de reincidencia por indicativo
+        await prisma.auditLog.create({
+          data: {
+            accion: 'RECORDATORIO',
+            entidad: 'Disponibilidad',
+            entidadId: u.id,
+            descripcion: `Recordatorio automático — ${u.numeroVoluntario || u.nombre} ${u.apellidos} no envió disponibilidad para la ${semanaTexto}`,
+            usuarioId: u.id,
+            usuarioNombre: `${u.nombre} ${u.apellidos}`,
+            modulo: 'Sistema',
+          }
+        })
+
+        resultados.push(u.numeroVoluntario || u.nombre)
+      } catch (err) {
+        console.error(`[CRON] Error procesando ${u.numeroVoluntario}:`, err)
+      }
+    }
+
+    console.log(`[CRON] Recordatorio disponibilidad: ${resultados.length} enviados para ${semanaTexto}`)
 
     return NextResponse.json({
       success: true,
-      enviados: sinRespuesta.length,
+      enviados: resultados.length,
       semana: semanaTexto,
-      personas: sinRespuesta.map(u => u.numeroVoluntario || u.nombre)
+      personas: resultados
     })
 
   } catch (error) {

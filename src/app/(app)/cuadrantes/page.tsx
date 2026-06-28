@@ -123,6 +123,7 @@ export default function CuadrantesPage() {
   // Slot cuyo horario se está editando actualmente
   const [editandoHorario, setEditandoHorario] = useState<string | null>(null)
   const [guardandoHorario, setGuardandoHorario] = useState<Record<string, boolean>>({})
+  const [slotsExpandidos, setSlotsExpandidos] = useState<Record<string, boolean>>({})
   const { isAdmin } = usePermisos()
 
   const calcularSugerencias = (
@@ -160,6 +161,21 @@ export default function CuadrantesPage() {
       sugMap[sk] = sugeridos
     })
     return sugMap
+  }
+
+  const aplicarPropuesta = () => {
+    if (!Object.keys(sugerencias).length) { alert('Sin propuesta generada aún. Selecciona una semana con disponibilidades.'); return }
+    const nuevas = { ...asignaciones }
+    let cambios = 0
+    Object.entries(sugerencias).forEach(([sk, ids]) => {
+      if (!nuevas[sk] || nuevas[sk].length === 0) {
+        nuevas[sk] = [...ids]
+        cambios++
+      }
+    })
+    if (cambios === 0) { alert('Todos los slots ya tienen asignaciones. Limpia algún slot para aplicar la propuesta en él.'); return }
+    setAsignaciones(nuevas)
+    setPendiente(true)
   }
 
   // Ordenación: J primero, luego B, luego S — dentro de cada grupo por número ascendente
@@ -604,6 +620,14 @@ export default function CuadrantesPage() {
             </button>
           </div>
           <button
+            onClick={aplicarPropuesta}
+            disabled={loading || !Object.keys(sugerencias).length}
+            className="px-3 py-2 bg-teal-600 text-white rounded-lg text-xs font-bold hover:bg-teal-700 disabled:opacity-40 flex items-center gap-1.5"
+            title="Asigna automáticamente la combinación óptima en los slots vacíos respetando criterios operativos"
+          >
+            ⚡ Aplicar propuesta
+          </button>
+          <button
             onClick={handleGuardar}
             disabled={guardando}
             className="px-3 py-2 bg-slate-600 text-white rounded-lg text-xs font-bold hover:bg-slate-700 disabled:opacity-50 flex items-center gap-1.5"
@@ -646,6 +670,33 @@ export default function CuadrantesPage() {
         <span className="flex items-center gap-1"><span className="font-mono text-[10px] text-slate-400">[N↓]</span> Turnos restantes</span>
         <span className="flex items-center gap-1"><span className="text-[9px] bg-slate-200 text-slate-500 px-1 rounded font-bold">ADM</span> Solo admin</span>
       </div>
+
+      {!loading && (() => {
+        const sinResponder = todosUsuarios.filter((u: any) =>
+          u.esOperativo !== false && !idsQueRespondieron.includes(u.id)
+        )
+        if (sinResponder.length === 0) return null
+        return (
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex gap-2 items-start">
+            <AlertTriangle size={16} className="text-amber-500 flex-shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-bold text-amber-800 mb-1">
+                {sinResponder.length} voluntario{sinResponder.length > 1 ? 's' : ''} sin disponibilidad declarada para esta semana
+              </p>
+              <div className="flex flex-wrap gap-1">
+                {sinResponder.map((u: any) => (
+                  <span key={u.id} className="px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded text-[10px] font-mono font-bold">
+                    {u.numeroVoluntario || u.nombre}
+                  </span>
+                ))}
+              </div>
+              <p className="text-[10px] text-amber-600 mt-1.5">
+                Si no envían disponibilidad antes del viernes a las 10:00 recibirán un aviso automático y quedará registrado para seguimiento.
+              </p>
+            </div>
+          </div>
+        )
+      })()}
 
       {loading ? (
         <div className="bg-white rounded-xl border border-slate-200 p-16 text-center">
@@ -780,7 +831,7 @@ export default function CuadrantesPage() {
                         </button>
                       )}
                     </div>
-                    <div className="space-y-0.5 max-h-56 overflow-y-auto pr-1">
+                    <div className="space-y-0.5 max-h-80 overflow-y-auto pr-1">
                       {(() => {
                         // Lista unificada de todos los voluntarios para este slot
                         const listaCompleta = todosUsuarios.map((u: any) => {
@@ -815,7 +866,16 @@ export default function CuadrantesPage() {
                         if (listaOrdenada.length === 0) {
                           return <div className="text-[9px] text-slate-300 text-center py-3">Sin voluntarios</div>
                         }
-                        return listaOrdenada.map((u: any) => {
+
+                        // Sección 1: disponibles para este turno concreto + asignados
+                        // Sección 2: resto colapsable (sin respuesta / no disponible / otro turno)
+                        const disponiblesSlot = listaOrdenada.filter((u: any) => u.tieneDisponibilidadEsteSlot || u.isAsig)
+                        const restoSlot = listaOrdenada.filter((u: any) => !u.tieneDisponibilidadEsteSlot && !u.isAsig)
+                        const nSinRespuesta = restoSlot.filter((u: any) => !u.haRespondido && !u.esNoDisponible).length
+                        const nNoDisponible = restoSlot.filter((u: any) => u.esNoDisponible).length
+                        const nOtroTurno = restoSlot.filter((u: any) => u.haRespondido && !u.esNoDisponible).length
+
+                        const renderItem = (u: any) => {
                           const isSug = sugeridosSk.includes(u.id) && !u.isAsig
                           const esPracticas = !!u.fichaVoluntario?.enPracticas
                           const turnosPrac = u.fichaVoluntario?.turnosPracticasRealizados ?? 0
@@ -926,7 +986,34 @@ export default function CuadrantesPage() {
                               )}
                             </div>
                           )
-                        })
+                        }
+
+                        return (
+                          <>
+                            {disponiblesSlot.length === 0
+                              ? <div className="text-[9px] text-slate-300 text-center py-3">Nadie disponible para este turno</div>
+                              : disponiblesSlot.map(renderItem)
+                            }
+                            {restoSlot.length > 0 && (
+                              <>
+                                <button
+                                  onClick={() => setSlotsExpandidos(p => ({ ...p, [sk]: !p[sk] }))}
+                                  className="w-full mt-1 text-[9px] text-slate-400 hover:text-slate-600 py-1 border-t border-dashed border-slate-200 flex items-center justify-center gap-1 flex-wrap"
+                                >
+                                  {slotsExpandidos[sk] ? '▲ Ocultar' : '▼ Ver más:'}
+                                  {nSinRespuesta > 0 && <span className="text-red-400 font-bold">{nSinRespuesta} sin resp.</span>}
+                                  {nNoDisponible > 0 && <span>{nNoDisponible} no disp.</span>}
+                                  {nOtroTurno > 0 && <span>{nOtroTurno} otro turno</span>}
+                                </button>
+                                {slotsExpandidos[sk] && (
+                                  <div className="opacity-60 space-y-0.5 mt-0.5">
+                                    {restoSlot.map(renderItem)}
+                                  </div>
+                                )}
+                              </>
+                            )}
+                          </>
+                        )
                       })()}
                     </div>
                     {slotParcial && (
