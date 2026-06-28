@@ -2,7 +2,10 @@
 import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { Plus, Download, Trash2, Eye, FileText, Loader2 } from 'lucide-react'
+import { Plus, Download, Trash2, Eye, FileText, Loader2, Upload } from 'lucide-react'
+import dynamic from 'next/dynamic'
+
+const ModalImportarPSI = dynamic(() => import('@/components/partes/ModalImportarPSI'), { ssr: false })
 import { ESTADOS_PARTE } from '@/constants/partesPSI'
 import { INITIAL_PSI_STATE } from '@/types/psi'
 import type { PsiFormState } from '@/types/psi'
@@ -105,6 +108,7 @@ function PartesPageInner() {
   const [filtroEstado, setFiltroEstado] = useState('todos')
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
+  const [showImportar, setShowImportar] = useState(false)
 
   useEffect(() => { cargarPartes() }, [page, filtroFecha, filtroEstado])
 
@@ -164,13 +168,22 @@ function PartesPageInner() {
           <h1 className="text-3xl font-bold text-gray-800">Partes de Servicio (PSI)</h1>
           <p className="text-gray-500 mt-1">Gestión de partes de servicio e intervención</p>
         </div>
-        <Link
-          href="/partes/psi"
-          className="px-5 py-2.5 bg-orange-500 text-white rounded-lg hover:bg-orange-600 font-medium flex items-center gap-2 shadow-md transition-colors whitespace-nowrap"
-        >
-          <Plus size={18} />
-          Nuevo Parte PSI
-        </Link>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowImportar(true)}
+            className="px-4 py-2.5 border border-slate-300 text-slate-600 rounded-lg hover:bg-slate-50 font-medium flex items-center gap-2 transition-colors whitespace-nowrap"
+          >
+            <Upload size={16} />
+            Importar PDFs
+          </button>
+          <Link
+            href="/partes/psi"
+            className="px-5 py-2.5 bg-orange-500 text-white rounded-lg hover:bg-orange-600 font-medium flex items-center gap-2 shadow-md transition-colors whitespace-nowrap"
+          >
+            <Plus size={18} />
+            Nuevo Parte PSI
+          </Link>
+        </div>
       </div>
 
       {/* FILTROS */}
@@ -350,6 +363,13 @@ function PartesPageInner() {
             Siguiente
           </button>
         </div>
+      )}
+
+      {showImportar && (
+        <ModalImportarPSI
+          onClose={() => setShowImportar(false)}
+          onImportados={() => { cargarPartes() }}
+        />
       )}
     </div>
   )
