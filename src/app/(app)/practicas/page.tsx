@@ -5,8 +5,9 @@ import { usePermisos } from '@/lib/permisos'
 import {
   Plus, Search, Edit, Trash2, X, ChevronDown,
   BookOpen, Users, Clock, AlertTriangle, Shield,
-  ClipboardList, CheckCircle2, RefreshCw, Settings, ZoomIn, FileText
+  ClipboardList, CheckCircle2, RefreshCw, Settings, ZoomIn, FileText, Upload
 } from 'lucide-react'
+import ModalImportarPDF from '@/components/practicas/ModalImportarPDF'
 
 const FAMILIAS = [
   { id: 'socorrismo', label: 'Socorrismo', color: 'bg-pink-100 text-pink-700 border-pink-200' },
@@ -95,6 +96,7 @@ export default function PracticasPage() {
   const [familiasDinamicas, setFamiliasDinamicas] = useState<FamiliaPractica[]>([])
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null)
   const [showGestionFamilias, setShowGestionFamilias] = useState(false)
+  const [showImportar, setShowImportar] = useState(false)
   const [nuevaFamiliaNombre, setNuevaFamiliaNombre] = useState('')
   const [nuevaFamiliaColor, setNuevaFamiliaColor] = useState('#f97316')
   const [guardandoFamilia, setGuardandoFamilia] = useState(false)
@@ -842,6 +844,9 @@ export default function PracticasPage() {
                   <button onClick={() => setShowGestionFamilias(true)} className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-600 hover:bg-slate-800 text-slate-300 hover:text-white text-sm font-semibold transition-colors">
                     <Settings size={15} /> Familias
                   </button>
+                  <button onClick={() => setShowImportar(true)} className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-600 hover:bg-slate-800 text-slate-300 hover:text-white text-sm font-semibold transition-colors">
+                    <Upload size={15} /> Importar PDFs
+                  </button>
                   <button onClick={() => { setPracticaEditando(null); setShowNueva(true) }} className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-white font-bold text-sm transition-all shadow-lg" style={{background: 'linear-gradient(135deg, #f97316, #ea580c)'}}>
                     <Plus size={16} /> Nueva práctica
                   </button>
@@ -1292,6 +1297,12 @@ export default function PracticasPage() {
           <img src={lightboxUrl} alt="Imagen ampliada" className="max-w-full max-h-[88vh] object-contain rounded-2xl shadow-2xl" onClick={e => e.stopPropagation()} />
           <a href={lightboxUrl} download target="_blank" rel="noopener noreferrer" className="absolute bottom-5 right-5 flex items-center gap-2 text-white text-sm font-bold rounded-xl px-5 py-2.5 z-10 border border-white/20" style={{background: 'rgba(255,255,255,0.1)'}} onClick={e => e.stopPropagation()}>⬇ Descargar</a>
         </div>
+      )}
+      {showImportar && (
+        <ModalImportarPDF
+          onClose={() => setShowImportar(false)}
+          onImportadas={() => { cargarDatos(); }}
+        />
       )}
     </div>
   )
