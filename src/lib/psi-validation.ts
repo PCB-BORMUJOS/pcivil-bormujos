@@ -26,6 +26,10 @@ export function validarPartePSI(data: any): { valido: boolean; errores: string[]
         errores.push('El campo "Lugar" es obligatorio')
     }
 
+    if (!data.motivo || data.motivo.trim() === '') {
+        errores.push('El campo "Motivo" es obligatorio')
+    }
+
     if (!data.observaciones || data.observaciones.trim() === '') {
         errores.push('El campo "Observaciones" es obligatorio')
     }

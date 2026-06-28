@@ -38,6 +38,7 @@ export type PsiFormState = {
     autoridadInterviene: string
     policiaLocalDe: string
     guardiaCivilDe: string
+    descripcionAccidente: string
 
     observaciones: string
 
@@ -86,10 +87,11 @@ export const INITIAL_PSI_STATE: PsiFormState = {
     fallecidos: '', fallecidosNum: '',
 
     // Tráfico
-    matriculasImplicados: Array(3).fill(''),
+    matriculasImplicados: Array(5).fill(''),
     autoridadInterviene: '',
     policiaLocalDe: '',
     guardiaCivilDe: '',
+    descripcionAccidente: '',
 
     observaciones: '',
 

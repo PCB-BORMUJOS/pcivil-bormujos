@@ -181,11 +181,15 @@ export function usePsiForm() {
                     otros: prevOtros ?? INITIAL_PSI_STATE.otros,
                     tabla1: tieneExtra ? (extra.tabla1 ?? tabla1DB) : tabla1DB,
                     tabla2: tieneExtra ? (extra.tabla2 ?? tabla2DB) : tabla2DB,
-                    matriculasImplicados: tieneExtra
-                        ? (extra.matriculasImplicados ?? INITIAL_PSI_STATE.matriculasImplicados)
-                        : (parte.matriculasImplicados
-                            ? String(parte.matriculasImplicados).split(',').map((s: string) => s.trim()).slice(0, 5).concat(Array(5).fill('')).slice(0, 5)
-                            : INITIAL_PSI_STATE.matriculasImplicados),
+                    matriculasImplicados: (() => {
+                        const raw = tieneExtra
+                            ? (extra.matriculasImplicados ?? INITIAL_PSI_STATE.matriculasImplicados)
+                            : (parte.matriculasImplicados
+                                ? String(parte.matriculasImplicados).split(',').map((s: string) => s.trim())
+                                : INITIAL_PSI_STATE.matriculasImplicados)
+                        // Always ensure exactly 5 slots
+                        return raw.concat(Array(5).fill('')).slice(0, 5)
+                    })(),
                     heridos: tieneExtra
                         ? (extra.heridos ?? (parte.tieneHeridos ? 'si' : ''))
                         : (parte.tieneHeridos ? 'si' : '') as 'si' | 'no' | '',
@@ -205,6 +209,7 @@ export function usePsiForm() {
                     policiaLocalDe: parte.policiaLocal || extra.policiaLocalDe || '',
                     guardiaCivilDe: parte.guardiaCivil || extra.guardiaCivilDe || '',
                     autoridadInterviene: extra.autoridadInterviene || '',
+                    descripcionAccidente: parte.descripcionAccidente || extra.descripcionAccidente || '',
                     otrosDescripcion: extra.otrosDescripcion || '',
                     fotos: [],
                 })
@@ -270,13 +275,18 @@ export function usePsiForm() {
                 lugar: form.lugar,
                 motivo: form.motivo,
                 alertante: form.alertante,
-                circulacion: form.circulacion,
+                // Auto-derive circulacion from typología selection
+                circulacion: Object.values(form.intervencion).some(Boolean) ? 'intervencion'
+                    : Object.values(form.prevencion).some(Boolean) ? 'prevencion'
+                    : Object.values(form.otros).some(Boolean) ? 'otros'
+                    : (form.circulacion || ''),
 
                 // Tráfico
                 matriculasImplicados: form.matriculasImplicados.join(', '),
                 policiaLocal: form.policiaLocalDe,
                 guardiaCivil: form.guardiaCivilDe,
                 autoridadInterviene: form.autoridadInterviene,
+                descripcionAccidente: form.descripcionAccidente,
 
                 // Tablas (JSON)
                 vehiculosIds: form.tabla1.map(r => r.vehiculo).filter(Boolean),
@@ -302,7 +312,7 @@ export function usePsiForm() {
                 indicativosInforman: form.indicativosInforman,
 
                 // Firmas y responsables
-                indicativoCumplimenta: form.indicativoCumplimenta,
+                indicativoCumplimenta: form.indicativoCumplimenta || form.indicativosInforman,
                 firmaIndicativoCumplimenta: form.firmaInformante,
                 responsableTurno: form.responsableTurno,
                 firmaResponsableTurno: form.firmaResponsable,

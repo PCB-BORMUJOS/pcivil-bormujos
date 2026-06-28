@@ -608,6 +608,10 @@ ${textComponents.conclusion}`.trim()
                                 </div>
                             </div>
 
+                            {/* DESCRIPCIÓN DEL ACCIDENTE */}
+                            <div className={styles.subBar}>DESCRIPCIÓN DEL ACCIDENTE</div>
+                            <textarea className={styles.textAreaShort} value={form.descripcionAccidente} onChange={(e) => setField('descripcionAccidente', e.target.value)} placeholder="Descripción detallada del accidente o incidente de tráfico..." />
+
                             {/* OBSERVACIONES */}
                             <div className={styles.bar}>OBSERVACIONES</div>
                             <textarea className={styles.textAreaBig} value={form.observaciones} onChange={(e) => setField('observaciones', e.target.value)} />
