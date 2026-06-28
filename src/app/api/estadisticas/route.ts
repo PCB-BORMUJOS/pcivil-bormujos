@@ -3,6 +3,14 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 
+function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371
+  const dLat = (lat2 - lat1) * Math.PI / 180
+  const dLon = (lon2 - lon1) * Math.PI / 180
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+}
+
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
@@ -134,6 +142,35 @@ export async function GET(request: NextRequest) {
     ;(recordatoriosRaw as any[]).forEach(r => {
       if (r.usuarioId) recordatoriosMap[r.usuarioId] = { count: r._count.id, ultimo: r._max.createdAt }
     })
+
+    // ── GPS km por vehículo (Haversine sobre UbicacionVehiculo) ─────────────
+    const ubicacionesGPS = await prisma.ubicacionVehiculo.findMany({
+      where: { createdAt: { gte: fechaInicio, lte: fechaFin } },
+      select: { vehiculoId: true, latitud: true, longitud: true, createdAt: true },
+      orderBy: [{ vehiculoId: 'asc' }, { createdAt: 'asc' }],
+    }).catch(() => [])
+
+    const kmGPSPorVehiculo: Record<string, number> = {}
+    let prevGPS: { vid: string; lat: number; lon: number; ts: number } | null = null
+    for (const pt of ubicacionesGPS as any[]) {
+      const curr = {
+        vid: pt.vehiculoId as string,
+        lat: Number(pt.latitud),
+        lon: Number(pt.longitud),
+        ts:  new Date(pt.createdAt).getTime(),
+      }
+      if (prevGPS && prevGPS.vid === curr.vid) {
+        const diffMin = (curr.ts - prevGPS.ts) / 60000
+        if (diffMin > 0 && diffMin <= 30) {
+          const d = haversineKm(prevGPS.lat, prevGPS.lon, curr.lat, curr.lon)
+          if (d <= 5) {
+            kmGPSPorVehiculo[curr.vid] = (kmGPSPorVehiculo[curr.vid] || 0) + d
+          }
+        }
+      }
+      prevGPS = curr
+    }
+    const totalKmGPS = +Object.values(kmGPSPorVehiculo).reduce((a, b) => a + b, 0).toFixed(1)
 
     // ── Guardias por mes ──────────────────────────────────────────────────────
     const guardiasPorMes = Array.from({ length: 12 }, (_, i) => {
@@ -306,6 +343,7 @@ export async function GET(request: NextRequest) {
         seguroAlerta: v.fechaSeguro ? new Date(v.fechaSeguro) <= en90dias : false,
         salidas: asig.length,
         kmRecorridos: kmRec,
+        kmGPS: +(kmGPSPorVehiculo[v.id] || 0).toFixed(1),
         litrosCombustible: +rep.reduce((a: number, r: any) => a + Number(r.litros || 0), 0).toFixed(1),
         costeCombustible: +rep.reduce((a: number, r: any) => a + Number(r.costeTotal || 0), 0).toFixed(2),
         numMantenimientos: mant.length,
@@ -408,7 +446,7 @@ export async function GET(request: NextRequest) {
       stockPorArea, peticionesEstados, peticionesPorArea, peticionesPorMes,
       statsVehiculos,
       asignacionesPorMes, combustiblePorMes, mantPorTipo,
-      statsVehiculosExt, totalLitros, totalCosteCombustible,
+      statsVehiculosExt, totalLitros, totalCosteCombustible, totalKmGPS,
       cecopalPorMes, cecopalPorTipo,
       droneEstados, vuelosPorMes, statsPilotos,
       cajaPorMes, partidas,

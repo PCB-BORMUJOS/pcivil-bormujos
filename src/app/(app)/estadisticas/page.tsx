@@ -240,6 +240,7 @@ export default function EstadisticasPage() {
 
   const totalKmFlota  = vehiculos.reduce((a:number,v:any)=>a+(v.kmActual||0),0)
   const totalKmPeriodo= statsVehiculosExt.reduce((a:number,v:any)=>a+(v.kmRecorridos||0),0)
+  const totalKmGPS: number = data.totalKmGPS || 0
   const costeMantTotal= statsVehiculosExt.reduce((a:number,v:any)=>a+(v.costeMant||0),0)
   const vehAlertas    = statsVehiculosExt.filter((v:any)=>v.itvAlerta||v.seguroAlerta)
   const costeVehChart = statsVehiculosExt.map((v:any)=>({
@@ -652,9 +653,10 @@ export default function EstadisticasPage() {
                   <KpiCard label="En mantenimiento" value={fmtNum(vehiculos.filter((v:any)=>['mantenimiento','en_taller'].includes(v.estado)).length)} icon={Wrench} color="red"/>
                 </div>
                 {/* KPIs fila 2 */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
                   <KpiCard label="Salidas registradas" value={fmtNum(resumen.totalSalidas)} icon={Activity} color="amber" sub={`Asignaciones ${year}`}/>
-                  <KpiCard label="Km recorridos" value={fmtKm(totalKmPeriodo)} icon={Route} color="teal" sub="Desde asignaciones"/>
+                  <KpiCard label="Km recorridos" value={fmtKm(totalKmPeriodo)} icon={Route} color="teal" sub="Desde odómetros"/>
+                  <KpiCard label="Km GPS flota" value={fmtKm(totalKmGPS)} icon={MapPin} color="cyan" sub="Calculados por geolocalización"/>
                   <KpiCard label="Litros combustible" value={fmtL(totalLitros)} icon={Fuel} color="orange" sub="Repostajes + SOLRED"/>
                   <KpiCard label="Coste combustible" value={fmtEur(totalCosteCombustible)} icon={DollarSign} color="purple" sub={`Total ${year}`}/>
                 </div>
@@ -770,7 +772,7 @@ export default function EstadisticasPage() {
                 {/* Tabla resumen por vehículo */}
                 <Panel title="Resumen por vehículo">
                   <DataTable
-                    heads={['Indicativo','Matrícula','Marca / Modelo','Km actual','Salidas','Km recorridos','Combustible','Coste comb.','Coste mant.','Estado']}
+                    heads={['Indicativo','Matrícula','Marca / Modelo','Km actual','Salidas','Km odóm.','Km GPS','Combustible','Coste comb.','Coste mant.','Estado']}
                     rows={statsVehiculosExt.map((v:any)=>[
                       <span key="i" className="font-black text-indigo-700 text-sm">{v.indicativo}</span>,
                       <span key="m" className="font-mono text-xs">{v.matricula}</span>,
@@ -778,6 +780,7 @@ export default function EstadisticasPage() {
                       <span key="km" className="font-medium">{fmtKm(v.kmActual)}</span>,
                       <span key="sal" className="font-bold">{v.salidas}</span>,
                       v.kmRecorridos>0?<span key="r" className="font-semibold text-teal-700">{fmtKm(v.kmRecorridos)}</span>:'—',
+                      v.kmGPS>0?<span key="gps" className="font-semibold text-cyan-700">{fmtKm(v.kmGPS)}</span>:'—',
                       v.litrosCombustible>0?<span key="l">{fmtL(v.litrosCombustible)}</span>:'—',
                       v.costeCombustible>0?<span key="cc" className="font-semibold text-orange-600">{fmtEur(v.costeCombustible)}</span>:'—',
                       v.costeMant>0?<span key="cm" className="font-semibold text-red-600">{fmtEur(v.costeMant)}</span>:'—',
