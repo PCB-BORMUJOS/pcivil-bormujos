@@ -123,6 +123,18 @@ export async function GET(request: NextRequest) {
       }).catch(() => []),
     ])
 
+    // ── Recordatorios de disponibilidad por voluntario ──────────────────────────
+    const recordatoriosRaw = await prisma.auditLog.groupBy({
+      by: ['usuarioId'],
+      where: { accion: 'RECORDATORIO', entidad: 'Disponibilidad' },
+      _count: { id: true },
+      _max: { createdAt: true },
+    }).catch(() => [])
+    const recordatoriosMap: Record<string, { count: number; ultimo: Date | null }> = {}
+    ;(recordatoriosRaw as any[]).forEach(r => {
+      if (r.usuarioId) recordatoriosMap[r.usuarioId] = { count: r._count.id, ultimo: r._max.createdAt }
+    })
+
     // ── Guardias por mes ──────────────────────────────────────────────────────
     const guardiasPorMes = Array.from({ length: 12 }, (_, i) => {
       const gm = (guardias as any[]).filter(g => new Date(g.fecha).getMonth() === i)
@@ -165,6 +177,8 @@ export async function GET(request: NextRequest) {
         importeDietas: dv.reduce((a: number, d: any) => a + Number(d.totalDieta || 0), 0),
         km: dv.reduce((a: number, d: any) => a + Number(d.kilometros || 0), 0),
         diasServicio: dv.length,
+        recordatorios: (recordatoriosMap[v.id]?.count) || 0,
+        ultimoRecordatorio: recordatoriosMap[v.id]?.ultimo || null,
       }
     }).sort((a, b) => b.guardias - a.guardias)
 

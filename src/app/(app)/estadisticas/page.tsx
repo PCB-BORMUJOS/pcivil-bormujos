@@ -381,7 +381,7 @@ export default function EstadisticasPage() {
                 </Panel>
                 <Panel title="Detalle por voluntario">
                   <DataTable
-                    heads={['Nº Vol.','Nombre completo','Área','Categoría','Guardias','Horas','Dietas','Km','Estado']}
+                    heads={['Nº Vol.','Nombre completo','Área','Categoría','Guardias','Horas','Dietas','Km','Avisos disp.','Estado']}
                     rows={statsVoluntarios.map((v:any)=>[
                       <span key="n" className="font-mono text-xs font-bold text-indigo-600">{v.numeroVoluntario||'—'}</span>,
                       `${v.nombre} ${v.apellidos}`.trim(),
@@ -391,6 +391,9 @@ export default function EstadisticasPage() {
                       v.horas>0?`${v.horas} h`:'—',
                       v.importeDietas>0?<span key="d" className="font-semibold text-green-700">{fmtEur(v.importeDietas)}</span>:'—',
                       v.km>0?<span key="km">{fmtKm(v.km)}</span>:'—',
+                      v.recordatorios>0
+                        ? <span key="rec" className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-red-100 text-red-700 rounded text-xs font-bold" title={v.ultimoRecordatorio ? `Último: ${new Date(v.ultimoRecordatorio).toLocaleDateString('es-ES')}` : ''}>⚠ {v.recordatorios}</span>
+                        : <span key="rec" className="text-slate-300 text-xs">—</span>,
                       <Badge key="s" label={v.activo?'Activo':'Inactivo'} variant={v.activo?'green':'red'}/>,
                     ])}
                     empty="Sin datos de voluntarios"

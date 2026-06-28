@@ -2,7 +2,7 @@
   "crons": [
     {
       "path": "/api/cron/recordatorio-disponibilidad",
-      "schedule": "0 8 * * 5"
+      "schedule": "0 10 * * 5"
     }
   ]
 }

@@ -209,7 +209,8 @@ export default function MiAreaPage() {
   const [formacionSubTab, setFormacionSubTab] = useState<'inscripciones' | 'certificaciones' | 'manual'>('inscripciones');
   const [actividades, setActividades] = useState<Actividad[]>([]);
   const [misGuardias, setMisGuardias] = useState<any[]>([]);
-  const [disponibilidades, setDisponibilidades] = useState<any[]>([]); // Nueva línea
+  const [disponibilidades, setDisponibilidades] = useState<any[]>([]);
+  const [recordatorios, setRecordatorios] = useState<any[]>([]);
   const [documentos, setDocumentos] = useState<Documento[]>([]);
   const [asignacionesVestuario, setAsignacionesVestuario] = useState<AsignacionVestuario[]>([]);
   const [solicitudesVestuario, setSolicitudesVestuario] = useState<SolicitudVestuario[]>([]);
@@ -319,6 +320,13 @@ export default function MiAreaPage() {
         const dataDisp = await resDisp.json();
         setDisponibilidades(dataDisp.disponibilidades || []);
       }
+      try {
+        const resRec = await fetch('/api/mi-area/recordatorios');
+        if (resRec.ok) {
+          const dataRec = await resRec.json();
+          setRecordatorios(dataRec.recordatorios || []);
+        }
+      } catch(e) { console.error('Error cargando recordatorios:', e) }
     } catch (error) {
       /* error silenciado */;
     } finally {
@@ -1191,12 +1199,20 @@ export default function MiAreaPage() {
                       <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-purple-500"></span> Formación</span>
                       <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-orange-500"></span> Eventos</span>
                       <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-green-500"></span> Turnos</span>
+                      <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-red-400"></span> Avisos</span>
                     </div>
                   </div>
 
                   {/* Combinar y ordenar todas las actividades */}
                   {(() => {
                     const todasActividades = [
+                      ...recordatorios.map(r => ({
+                        id: r.id,
+                        tipo: 'recordatorio',
+                        fecha: r.createdAt,
+                        titulo: 'Aviso automático de disponibilidad',
+                        data: r
+                      })),
                       ...disponibilidades.map(d => ({
                         id: d.id,
                         tipo: 'disponibilidad',
@@ -1232,7 +1248,27 @@ export default function MiAreaPage() {
                     return (
                       <div className="space-y-3">
                         {todasActividades.map(item => {
-                          if (item.tipo === 'guardia') {
+                          if (item.tipo === 'recordatorio') {
+                          const r = item.data;
+                          return (
+                            <div key={item.id} className="flex items-center gap-4 p-4 bg-white border border-red-100 rounded-xl hover:shadow-sm transition-shadow">
+                              <div className="w-1 h-12 rounded-full bg-red-400 flex-shrink-0"></div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <h4 className="font-medium text-slate-800">Aviso de disponibilidad pendiente</h4>
+                                  <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded font-bold">Recordatorio automático</span>
+                                </div>
+                                <p className="text-sm text-slate-500 mt-0.5">
+                                  {new Date(r.createdAt).toLocaleDateString('es-ES', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}
+                                </p>
+                                {r.descripcion && (
+                                  <p className="text-xs text-red-400 mt-0.5 truncate">{r.descripcion}</p>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        }
+                        if (item.tipo === 'guardia') {
                             const g = item.data;
                             const fechaObj = new Date(g.fecha);
                             const diaSemana = fechaObj.toLocaleDateString('es-ES', { weekday: 'long' });
