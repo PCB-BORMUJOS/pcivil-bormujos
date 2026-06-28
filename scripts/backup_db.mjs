@@ -10,17 +10,45 @@ async function backup() {
   mkdirSync(dir, { recursive: true })
 
   const modelos = [
-    'usuario', 'rol', 'servicio', 'configuracion',
-    'edificio', 'equipoECI', 'hidrante', 'planoMarcador',
-    'dEA', 'botiquin', 'botiquinItem', 'revisionBotiquin',
-    'vehiculo', 'documentoVehiculo', 'mantenimientoVehiculo',
-    'equipoRadio', 'categoriaInventario', 'familiaArticulo', 'articulo',
-    'peticionMaterial', 'historialPeticion', 'movimientoStock',
-    'drone', 'bateriaDrone', 'pilotoDrone', 'vuelo',
-    'curso', 'convocatoria', 'inscripcion', 'certificacion',
-    'guardia', 'disponibilidad', 'dieta', 'fichaVoluntario',
-    'evento', 'manual', 'partePSI', 'auditLog',
-    'asignacionVestuario', 'notificacion', 'mensaje'
+    // Usuarios y roles
+    'usuario', 'rol', 'fichaVoluntario', 'asignacionVestuario', 'solicitudVestuario',
+    // Configuración y sistema
+    'servicio', 'configuracion', 'semanaPublicada', 'auditLog',
+    // Guardias y disponibilidad
+    'guardia', 'disponibilidad', 'dieta', 'informeDietas',
+    // Cuadrantes / presupuesto
+    'presupuestoAnual', 'partidaPresupuestaria', 'presupuestoProveedor', 'proveedor',
+    'expedienteCompra', 'lineaExpediente', 'facturaExpediente', 'historialExpediente',
+    // Edificios y recursos
+    'edificio', 'planoEdificio', 'equipoECI', 'hidrante', 'planoMarcador',
+    'dEA', 'botiquin', 'botiquinItem', 'revisionBotiquin', 'ubicacion',
+    // Vehículos
+    'vehiculo', 'documentoVehiculo', 'mantenimientoVehiculo', 'vehiculoAsignacion',
+    'repostajeVehiculo', 'registroFluidoVehiculo', 'ticketCombustible', 'ubicacionVehiculo',
+    'poliza', 'cicloCarga',
+    // Logística e inventario
+    'equipoRadio', 'mantenimientoEquipo', 'categoriaInventario', 'familiaArticulo', 'articulo',
+    'peticionMaterial', 'peticionItem', 'historialPeticion', 'movimientoStock', 'movimientoCaja',
+    // Drones
+    'drone', 'bateriaDrone', 'pilotoDrone', 'vuelo', 'checklistVuelo',
+    'mantenimientoDrone', 'notamRegistro', 'zonaVueloDron',
+    // Formación
+    'curso', 'convocatoria', 'inscripcion', 'certificacion', 'necesidadFormativa',
+    // Prácticas y Megacode
+    'practica', 'familiaPractica', 'registroPractica', 'jornadaAsistencia', 'participanteExterno',
+    'megacode', 'megacodePractica', 'megacodeParticipacion', 'registroFirma',
+    // Eventos y comunicación
+    'evento', 'eventoParticipante', 'manual', 'notificacion', 'mensaje', 'mensajeEstado',
+    // Partes operativos
+    'partePSI', 'partePRVFSV',
+    // CECOPAL e incidencias
+    'incidencia', 'incidenciaCecopal',
+    // Acción social
+    'casoViogen', 'espacioAcogida',
+    // Directorio
+    'categoriaDirectorio', 'contactoDirectorio', 'centroEmergencia',
+    // Aspirantes
+    'aspirante',
   ]
 
   let total = 0
