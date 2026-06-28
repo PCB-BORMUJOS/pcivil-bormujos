@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
           data: {
             usuarioId: u.id,
             titulo: '⚠ Disponibilidad pendiente de envío',
-            mensaje: `No has enviado tu disponibilidad para la ${semanaTexto}. Accede a Mi Área → Disponibilidad y envíala antes de que se confeccione el cuadrante.`,
+            mensaje: `No has enviado tu disponibilidad para la ${semanaTexto}. Accede al panel principal de la aplicación y usa el formulario «Enviar Disponibilidad» antes de que se confeccione el cuadrante.`,
             tipo: 'alerta',
             leida: false,
           }
@@ -77,7 +77,7 @@ export async function GET(request: NextRequest) {
               remitenteId: coordinador.id,
               destinatarioId: u.id,
               asunto: `Recordatorio: disponibilidad pendiente — ${semanaTexto}`,
-              contenido: `Hola ${u.nombre},\n\nEstamos preparando el cuadrante de la ${semanaTexto} y aún no hemos recibido tu disponibilidad.\n\nPor favor accede a Mi Área → Disponibilidad y envíala cuanto antes para poder asignarte los turnos que quieres cubrir.\n\nGracias.\n\nCoordinación — Protección Civil Bormujos`,
+              contenido: `Hola ${u.nombre},\n\nEstamos preparando el cuadrante de la ${semanaTexto} y aún no hemos recibido tu disponibilidad.\n\nPor favor accede al panel principal de la aplicación y cumplimenta el formulario «Enviar Disponibilidad» cuanto antes para poder asignarte los turnos que quieres cubrir.\n\nGracias.\n\nCoordinación — Protección Civil Bormujos`,
               leido: false,
             }
           })

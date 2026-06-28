@@ -691,7 +691,7 @@ export default function CuadrantesPage() {
                 ))}
               </div>
               <p className="text-[10px] text-amber-600 mt-1.5">
-                Si no envían disponibilidad antes del viernes a las 10:00 recibirán un aviso automático y quedará registrado para seguimiento.
+                Si no envían disponibilidad antes del viernes a las 12:00 recibirán un aviso automático desde el panel principal y quedará registrado para seguimiento.
               </p>
             </div>
           </div>
