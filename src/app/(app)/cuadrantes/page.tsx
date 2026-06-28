@@ -3,9 +3,8 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { usePermisos } from '@/lib/permisos'
 import {
-  Calendar, ChevronLeft, ChevronRight, RefreshCw, Save,
-  Shield, Car, Minus, Plus, Clock, AlertTriangle, CheckCircle2, Info
-, X } from 'lucide-react'
+  Calendar, ChevronLeft, ChevronRight, RefreshCw, Save, Send, Zap,
+  Shield, Car, Minus, Plus, Clock, AlertTriangle, CheckCircle2, Info, X } from 'lucide-react'
 
 interface UsuarioDisponible {
   id: string
@@ -625,26 +624,23 @@ export default function CuadrantesPage() {
             className="px-3 py-2 bg-teal-600 text-white rounded-lg text-xs font-bold hover:bg-teal-700 disabled:opacity-40 flex items-center gap-1.5"
             title="Asigna automáticamente la combinación óptima en los slots vacíos respetando criterios operativos"
           >
-            ⚡ Aplicar propuesta
+            <Zap size={14} /> Aplicar propuesta
           </button>
           <button
             onClick={handleGuardar}
             disabled={guardando}
             className="px-3 py-2 bg-slate-600 text-white rounded-lg text-xs font-bold hover:bg-slate-700 disabled:opacity-50 flex items-center gap-1.5"
-            title="Guardar sin notificar"
+            title="Guardar sin notificar a los voluntarios"
           >
-            💾 Guardar
+            <Save size={14} /> Guardar
           </button>
           <button
             onClick={handlePublicar}
-            disabled={guardando || !pendiente}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold shadow-sm transition-all ${
-              pendiente
-                ? 'bg-green-600 text-white hover:bg-green-700'
-                : 'bg-slate-100 text-slate-400 cursor-not-allowed'
-            } disabled:opacity-60`}
+            disabled={guardando}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold shadow-sm transition-all bg-green-600 text-white hover:bg-green-700 disabled:opacity-60"
+            title="Guardar y notificar a los voluntarios — necesario para que puedan ver sus indicativos asignados"
           >
-            <Save size={15} />
+            <Send size={15} />
             {guardando ? 'Guardando…' : 'Publicar Cuadrante'}
           </button>
           <button
