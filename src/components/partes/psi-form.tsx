@@ -11,7 +11,7 @@ import { usePsiForm } from '@/hooks/use-psi-form'
 import { ImageUploader } from './image-uploader'
 import SignatureCanvas from './SignatureCanvas'
 import { Toaster, toast } from 'react-hot-toast'
-import { Loader2, Save, FileDown, Plus, Trash2, ChevronLeft } from 'lucide-react'
+import { Loader2, Save, FileDown, Plus, Trash2, ChevronLeft, Sparkles } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 
@@ -33,6 +33,52 @@ export function PsiForm() {
     const estadoInfo = estadoConfig[estadoParte] ?? estadoConfig.borrador
 
     const [activeTab, setActiveTab] = useState<1 | 2 | 3>(1)
+    const [rewriting, setRewriting] = useState(false)
+
+    const handleReescribir = async () => {
+        setRewriting(true)
+        const toastId = toast.loading('Reescribiendo con IA...')
+        try {
+            const tipologiasStr = [
+                ...Object.entries(form.prevencion).filter(([, v]) => v).map(([k]) => `prevención:${k}`),
+                ...Object.entries(form.intervencion).filter(([, v]) => v).map(([k]) => `intervención:${k}`),
+                ...Object.entries(form.otros).filter(([, v]) => v).map(([k]) => `otros:${k}`),
+            ].join(', ')
+
+            const res = await fetch('/api/partes/psi/reescribir', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    lugar: form.lugar,
+                    motivo: form.motivo,
+                    alertante: form.alertante,
+                    tipologias: tipologiasStr,
+                    observaciones: form.observaciones,
+                    introduccion: textComponents.introduccion,
+                    desarrolloDetallado: textComponents.desarrollo,
+                    conclusion: textComponents.conclusion,
+                }),
+            })
+            const data = await res.json()
+            if (!res.ok || !data.ok) throw new Error(data.error || 'Error desconocido')
+
+            const { resultado } = data
+            if (resultado.observaciones !== undefined) setField('observaciones', resultado.observaciones)
+            if (resultado.introduccion !== undefined || resultado.desarrolloDetallado !== undefined || resultado.conclusion !== undefined) {
+                setTextComponents({
+                    introduccion: resultado.introduccion ?? textComponents.introduccion,
+                    desarrollo: resultado.desarrolloDetallado ?? textComponents.desarrollo,
+                    conclusion: resultado.conclusion ?? textComponents.conclusion,
+                })
+            }
+            toast.success('Texto reescrito correctamente', { id: toastId })
+            setActiveTab(2)
+        } catch (e: any) {
+            toast.error('Error al reescribir: ' + (e.message || 'desconocido'), { id: toastId })
+        } finally {
+            setRewriting(false)
+        }
+    }
 
     const handleTabKeyDown = (e: React.KeyboardEvent) => {
         if (e.key === 'ArrowRight') {
@@ -250,6 +296,17 @@ ${textComponents.conclusion}`.trim()
                 >
                     {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                     {saving ? 'Guardando...' : hasChanges ? 'Guardar Cambios' : 'Guardado'}
+                </button>
+
+                <button
+                    type="button"
+                    onClick={handleReescribir}
+                    disabled={rewriting}
+                    className="flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium bg-purple-600 text-white hover:bg-purple-700 shadow-sm transition-colors disabled:opacity-50"
+                    title="Reescribir el texto del parte con IA de forma profesional"
+                >
+                    {rewriting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                    {rewriting ? 'Reescribiendo...' : 'Reescribir con IA'}
                 </button>
 
                 <button
