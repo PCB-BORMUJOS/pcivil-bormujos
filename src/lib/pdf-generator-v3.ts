@@ -532,61 +532,37 @@ function drawPage2(doc: jsPDF, data: PsiFormState) {
         desarrollo = rawText
     }
 
-    const sections: Array<{ label: string; text: string }> = [
-        { label: 'INTRODUCCIÓN',         text: introduccion },
-        { label: 'DESARROLLO DETALLADO', text: desarrollo   },
-        { label: 'CONCLUSIÓN',           text: conclusion   },
-    ]
+    // Combinar las 3 secciones en texto continuo sin etiquetas de sección
+    const fullText = [introduccion, desarrollo, conclusion].filter(Boolean).join('\n\n')
 
     let y = drawHeader(doc)
 
-    for (const { label, text } of sections) {
-        // Asegurar espacio para la barra de sección + al menos una línea
-        if (y + 8 > FOOTER_TOP) {
+    if (!fullText) {
+        drawRect(doc, MARGIN, y, CONTENT_W, 20, undefined, BORDER)
+        drawFooter(doc)
+        return
+    }
+
+    doc.setFontSize(FONT_SIZE)
+    doc.setFont('helvetica', 'normal')
+    const rawLines = fullText.split('\n')
+    const lines: string[] = []
+    for (const rl of rawLines) {
+        const wrapped = doc.splitTextToSize(rl || ' ', CONTENT_W - 6) as string[]
+        lines.push(...wrapped)
+    }
+
+    for (const line of lines) {
+        if (y + LINE_H > FOOTER_TOP) {
             drawFooter(doc)
             doc.addPage()
             y = drawHeader(doc)
         }
-
-        y = sectionBar(doc, label, y)
-        y += 2
-
-        if (!text) {
-            // Caja vacía mínima
-            if (y + 8 > FOOTER_TOP) {
-                drawFooter(doc)
-                doc.addPage()
-                y = drawHeader(doc)
-            }
-            drawRect(doc, MARGIN, y, CONTENT_W, 8, undefined, BORDER)
-            y += 10
-            continue
-        }
-
-        // Dividir texto en líneas (respeta saltos de línea y wrap)
+        doc.setTextColor(...TEXT_DARK)
         doc.setFontSize(FONT_SIZE)
         doc.setFont('helvetica', 'normal')
-        const rawLines = text.split('\n')
-        const lines: string[] = []
-        for (const rl of rawLines) {
-            const wrapped = doc.splitTextToSize(rl || ' ', CONTENT_W - 6) as string[]
-            lines.push(...wrapped)
-        }
-
-        for (const line of lines) {
-            if (y + LINE_H > FOOTER_TOP) {
-                drawFooter(doc)
-                doc.addPage()
-                y = drawHeader(doc)
-            }
-            doc.setTextColor(...TEXT_DARK)
-            doc.setFontSize(FONT_SIZE)
-            doc.setFont('helvetica', 'normal')
-            doc.text(line, MARGIN + 3, y + LINE_H * 0.78)
-            y += LINE_H
-        }
-
-        y += 5  // separación entre secciones
+        doc.text(line, MARGIN + 3, y + LINE_H * 0.78)
+        y += LINE_H
     }
 
     drawFooter(doc)
