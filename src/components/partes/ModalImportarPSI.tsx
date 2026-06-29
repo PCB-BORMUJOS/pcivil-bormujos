@@ -11,6 +11,7 @@ interface ArchivoEnCola {
   fecha?: string
   lugar?: string
   paginas?: number
+  imagenesSubidas?: number
   error?: string
 }
 
@@ -29,7 +30,78 @@ const ESTADOS: Record<Estado, { label: string; color: string }> = {
   error:      { label: 'Error',               color: 'text-red-600' },
 }
 
-async function renderizarPaginasPDF(file: File): Promise<Blob[]> {
+// Detecta la barra azul [40,54,102] del encabezado de firmas escaneando desde abajo.
+// Devuelve la y en px donde empieza esa barra (o -1 si no encuentra).
+function detectarBarraFirmas(canvas: HTMLCanvasElement): number {
+  const ctx = canvas.getContext('2d')!
+  const { width: w, height: h } = canvas
+  const d = ctx.getImageData(0, 0, w, h).data
+  const x0 = Math.floor(w * 0.05)
+  const x1 = Math.floor(w * 0.95)
+  const umbral = (x1 - x0) * 0.35
+
+  for (let y = h - 60; y >= Math.floor(h * 0.55); y--) {
+    let azules = 0
+    for (let x = x0; x < x1; x++) {
+      const i = (y * w + x) * 4
+      if (Math.abs(d[i] - 40) < 30 && Math.abs(d[i + 1] - 54) < 30 && Math.abs(d[i + 2] - 102) < 30) azules++
+    }
+    if (azules > umbral) return y
+  }
+  return -1
+}
+
+// Recorta las 3 firmas del canvas usando la y de la barra de cabecera.
+// Layout PSI: MARGIN=8mm, sigColW=64.67mm (3 columnas), imagen empieza 20mm bajo body_start
+// A4 a pdfjs 1.5x: 1mm ≈ 4.252px
+function extraerFirmasDeCanvas(canvas: HTMLCanvasElement): {
+  informante: string | null
+  responsable: string | null
+  jefe: string | null
+} {
+  const headerY = detectarBarraFirmas(canvas)
+  if (headerY === -1) return { informante: null, responsable: null, jefe: null }
+
+  const mm = (v: number) => Math.round(v * 4.252)
+  const MARGIN  = mm(8)
+  const colW    = mm(194 / 3)        // 64.67mm por columna
+  const headerH = mm(6)              // 6mm cabecera azul
+  const bodyStart = headerY + headerH
+  const imgOffY  = mm(20)           // 20mm desde inicio de body hasta imagen
+  const imgOffX  = mm(3)            // 3mm desde borde izquierdo de columna
+  const imgW     = mm(194 / 3 - 6)  // ancho de imagen: colW - 6mm
+  const imgH     = mm(15)           // alto de imagen: 15mm
+  const imgY     = bodyStart + imgOffY
+  const { width: w, height: h } = canvas
+  const d        = canvas.getContext('2d')!.getImageData(0, 0, w, h).data
+
+  const resultado: (string | null)[] = []
+  for (let c = 0; c < 3; c++) {
+    const imgX = MARGIN + c * colW + imgOffX
+
+    if (imgY + imgH > h || imgX + imgW > w) { resultado.push(null); continue }
+
+    // ¿Tiene contenido? (no todo blanco/gris claro)
+    let noBlanco = 0
+    for (let py = imgY; py < imgY + imgH; py++) {
+      for (let px = imgX; px < imgX + imgW; px++) {
+        const i = (py * w + px) * 4
+        if (d[i] < 220 || d[i + 1] < 220 || d[i + 2] < 220) noBlanco++
+      }
+    }
+    if (noBlanco < 80) { resultado.push(null); continue }
+
+    const crop = document.createElement('canvas')
+    crop.width  = imgW
+    crop.height = imgH
+    crop.getContext('2d')!.drawImage(canvas, imgX, imgY, imgW, imgH, 0, 0, imgW, imgH)
+    resultado.push(crop.toDataURL('image/png'))
+  }
+
+  return { informante: resultado[0] ?? null, responsable: resultado[1] ?? null, jefe: resultado[2] ?? null }
+}
+
+async function renderizarPaginasPDF(file: File): Promise<{ blobs: Blob[]; canvas1: HTMLCanvasElement | null }> {
   const pdfjsLib = await import('pdfjs-dist')
   pdfjsLib.GlobalWorkerOptions.workerSrc =
     'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'
@@ -37,6 +109,7 @@ async function renderizarPaginasPDF(file: File): Promise<Blob[]> {
   const arrayBuffer = await file.arrayBuffer()
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
   const blobs: Blob[] = []
+  let canvas1: HTMLCanvasElement | null = null
 
   for (let i = 1; i <= Math.min(pdf.numPages, 10); i++) {
     const page = await pdf.getPage(i)
@@ -44,15 +117,15 @@ async function renderizarPaginasPDF(file: File): Promise<Blob[]> {
     const canvas = document.createElement('canvas')
     canvas.width  = viewport.width
     canvas.height = viewport.height
-    const ctx = canvas.getContext('2d')!
-    await page.render({ canvasContext: ctx, viewport }).promise
+    await page.render({ canvasContext: canvas.getContext('2d')!, viewport }).promise
+    if (i === 1) canvas1 = canvas  // guardar referencia para extraer firmas
     const blob = await new Promise<Blob>(resolve =>
       canvas.toBlob(b => resolve(b!), 'image/png', 0.85)
     )
     blobs.push(blob)
   }
 
-  return blobs
+  return { blobs, canvas1 }
 }
 
 export default function ModalImportarPSI({ onClose, onImportados }: Props) {
@@ -95,38 +168,46 @@ export default function ModalImportarPSI({ onClose, onImportados }: Props) {
       return
     }
     const datos = d1.datos
-    actualizarArchivo(archivo.id, {
-      fecha: datos.fecha || undefined,
-      lugar: datos.lugar || undefined,
-    })
+    actualizarArchivo(archivo.id, { fecha: datos.fecha || undefined, lugar: datos.lugar || undefined })
 
-    // ── 2. Renderizar páginas del PDF como imágenes ───────────────────────
+    // ── 2. Renderizar páginas + extraer firmas ────────────────────────────
     actualizarArchivo(archivo.id, { estado: 'imagenes' })
     let imagenesUrls: string[] = []
+    let firmas = { informante: null as string | null, responsable: null as string | null, jefe: null as string | null }
+
     try {
-      const paginasBlob = await renderizarPaginasPDF(archivo.file)
-      actualizarArchivo(archivo.id, { paginas: paginasBlob.length })
+      const { blobs, canvas1 } = await renderizarPaginasPDF(archivo.file)
+      actualizarArchivo(archivo.id, { paginas: blobs.length })
+
+      if (canvas1) firmas = extraerFirmasDeCanvas(canvas1)
+
       const numeroParte = datos.numeroParte || archivo.file.name.replace('.pdf', '')
-      for (let i = 0; i < paginasBlob.length; i++) {
+      for (let i = 0; i < blobs.length; i++) {
         const fd2 = new FormData()
-        fd2.append('imagen', paginasBlob[i], `pagina-${i + 1}.png`)
+        fd2.append('imagen', blobs[i], `pagina-${i + 1}.png`)
         fd2.append('numeroParte', numeroParte)
         fd2.append('pagina', String(i + 1))
-        const r2 = await fetch('/api/partes/psi/importar/imagen', { method: 'POST', body: fd2 })
-        const d2 = await r2.json()
-        if (r2.ok && d2.url) imagenesUrls.push(d2.url)
+        try {
+          const r2 = await fetch('/api/partes/psi/importar/imagen', { method: 'POST', body: fd2 })
+          const d2 = await r2.json()
+          if (r2.ok && d2.url) imagenesUrls.push(d2.url)
+        } catch {
+          // Página concreta falló — continuamos con las demás
+        }
       }
-    } catch {
-      // Las imágenes son opcionales — continuamos sin ellas
+    } catch (err) {
+      console.warn('[PSI import] Error capturando imágenes:', err)
       imagenesUrls = []
     }
+
+    actualizarArchivo(archivo.id, { imagenesSubidas: imagenesUrls.length })
 
     // ── 3. Guardar en BD ─────────────────────────────────────────────────
     actualizarArchivo(archivo.id, { estado: 'guardando' })
     const r3 = await fetch('/api/partes/psi/importar/guardar', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ datos, imagenes: imagenesUrls }),
+      body: JSON.stringify({ datos, imagenes: imagenesUrls, firmas }),
     })
     const d3 = await r3.json()
 
@@ -169,7 +250,7 @@ export default function ModalImportarPSI({ onClose, onImportados }: Props) {
             </div>
             <div>
               <h2 className="text-base font-black text-slate-800">Importar partes PSI desde PDF</h2>
-              <p className="text-xs text-slate-400">Claude extrae los campos · pdfjs captura las imágenes</p>
+              <p className="text-xs text-slate-400">Claude extrae campos y firmas · pdfjs captura imágenes</p>
             </div>
           </div>
           <button onClick={onClose} disabled={ejecutando && !terminado}
@@ -215,26 +296,26 @@ export default function ModalImportarPSI({ onClose, onImportados }: Props) {
                   'bg-slate-50 border-slate-100'
                 }`}>
                   <div className="flex-shrink-0">
-                    {a.estado === 'ok'      && <CheckCircle2 size={18} className="text-green-500" />}
-                    {a.estado === 'error'   && <AlertCircle  size={18} className="text-red-500" />}
-                    {a.estado === 'omitida' && <Clock        size={18} className="text-amber-500" />}
-                    {a.estado === 'imagenes'&& <Image        size={18} className="text-purple-500" />}
+                    {a.estado === 'ok'       && <CheckCircle2 size={18} className="text-green-500" />}
+                    {a.estado === 'error'    && <AlertCircle  size={18} className="text-red-500" />}
+                    {a.estado === 'omitida'  && <Clock        size={18} className="text-amber-500" />}
+                    {a.estado === 'imagenes' && <Image        size={18} className="text-purple-500" />}
                     {activo && a.estado !== 'imagenes'
                       && <Loader2 size={18} className={`animate-spin ${a.estado === 'guardando' ? 'text-orange-500' : 'text-blue-500'}`} />}
-                    {a.estado === 'espera'  && <FileText     size={18} className="text-slate-300" />}
+                    {a.estado === 'espera'   && <FileText     size={18} className="text-slate-300" />}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-slate-800 truncate">
-                      {a.fecha
-                        ? <span className="font-mono text-orange-600 mr-1.5">{a.fecha}</span>
-                        : null}
+                      {a.fecha && <span className="font-mono text-orange-600 mr-1.5">{a.fecha}</span>}
                       {a.lugar || a.file.name}
                     </p>
                     <p className={`text-xs font-semibold ${cfg.color}`}>
                       {cfg.label}
                       {a.estado === 'imagenes' && a.paginas ? ` (${a.paginas} pág.)` : ''}
-                      {a.estado === 'error'   && a.error ? ` — ${a.error}` : ''}
-                      {a.estado === 'omitida' && a.error ? ` — ${a.error}` : ''}
+                      {a.estado === 'ok' && a.paginas != null && a.imagenesSubidas != null
+                        ? ` · ${a.imagenesSubidas}/${a.paginas} imágenes${a.imagenesSubidas < a.paginas ? ' ⚠️' : ''}` : ''}
+                      {a.estado === 'error'    && a.error   ? ` — ${a.error}` : ''}
+                      {a.estado === 'omitida'  && a.error   ? ` — ${a.error}` : ''}
                     </p>
                   </div>
                   <span className="text-xs text-slate-300 flex-shrink-0">

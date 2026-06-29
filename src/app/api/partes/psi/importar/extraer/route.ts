@@ -88,13 +88,15 @@ TIPOLOGÍAS: marca true SOLO los que tengan X o marca visible en el formulario i
 
 TIEMPO: formato HH:MM estricto o null
 
-TEXTO DE DESARROLLO:
-- El formulario tiene un campo de texto libre con el relato del servicio
-- Extrae TODO el texto sin resumir, sin omitir nada
-- Si el texto tiene una parte introductoria, ponla en "introduccion"
-- El grueso del relato va en "desarrolloDetallado"
-- Si hay una conclusión o resolución final, ponla en "conclusion"
-- Si el texto es uno solo sin estructura clara, pon todo en "desarrolloDetallado" y null en los otros
+TEXTO DE DESARROLLO — MUY IMPORTANTE:
+- Lee TODO el texto narrativo del campo de desarrollo del formulario
+- Reparte el contenido en partes DISTINTAS Y SIN REPETICIÓN entre los tres campos
+- "introduccion": SOLO el párrafo o frase inicial que contextualiza el servicio. Si no hay intro claramente diferenciada → null
+- "desarrolloDetallado": el CUERPO PRINCIPAL del relato. NO repitas aquí lo que pusiste en introduccion ni lo que irás en conclusion
+- "conclusion": SOLO el cierre o resolución final (si existe y es diferente del resto). Si no hay conclusión diferenciada → null
+- Si el texto es continuo sin estructura clara → pon TODO en "desarrolloDetallado" y null en los otros DOS campos
+- NUNCA copies el mismo párrafo en más de un campo
+- La suma de los 3 campos debe reproducir el texto completo sin solapamientos ni omisiones
 
 FIRMAS (parte inferior del formulario):
 - Izquierda: INDICATIVO QUE INFORMA → indicativoCumplimenta
