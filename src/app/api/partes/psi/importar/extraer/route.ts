@@ -7,70 +7,102 @@ const PROMPT = `Analiza este Parte de Servicio e Intervención (PSI) de Protecci
 Devuelve ÚNICAMENTE un objeto JSON válido (sin texto adicional, sin bloques de código markdown):
 
 {
-  "numeroParte": "número del parte si aparece impreso o escrito (ej: 20260211-001), o null",
+  "numeroParte": "número completo del parte TAL COMO APARECE en el documento, incluyendo SIEMPRE el sufijo de intervención. Formato real: YYYYMMDDNNN-X donde NNN es el correlativo del día y X es el número de intervención dentro del turno (1, 2, 3...). Ejemplos correctos: 20260102001-1, 20260102001-2, 20260102001-3. CRÍTICO: NUNCA omitas el sufijo -1, -2, -3 aunque sea el primero (-1). Si ves barra (/) úsala como guión: 20260102001/2 → 20260102001-2. Si no aparece ningún número de parte usa null",
   "fecha": "fecha en formato YYYY-MM-DD",
-  "hora": "hora general de inicio del servicio en formato HH:MM, o null",
+  "hora": "hora general de inicio del servicio HH:MM o null",
   "lugar": "lugar completo del servicio o intervención",
   "motivo": "motivo o tipo de aviso completo",
   "alertante": "quién alertó o realizó la llamada, o null",
-  "horaLlamada": "hora de llamada HH:MM o null",
-  "horaSalida": "hora de salida HH:MM o null",
-  "horaLlegada": "hora de llegada al lugar HH:MM o null",
-  "horaTerminado": "hora en que terminó el servicio HH:MM o null",
-  "horaDisponible": "hora de disponibilidad HH:MM o null",
+
+  "horaLlamada": "HH:MM o null",
+  "horaSalida": "HH:MM o null",
+  "horaLlegada": "HH:MM o null",
+  "horaTerminado": "HH:MM o null",
+  "horaDisponible": "HH:MM o null",
+
   "vehiculos": ["UMJ", "VIR"],
+
   "equipo": [
     {"indicativo": "S-01", "walkie": "W01"},
     {"indicativo": "B-03", "walkie": "W02"}
   ],
+
   "tipologias": {
     "prevencion": {
-      "mantenimiento": false,
-      "practicas": false,
-      "suministros": false,
-      "preventivo": false,
-      "otros": false
+      "mantenimiento": false, "practicas": false, "suministros": false,
+      "preventivo": false, "otros": false
     },
     "intervencion": {
-      "svb": false,
-      "incendios": false,
-      "inundaciones": false,
-      "otros_riesgos_meteo": false,
-      "activacion_pem_bor": false,
-      "otros": false
+      "svb": false, "incendios": false, "inundaciones": false,
+      "otros_riesgos_meteo": false, "activacion_pem_bor": false, "otros": false
     },
     "otros": {
-      "reunion_coordinacion": false,
-      "reunion_areas": false,
-      "limpieza": false,
-      "formacion": false,
-      "otros": false
+      "reunion_coordinacion": false, "reunion_areas": false,
+      "limpieza": false, "formacion": false, "otros": false
     }
   },
-  "otrosDescripcion": "descripción si se marcó Otros en cualquier categoría, o null",
-  "posiblesCausas": "texto de posibles causas si aparece, o null",
+  "otrosDescripcion": "descripción si hay Otros marcado, o null",
+  "posiblesCausas": "posibles causas o null",
+
   "tieneHeridos": false,
   "numeroHeridos": 0,
   "tieneFallecidos": false,
   "numeroFallecidos": 0,
+
   "matriculasImplicados": ["", "", "", "", ""],
-  "policiaLocal": "municipio de Policía Local si interviene, o null",
-  "guardiaCivil": "municipio de Guardia Civil si interviene, o null",
-  "descripcionAccidente": "descripción completa del accidente o incidente si aparece, o null",
+  "policiaLocal": "municipio o null",
+  "guardiaCivil": "municipio o null",
+  "descripcionAccidente": "descripción del accidente o null",
+
   "observaciones": "texto completo de las observaciones",
-  "desarrolloDetallado": "texto completo del desarrollo detallado si aparece en página 2, o null",
-  "indicativoCumplimenta": "indicativo del voluntario que cumplimenta o informa (ej: S-01, B-03, J-44)",
-  "responsableTurno": "indicativo del responsable de turno (ej: S-01, J-44)"
+
+  "introduccion": "párrafo de introducción o contexto inicial del parte. Extrae la primera parte del texto de desarrollo si tiene estructura, o déjalo null si no hay",
+  "desarrolloDetallado": "cuerpo principal del desarrollo o relato de los hechos. Extrae TODO el texto narrativo principal sin resumir",
+  "conclusion": "conclusión, resolución final o cierre del servicio. Extrae la parte final si la hay, o null",
+
+  "indicativoCumplimenta": "indicativo del voluntario que firma como INFORMANTE en la parte inferior izquierda del formulario (ej: S-01, B-03)",
+  "responsableTurno": "indicativo del RESPONSABLE DE TURNO que firma en la parte inferior central (ej: S-02, J-44)"
 }
 
-Reglas estrictas:
-- vehiculos: SOLO valores exactos de la lista [UMJ, VIR, FSV, PMA], solo los que aparezcan en el parte
-- horaLlamada/horaSalida/horaLlegada/horaTerminado/horaDisponible: formato HH:MM estricto (ej: 09:30) o null
-- tipologias: marca true SOLO los que estén marcados con X, tick o similar en el formulario impreso
-- tieneHeridos/tieneFallecidos: true si está marcado SÍ, false si NO o si no aparece
-- matriculasImplicados: array de exactamente 5 elementos, vacío ("") si no hay matrícula en esa posición
-- Copia el texto exacto del documento sin resumir ni parafrasear
-- Si un campo no aparece en el documento usa null`
+INSTRUCCIONES CRÍTICAS:
+
+EQUIPO Y WALKIES (tabla en la parte superior derecha del formulario):
+- El formulario tiene una tabla con columnas EQUIPO y WALKIES
+- Puede haber hasta 12 filas de personal (2 grupos de 6)
+- Extrae TODOS los indicativos y sus walkies correspondientes
+- Los indicativos tienen formato S-01, B-02, J-44, UMJ, VIR, FSV, PMA etc.
+- Para los walkies anota el código exacto (W01, WJ01, etc.)
+- Si una fila está vacía, no la incluyas
+
+VEHÍCULOS: Solo los valores exactos [UMJ, VIR, FSV, PMA] que aparezcan
+
+NÚMERO DE PARTE — MUY IMPORTANTE:
+- El formato es YYYYMMDDNNN-X (sin guión entre la fecha y el correlativo, solo al final)
+- X es el número de intervención del turno: -1 primero, -2 segundo, -3 tercero, etc.
+- TODOS los partes tienen sufijo: el primero lleva -1, el segundo -2, el tercero -3
+- NUNCA omitas el sufijo aunque sea -1
+- Sustituye barras por guiones: 20260102001/2 → 20260102001-2
+- Ejemplos correctos: 20260102001-1, 20260102001-2, 20260102001-3
+
+TIPOLOGÍAS: marca true SOLO los que tengan X o marca visible en el formulario impreso
+
+TIEMPO: formato HH:MM estricto o null
+
+TEXTO DE DESARROLLO:
+- El formulario tiene un campo de texto libre con el relato del servicio
+- Extrae TODO el texto sin resumir, sin omitir nada
+- Si el texto tiene una parte introductoria, ponla en "introduccion"
+- El grueso del relato va en "desarrolloDetallado"
+- Si hay una conclusión o resolución final, ponla en "conclusion"
+- Si el texto es uno solo sin estructura clara, pon todo en "desarrolloDetallado" y null en los otros
+
+FIRMAS (parte inferior del formulario):
+- Izquierda: INDICATIVO QUE INFORMA → indicativoCumplimenta
+- Centro: RESPONSABLE DE TURNO → responsableTurno
+- Derecha: VB JEFE DE SERVICIO (siempre J-44, no hace falta extraer)
+- Copia el indicativo exacto que aparezca impreso o escrito junto a cada firma
+
+Si un campo no aparece en el documento usa null`
 
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions)
@@ -111,6 +143,12 @@ export async function POST(request: NextRequest) {
     texto = texto.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim()
 
     const datos = JSON.parse(texto)
+
+    // Normalizar numeroParte: reemplazar / por - si Claude no lo hizo
+    if (datos.numeroParte && typeof datos.numeroParte === 'string') {
+      datos.numeroParte = datos.numeroParte.replace(/\//g, '-')
+    }
+
     return NextResponse.json({ ok: true, datos })
 
   } catch (error: any) {
