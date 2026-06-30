@@ -30,75 +30,74 @@ const ESTADOS: Record<Estado, { label: string; color: string }> = {
   error:      { label: 'Error',               color: 'text-red-600' },
 }
 
-// Detecta la barra de cabecera azul oscuro del bloque de firmas escaneando de abajo hacia arriba.
-// Usa detección de "azul dominante y oscuro" en lugar de un RGB exacto, para mayor robustez.
-// Devuelve la y en px donde empieza esa barra (o -1 si no la encuentra).
-function detectarBarraFirmas(canvas: HTMLCanvasElement): number {
-  const { width: w, height: h } = canvas
-  const d = canvas.getContext('2d')!.getImageData(0, 0, w, h).data
-  const x0 = Math.floor(w * 0.05)
-  const x1 = Math.floor(w * 0.95)
-  const umbral = (x1 - x0) * 0.25 // 25% de píxeles azul-oscuro en la fila
+// Recorta las firmas de la página 1 usando los rects de las anotaciones como anclas.
+// Las firmas están DEBAJO de los campos "INDICATIVO INFORMA" y "RESPONSABLE TURNO",
+// ocupando el espacio restante hasta el borde inferior de la página en cada columna.
+function extraerFirmasDeCanvas(
+  canvas: HTMLCanvasElement,
+  anns: Array<{ fieldName?: string; rect?: number[] }>
+): { informante: string | null; responsable: string | null; jefe: string | null } {
+  const SCALE = 1.5
+  const PH    = canvas.height
+  const PW    = canvas.width
 
-  // Escanear desde 60px sobre el pie de página hasta el 40% de la página
-  for (let y = h - 50; y >= Math.floor(h * 0.40); y--) {
-    let azules = 0
-    for (let x = x0; x < x1; x++) {
-      const k = (y * w + x) * 4
-      const r = d[k], g = d[k + 1], b = d[k + 2]
-      // Azul oscuro: canal azul dominante, valores no demasiado brillantes
-      if (b > r && b > g && b > 50 && r < 160 && g < 160) azules++
-    }
-    if (azules > umbral) return y
-  }
-  return -1
-}
+  // PDF coords (pt desde abajo) → canvas px (desde arriba)
+  const pyToCy = (pdfY: number) => PH - pdfY * SCALE
+  const pxToCx = (pdfX: number) => pdfX * SCALE
 
-// Recorta las 3 imágenes de firma del canvas de la página 1.
-// Layout PSI (de pdf-generator-v3.ts): MARGIN=8mm, sigColW=194/3 mm,
-// sigHeaderH=6mm, sigBoxOffsetY=19mm, sigBoxH=17mm.
-// A4 renderizado a escala 1.5 en pdfjs: 1mm = 2.835pt * 1.5 = 4.252px.
-function extraerFirmasDeCanvas(canvas: HTMLCanvasElement): {
-  informante: string | null
-  responsable: string | null
-  jefe: string | null
-} {
-  const headerY = detectarBarraFirmas(canvas)
-  if (headerY === -1) return { informante: null, responsable: null, jefe: null }
+  const find = (term: string) =>
+    anns.find(a => typeof a.fieldName === 'string' && a.fieldName.toUpperCase().includes(term.toUpperCase()))
 
-  const mm = (v: number) => Math.round(v * 4.252)
-  const MARGIN    = mm(8)
-  const colW      = mm(194 / 3)      // 64.67mm por columna
-  const headerH   = mm(6)            // 6mm cabecera azul
-  const bodyStart = headerY + headerH
-  const imgOffY   = mm(19)           // 19mm desde inicio de cuerpo hasta imagen (según pdf-generator-v3)
-  const imgOffX   = mm(3)            // 3mm desde borde izquierdo de columna
-  const imgW      = mm(194 / 3 - 6)  // ancho: colW − 6mm márgenes
-  const imgH      = mm(17)           // 17mm de alto (sigBodyH − 21mm + ajuste)
-  const imgY      = bodyStart + imgOffY
-  const { width: w, height: h } = canvas
-  const d         = canvas.getContext('2d')!.getImageData(0, 0, w, h).data
+  const aInfo = find('INDICATIVO INFORMA') || find('INDICATIVO')
+  const aResp = find('RESPONSABLE')
+  const aJefe = find('VB JEFE') || find('JEFE DE SERVICIO')
 
+  // Margen inferior ~5mm en px
+  const sigBottom = PH - Math.round(5 * SCALE * (72 / 25.4))
+
+  // Para cada firma: el área empieza en el borde INFERIOR del campo combo (pdfRect[1])
+  // y llega hasta sigBottom, cubriendo todo el ancho de la columna
+  const MARGIN_PX = Math.round(8 * SCALE * (72 / 25.4))  // 8mm margen izquierdo
+
+  // Límites X de las 3 columnas: derivados de las posiciones X de las anotaciones
+  const col1X1 = MARGIN_PX
+  const col1X2 = aResp?.rect ? pxToCx(aResp.rect[0]) - 2 : Math.floor(PW / 3)
+  const col2X1 = col1X2
+  const col2X2 = aJefe?.rect ? pxToCx(aJefe.rect[0]) - 2 : Math.floor(PW * 2 / 3)
+  const col3X1 = col2X2
+  const col3X2 = PW - MARGIN_PX
+
+  const fallbackSigTop = PH - 130  // fallback si no hay anotación
+
+  const areas = [
+    { x: col1X1, y: aInfo?.rect ? pyToCy(aInfo.rect[1]) : fallbackSigTop, w: col1X2 - col1X1, h: 0 },
+    { x: col2X1, y: aResp?.rect ? pyToCy(aResp.rect[1]) : fallbackSigTop, w: col2X2 - col2X1, h: 0 },
+    { x: col3X1, y: aJefe?.rect ? pyToCy(aJefe.rect[1]) : fallbackSigTop, w: col3X2 - col3X1, h: 0 },
+  ].map(a => ({ ...a, h: sigBottom - a.y }))
+
+  const ctx = canvas.getContext('2d')!
   const resultado: (string | null)[] = []
-  for (let c = 0; c < 3; c++) {
-    const imgX = MARGIN + c * colW + imgOffX
 
-    if (imgY + imgH > h || imgX + imgW > w) { resultado.push(null); continue }
+  for (const area of areas) {
+    const cx = Math.max(0, Math.floor(area.x))
+    const cy = Math.max(0, Math.floor(area.y))
+    const cw = Math.min(Math.ceil(area.w), PW - cx)
+    const ch = Math.min(Math.ceil(area.h), PH - cy)
 
-    // ¿Tiene contenido visible? (umbral: al menos 60 píxeles no blancos)
+    if (cw <= 0 || ch <= 0) { resultado.push(null); continue }
+
+    const pix = ctx.getImageData(cx, cy, cw, ch)
     let noBlanco = 0
-    for (let py = imgY; py < imgY + imgH && noBlanco < 60; py++) {
-      for (let px = imgX; px < imgX + imgW; px++) {
-        const k = (py * w + px) * 4
-        if (d[k] < 230 || d[k + 1] < 230 || d[k + 2] < 230) noBlanco++
+    for (let k = 0; k < pix.data.length; k += 4) {
+      if (pix.data[k] < 230 || pix.data[k + 1] < 230 || pix.data[k + 2] < 230) {
+        if (++noBlanco >= 50) break
       }
     }
-    if (noBlanco < 60) { resultado.push(null); continue }
+    if (noBlanco < 50) { resultado.push(null); continue }
 
     const crop = document.createElement('canvas')
-    crop.width  = imgW
-    crop.height = imgH
-    crop.getContext('2d')!.drawImage(canvas, imgX, imgY, imgW, imgH, 0, 0, imgW, imgH)
+    crop.width = cw; crop.height = ch
+    crop.getContext('2d')!.drawImage(canvas, cx, cy, cw, ch, 0, 0, cw, ch)
     resultado.push(crop.toDataURL('image/png'))
   }
 
@@ -109,7 +108,11 @@ function extraerFirmasDeCanvas(canvas: HTMLCanvasElement): {
 // Los campos son Widget/Btn llamados "Imagen 1", "Imagen 2", "Imagen 3".
 // Se obtienen los rects dinámicamente de las anotaciones y se recorta cada zona
 // del canvas de la página 3 — cada recorte es una imagen independiente, no una captura de página.
-async function extraerFotosFormulario(file: File): Promise<{ blobs: Blob[]; canvas1: HTMLCanvasElement | null }> {
+async function extraerFotosFormulario(file: File): Promise<{
+  blobs: Blob[]
+  canvas1: HTMLCanvasElement | null
+  anns1: Array<{ fieldName?: string; rect?: number[] }>
+}> {
   const pdfjsLib = await import('pdfjs-dist')
   pdfjsLib.GlobalWorkerOptions.workerSrc =
     'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'
@@ -117,9 +120,10 @@ async function extraerFotosFormulario(file: File): Promise<{ blobs: Blob[]; canv
   const arrayBuffer = await file.arrayBuffer()
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
   let canvas1: HTMLCanvasElement | null = null
+  let anns1: Array<{ fieldName?: string; rect?: number[] }> = []
   const blobs: Blob[] = []
 
-  // Página 1 → render para extraer firmas (lógica existente sin cambios)
+  // Página 1 → render + anotaciones para extraer firmas
   if (pdf.numPages >= 1) {
     const pag1 = await pdf.getPage(1)
     const vp1  = pag1.getViewport({ scale: 1.5 })
@@ -127,6 +131,7 @@ async function extraerFotosFormulario(file: File): Promise<{ blobs: Blob[]; canv
     c1.width = vp1.width; c1.height = vp1.height
     await pag1.render({ canvasContext: c1.getContext('2d')!, viewport: vp1 }).promise
     canvas1 = c1
+    anns1 = await pag1.getAnnotations().catch(() => [])
   }
 
   // Página 3 → recortar los 3 campos de imagen
@@ -145,7 +150,7 @@ async function extraerFotosFormulario(file: File): Promise<{ blobs: Blob[]; canv
       )
       .sort((a, b) => b.rect[1] - a.rect[1]) // mayor Y en PDF = más arriba en la página
 
-    if (campos.length === 0) return { blobs, canvas1 }
+    if (campos.length === 0) return { blobs, canvas1, anns1 }
 
     // Render de la página 3 en alta resolución para recortar
     const vp3     = pag3.getViewport({ scale: SCALE })
@@ -182,7 +187,7 @@ async function extraerFotosFormulario(file: File): Promise<{ blobs: Blob[]; canv
     }
   }
 
-  return { blobs, canvas1 }
+  return { blobs, canvas1, anns1 }
 }
 
 export default function ModalImportarPSI({ onClose, onImportados }: Props) {
@@ -233,10 +238,10 @@ export default function ModalImportarPSI({ onClose, onImportados }: Props) {
     let firmas = { informante: null as string | null, responsable: null as string | null, jefe: null as string | null }
 
     try {
-      const { blobs, canvas1 } = await extraerFotosFormulario(archivo.file)
+      const { blobs, canvas1, anns1 } = await extraerFotosFormulario(archivo.file)
       actualizarArchivo(archivo.id, { paginas: blobs.length })
 
-      if (canvas1) firmas = extraerFirmasDeCanvas(canvas1)
+      if (canvas1) firmas = extraerFirmasDeCanvas(canvas1, anns1)
 
       const numeroParte = datos.numeroParte || archivo.file.name.replace('.pdf', '')
       for (let i = 0; i < blobs.length; i++) {
