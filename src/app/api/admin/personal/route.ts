@@ -71,11 +71,22 @@ export async function POST(request: NextRequest) {
     } = body
 
     // Validaciones
-    if (!email || !password || !nombre || !apellidos || !rolId || !servicioId) {
+    if (!email || !password || !nombre || !apellidos || !rolId) {
       return NextResponse.json(
-        { error: 'Email, contraseña, nombre, apellidos, rol y servicio son requeridos' },
+        { error: 'Email, contraseña, nombre, apellidos y rol son requeridos' },
         { status: 400 }
       )
+    }
+
+    // Si no viene servicioId, usar el único servicio existente (o crearlo si no hay ninguno)
+    let servicioIdFinal = servicioId
+    if (!servicioIdFinal) {
+      const servicioBase = await prisma.servicio.upsert({
+        where: { codigo: 'PCB' },
+        update: {},
+        create: { nombre: 'Protección Civil Bormujos', codigo: 'PCB', activo: true },
+      })
+      servicioIdFinal = servicioBase.id
     }
 
     // Verificar si el email ya existe
@@ -107,7 +118,7 @@ export async function POST(request: NextRequest) {
         dni: dni || null,
         numeroVoluntario: numeroVoluntario || null,
         rolId,
-        servicioId,
+        servicioId: servicioIdFinal,
         experiencia: 'MEDIA',
         activo: true,
       },
