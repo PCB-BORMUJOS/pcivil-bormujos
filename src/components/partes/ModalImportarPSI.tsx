@@ -30,21 +30,24 @@ const ESTADOS: Record<Estado, { label: string; color: string }> = {
   error:      { label: 'Error',               color: 'text-red-600' },
 }
 
-// Recorta las firmas de la página 1 usando los rects de las anotaciones como anclas.
-// Las firmas están DEBAJO de los campos "INDICATIVO INFORMA" y "RESPONSABLE TURNO",
-// ocupando el espacio restante hasta el borde inferior de la página en cada columna.
+// Recorta las firmas de la página 1 usando el mismo layout de columnas que pdf-generator-v3.ts.
+// Las 3 columnas son iguales (CONTENT_W / 3). El Y de cada área se ancla en el borde inferior
+// del campo combo correspondiente (obtenido de las anotaciones AcroForm).
 function extraerFirmasDeCanvas(
   canvas: HTMLCanvasElement,
   anns: Array<{ fieldName?: string; rect?: number[] }>
 ): { informante: string | null; responsable: string | null; jefe: string | null } {
-  const SCALE = 1.5
-  const PH    = canvas.height
-  const PW    = canvas.width
+  const SCALE  = 1.5
+  const PH     = canvas.height
+  const PW     = canvas.width
 
-  // PDF coords (pt desde abajo) → canvas px (desde arriba)
-  const pyToCy = (pdfY: number) => PH - pdfY * SCALE
-  const pxToCx = (pdfX: number) => pdfX * SCALE
+  // Misma geometría que pdf-generator-v3.ts: margen 8 mm, 3 columnas iguales
+  const MM         = (mm: number) => mm * (72 / 25.4) * SCALE   // mm → px a escala 1.5
+  const MARGIN_PX  = MM(8)
+  const COL_W      = Math.round((PW - 2 * MARGIN_PX) / 3)
+  const sigBottom  = PH - Math.round(MM(4))                      // 4 mm de margen inferior
 
+  // Buscar anotaciones por nombre para obtener la Y de cada campo combo
   const find = (term: string) =>
     anns.find(a => typeof a.fieldName === 'string' && a.fieldName.toUpperCase().includes(term.toUpperCase()))
 
@@ -52,48 +55,35 @@ function extraerFirmasDeCanvas(
   const aResp = find('RESPONSABLE')
   const aJefe = find('VB JEFE') || find('JEFE DE SERVICIO')
 
-  // Margen inferior ~5mm en px
-  const sigBottom = PH - Math.round(5 * SCALE * (72 / 25.4))
-
-  // Para cada firma: el área empieza en el borde INFERIOR del campo combo (pdfRect[1])
-  // y llega hasta sigBottom, cubriendo todo el ancho de la columna
-  const MARGIN_PX = Math.round(8 * SCALE * (72 / 25.4))  // 8mm margen izquierdo
-
-  // Límites X de las 3 columnas: derivados de las posiciones X de las anotaciones
-  const col1X1 = MARGIN_PX
-  const col1X2 = aResp?.rect ? pxToCx(aResp.rect[0]) - 2 : Math.floor(PW / 3)
-  const col2X1 = col1X2
-  const col2X2 = aJefe?.rect ? pxToCx(aJefe.rect[0]) - 2 : Math.floor(PW * 2 / 3)
-  const col3X1 = col2X2
-  const col3X2 = PW - MARGIN_PX
-
-  const fallbackSigTop = PH - 130  // fallback si no hay anotación
-
-  const areas = [
-    { x: col1X1, y: aInfo?.rect ? pyToCy(aInfo.rect[1]) : fallbackSigTop, w: col1X2 - col1X1, h: 0 },
-    { x: col2X1, y: aResp?.rect ? pyToCy(aResp.rect[1]) : fallbackSigTop, w: col2X2 - col2X1, h: 0 },
-    { x: col3X1, y: aJefe?.rect ? pyToCy(aJefe.rect[1]) : fallbackSigTop, w: col3X2 - col3X1, h: 0 },
-  ].map(a => ({ ...a, h: sigBottom - a.y }))
+  // rect PDF = [x1, y1_bottom, x2, y2_top] con y desde abajo.
+  // La firma está DEBAJO del borde inferior del campo (y1), que en canvas es PH - y1*SCALE.
+  const fallbackY = Math.floor(PH * 0.87)
+  const sigTops = [
+    aInfo?.rect ? Math.floor(PH - aInfo.rect[1] * SCALE) : fallbackY,
+    aResp?.rect ? Math.floor(PH - aResp.rect[1] * SCALE) : fallbackY,
+    aJefe?.rect ? Math.floor(PH - aJefe.rect[1] * SCALE) : fallbackY,
+  ]
 
   const ctx = canvas.getContext('2d')!
   const resultado: (string | null)[] = []
 
-  for (const area of areas) {
-    const cx = Math.max(0, Math.floor(area.x))
-    const cy = Math.max(0, Math.floor(area.y))
-    const cw = Math.min(Math.ceil(area.w), PW - cx)
-    const ch = Math.min(Math.ceil(area.h), PH - cy)
+  for (let i = 0; i < 3; i++) {
+    const cx = Math.max(0, Math.round(MARGIN_PX + i * COL_W))
+    const cy = Math.max(0, sigTops[i])
+    const cw = Math.min(COL_W, PW - cx)
+    const ch = Math.min(sigBottom - cy, PH - cy)
 
     if (cw <= 0 || ch <= 0) { resultado.push(null); continue }
 
+    // Umbral: al menos 60 píxeles no blancos (firma escaneada siempre tiene tinta)
     const pix = ctx.getImageData(cx, cy, cw, ch)
     let noBlanco = 0
     for (let k = 0; k < pix.data.length; k += 4) {
-      if (pix.data[k] < 230 || pix.data[k + 1] < 230 || pix.data[k + 2] < 230) {
-        if (++noBlanco >= 50) break
+      if (pix.data[k] < 220 || pix.data[k + 1] < 220 || pix.data[k + 2] < 220) {
+        if (++noBlanco >= 60) break
       }
     }
-    if (noBlanco < 50) { resultado.push(null); continue }
+    if (noBlanco < 60) { resultado.push(null); continue }
 
     const crop = document.createElement('canvas')
     crop.width = cw; crop.height = ch
