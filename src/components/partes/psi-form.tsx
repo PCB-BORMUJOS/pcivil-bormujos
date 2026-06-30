@@ -474,30 +474,40 @@ ${textComponents.conclusion}`.trim()
                                             <div>WALKIES</div>
                                         </div>
                                         <div className="flex flex-col gap-1 mt-1">
-                                            {[0, 1, 2, 3, 4, 5].map((i) => (
+                                            {[0, 1, 2, 3, 4, 5].map((i) => {
+                                                const eqVal = form.tabla1[i]?.equipo || ''
+                                                const wkVal = form.tabla1[i]?.walkie || ''
+                                                return (
                                                 <div key={`eq1-${i}`} className="grid grid-cols-2 gap-1">
                                                     <select
                                                         className={styles.tableCell}
-                                                        value={form.tabla1[i]?.equipo || ''}
+                                                        value={eqVal}
                                                         onChange={(e) => setRow1(i, 'equipo', e.target.value)}
                                                     >
                                                         <option value=""></option>
+                                                        {eqVal && !indicativosList.includes(eqVal) && (
+                                                            <option value={eqVal}>{eqVal}</option>
+                                                        )}
                                                         {indicativosList.map(ind => (
                                                             <option key={ind} value={ind}>{ind}</option>
                                                         ))}
                                                     </select>
                                                     <select
                                                         className={styles.tableCell}
-                                                        value={form.tabla1[i]?.walkie || ''}
+                                                        value={wkVal}
                                                         onChange={(e) => setRow1(i, 'walkie', e.target.value)}
                                                     >
                                                         <option value=""></option>
+                                                        {wkVal && !WALKIES_LIST.includes(wkVal) && (
+                                                            <option value={wkVal}>{wkVal}</option>
+                                                        )}
                                                         {WALKIES_LIST.map(w => (
                                                             <option key={w} value={w}>{w}</option>
                                                         ))}
                                                     </select>
                                                 </div>
-                                            ))}
+                                                )
+                                            })}
                                         </div>
                                     </div>
 
@@ -509,30 +519,40 @@ ${textComponents.conclusion}`.trim()
                                             <div>WALKIES</div>
                                         </div>
                                         <div className="flex flex-col gap-1 mt-1">
-                                            {form.tabla2.slice(0, 6).map((r, i) => (
+                                            {form.tabla2.slice(0, 6).map((r, i) => {
+                                                const eqVal2 = r.equipo || ''
+                                                const wkVal2 = r.walkie || ''
+                                                return (
                                                 <div key={`eq2-${i}`} className="grid grid-cols-2 gap-1">
                                                     <select
                                                         className={styles.tableCell}
-                                                        value={r.equipo}
+                                                        value={eqVal2}
                                                         onChange={(e) => setRow2(i, 'equipo', e.target.value)}
                                                     >
                                                         <option value=""></option>
+                                                        {eqVal2 && !indicativosList.includes(eqVal2) && (
+                                                            <option value={eqVal2}>{eqVal2}</option>
+                                                        )}
                                                         {indicativosList.map(ind => (
                                                             <option key={ind} value={ind}>{ind}</option>
                                                         ))}
                                                     </select>
                                                     <select
                                                         className={styles.tableCell}
-                                                        value={r.walkie}
+                                                        value={wkVal2}
                                                         onChange={(e) => setRow2(i, 'walkie', e.target.value)}
                                                     >
                                                         <option value=""></option>
+                                                        {wkVal2 && !WALKIES_LIST.includes(wkVal2) && (
+                                                            <option value={wkVal2}>{wkVal2}</option>
+                                                        )}
                                                         {WALKIES_LIST.map(w => (
                                                             <option key={w} value={w}>{w}</option>
                                                         ))}
                                                     </select>
                                                 </div>
-                                            ))}
+                                                )
+                                            })}
                                         </div>
                                     </div>
                                 </div>
@@ -693,10 +713,11 @@ ${textComponents.conclusion}`.trim()
                                         onChange={(e) => setField('indicativosInforman', e.target.value)}
                                     >
                                         <option value="">Seleccionar...</option>
+                                        {form.indicativosInforman && !indicativosList.includes(form.indicativosInforman) && (
+                                            <option value={form.indicativosInforman}>{form.indicativosInforman}</option>
+                                        )}
                                         {indicativosList.map((ind) => (
-                                            <option key={ind} value={ind}>
-                                                {ind}
-                                            </option>
+                                            <option key={ind} value={ind}>{ind}</option>
                                         ))}
                                     </select>
                                 </div>
@@ -720,10 +741,11 @@ ${textComponents.conclusion}`.trim()
                                         onChange={(e) => setField('responsableTurno', e.target.value)}
                                     >
                                         <option value="">Seleccionar...</option>
+                                        {form.responsableTurno && !indicativosList.includes(form.responsableTurno) && (
+                                            <option value={form.responsableTurno}>{form.responsableTurno}</option>
+                                        )}
                                         {indicativosList.map((ind) => (
-                                            <option key={ind} value={ind}>
-                                                {ind}
-                                            </option>
+                                            <option key={ind} value={ind}>{ind}</option>
                                         ))}
                                     </select>
                                 </div>

@@ -30,30 +30,34 @@ const ESTADOS: Record<Estado, { label: string; color: string }> = {
   error:      { label: 'Error',               color: 'text-red-600' },
 }
 
-// Detecta la barra azul [40,54,102] del encabezado de firmas escaneando desde abajo.
-// Devuelve la y en px donde empieza esa barra (o -1 si no encuentra).
+// Detecta la barra de cabecera azul oscuro del bloque de firmas escaneando de abajo hacia arriba.
+// Usa detección de "azul dominante y oscuro" en lugar de un RGB exacto, para mayor robustez.
+// Devuelve la y en px donde empieza esa barra (o -1 si no la encuentra).
 function detectarBarraFirmas(canvas: HTMLCanvasElement): number {
-  const ctx = canvas.getContext('2d')!
   const { width: w, height: h } = canvas
-  const d = ctx.getImageData(0, 0, w, h).data
+  const d = canvas.getContext('2d')!.getImageData(0, 0, w, h).data
   const x0 = Math.floor(w * 0.05)
   const x1 = Math.floor(w * 0.95)
-  const umbral = (x1 - x0) * 0.35
+  const umbral = (x1 - x0) * 0.25 // 25% de píxeles azul-oscuro en la fila
 
-  for (let y = h - 60; y >= Math.floor(h * 0.55); y--) {
+  // Escanear desde 60px sobre el pie de página hasta el 40% de la página
+  for (let y = h - 50; y >= Math.floor(h * 0.40); y--) {
     let azules = 0
     for (let x = x0; x < x1; x++) {
-      const i = (y * w + x) * 4
-      if (Math.abs(d[i] - 40) < 30 && Math.abs(d[i + 1] - 54) < 30 && Math.abs(d[i + 2] - 102) < 30) azules++
+      const k = (y * w + x) * 4
+      const r = d[k], g = d[k + 1], b = d[k + 2]
+      // Azul oscuro: canal azul dominante, valores no demasiado brillantes
+      if (b > r && b > g && b > 50 && r < 160 && g < 160) azules++
     }
     if (azules > umbral) return y
   }
   return -1
 }
 
-// Recorta las 3 firmas del canvas usando la y de la barra de cabecera.
-// Layout PSI: MARGIN=8mm, sigColW=64.67mm (3 columnas), imagen empieza 20mm bajo body_start
-// A4 a pdfjs 1.5x: 1mm ≈ 4.252px
+// Recorta las 3 imágenes de firma del canvas de la página 1.
+// Layout PSI (de pdf-generator-v3.ts): MARGIN=8mm, sigColW=194/3 mm,
+// sigHeaderH=6mm, sigBoxOffsetY=19mm, sigBoxH=17mm.
+// A4 renderizado a escala 1.5 en pdfjs: 1mm = 2.835pt * 1.5 = 4.252px.
 function extraerFirmasDeCanvas(canvas: HTMLCanvasElement): {
   informante: string | null
   responsable: string | null
@@ -63,17 +67,17 @@ function extraerFirmasDeCanvas(canvas: HTMLCanvasElement): {
   if (headerY === -1) return { informante: null, responsable: null, jefe: null }
 
   const mm = (v: number) => Math.round(v * 4.252)
-  const MARGIN  = mm(8)
-  const colW    = mm(194 / 3)        // 64.67mm por columna
-  const headerH = mm(6)              // 6mm cabecera azul
+  const MARGIN    = mm(8)
+  const colW      = mm(194 / 3)      // 64.67mm por columna
+  const headerH   = mm(6)            // 6mm cabecera azul
   const bodyStart = headerY + headerH
-  const imgOffY  = mm(20)           // 20mm desde inicio de body hasta imagen
-  const imgOffX  = mm(3)            // 3mm desde borde izquierdo de columna
-  const imgW     = mm(194 / 3 - 6)  // ancho de imagen: colW - 6mm
-  const imgH     = mm(15)           // alto de imagen: 15mm
-  const imgY     = bodyStart + imgOffY
+  const imgOffY   = mm(19)           // 19mm desde inicio de cuerpo hasta imagen (según pdf-generator-v3)
+  const imgOffX   = mm(3)            // 3mm desde borde izquierdo de columna
+  const imgW      = mm(194 / 3 - 6)  // ancho: colW − 6mm márgenes
+  const imgH      = mm(17)           // 17mm de alto (sigBodyH − 21mm + ajuste)
+  const imgY      = bodyStart + imgOffY
   const { width: w, height: h } = canvas
-  const d        = canvas.getContext('2d')!.getImageData(0, 0, w, h).data
+  const d         = canvas.getContext('2d')!.getImageData(0, 0, w, h).data
 
   const resultado: (string | null)[] = []
   for (let c = 0; c < 3; c++) {
@@ -81,15 +85,15 @@ function extraerFirmasDeCanvas(canvas: HTMLCanvasElement): {
 
     if (imgY + imgH > h || imgX + imgW > w) { resultado.push(null); continue }
 
-    // ¿Tiene contenido? (no todo blanco/gris claro)
+    // ¿Tiene contenido visible? (umbral: al menos 60 píxeles no blancos)
     let noBlanco = 0
-    for (let py = imgY; py < imgY + imgH; py++) {
+    for (let py = imgY; py < imgY + imgH && noBlanco < 60; py++) {
       for (let px = imgX; px < imgX + imgW; px++) {
-        const i = (py * w + px) * 4
-        if (d[i] < 220 || d[i + 1] < 220 || d[i + 2] < 220) noBlanco++
+        const k = (py * w + px) * 4
+        if (d[k] < 230 || d[k + 1] < 230 || d[k + 2] < 230) noBlanco++
       }
     }
-    if (noBlanco < 80) { resultado.push(null); continue }
+    if (noBlanco < 60) { resultado.push(null); continue }
 
     const crop = document.createElement('canvas')
     crop.width  = imgW
