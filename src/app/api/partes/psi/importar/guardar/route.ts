@@ -201,6 +201,9 @@ export async function POST(request: NextRequest) {
     }
     if (!userId) return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 401 })
 
+    console.log('[psi/guardar] equipo extraído:', JSON.stringify(datos.equipo || []))
+    console.log('[psi/guardar] imagenes recibidas:', imagenes.length)
+
     const numeroParte = datos.numeroParte || await generarNumeroParte()
     const dbData = construirDatos(datos, imagenes, firmas)
 
