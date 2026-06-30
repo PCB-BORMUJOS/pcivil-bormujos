@@ -839,15 +839,13 @@ export default function PracticasPage() {
               <button onClick={cargarDatos} className="p-3 rounded-xl border border-slate-700 hover:bg-slate-800 transition-colors">
                 <RefreshCw size={16} className="text-slate-400" />
               </button>
-              {isJefeArea && (
-                <button onClick={() => setShowImportar(true)} className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-600 hover:bg-slate-800 text-slate-300 hover:text-white text-sm font-semibold transition-colors">
-                  <Upload size={15} /> Importar PDFs
-                </button>
-              )}
               {isAdmin && (
                 <>
                   <button onClick={() => setShowGestionFamilias(true)} className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-600 hover:bg-slate-800 text-slate-300 hover:text-white text-sm font-semibold transition-colors">
                     <Settings size={15} /> Familias
+                  </button>
+                  <button onClick={() => setShowImportar(true)} className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-600 hover:bg-slate-800 text-slate-300 hover:text-white text-sm font-semibold transition-colors">
+                    <Upload size={15} /> Importar PDFs
                   </button>
                   <button onClick={() => { setPracticaEditando(null); setShowNueva(true) }} className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-white font-bold text-sm transition-all shadow-lg" style={{background: 'linear-gradient(135deg, #f97316, #ea580c)'}}>
                     <Plus size={16} /> Nueva práctica
