@@ -189,14 +189,18 @@ export default function ModalImportarPSI({ onClose, onImportados }: Props) {
         fd2.append('pagina', String(i + 1))
         try {
           const r2 = await fetch('/api/partes/psi/importar/imagen', { method: 'POST', body: fd2 })
-          const d2 = await r2.json()
-          if (r2.ok && d2.url) imagenesUrls.push(d2.url)
-        } catch {
-          // Página concreta falló — continuamos con las demás
+          const d2 = await r2.json().catch(() => ({}))
+          if (r2.ok && d2.url) {
+            imagenesUrls.push(d2.url)
+          } else {
+            console.error(`[PSI img] pág ${i + 1} → HTTP ${r2.status}:`, d2.error || d2)
+          }
+        } catch (e: any) {
+          console.error(`[PSI img] pág ${i + 1} red error:`, e?.message)
         }
       }
-    } catch (err) {
-      console.warn('[PSI import] Error capturando imágenes:', err)
+    } catch (err: any) {
+      console.error('[PSI import] Error renderizando PDF:', err?.message || err)
       imagenesUrls = []
     }
 

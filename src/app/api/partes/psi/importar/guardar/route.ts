@@ -6,6 +6,11 @@ import { generarNumeroParte } from '@/lib/partesPSI'
 
 const VEHICULOS_VALIDOS = ['UMJ', 'VIR', 'FSV', 'PMA']
 
+// "J44" → "J-44", "S05" → "S-05". Indicativos ya con guion o con >1 letra quedan igual.
+function normalizarIndicativo(ind: string): string {
+  return ind.replace(/^([A-Za-z])(\d{2,})$/, '$1-$2').toUpperCase()
+}
+
 function combinarTexto(datos: any): string {
   const intro = (datos.introduccion || '').trim()
   const desarrollo = (datos.desarrolloDetallado || '').trim()
@@ -38,8 +43,14 @@ function construirDatos(
   const vehiculos = (datos.vehiculos || []).filter((v: string) => VEHICULOS_VALIDOS.includes(v))
   const equipo: Array<{ indicativo: string; walkie: string }> = datos.equipo || []
 
+  // Normalizar indicativos: "J44" → "J-44", "S05" → "S-05"
+  const equipoNorm = equipo.map((e: { indicativo: string; walkie: string }) => ({
+    indicativo: e.indicativo ? normalizarIndicativo(e.indicativo) : '',
+    walkie:     e.walkie || '',
+  }))
+
   // equipoWalkies: lista plana de personal (vehículos van en vehiculosIds por separado)
-  const equipoWalkies = equipo
+  const equipoWalkies = equipoNorm
     .map((e: { indicativo: string; walkie: string }) => ({
       equipo: e.indicativo || '',
       walkie: e.walkie || '',
@@ -61,14 +72,14 @@ function construirDatos(
   // Son columnas independientes en el formulario — no se emparejan entre sí
   const tabla1 = Array.from({ length: 8 }, (_, i) => ({
     vehiculo: vehiculos[i] || '',
-    equipo:   equipo[i]?.indicativo || '',
-    walkie:   equipo[i]?.walkie     || '',
+    equipo:   equipoNorm[i]?.indicativo || '',
+    walkie:   equipoNorm[i]?.walkie     || '',
   }))
 
   // tabla2: equipo sobrante (posiciones 6 en adelante → segunda columna de equipo del formulario)
   const tabla2 = Array.from({ length: 8 }, (_, i) => ({
-    equipo: equipo[i + 6]?.indicativo || '',
-    walkie: equipo[i + 6]?.walkie     || '',
+    equipo: equipoNorm[i + 6]?.indicativo || '',
+    walkie: equipoNorm[i + 6]?.walkie     || '',
   }))
 
   // informacionExtra compatible con PsiFormState para restauración perfecta en el formulario
