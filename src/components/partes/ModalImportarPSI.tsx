@@ -101,28 +101,81 @@ function extraerFirmasDeCanvas(canvas: HTMLCanvasElement): {
   return { informante: resultado[0] ?? null, responsable: resultado[1] ?? null, jefe: resultado[2] ?? null }
 }
 
-async function renderizarPaginasPDF(file: File): Promise<{ blobs: Blob[]; canvas1: HTMLCanvasElement | null }> {
+// Extrae las fotos de los 3 campos de imagen del formulario PSI (página 3).
+// Los campos son Widget/Btn llamados "Imagen 1", "Imagen 2", "Imagen 3".
+// Se obtienen los rects dinámicamente de las anotaciones y se recorta cada zona
+// del canvas de la página 3 — cada recorte es una imagen independiente, no una captura de página.
+async function extraerFotosFormulario(file: File): Promise<{ blobs: Blob[]; canvas1: HTMLCanvasElement | null }> {
   const pdfjsLib = await import('pdfjs-dist')
   pdfjsLib.GlobalWorkerOptions.workerSrc =
     'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'
 
   const arrayBuffer = await file.arrayBuffer()
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
-  const blobs: Blob[] = []
   let canvas1: HTMLCanvasElement | null = null
+  const blobs: Blob[] = []
 
-  for (let i = 1; i <= Math.min(pdf.numPages, 10); i++) {
-    const page = await pdf.getPage(i)
-    const viewport = page.getViewport({ scale: 1.5 })
-    const canvas = document.createElement('canvas')
-    canvas.width  = viewport.width
-    canvas.height = viewport.height
-    await page.render({ canvasContext: canvas.getContext('2d')!, viewport }).promise
-    if (i === 1) canvas1 = canvas  // guardar referencia para extraer firmas
-    const blob = await new Promise<Blob>(resolve =>
-      canvas.toBlob(b => resolve(b!), 'image/png', 0.85)
-    )
-    blobs.push(blob)
+  // Página 1 → render para extraer firmas (lógica existente sin cambios)
+  if (pdf.numPages >= 1) {
+    const pag1 = await pdf.getPage(1)
+    const vp1  = pag1.getViewport({ scale: 1.5 })
+    const c1   = document.createElement('canvas')
+    c1.width = vp1.width; c1.height = vp1.height
+    await pag1.render({ canvasContext: c1.getContext('2d')!, viewport: vp1 }).promise
+    canvas1 = c1
+  }
+
+  // Página 3 → recortar los 3 campos de imagen
+  if (pdf.numPages >= 3) {
+    const SCALE = 2.5
+    const pag3   = await pdf.getPage(3)
+    const anns   = await pag3.getAnnotations()
+
+    // Encontrar las anotaciones de tipo imagen ordenadas de arriba a abajo
+    const campos = anns
+      .filter(a =>
+        a.subtype === 'Widget' &&
+        a.fieldType === 'Btn' &&
+        typeof a.fieldName === 'string' &&
+        /imagen/i.test(a.fieldName)
+      )
+      .sort((a, b) => b.rect[1] - a.rect[1]) // mayor Y en PDF = más arriba en la página
+
+    if (campos.length === 0) return { blobs, canvas1 }
+
+    // Render de la página 3 en alta resolución para recortar
+    const vp3     = pag3.getViewport({ scale: SCALE })
+    const canvas3 = document.createElement('canvas')
+    canvas3.width = vp3.width; canvas3.height = vp3.height
+    await pag3.render({ canvasContext: canvas3.getContext('2d')!, viewport: vp3 }).promise
+    const ctx3 = canvas3.getContext('2d')!
+    const ph   = vp3.height // alto total del canvas (PDF Y=0 es abajo; canvas Y=0 es arriba)
+
+    for (const campo of campos) {
+      const [x1, y1, x2, y2] = campo.rect   // PDF: (izq, abajo, der, arriba)
+      const cx = Math.round(x1 * SCALE)
+      const cy = Math.round(ph - y2 * SCALE) // invertir eje Y
+      const cw = Math.round((x2 - x1) * SCALE)
+      const ch = Math.round((y2 - y1) * SCALE)
+
+      if (cw <= 0 || ch <= 0 || cx < 0 || cy < 0) continue
+
+      // Verificar que el campo no está vacío (< 1 % de píxeles con contenido → omitir)
+      const pix = ctx3.getImageData(cx, cy, cw, ch)
+      let noBlanco = 0
+      for (let k = 0; k < pix.data.length; k += 4) {
+        if (pix.data[k] < 240 || pix.data[k + 1] < 240 || pix.data[k + 2] < 240) noBlanco++
+      }
+      if (noBlanco < cw * ch * 0.01) continue // campo vacío
+
+      const crop = document.createElement('canvas')
+      crop.width = cw; crop.height = ch
+      crop.getContext('2d')!.drawImage(canvas3, cx, cy, cw, ch, 0, 0, cw, ch)
+      const blob = await new Promise<Blob>(resolve =>
+        crop.toBlob(b => resolve(b!), 'image/jpeg', 0.92)
+      )
+      blobs.push(blob)
+    }
   }
 
   return { blobs, canvas1 }
@@ -176,7 +229,7 @@ export default function ModalImportarPSI({ onClose, onImportados }: Props) {
     let firmas = { informante: null as string | null, responsable: null as string | null, jefe: null as string | null }
 
     try {
-      const { blobs, canvas1 } = await renderizarPaginasPDF(archivo.file)
+      const { blobs, canvas1 } = await extraerFotosFormulario(archivo.file)
       actualizarArchivo(archivo.id, { paginas: blobs.length })
 
       if (canvas1) firmas = extraerFirmasDeCanvas(canvas1)
@@ -184,7 +237,7 @@ export default function ModalImportarPSI({ onClose, onImportados }: Props) {
       const numeroParte = datos.numeroParte || archivo.file.name.replace('.pdf', '')
       for (let i = 0; i < blobs.length; i++) {
         const fd2 = new FormData()
-        fd2.append('imagen', blobs[i], `pagina-${i + 1}.png`)
+        fd2.append('imagen', blobs[i], `foto-${i + 1}.jpg`)
         fd2.append('numeroParte', numeroParte)
         fd2.append('pagina', String(i + 1))
         try {
@@ -193,14 +246,14 @@ export default function ModalImportarPSI({ onClose, onImportados }: Props) {
           if (r2.ok && d2.url) {
             imagenesUrls.push(d2.url)
           } else {
-            console.error(`[PSI img] pág ${i + 1} → HTTP ${r2.status}:`, d2.error || d2)
+            console.error(`[PSI foto] ${i + 1} → HTTP ${r2.status}:`, d2.error || d2)
           }
         } catch (e: any) {
-          console.error(`[PSI img] pág ${i + 1} red error:`, e?.message)
+          console.error(`[PSI foto] ${i + 1} red error:`, e?.message)
         }
       }
     } catch (err: any) {
-      console.error('[PSI import] Error renderizando PDF:', err?.message || err)
+      console.error('[PSI import] Error extrayendo fotos:', err?.message || err)
       imagenesUrls = []
     }
 
