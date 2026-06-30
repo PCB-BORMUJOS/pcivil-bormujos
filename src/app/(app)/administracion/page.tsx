@@ -641,7 +641,12 @@ export default function AdministracionPage() {
       const data = await res.json();
       setVoluntarios(data.voluntarios || []);
       setRoles(data.roles || []);
-      setServicios(data.servicios || []);
+      const svcs = data.servicios || [];
+      setServicios(svcs);
+      // Si solo hay un servicio, preseleccionarlo en fichaData para evitar FK error
+      if (svcs.length === 1) {
+        setFichaData((prev: any) => ({ ...prev, servicioId: prev.servicioId || svcs[0].id }));
+      }
     } catch (error) {
       /* error silenciado */;
     }
@@ -1443,7 +1448,7 @@ export default function AdministracionPage() {
             onClick={() => {
               if (activeTab === 'personal') {
                 setSelectedVoluntario({ id: '', numeroVoluntario: '', nombre: '', apellidos: '', email: '', telefono: '', activo: true, rolId: '', rol: { id: '', nombre: '' } } as Voluntario);
-                setFichaData({ fechaAlta: new Date().toISOString().split('T')[0], localidad: '',  provincia: '', areaAsignada: '', categoria: 'VOLUNTARIO' });
+                setFichaData({ fechaAlta: new Date().toISOString().split('T')[0], localidad: '',  provincia: '', areaAsignada: '', categoria: 'VOLUNTARIO', servicioId: servicios[0]?.id || '' });
                 setModoNuevaFicha('existente');
                 setNuevoPassword('');
                 setShowFichaModal(true);
