@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Nombre, teléfono y categoría son obligatorios" }, { status: 400 })
     }
     const contacto = await prisma.contactoDirectorio.create({
-      data: { nombre, entidad: entidad || null, categoria, cargo: cargo || null, telefono, telefonoAlt: telefonoAlt || null, email: email || null, extension3cx: extension3cx || null, disponibilidad: disponibilidad || null, notas: notas || null }
+      data: { nombre, entidad: entidad || null, categoria, cargo: cargo || null, telefono, telefonoAlt: telefonoAlt || null, email: email || null, extension3cx: extension3cx || null, disponibilidad: disponibilidad || null, notas: notas || null, ambito: 'cecopal' }
     })
     return NextResponse.json({ contacto })
   } catch (error) {

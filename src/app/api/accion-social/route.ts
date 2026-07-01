@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
     if (tipo === 'directorio') {
       const categoria = searchParams.get('categoria')
       const contactos = await prisma.contactoDirectorio.findMany({
-        where: { activo: true, ...(categoria && categoria !== 'all' ? { categoria } : {}) },
+        where: { activo: true, ambito: 'accion_social', ...(categoria && categoria !== 'all' ? { categoria } : {}) },
         orderBy: { nombre: 'asc' }
       })
       return NextResponse.json({ contactos })
@@ -177,7 +177,8 @@ export async function POST(request: NextRequest) {
           nombre: body.nombre, entidad: body.entidad || null, categoria: body.categoria,
           cargo: body.cargo || null, telefono: body.telefono,
           telefonoAlt: body.telefonoAlt || null, email: body.email || null,
-          disponibilidad: body.disponibilidad || null, notas: body.notas || null
+          disponibilidad: body.disponibilidad || null, notas: body.notas || null,
+          ambito: 'accion_social'
         }
       })
       return NextResponse.json({ contacto })
