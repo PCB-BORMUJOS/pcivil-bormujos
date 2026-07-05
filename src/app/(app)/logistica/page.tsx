@@ -812,18 +812,59 @@ export default function LogisticaPage() {
           return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib)
         })
         return (
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-3 gap-4">
             {areasOrdenadas.map(area => {
               const IconoArea = getIconoArea(area.slug);
+              const sinStock = 0; // reservado para futura expansión
+              const stockOk  = area.totalArticulos - area.stockBajo;
               return (
-                <button key={area.id} onClick={() => handleCambiarInventario(area.slug)} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all text-left">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white" style={{ backgroundColor: area.color }}><IconoArea size={16} /></div>
-                    <span className="font-medium text-slate-800 text-sm truncate">{area.nombre}</span>
+                <button
+                  key={area.id}
+                  onClick={() => handleCambiarInventario(area.slug)}
+                  className="bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all text-left overflow-hidden group"
+                >
+                  {/* Cabecera con color del área */}
+                  <div className="px-4 pt-4 pb-3 flex items-center gap-3" style={{ borderBottom: `3px solid ${area.color}` }}>
+                    <div className="w-11 h-11 rounded-xl flex items-center justify-center text-white flex-shrink-0 shadow-sm" style={{ backgroundColor: area.color }}>
+                      <IconoArea size={22} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-bold text-slate-800 text-sm leading-tight truncate">{area.nombre}</p>
+                      {area.subInventarios?.length > 0 && (
+                        <p className="text-xs text-slate-400 truncate">{area.subInventarios.map((s: any) => s.nombre).join(' · ')}</p>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-2xl font-bold text-slate-800">{area.totalArticulos}</span>
-                    {area.stockBajo > 0 && <span className="text-xs bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded-full font-bold inline-flex items-center gap-1"><AlertTriangle size={10} />{area.stockBajo}</span>}
+                  {/* Cuerpo con métricas */}
+                  <div className="px-4 py-3 space-y-2">
+                    <div className="flex items-end justify-between">
+                      <div>
+                        <p className="text-3xl font-black text-slate-800 leading-none">{area.totalArticulos}</p>
+                        <p className="text-xs text-slate-400 mt-0.5">referencias</p>
+                      </div>
+                      <div className="text-right space-y-1">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <CheckCircle size={11} className="text-emerald-500" />
+                          <span className="text-xs font-semibold text-emerald-600">{stockOk} OK</span>
+                        </div>
+                        {area.stockBajo > 0 && (
+                          <div className="flex items-center justify-end gap-1.5">
+                            <AlertTriangle size={11} className="text-amber-500" />
+                            <span className="text-xs font-semibold text-amber-600">{area.stockBajo} bajo mínimo</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    {/* Barra de estado */}
+                    <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                      <div
+                        className="h-full rounded-full transition-all"
+                        style={{
+                          width: area.totalArticulos > 0 ? `${Math.round((stockOk / area.totalArticulos) * 100)}%` : '0%',
+                          backgroundColor: area.stockBajo > 0 ? '#f59e0b' : area.color,
+                        }}
+                      />
+                    </div>
                   </div>
                 </button>
               )
