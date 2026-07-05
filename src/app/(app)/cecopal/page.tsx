@@ -6,7 +6,7 @@ import {
   Radio, Phone, AlertTriangle, Flame, Heart, Car, Waves, HelpCircle,
   Clock, Users, Truck, Shield, CheckCircle, MapPin,
   RefreshCw, Bell, FileText, Activity, Cloud, Wind, Droplets,
-  Siren, Edit, Send, X
+  Siren, Edit, Send, X, BookUser, Search, Plus, Trash2, Pencil
 } from 'lucide-react'
 
 const MapContainer = dynamic(() => import('react-leaflet').then(m => m.MapContainer), { ssr: false })
@@ -81,6 +81,15 @@ export default function CecopalPage() {
   const [ubicacionesGPS, setUbicacionesGPS] = useState<any[]>([])
   const [meteo, setMeteo] = useState<any>(null)
   const [novedadesHoy, setNovedadesHoy] = useState<any[]>([])
+  // Directorio CECOPAL
+  const [dirContactos, setDirContactos] = useState<any[]>([])
+  const [dirCategorias, setDirCategorias] = useState<any[]>([])
+  const [dirBusqueda, setDirBusqueda] = useState('')
+  const [dirCategoria, setDirCategoria] = useState('')
+  const [dirModal, setDirModal] = useState<'nuevo' | 'editar' | 'categoria' | null>(null)
+  const [dirContactoSel, setDirContactoSel] = useState<any>(null)
+  const [dirForm, setDirForm] = useState({ nombre: '', entidad: '', categoria: '', cargo: '', telefono: '', telefonoAlt: '', email: '', extension3cx: '', disponibilidad: '', notas: '' })
+  const [dirNuevaCat, setDirNuevaCat] = useState({ nombre: '', color: '#3b82f6' })
 
   const cargarDatos = useCallback(async () => {
     try {
@@ -127,6 +136,20 @@ export default function CecopalPage() {
     const iv = setInterval(fetchMeteo, 300000)
     return () => clearInterval(iv)
   }, [])
+
+  const cargarDirectorio = async (busqueda = '', categoria = '') => {
+    try {
+      const p = new URLSearchParams()
+      if (busqueda) p.set('busqueda', busqueda)
+      if (categoria) p.set('categoria', categoria)
+      const [rC, rCat] = await Promise.all([
+        fetch('/api/directorio?' + p.toString()).then(r => r.json()),
+        fetch('/api/directorio?tipo=categorias').then(r => r.json()),
+      ])
+      setDirContactos(rC.contactos || [])
+      setDirCategorias(rCat.categorias || [])
+    } catch { /* silencioso */ }
+  }
 
   const getMeteoIcon = (code: number) => {
     if (code === 0) return '☀️'
@@ -398,7 +421,169 @@ export default function CecopalPage() {
             ))}
           </MapContainer>
         </div>
+
+        {/* ── DIRECTORIO CECOPAL ── */}
+        <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700">
+            <div className="flex items-center gap-2">
+              <BookUser size={15} className="text-purple-400" />
+              <span className="text-white text-sm font-semibold uppercase tracking-wider">Directorio Operativo</span>
+              <span className="text-slate-500 text-xs">({dirContactos.length} contactos)</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button onClick={() => setDirModal('categoria')} className="px-3 py-1.5 text-xs bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg transition-colors">Categorías</button>
+              <button onClick={() => { setDirForm({ nombre: '', entidad: '', categoria: '', cargo: '', telefono: '', telefonoAlt: '', email: '', extension3cx: '', disponibilidad: '', notas: '' }); setDirContactoSel(null); setDirModal('nuevo') }} className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors"><Plus size={12} /> Nuevo contacto</button>
+            </div>
+          </div>
+          <div className="p-3 border-b border-slate-700 flex gap-3">
+            <div className="relative flex-1">
+              <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+              <input value={dirBusqueda} onChange={e => { setDirBusqueda(e.target.value); cargarDirectorio(e.target.value, dirCategoria) }} placeholder="Buscar nombre, entidad, teléfono, extensión…" className="w-full pl-8 pr-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-xs placeholder-slate-500 focus:outline-none focus:border-purple-500" />
+            </div>
+            <select value={dirCategoria} onChange={e => { setDirCategoria(e.target.value); cargarDirectorio(dirBusqueda, e.target.value) }} className="bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-purple-500 min-w-[160px]">
+              <option value="">Todas las categorías</option>
+              {dirCategorias.map((c: any) => <option key={c.id} value={c.nombre}>{c.nombre}</option>)}
+            </select>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-slate-700">
+                  {['Nombre / Entidad', 'Categoría', 'Teléfono', '3CX', 'Disponibilidad', 'Email', ''].map(h => (
+                    <th key={h} className="text-left px-4 py-2.5 text-slate-500 uppercase tracking-wider font-semibold whitespace-nowrap">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-700/50">
+                {dirContactos.length === 0 ? (
+                  <tr><td colSpan={7} className="px-4 py-10 text-center text-slate-500">Sin contactos. Añade el primero con «Nuevo contacto».</td></tr>
+                ) : dirContactos.map((ct: any) => (
+                  <tr key={ct.id} className="hover:bg-slate-700/30 transition-colors group">
+                    <td className="px-4 py-2.5">
+                      <p className="text-white font-semibold">{ct.nombre}</p>
+                      {ct.entidad && <p className="text-slate-400">{ct.entidad}{ct.cargo ? ` · ${ct.cargo}` : ''}</p>}
+                    </td>
+                    <td className="px-4 py-2.5">
+                      <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-slate-700 text-slate-300 border border-slate-600">{ct.categoria}</span>
+                      {ct.ambito === 'accion_social' && <span className="ml-1 px-1.5 py-0.5 rounded text-xs bg-rose-900/40 text-rose-300 border border-rose-700/30">AS</span>}
+                    </td>
+                    <td className="px-4 py-2.5">
+                      <a href={`tel:${ct.telefono}`} className="text-emerald-400 hover:text-emerald-300 font-mono transition-colors">{ct.telefono}</a>
+                      {ct.telefonoAlt && <p className="text-blue-400 font-mono">{ct.telefonoAlt}</p>}
+                    </td>
+                    <td className="px-4 py-2.5 text-purple-400 font-mono">{ct.extension3cx || '—'}</td>
+                    <td className="px-4 py-2.5">
+                      {ct.disponibilidad === '24h' && <span className="px-2 py-0.5 rounded-full text-xs bg-emerald-900/40 text-emerald-300 border border-emerald-700/30">24h</span>}
+                      {ct.disponibilidad === 'horario_oficina' && <span className="px-2 py-0.5 rounded-full text-xs bg-amber-900/40 text-amber-300 border border-amber-700/30">Oficina</span>}
+                      {ct.disponibilidad === 'guardia' && <span className="px-2 py-0.5 rounded-full text-xs bg-blue-900/40 text-blue-300 border border-blue-700/30">Guardia</span>}
+                      {!ct.disponibilidad && <span className="text-slate-600">—</span>}
+                    </td>
+                    <td className="px-4 py-2.5 text-slate-400">{ct.email || '—'}</td>
+                    <td className="px-4 py-2.5">
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {ct.ambito !== 'accion_social' && (
+                          <>
+                            <button onClick={() => { setDirForm({ nombre: ct.nombre, entidad: ct.entidad || '', categoria: ct.categoria, cargo: ct.cargo || '', telefono: ct.telefono, telefonoAlt: ct.telefonoAlt || '', email: ct.email || '', extension3cx: ct.extension3cx || '', disponibilidad: ct.disponibilidad || '', notas: ct.notas || '' }); setDirContactoSel(ct); setDirModal('editar') }} className="p-1.5 text-slate-400 hover:text-blue-400 rounded transition-colors" title="Editar"><Pencil size={12} /></button>
+                            <button onClick={async () => { if (!confirm('¿Eliminar contacto?')) return; await fetch(`/api/directorio?id=${ct.id}`, { method: 'DELETE' }); cargarDirectorio(dirBusqueda, dirCategoria) }} className="p-1.5 text-slate-400 hover:text-red-400 rounded transition-colors" title="Eliminar"><Trash2 size={12} /></button>
+                          </>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
+
+      {/* Modal nuevo / editar contacto */}
+      {(dirModal === 'nuevo' || dirModal === 'editar') && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[3000] p-4">
+          <div className="bg-slate-800 rounded-xl border border-slate-600 w-full max-w-lg overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-700">
+              <h3 className="text-white font-semibold text-sm">{dirModal === 'editar' ? 'Editar contacto' : 'Nuevo contacto CECOPAL'}</h3>
+              <button onClick={() => setDirModal(null)} className="text-slate-500 hover:text-white"><X size={16} /></button>
+            </div>
+            <div className="p-5 space-y-3 max-h-[70vh] overflow-y-auto">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="col-span-2"><label className="block text-xs text-slate-400 mb-1">Nombre *</label><input value={dirForm.nombre} onChange={e => setDirForm(p => ({...p, nombre: e.target.value}))} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-purple-500" /></div>
+                <div><label className="block text-xs text-slate-400 mb-1">Entidad</label><input value={dirForm.entidad} onChange={e => setDirForm(p => ({...p, entidad: e.target.value}))} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-purple-500" /></div>
+                <div><label className="block text-xs text-slate-400 mb-1">Cargo</label><input value={dirForm.cargo} onChange={e => setDirForm(p => ({...p, cargo: e.target.value}))} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-purple-500" /></div>
+                <div><label className="block text-xs text-slate-400 mb-1">Teléfono *</label><input value={dirForm.telefono} onChange={e => setDirForm(p => ({...p, telefono: e.target.value}))} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-purple-500" /></div>
+                <div><label className="block text-xs text-slate-400 mb-1">Teléfono Alt.</label><input value={dirForm.telefonoAlt} onChange={e => setDirForm(p => ({...p, telefonoAlt: e.target.value}))} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-purple-500" /></div>
+                <div><label className="block text-xs text-slate-400 mb-1">Extensión 3CX</label><input value={dirForm.extension3cx} onChange={e => setDirForm(p => ({...p, extension3cx: e.target.value}))} placeholder="Ej: 101" className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-purple-500" /></div>
+                <div><label className="block text-xs text-slate-400 mb-1">Email</label><input type="email" value={dirForm.email} onChange={e => setDirForm(p => ({...p, email: e.target.value}))} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-purple-500" /></div>
+                <div><label className="block text-xs text-slate-400 mb-1">Categoría *</label>
+                  <select value={dirForm.categoria} onChange={e => setDirForm(p => ({...p, categoria: e.target.value}))} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-purple-500">
+                    <option value="">Seleccionar…</option>
+                    {dirCategorias.map((c: any) => <option key={c.id} value={c.nombre}>{c.nombre}</option>)}
+                  </select>
+                </div>
+                <div><label className="block text-xs text-slate-400 mb-1">Disponibilidad</label>
+                  <select value={dirForm.disponibilidad} onChange={e => setDirForm(p => ({...p, disponibilidad: e.target.value}))} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-purple-500">
+                    <option value="">Sin especificar</option>
+                    <option value="24h">24 horas</option>
+                    <option value="horario_oficina">Horario oficina</option>
+                    <option value="guardia">Guardia</option>
+                  </select>
+                </div>
+                <div className="col-span-2"><label className="block text-xs text-slate-400 mb-1">Notas</label><textarea value={dirForm.notas} onChange={e => setDirForm(p => ({...p, notas: e.target.value}))} rows={2} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-purple-500 resize-none" /></div>
+              </div>
+              <div className="flex justify-end gap-3 pt-2 border-t border-slate-700">
+                <button onClick={() => setDirModal(null)} className="px-4 py-2 text-slate-400 hover:text-white text-sm transition-colors">Cancelar</button>
+                <button onClick={async () => {
+                  if (!dirForm.nombre || !dirForm.telefono || !dirForm.categoria) return
+                  if (dirModal === 'editar' && dirContactoSel) {
+                    await fetch('/api/directorio', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...dirForm, id: dirContactoSel.id }) })
+                  } else {
+                    await fetch('/api/directorio', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dirForm) })
+                  }
+                  setDirModal(null)
+                  cargarDirectorio(dirBusqueda, dirCategoria)
+                }} disabled={!dirForm.nombre || !dirForm.telefono || !dirForm.categoria} className="flex items-center gap-2 px-5 py-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-40 text-white rounded-lg text-sm font-medium transition-colors">Guardar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal gestión de categorías */}
+      {dirModal === 'categoria' && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[3000] p-4">
+          <div className="bg-slate-800 rounded-xl border border-slate-600 w-full max-w-sm overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-700">
+              <h3 className="text-white font-semibold text-sm">Categorías del directorio</h3>
+              <button onClick={() => setDirModal(null)} className="text-slate-500 hover:text-white"><X size={16} /></button>
+            </div>
+            <div className="p-5 space-y-4">
+              <div className="flex gap-2">
+                <input value={dirNuevaCat.nombre} onChange={e => setDirNuevaCat(p => ({...p, nombre: e.target.value}))} placeholder="Nueva categoría…" className="flex-1 bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-purple-500" />
+                <input type="color" value={dirNuevaCat.color} onChange={e => setDirNuevaCat(p => ({...p, color: e.target.value}))} className="w-10 h-9 rounded-lg border border-slate-600 bg-slate-700 cursor-pointer" />
+                <button onClick={async () => {
+                  if (!dirNuevaCat.nombre.trim()) return
+                  const res = await fetch('/api/directorio', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'categoria', ...dirNuevaCat }) })
+                  if (!res.ok) return
+                  setDirNuevaCat({ nombre: '', color: '#3b82f6' })
+                  cargarDirectorio(dirBusqueda, dirCategoria)
+                }} className="px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-medium transition-colors">+</button>
+              </div>
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {dirCategorias.map((cat: any) => (
+                  <div key={cat.id} className="flex items-center justify-between p-2.5 bg-slate-700/50 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: cat.color }} />
+                      <span className="text-white text-sm">{cat.nombre}</span>
+                    </div>
+                    <button onClick={async () => { if (!confirm('¿Eliminar categoría?')) return; await fetch(`/api/directorio?id=${cat.id}&tipo=categoria`, { method: 'DELETE' }); cargarDirectorio(dirBusqueda, dirCategoria) }} className="text-slate-500 hover:text-red-400 text-xs transition-colors">✕</button>
+                  </div>
+                ))}
+                {dirCategorias.length === 0 && <p className="text-slate-500 text-xs text-center py-3">Sin categorías</p>}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   )
