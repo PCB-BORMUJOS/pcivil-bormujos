@@ -282,6 +282,11 @@ export default function CecopalPage() {
               </div>
             )}
           </div>
+          <div className="w-px h-4 bg-slate-600" />
+          <a href="#directorio-cecopal" className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg hover:bg-slate-700 transition-colors text-slate-300 hover:text-purple-300">
+            <BookUser size={13} className="text-purple-400" />
+            <span className="text-xs font-medium">Directorio</span>
+          </a>
 
           <div className="ml-auto flex items-center gap-3">
             <button onClick={cargarDatos} className="p-1.5 text-slate-500 hover:text-slate-300 transition-colors"><RefreshCw size={14} /></button>
@@ -423,7 +428,7 @@ export default function CecopalPage() {
         </div>
 
         {/* ── DIRECTORIO CECOPAL ── */}
-        <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
+        <div id="directorio-cecopal" className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden scroll-mt-4">
           <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700">
             <div className="flex items-center gap-2">
               <BookUser size={15} className="text-purple-400" />
