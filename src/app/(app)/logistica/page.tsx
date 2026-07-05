@@ -149,6 +149,19 @@ const ICONOS_AREA: Record<string, any> = {
   'accion-social': Users,
 };
 
+const COLORES_AREA: Record<string, string> = {
+  'incendios':     '#ef4444',
+  'socorrismo':    '#3b82f6',
+  'vestuario':     '#8b5cf6',
+  'vehiculos':     '#f59e0b',
+  'transmisiones': '#10b981',
+  'drones':        '#06b6d4',
+  'pma':           '#f97316',
+  'formacion':     '#6366f1',
+  'accion-social': '#ec4899',
+  'logistica':     '#8b5cf6',
+};
+
 const ESTADOS_PETICION = {
   pendiente: { color: 'bg-yellow-100 text-yellow-700 border-yellow-300', label: 'Pendiente', icon: Clock },
   aprobada: { color: 'bg-blue-100 text-blue-700 border-blue-300', label: 'Aprobada', icon: Check },
@@ -815,8 +828,8 @@ export default function LogisticaPage() {
           <div className="grid grid-cols-3 gap-4">
             {areasOrdenadas.map(area => {
               const IconoArea = getIconoArea(area.slug);
-              const sinStock = 0; // reservado para futura expansión
-              const stockOk  = area.totalArticulos - area.stockBajo;
+              const color = area.color || COLORES_AREA[area.slug] || '#8b5cf6';
+              const stockOk = area.totalArticulos - area.stockBajo;
               return (
                 <button
                   key={area.id}
@@ -824,8 +837,8 @@ export default function LogisticaPage() {
                   className="bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all text-left overflow-hidden group"
                 >
                   {/* Cabecera con color del área */}
-                  <div className="px-4 pt-4 pb-3 flex items-center gap-3" style={{ borderBottom: `3px solid ${area.color}` }}>
-                    <div className="w-11 h-11 rounded-xl flex items-center justify-center text-white flex-shrink-0 shadow-sm" style={{ backgroundColor: area.color }}>
+                  <div className="px-4 pt-4 pb-3 flex items-center gap-3" style={{ borderBottom: `3px solid ${color}` }}>
+                    <div className="w-11 h-11 rounded-xl flex items-center justify-center text-white flex-shrink-0 shadow-sm" style={{ backgroundColor: color }}>
                       <IconoArea size={22} />
                     </div>
                     <div className="min-w-0">
@@ -861,7 +874,7 @@ export default function LogisticaPage() {
                         className="h-full rounded-full transition-all"
                         style={{
                           width: area.totalArticulos > 0 ? `${Math.round((stockOk / area.totalArticulos) * 100)}%` : '0%',
-                          backgroundColor: area.stockBajo > 0 ? '#f59e0b' : area.color,
+                          backgroundColor: area.stockBajo > 0 ? '#f59e0b' : color,
                         }}
                       />
                     </div>
