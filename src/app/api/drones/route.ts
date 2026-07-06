@@ -36,7 +36,20 @@ export async function GET(request: NextRequest) {
 
     if (tipo === 'pilotos') {
       const pilotos = await prisma.pilotoDrone.findMany({ orderBy: { apellidos: 'asc' } })
-      return NextResponse.json({ pilotos })
+      // Normalizar certificaciones: en BD se almacena como String[] con un elemento JSON.
+      // Devolver siempre como objeto {} para que el formulario pueda leerlo directamente.
+      const pilotosNorm = pilotos.map(p => ({
+        ...p,
+        externo: p.esExterno,
+        certificaciones: (() => {
+          try {
+            if (!p.certificaciones || p.certificaciones.length === 0) return {}
+            const raw = p.certificaciones[0]
+            return typeof raw === 'string' ? JSON.parse(raw) : raw
+          } catch { return {} }
+        })()
+      }))
+      return NextResponse.json({ pilotos: pilotosNorm })
     }
 
     if (tipo === 'vuelos') {
@@ -112,11 +125,12 @@ export async function POST(request: NextRequest) {
         data: {
           nombre: data.nombre, apellidos: data.apellidos,
           email: data.email, telefono: data.telefono,
-          esExterno: data.externo || false,
-          certificaciones: data.certificaciones ? [JSON.stringify(data.certificaciones)] : [],
-          seguroRCNumero: data.seguroRCNumero,
+          esExterno: data.esExterno ?? data.externo ?? false,
+          certificaciones: data.certificaciones && Object.keys(data.certificaciones).length > 0
+            ? [JSON.stringify(data.certificaciones)] : [],
+          seguroRCNumero: data.seguroRCNumero || null,
           seguroRCVigencia: data.seguroRCVigencia ? new Date(data.seguroRCVigencia) : null,
-          observaciones: data.observaciones,
+          observaciones: data.observaciones || null,
         }
       })
       return NextResponse.json({ piloto })
@@ -273,11 +287,12 @@ export async function PUT(request: NextRequest) {
         data: {
           nombre: data.nombre, apellidos: data.apellidos,
           email: data.email, telefono: data.telefono,
-          esExterno: data.esExterno || false,
-          certificaciones: certs ? [JSON.stringify(certs)] : [],
-          seguroRCNumero: data.seguroRCNumero,
+          esExterno: data.esExterno ?? data.externo ?? false,
+          certificaciones: certs && Object.keys(certs).length > 0
+            ? [JSON.stringify(certs)] : [],
+          seguroRCNumero: data.seguroRCNumero || null,
           seguroRCVigencia: data.seguroRCVigencia ? new Date(data.seguroRCVigencia) : null,
-          observaciones: data.observaciones,
+          observaciones: data.observaciones || null,
         }
       })
       return NextResponse.json({ piloto })

@@ -727,13 +727,13 @@ export default function DronesPage() {
                   </div>
                   {/* Certificaciones */}
                   {(() => {
-                    // certificaciones viene como String[] con JSON dentro
                     let certsObj: Record<string, any> = {}
                     try {
-                      const raw = Array.isArray(p.certificaciones) ? p.certificaciones : []
-                      if (raw.length > 0) {
-                        const parsed = typeof raw[0] === 'string' ? JSON.parse(raw[0]) : raw[0]
-                        certsObj = parsed || {}
+                      const raw = p.certificaciones
+                      if (Array.isArray(raw) && raw.length > 0) {
+                        certsObj = typeof raw[0] === 'string' ? JSON.parse(raw[0]) : (raw[0] || {})
+                      } else if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+                        certsObj = raw
                       }
                     } catch { certsObj = {} }
                     const certEntries = Object.entries(certsObj)
@@ -2559,7 +2559,10 @@ export default function DronesPage() {
                 <p className="text-xs font-bold text-slate-500 uppercase mb-3">Certificaciones AESA</p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {[['A1A3','a1a3'],['A2','a2'],['STS01','sts01'],['STS02','sts02']].map(([label,key]) => {
-                    const certs = typeof pilotoSeleccionado.certificaciones === 'string' ? JSON.parse(pilotoSeleccionado.certificaciones) : (pilotoSeleccionado.certificaciones || {})
+                    const rawCerts = pilotoSeleccionado.certificaciones
+                    const certs: Record<string, any> = Array.isArray(rawCerts) && rawCerts.length > 0
+                      ? (typeof rawCerts[0] === 'string' ? JSON.parse(rawCerts[0]) : rawCerts[0]) || {}
+                      : (rawCerts && !Array.isArray(rawCerts) && typeof rawCerts === 'object' ? rawCerts : {})
                     const d = certs[label] || {}
                     return (
                       <div key={key} className="bg-slate-50 rounded-lg p-3 space-y-2">
