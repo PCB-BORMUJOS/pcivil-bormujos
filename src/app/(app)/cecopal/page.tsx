@@ -6,8 +6,12 @@ import {
   Radio, Phone, AlertTriangle, Flame, Heart, Car, Waves, HelpCircle,
   Clock, Users, Truck, Shield, CheckCircle, MapPin,
   RefreshCw, Bell, FileText, Activity, Cloud, Wind, Droplets,
-  Siren, Edit, Send, X, BookUser, Search, Plus, Trash2, Pencil
+  Siren, Edit, Send, X, BookUser, Search, Plus, Trash2, Pencil,
+  FlaskConical, ChevronDown, AlertOctagon, Flame as FlameIcon, Droplet, Wind as WindIcon,
+  ShieldAlert, Eye, Zap, Package
 } from 'lucide-react'
+import { CLASES_ADR } from '@/data/adr-data'
+import type { SustanciaADR } from '@/data/adr-data'
 
 const MapContainer = dynamic(() => import('react-leaflet').then(m => m.MapContainer), { ssr: false })
 const TileLayer = dynamic(() => import('react-leaflet').then(m => m.TileLayer), { ssr: false })
@@ -81,6 +85,23 @@ export default function CecopalPage() {
   const [ubicacionesGPS, setUbicacionesGPS] = useState<any[]>([])
   const [meteo, setMeteo] = useState<any>(null)
   const [novedadesHoy, setNovedadesHoy] = useState<any[]>([])
+  // ADR Mercancías Peligrosas
+  const [adrOpen, setAdrOpen] = useState(false)
+  const [adrQuery, setAdrQuery] = useState('')
+  const [adrResultados, setAdrResultados] = useState<SustanciaADR[]>([])
+  const [adrSel, setAdrSel] = useState<SustanciaADR | null>(null)
+  const [adrBuscando, setAdrBuscando] = useState(false)
+
+  const buscarADR = async (q: string) => {
+    if (!q.trim()) { setAdrResultados([]); return }
+    setAdrBuscando(true)
+    try {
+      const r = await fetch(`/api/adr?q=${encodeURIComponent(q)}`)
+      const d = await r.json()
+      setAdrResultados(d.resultados || [])
+    } catch { setAdrResultados([]) } finally { setAdrBuscando(false) }
+  }
+
   // Directorio CECOPAL
   const [dirContactos, setDirContactos] = useState<any[]>([])
   const [dirCategorias, setDirCategorias] = useState<any[]>([])
@@ -287,6 +308,11 @@ export default function CecopalPage() {
             <BookUser size={13} className="text-purple-400" />
             <span className="text-xs font-medium">Directorio</span>
           </a>
+          <div className="w-px h-4 bg-slate-600" />
+          <button onClick={() => { setAdrOpen(true); setAdrQuery(''); setAdrResultados([]); setAdrSel(null) }} className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg hover:bg-orange-900/40 transition-colors text-slate-300 hover:text-orange-300 border border-transparent hover:border-orange-700/50">
+            <FlaskConical size={13} className="text-orange-400" />
+            <span className="text-xs font-medium">ADR / Merc. Peligrosas</span>
+          </button>
 
           <div className="ml-auto flex items-center gap-3">
             <button onClick={cargarDatos} className="p-1.5 text-slate-500 hover:text-slate-300 transition-colors"><RefreshCw size={14} /></button>
@@ -585,6 +611,167 @@ export default function CecopalPage() {
                 ))}
                 {dirCategorias.length === 0 && <p className="text-slate-500 text-xs text-center py-3">Sin categorías</p>}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL ADR ── */}
+      {adrOpen && (
+        <div className="fixed inset-0 z-[2000] flex items-start justify-center bg-black/80 pt-10 px-4 pb-4">
+          <div className="bg-slate-900 border border-orange-700/40 rounded-2xl w-full max-w-3xl flex flex-col max-h-[85vh] shadow-2xl">
+            <div className="flex items-center gap-3 px-5 py-4 border-b border-slate-700 flex-shrink-0">
+              <div className="w-9 h-9 rounded-xl bg-orange-500/20 border border-orange-500/30 flex items-center justify-center">
+                <FlaskConical size={18} className="text-orange-400" />
+              </div>
+              <div>
+                <h2 className="text-white font-bold text-base">ADR — Mercancías Peligrosas</h2>
+                <p className="text-slate-400 text-xs">Busca por número ONU o nombre de sustancia</p>
+              </div>
+              <button onClick={() => { setAdrOpen(false); setAdrSel(null) }} className="ml-auto text-slate-500 hover:text-white transition-colors"><X size={20} /></button>
+            </div>
+
+            <div className="px-5 py-3 border-b border-slate-700 flex-shrink-0">
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    autoFocus
+                    type="text"
+                    placeholder="Nº ONU (ej: 1203) o nombre (ej: gasolina, cloro...)"
+                    value={adrQuery}
+                    onChange={e => { setAdrQuery(e.target.value); buscarADR(e.target.value) }}
+                    className="w-full pl-8 pr-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white text-sm placeholder-slate-500 focus:outline-none focus:border-orange-500"
+                  />
+                </div>
+                {adrQuery && <button onClick={() => { setAdrQuery(''); setAdrResultados([]); setAdrSel(null) }} className="px-3 py-2 text-slate-400 hover:text-white bg-slate-800 border border-slate-600 rounded-lg text-xs transition-colors">Limpiar</button>}
+              </div>
+              {adrBuscando && <p className="text-slate-500 text-xs mt-2">Buscando...</p>}
+              {!adrBuscando && adrQuery && adrResultados.length === 0 && !adrSel && (
+                <p className="text-slate-500 text-xs mt-2">Sin resultados para &quot;{adrQuery}&quot;</p>
+              )}
+            </div>
+
+            <div className="flex-1 overflow-y-auto">
+              {!adrSel && adrResultados.length > 0 && (
+                <div className="divide-y divide-slate-800">
+                  {adrResultados.map(s => {
+                    const cls = CLASES_ADR[s.clase] || CLASES_ADR['9']
+                    return (
+                      <button key={s.onu} onClick={() => setAdrSel(s)} className="w-full flex items-center gap-3 px-5 py-3 hover:bg-slate-800 transition-colors text-left">
+                        <span className="text-orange-400 font-mono font-bold text-lg w-12 flex-shrink-0">{s.onu}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-white text-sm font-semibold truncate">{s.nombre}</p>
+                          {s.descripcion && <p className="text-slate-400 text-xs truncate">{s.descripcion}</p>}
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <span className="text-xs px-2 py-0.5 rounded-full font-semibold" style={{ backgroundColor: cls.bg, color: cls.color }}>Clase {s.clase}</span>
+                          {s.kemler && <span className="text-xs px-2 py-0.5 bg-slate-700 text-slate-300 rounded font-mono">{s.kemler}</span>}
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+
+              {adrSel && (() => {
+                const cls = CLASES_ADR[adrSel.clase] || CLASES_ADR['9']
+                const etiqColors: Record<string, string> = {
+                  '1':'#f59e0b','1.1':'#f59e0b','1.2':'#f59e0b','2.1':'#ef4444','2.2':'#3b82f6','2.3':'#7c3aed',
+                  '3':'#f97316','4.1':'#dc2626','4.2':'#b91c1c','4.3':'#1d4ed8',
+                  '5.1':'#d97706','5.2':'#c2410c','6.1':'#7c3aed','6.2':'#be185d',
+                  '7':'#ca8a04','8':'#0891b2','9':'#374151',
+                }
+                return (
+                  <div className="p-5 space-y-4">
+                    <button onClick={() => setAdrSel(null)} className="flex items-center gap-1.5 text-slate-400 hover:text-white text-xs transition-colors">
+                      <ChevronDown size={12} className="rotate-90" /> Volver
+                    </button>
+                    <div className="flex items-start gap-4 p-4 rounded-xl border" style={{ backgroundColor: cls.bg + '22', borderColor: cls.color + '55' }}>
+                      <div className="text-center flex-shrink-0">
+                        <div className="text-3xl font-black font-mono text-white">{adrSel.onu}</div>
+                        <div className="text-xs text-slate-400 mt-0.5">Nº ONU</div>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-white font-bold text-lg leading-tight">{adrSel.nombre}</h3>
+                        {adrSel.descripcion && <p className="text-slate-300 text-sm mt-1">{adrSel.descripcion}</p>}
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          <span className="text-xs px-2 py-1 rounded-full font-semibold" style={{ backgroundColor: cls.bg, color: cls.color }}>Clase {adrSel.clase} — {cls.label}</span>
+                          {adrSel.pg && <span className="text-xs px-2 py-1 bg-slate-700 text-slate-300 rounded-full">GE {adrSel.pg}</span>}
+                          {adrSel.cpe && <span className="text-xs px-2 py-1 bg-slate-700 text-slate-300 rounded-full font-mono">{adrSel.cpe}</span>}
+                          {adrSel.tunel && <span className="text-xs px-2 py-1 bg-slate-700 text-slate-300 rounded-full">Túnel {adrSel.tunel}</span>}
+                          {adrSel.erg && <span className="text-xs px-2 py-1 bg-blue-900/50 text-blue-300 rounded-full border border-blue-700/40">ERG {adrSel.erg}</span>}
+                        </div>
+                      </div>
+                      {adrSel.kemler && (
+                        <div className="flex-shrink-0 text-center bg-orange-950/60 border border-orange-700/40 rounded-xl p-3">
+                          <div className="text-2xl font-black font-mono text-orange-300">{adrSel.kemler}</div>
+                          <div className="text-xs text-slate-400 mt-0.5">Kemler</div>
+                        </div>
+                      )}
+                    </div>
+                    {adrSel.etiquetas && adrSel.etiquetas.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {adrSel.etiquetas.map(e => (
+                          <span key={e} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-sm font-bold" style={{ backgroundColor: (etiqColors[e] || '#374151') + 'cc' }}>
+                            <AlertOctagon size={13} /> Etiqueta {e}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    {(adrSel.riesgos || adrSel.epi) && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {adrSel.riesgos && adrSel.riesgos.length > 0 && (
+                          <div className="bg-red-950/30 border border-red-800/30 rounded-xl p-4">
+                            <p className="text-xs font-bold text-red-400 uppercase tracking-wider mb-2 flex items-center gap-1.5"><ShieldAlert size={12} /> Riesgos</p>
+                            <ul className="space-y-1">{adrSel.riesgos.map((r, i) => <li key={i} className="text-slate-300 text-sm flex items-start gap-2"><span className="text-red-400 mt-0.5">▸</span>{r}</li>)}</ul>
+                          </div>
+                        )}
+                        {adrSel.epi && adrSel.epi.length > 0 && (
+                          <div className="bg-blue-950/30 border border-blue-800/30 rounded-xl p-4">
+                            <p className="text-xs font-bold text-blue-400 uppercase tracking-wider mb-2 flex items-center gap-1.5"><Eye size={12} /> EPI</p>
+                            <ul className="space-y-1">{adrSel.epi.map((e, i) => <li key={i} className="text-slate-300 text-sm flex items-start gap-2"><span className="text-blue-400 mt-0.5">▸</span>{e}</li>)}</ul>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {adrSel.accion && (
+                      <div className="space-y-3">
+                        <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Acciones de Emergencia</p>
+                        {adrSel.accion.general && <div className="bg-amber-950/30 border border-amber-700/30 rounded-xl p-4"><p className="text-xs font-bold text-amber-400 uppercase mb-1 flex items-center gap-1.5"><Zap size={11} /> General</p><p className="text-slate-200 text-sm">{adrSel.accion.general}</p></div>}
+                        {adrSel.accion.incendio && <div className="bg-red-950/30 border border-red-700/30 rounded-xl p-4"><p className="text-xs font-bold text-red-400 uppercase mb-1 flex items-center gap-1.5"><FlameIcon size={11} /> Incendio</p><p className="text-slate-200 text-sm">{adrSel.accion.incendio}</p></div>}
+                        {adrSel.accion.fuga && <div className="bg-cyan-950/30 border border-cyan-700/30 rounded-xl p-4"><p className="text-xs font-bold text-cyan-400 uppercase mb-1 flex items-center gap-1.5"><Droplet size={11} /> Fuga / Derrame</p><p className="text-slate-200 text-sm">{adrSel.accion.fuga}</p></div>}
+                        {adrSel.accion.personas && <div className="bg-purple-950/30 border border-purple-700/30 rounded-xl p-4"><p className="text-xs font-bold text-purple-400 uppercase mb-1 flex items-center gap-1.5"><Users size={11} /> Personas / Evacuación</p><p className="text-slate-200 text-sm">{adrSel.accion.personas}</p></div>}
+                        {adrSel.accion.medioambiente && <div className="bg-green-950/30 border border-green-700/30 rounded-xl p-4"><p className="text-xs font-bold text-green-400 uppercase mb-1 flex items-center gap-1.5"><WindIcon size={11} /> Medio Ambiente</p><p className="text-slate-200 text-sm">{adrSel.accion.medioambiente}</p></div>}
+                      </div>
+                    )}
+                    {!adrSel.riesgos && !adrSel.epi && !adrSel.accion && (
+                      <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-6 text-center">
+                        <Package size={32} className="text-slate-600 mx-auto mb-2" />
+                        <p className="text-slate-400 text-sm">Datos básicos de clasificación disponibles.</p>
+                        <p className="text-slate-500 text-xs mt-1">Consulta la guía ERG {adrSel.erg || 'correspondiente'} para acciones de emergencia detalladas.</p>
+                      </div>
+                    )}
+                  </div>
+                )
+              })()}
+
+              {!adrQuery && !adrSel && (
+                <div className="flex flex-col items-center justify-center py-16 text-center px-6">
+                  <FlaskConical size={48} className="text-orange-500/30 mb-4" />
+                  <p className="text-slate-300 font-semibold">Base de datos ADR 2023</p>
+                  <p className="text-slate-500 text-sm mt-1">+1.300 sustancias peligrosas · Clases 1–9</p>
+                  <p className="text-slate-600 text-xs mt-3">Introduce el número ONU o el nombre de la sustancia</p>
+                  <div className="flex flex-wrap gap-2 mt-4 justify-center">
+                    {[{onu:'1203',label:'Gasolina'},{onu:'1005',label:'Amoníaco'},{onu:'1017',label:'Cloro'},{onu:'1830',label:'Ác. Sulfúrico'},{onu:'1978',label:'Propano'},{onu:'1072',label:'Oxígeno'}].map(({onu,label}) => (
+                      <button key={onu} onClick={() => { setAdrQuery(onu); buscarADR(onu) }} className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs rounded-lg transition-colors">
+                        <span className="text-orange-400 font-mono">{onu}</span>
+                        <span className="text-slate-400 ml-1.5">{label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
