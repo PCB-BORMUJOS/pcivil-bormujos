@@ -548,8 +548,14 @@ export default function AdministracionPage() {
   // Estados para Combustible
   const [ticketsCombustible, setTicketsCombustible] = useState<TicketCombustible[]>([]);
   const [mesCombustible, setMesCombustible] = useState('');
+  const [vistaAnualCombustible, setVistaAnualCombustible] = useState(false);
   const [showNuevoTicket, setShowNuevoTicket] = useState(false);
   const [ticketPreview, setTicketPreview] = useState<string | null>(null)
+  const [ticketEditando, setTicketEditando] = useState<TicketCombustible | null>(null);
+  const [editTicket, setEditTicket] = useState({
+    fecha: '', hora: '', estacion: '', destino: 'MAQUINARIA', concepto: 'EFITEC 95',
+    litros: 0, precioLitro: 0, importeFinal: 0, vehiculoDestino: '', notas: '', ticketUrl: ''
+  });
   const [nuevoTicket, setNuevoTicket] = useState({
     fecha: '', hora: '', estacion: '', destino: 'MAQUINARIA', concepto: 'EFITEC 95',
     litros: 0, precioLitro: 0, importeFinal: 0, vehiculoDestino: '', notas: '', ticketUrl: ''
@@ -630,7 +636,7 @@ export default function AdministracionPage() {
       }
     };
     cargarDatos();
-  }, [activeTab, semanaDisp, mesDietas, mesCombustible]);
+  }, [activeTab, semanaDisp, mesDietas, mesCombustible, vistaAnualCombustible]);
 
   // ============================================
   // FUNCIONES DE CARGA
@@ -694,7 +700,11 @@ export default function AdministracionPage() {
 
   const cargarTicketsCombustible = async () => {
     try {
-      const res = await fetch(`/api/admin/combustible?mes=${mesCombustible}`);
+      const anio = mesCombustible ? mesCombustible.slice(0, 4) : new Date().getFullYear().toString()
+      const url = vistaAnualCombustible
+        ? `/api/admin/combustible?anio=${anio}`
+        : `/api/admin/combustible?mes=${mesCombustible}`
+      const res = await fetch(url);
       const data = await res.json();
       setTicketsCombustible(data.tickets || []);
     } catch (error) {
@@ -1081,6 +1091,45 @@ export default function AdministracionPage() {
 
     const win = window.open('', '_blank', 'width=900,height=750')
     if (win) { win.document.write(html); win.document.close() }
+  }
+
+  const eliminarTicket = async (id: string) => {
+    if (!confirm('¿Eliminar este ticket de combustible? Esta acción no se puede deshacer.')) return
+    try {
+      const res = await fetch(`/api/admin/combustible?id=${id}`, { method: 'DELETE' })
+      if (res.ok) cargarTicketsCombustible()
+      else alert('Error al eliminar el ticket')
+    } catch { alert('Error al eliminar el ticket') }
+  }
+
+  const abrirEditarTicket = (t: TicketCombustible) => {
+    setTicketEditando(t)
+    setEditTicket({
+      fecha: new Date(t.fecha).toISOString().slice(0, 10),
+      hora: (t as any).hora || '',
+      estacion: (t as any).estacion || '',
+      destino: t.destino,
+      concepto: t.concepto,
+      litros: t.litros,
+      precioLitro: t.precioLitro,
+      importeFinal: t.importeFinal,
+      vehiculoDestino: (t as any).vehiculoDestino || '',
+      notas: (t as any).notas || '',
+      ticketUrl: t.ticketUrl || ''
+    })
+  }
+
+  const guardarEditarTicket = async () => {
+    if (!ticketEditando) return
+    try {
+      const res = await fetch('/api/admin/combustible', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: ticketEditando.id, ...editTicket })
+      })
+      if (res.ok) { setTicketEditando(null); cargarTicketsCombustible() }
+      else alert('Error al guardar los cambios')
+    } catch { alert('Error al guardar los cambios') }
   }
 
   const generarInformeCombustible = () => {
@@ -2298,29 +2347,51 @@ export default function AdministracionPage() {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                 <div className="flex flex-wrap items-center gap-4">
                   <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Periodo</label>
-                    <input
-                      type="month"
-                      value={mesCombustible}
-                      onChange={e => setMesCombustible(e.target.value)}
-                      className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
-                    />
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
+                      {vistaAnualCombustible ? 'Año' : 'Mes'}
+                    </label>
+                    <div className="flex items-center gap-2">
+                      {vistaAnualCombustible ? (
+                        <select
+                          value={mesCombustible ? mesCombustible.slice(0, 4) : new Date().getFullYear().toString()}
+                          onChange={e => setMesCombustible(e.target.value + '-01')}
+                          className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
+                        >
+                          {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map(y => (
+                            <option key={y} value={y}>{y}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <input
+                          type="month"
+                          value={mesCombustible}
+                          onChange={e => setMesCombustible(e.target.value)}
+                          className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
+                        />
+                      )}
+                      <button
+                        onClick={() => setVistaAnualCombustible(v => !v)}
+                        className={`px-3 py-2 rounded-lg text-xs font-semibold border transition-colors ${vistaAnualCombustible ? 'bg-orange-100 text-orange-700 border-orange-300' : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'}`}
+                      >
+                        {vistaAnualCombustible ? 'Ver mes' : 'Ver año'}
+                      </button>
+                    </div>
                   </div>
                   <div className="bg-purple-100 rounded-xl px-4 py-3">
-                    <p className="text-purple-600 text-xs font-bold">Total Mes</p>
+                    <p className="text-purple-600 text-xs font-bold">{vistaAnualCombustible ? 'Total Año' : 'Total Mes'}</p>
                     <p className="text-2xl font-bold text-purple-700">
                       {ticketsCombustible.reduce((sum, t) => sum + Number(t.importeFinal), 0).toFixed(2)} €
                     </p>
+                    {vistaAnualCombustible && (
+                      <p className="text-purple-500 text-xs">{ticketsCombustible.reduce((sum, t) => sum + Number(t.litros), 0).toFixed(2)} L total</p>
+                    )}
                   </div>
                 </div>
                 <div className="flex gap-2">
                   <button onClick={generarInformeCombustible} className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors">
                     <Printer size={18} /> <span className="hidden sm:inline">Generar Informe</span>
                   </button>
-                  <button
-                    onClick={() => setShowNuevoTicket(true)}
-                    className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
-                  >
+                  <button onClick={() => setShowNuevoTicket(true)} className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors">
                     <Plus size={18} /> <span className="hidden sm:inline">Nuevo Ticket</span>
                   </button>
                 </div>
@@ -2337,7 +2408,7 @@ export default function AdministracionPage() {
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full min-w-[560px]">
+                  <table className="w-full min-w-[700px]">
                     <thead>
                       <tr className="bg-slate-50 border-b border-slate-200">
                         <th className="text-left py-3 px-4 text-xs font-bold text-slate-500 uppercase">Fecha</th>
@@ -2346,7 +2417,7 @@ export default function AdministracionPage() {
                         <th className="text-right py-3 px-4 text-xs font-bold text-slate-500 uppercase">Litros</th>
                         <th className="text-right py-3 px-4 text-xs font-bold text-slate-500 uppercase">€/L</th>
                         <th className="text-right py-3 px-4 text-xs font-bold text-slate-500 uppercase">Importe</th>
-                        <th className="text-center py-3 px-4 text-xs font-bold text-slate-500 uppercase">Ticket</th>
+                        <th className="text-center py-3 px-4 text-xs font-bold text-slate-500 uppercase">Acciones</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -2358,22 +2429,110 @@ export default function AdministracionPage() {
                           <td className="py-3 px-4 text-right text-slate-700">{Number(t.litros).toFixed(2)}</td>
                           <td className="py-3 px-4 text-right text-slate-600">{Number(t.precioLitro).toFixed(3)}</td>
                           <td className="py-3 px-4 text-right font-bold text-slate-800">{Number(t.importeFinal).toFixed(2)} €</td>
-                          <td className="py-3 px-4 text-center">
-                            {t.ticketUrl ? (
-                              <button onClick={() => setTicketPreview(t.ticketUrl || null)} className="text-orange-500 hover:text-orange-700 transition-colors">
-                                <Eye size={18} />
+                          <td className="py-3 px-4">
+                            <div className="flex items-center justify-center gap-1">
+                              {t.ticketUrl && (
+                                <button onClick={() => setTicketPreview(t.ticketUrl || null)} className="p-1.5 rounded-lg text-orange-500 hover:bg-orange-50 transition-colors" title="Ver ticket">
+                                  <Eye size={15} />
+                                </button>
+                              )}
+                              <button onClick={() => generarInformeTicket(t)} className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 transition-colors" title="Generar informe">
+                                <Printer size={15} />
                               </button>
-                            ) : <span className="text-slate-300">-</span>}
-                          </td>
-                          <td className="py-3 px-4 text-center">
-                            <button onClick={() => generarInformeTicket(t)} className="text-slate-500 hover:text-orange-600 transition-colors" title="Generar informe">
-                              <Printer size={16} />
-                            </button>
+                              <button onClick={() => abrirEditarTicket(t)} className="p-1.5 rounded-lg text-blue-500 hover:bg-blue-50 transition-colors" title="Editar">
+                                <Edit size={15} />
+                              </button>
+                              <button onClick={() => eliminarTicket(t.id)} className="p-1.5 rounded-lg text-red-400 hover:bg-red-50 transition-colors" title="Eliminar">
+                                <Trash2 size={15} />
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}
                     </tbody>
+                    <tfoot>
+                      <tr className="bg-slate-50 border-t-2 border-slate-200">
+                        <td colSpan={3} className="py-3 px-4 text-xs font-bold text-slate-500 uppercase">Total {vistaAnualCombustible ? 'año' : 'mes'}</td>
+                        <td className="py-3 px-4 text-right font-bold text-slate-700">{ticketsCombustible.reduce((s, t) => s + Number(t.litros), 0).toFixed(2)} L</td>
+                        <td className="py-3 px-4" />
+                        <td className="py-3 px-4 text-right font-bold text-orange-700 text-base">{ticketsCombustible.reduce((s, t) => s + Number(t.importeFinal), 0).toFixed(2)} €</td>
+                        <td className="py-3 px-4" />
+                      </tr>
+                    </tfoot>
                   </table>
+                </div>
+              )}
+
+              {/* Modal editar ticket */}
+              {ticketEditando && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                  <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+                    <div className="flex items-center justify-between px-6 py-4 border-b">
+                      <h3 className="font-bold text-slate-800 text-lg">Editar Ticket</h3>
+                      <button onClick={() => setTicketEditando(null)} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
+                    </div>
+                    <div className="p-6 space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Fecha *</label>
+                          <input type="date" value={editTicket.fecha} onChange={e => setEditTicket({ ...editTicket, fecha: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm" />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Hora</label>
+                          <input type="time" value={editTicket.hora} onChange={e => setEditTicket({ ...editTicket, hora: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm" />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Estación</label>
+                        <input type="text" value={editTicket.estacion} onChange={e => setEditTicket({ ...editTicket, estacion: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm" placeholder="Ej: CAMPSA CIUDAD UNIVERSITARIA" />
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Destino *</label>
+                          <select value={editTicket.destino} onChange={e => setEditTicket({ ...editTicket, destino: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm">
+                            <option value="MAQUINARIA">MAQUINARIA</option>
+                            <option value="FSV">FSV</option>
+                            <option value="UMJ">UMJ</option>
+                            <option value="VIR">VIR</option>
+                            <option value="PMA">PMA</option>
+                            <option value="OTRO">OTRO</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Concepto *</label>
+                          <select value={editTicket.concepto} onChange={e => setEditTicket({ ...editTicket, concepto: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm">
+                            <option value="EFITEC 95">EFITEC 95</option>
+                            <option value="DIÉSEL">DIÉSEL</option>
+                            <option value="GASOLINA 98">GASOLINA 98</option>
+                            <option value="GLP">GLP</option>
+                            <option value="ADBLUE">ADBLUE</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-3 gap-4">
+                        <div>
+                          <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Litros *</label>
+                          <input type="number" step="0.01" value={editTicket.litros || ''} onChange={e => setEditTicket({ ...editTicket, litros: parseFloat(e.target.value) || 0 })} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm" />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-slate-500 uppercase mb-1">€/Litro</label>
+                          <input type="number" step="0.001" value={editTicket.precioLitro || ''} onChange={e => setEditTicket({ ...editTicket, precioLitro: parseFloat(e.target.value) || 0 })} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm" />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Importe € *</label>
+                          <input type="number" step="0.01" value={editTicket.importeFinal || ''} onChange={e => setEditTicket({ ...editTicket, importeFinal: parseFloat(e.target.value) || 0 })} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm" />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Notas</label>
+                        <textarea value={editTicket.notas} onChange={e => setEditTicket({ ...editTicket, notas: e.target.value })} rows={2} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm" />
+                      </div>
+                    </div>
+                    <div className="flex justify-end gap-3 px-6 py-4 border-t">
+                      <button onClick={() => setTicketEditando(null)} className="px-4 py-2 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50">Cancelar</button>
+                      <button onClick={guardarEditarTicket} className="px-6 py-2 bg-orange-500 text-white rounded-lg text-sm font-semibold hover:bg-orange-600">Guardar cambios</button>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
