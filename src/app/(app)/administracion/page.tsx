@@ -2429,21 +2429,19 @@ export default function AdministracionPage() {
                           <td className="py-3 px-4 text-right text-slate-700">{Number(t.litros).toFixed(2)}</td>
                           <td className="py-3 px-4 text-right text-slate-600">{Number(t.precioLitro).toFixed(3)}</td>
                           <td className="py-3 px-4 text-right font-bold text-slate-800">{Number(t.importeFinal).toFixed(2)} €</td>
-                          <td className="py-3 px-4">
-                            <div className="flex items-center justify-center gap-1">
-                              {t.ticketUrl && (
-                                <button onClick={() => setTicketPreview(t.ticketUrl || null)} className="p-1.5 rounded-lg text-orange-500 hover:bg-orange-50 transition-colors" title="Ver ticket">
-                                  <Eye size={15} />
-                                </button>
-                              )}
-                              <button onClick={() => generarInformeTicket(t)} className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 transition-colors" title="Generar informe">
-                                <Printer size={15} />
+                          <td className="py-3 px-4 text-center whitespace-nowrap">
+                            <div className="inline-flex items-center gap-0.5">
+                              <button onClick={() => setTicketPreview(t.ticketUrl || null)} disabled={!t.ticketUrl} className="p-1.5 rounded text-orange-400 hover:bg-orange-50 disabled:opacity-20 disabled:cursor-default transition-colors" title="Ver ticket">
+                                <Eye size={14} />
                               </button>
-                              <button onClick={() => abrirEditarTicket(t)} className="p-1.5 rounded-lg text-blue-500 hover:bg-blue-50 transition-colors" title="Editar">
-                                <Edit size={15} />
+                              <button onClick={() => generarInformeTicket(t)} className="p-1.5 rounded text-slate-400 hover:bg-slate-100 transition-colors" title="Generar informe">
+                                <Printer size={14} />
                               </button>
-                              <button onClick={() => eliminarTicket(t.id)} className="p-1.5 rounded-lg text-red-400 hover:bg-red-50 transition-colors" title="Eliminar">
-                                <Trash2 size={15} />
+                              <button onClick={() => abrirEditarTicket(t)} className="p-1.5 rounded text-blue-400 hover:bg-blue-50 transition-colors" title="Editar">
+                                <Edit size={14} />
+                              </button>
+                              <button onClick={() => eliminarTicket(t.id)} className="p-1.5 rounded text-red-400 hover:bg-red-50 transition-colors" title="Eliminar">
+                                <Trash2 size={14} />
                               </button>
                             </div>
                           </td>
