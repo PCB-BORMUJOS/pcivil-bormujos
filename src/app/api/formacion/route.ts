@@ -273,7 +273,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
         }
         const _rolF = (session?.user as any)?.rol ?? 'voluntario'
-        const _nivF = ({ superadmin: 5, coordinador: 4, admin: 4, jefe_area: 3, responsable_turno: 2, voluntario: 1, visor: 0 } as Record<string,number>)[_rolF] ?? 1
+        const _nivF = ({ superadmin: 5, coordinador: 4, admin: 4, jefe_area: 3, responsable_turno: 2, voluntario: 1, visor: 4 } as Record<string,number>)[_rolF] ?? 1
         if (_nivF < 4) return NextResponse.json({ error: 'Sin permisos suficientes' }, { status: 403 })
 
         const body = await request.json()
@@ -636,7 +636,7 @@ export async function PUT(request: NextRequest) {
             return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
         }
         const _rolF = (session?.user as any)?.rol ?? 'voluntario'
-        const _nivF = ({ superadmin: 5, coordinador: 4, admin: 4, jefe_area: 3, responsable_turno: 2, voluntario: 1, visor: 0 } as Record<string,number>)[_rolF] ?? 1
+        const _nivF = ({ superadmin: 5, coordinador: 4, admin: 4, jefe_area: 3, responsable_turno: 2, voluntario: 1, visor: 4 } as Record<string,number>)[_rolF] ?? 1
         if (_nivF < 4) return NextResponse.json({ error: 'Sin permisos suficientes' }, { status: 403 })
 
         const body = await request.json()
@@ -776,7 +776,7 @@ export async function DELETE(request: NextRequest) {
             return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
         }
         const _rolF = (session?.user as any)?.rol ?? 'voluntario'
-        const _nivF = ({ superadmin: 5, coordinador: 4, admin: 4, jefe_area: 3, responsable_turno: 2, voluntario: 1, visor: 0 } as Record<string,number>)[_rolF] ?? 1
+        const _nivF = ({ superadmin: 5, coordinador: 4, admin: 4, jefe_area: 3, responsable_turno: 2, voluntario: 1, visor: 4 } as Record<string,number>)[_rolF] ?? 1
         if (_nivF < 4) return NextResponse.json({ error: 'Sin permisos suficientes' }, { status: 403 })
 
         const { searchParams } = new URL(request.url)

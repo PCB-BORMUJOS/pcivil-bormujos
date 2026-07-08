@@ -9,7 +9,7 @@ const NIVEL: Record<string, number> = {
   jefe_area:         3,
   responsable_turno: 2,
   voluntario:        1,
-  visor:             0,
+  visor:             4, // lectura equivalente a admin; escritura bloqueada abajo
 }
 
 function getNivel(rol: string): number {
@@ -61,6 +61,14 @@ export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname
   const isAuthPage = pathname === '/login'
 
+  // Visor = solo lectura: bloquear escrituras en toda la API
+  const esApiEscritura = pathname.startsWith('/api/') &&
+    !pathname.startsWith('/api/auth/') &&
+    ['POST', 'PUT', 'DELETE', 'PATCH'].includes(request.method)
+  if (esApiEscritura && ((token as any)?.rol === 'visor')) {
+    return NextResponse.json({ error: 'Perfil de solo lectura' }, { status: 403 })
+  }
+
   const esRutaProtegida = RUTAS_PROTEGIDAS.some(r => pathname.startsWith(r))
 
   // Sin token → redirigir a login
@@ -98,6 +106,7 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
+    '/api/:path*',
     '/dashboard/:path*',
     '/cuadrantes/:path*',
     '/mi-area/:path*',

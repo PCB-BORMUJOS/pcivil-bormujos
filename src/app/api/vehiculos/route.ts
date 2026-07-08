@@ -111,7 +111,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
     const _rolV = (session.user as any)?.rol ?? 'voluntario'
-    const _nivV = ({ superadmin: 5, coordinador: 4, admin: 4, jefe_area: 3, responsable_turno: 2, voluntario: 1, visor: 0 } as Record<string,number>)[_rolV] ?? 1
+    const _nivV = ({ superadmin: 5, coordinador: 4, admin: 4, jefe_area: 3, responsable_turno: 2, voluntario: 1, visor: 4 } as Record<string,number>)[_rolV] ?? 1
     if (_nivV < 3) return NextResponse.json({ error: 'Sin permisos suficientes' }, { status: 403 })
 
     const { searchParams } = new URL(request.url)
@@ -327,7 +327,7 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
     const _rolV = (session.user as any)?.rol ?? 'voluntario'
-    const _nivV = ({ superadmin: 5, coordinador: 4, admin: 4, jefe_area: 3, responsable_turno: 2, voluntario: 1, visor: 0 } as Record<string,number>)[_rolV] ?? 1
+    const _nivV = ({ superadmin: 5, coordinador: 4, admin: 4, jefe_area: 3, responsable_turno: 2, voluntario: 1, visor: 4 } as Record<string,number>)[_rolV] ?? 1
     if (_nivV < 3) return NextResponse.json({ error: 'Sin permisos suficientes' }, { status: 403 })
 
     const { searchParams } = new URL(request.url)
@@ -489,7 +489,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
     const _rolV = (session.user as any)?.rol ?? 'voluntario'
-    const _nivV = ({ superadmin: 5, coordinador: 4, admin: 4, jefe_area: 3, responsable_turno: 2, voluntario: 1, visor: 0 } as Record<string,number>)[_rolV] ?? 1
+    const _nivV = ({ superadmin: 5, coordinador: 4, admin: 4, jefe_area: 3, responsable_turno: 2, voluntario: 1, visor: 4 } as Record<string,number>)[_rolV] ?? 1
     if (_nivV < 3) return NextResponse.json({ error: 'Sin permisos suficientes' }, { status: 403 })
 
     const { searchParams } = new URL(request.url)

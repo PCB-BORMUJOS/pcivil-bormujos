@@ -261,7 +261,7 @@ export async function DELETE(request: NextRequest) {
         }
 
         const rol = (session.user as any).rol ?? ''
-        const nivelRol: Record<string, number> = { superadmin: 5, coordinador: 4, admin: 4, jefe_area: 3, responsable_turno: 2, voluntario: 1, visor: 0 }
+        const nivelRol: Record<string, number> = { superadmin: 5, coordinador: 4, admin: 4, jefe_area: 3, responsable_turno: 2, voluntario: 1, visor: 4 }
         if ((nivelRol[rol] ?? 1) < 5) {
             return NextResponse.json(
                 { error: 'Solo el Jefe del Servicio puede eliminar partes' },

@@ -7,7 +7,7 @@ export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session?.user?.email) return NextResponse.json({ error: "No autorizado" }, { status: 401 })
   const _rol = (session?.user as any)?.rol ?? 'voluntario'
-  const _niv = ({ superadmin: 5, coordinador: 4, admin: 4, jefe_area: 3, responsable_turno: 2, voluntario: 1, visor: 0 } as Record<string,number>)[_rol] ?? 1
+  const _niv = ({ superadmin: 5, coordinador: 4, admin: 4, jefe_area: 3, responsable_turno: 2, voluntario: 1, visor: 4 } as Record<string,number>)[_rol] ?? 1
   if (_niv < 1) return NextResponse.json({ error: 'Sin permisos' }, { status: 403 })
 
   try {
@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session?.user?.email) return NextResponse.json({ error: "No autorizado" }, { status: 401 })
   const _rol = (session?.user as any)?.rol ?? 'voluntario'
-  const _niv = ({ superadmin: 5, coordinador: 4, admin: 4, jefe_area: 3, responsable_turno: 2, voluntario: 1, visor: 0 } as Record<string,number>)[_rol] ?? 1
+  const _niv = ({ superadmin: 5, coordinador: 4, admin: 4, jefe_area: 3, responsable_turno: 2, voluntario: 1, visor: 4 } as Record<string,number>)[_rol] ?? 1
   if (_niv < 3) return NextResponse.json({ error: 'Sin permisos' }, { status: 403 })
 
   try {
@@ -85,7 +85,7 @@ export async function PUT(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session?.user?.email) return NextResponse.json({ error: "No autorizado" }, { status: 401 })
   const _rol = (session?.user as any)?.rol ?? 'voluntario'
-  const _niv = ({ superadmin: 5, coordinador: 4, admin: 4, jefe_area: 3, responsable_turno: 2, voluntario: 1, visor: 0 } as Record<string,number>)[_rol] ?? 1
+  const _niv = ({ superadmin: 5, coordinador: 4, admin: 4, jefe_area: 3, responsable_turno: 2, voluntario: 1, visor: 4 } as Record<string,number>)[_rol] ?? 1
   if (_niv < 3) return NextResponse.json({ error: 'Sin permisos' }, { status: 403 })
 
   try {
@@ -117,7 +117,7 @@ export async function DELETE(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session?.user?.email) return NextResponse.json({ error: "No autorizado" }, { status: 401 })
   const _rol = (session?.user as any)?.rol ?? 'voluntario'
-  const _niv = ({ superadmin: 5, coordinador: 4, admin: 4, jefe_area: 3, responsable_turno: 2, voluntario: 1, visor: 0 } as Record<string,number>)[_rol] ?? 1
+  const _niv = ({ superadmin: 5, coordinador: 4, admin: 4, jefe_area: 3, responsable_turno: 2, voluntario: 1, visor: 4 } as Record<string,number>)[_rol] ?? 1
   if (_niv < 3) return NextResponse.json({ error: 'Sin permisos' }, { status: 403 })
 
   try {
