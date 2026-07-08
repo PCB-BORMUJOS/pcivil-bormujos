@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
+import { useSession } from 'next-auth/react'
 import {
   BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -157,6 +158,8 @@ function ProgressBar({ label, value, max }: any) {
 }
 
 export default function EstadisticasPage() {
+  const { data: session } = useSession()
+  const esSuperadmin = (session?.user as any)?.rol === 'superadmin'
   const [tab, setTab]   = useState('personal')
   const [statsPracticas, setStatsPracticas] = useState<any>(null)
   const [year, setYear] = useState(currentYear)
@@ -201,7 +204,9 @@ export default function EstadisticasPage() {
   const mantPorMes        = (data.statsVehiculos?.mantenimientoPorMes||[]).map((m:any,i:number)=>({...m,mes:MESES[i]??m.mes}))
 
   const statsVoluntarios: any[] = data.statsVoluntarios  || []
-  const statsPorArea: any[]     = data.statsPorArea      || []
+  const turnosPorMes: any[]     = data.turnosPorMes       || []
+  const statsJ44: any           = data.statsJ44           || null
+  const statsPorArea: any[]     = data.statsPorArea       || []
   const voluntarios: any[]      = data.todosVoluntarios   || []
   const eventos: any[]          = data.eventosRaw         || []
   const formaciones: any[]      = data.statsFormacion?.lista || []
@@ -400,6 +405,131 @@ export default function EstadisticasPage() {
                     empty="Sin datos de voluntarios"
                   />
                 </Panel>
+
+                {/* ── Tabla turnos por mes ──────────────────────────────── */}
+                <Panel title="Cumplimiento de turnos por voluntario y mes">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs min-w-[900px]">
+                      <thead>
+                        <tr className="bg-slate-50 border-b border-slate-200">
+                          <th className="text-left py-2 px-3 font-bold text-slate-500 uppercase sticky left-0 bg-slate-50">Voluntario</th>
+                          <th className="text-left py-2 px-3 font-bold text-slate-500 uppercase">Área</th>
+                          {['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'].map(m => (
+                            <th key={m} className="text-center py-2 px-2 font-bold text-slate-500 uppercase w-12">{m}</th>
+                          ))}
+                          <th className="text-center py-2 px-3 font-bold text-slate-500 uppercase">Total</th>
+                          <th className="text-center py-2 px-3 font-bold text-slate-500 uppercase">% Cumpl.</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {turnosPorMes.map((v: any) => (
+                          <tr key={v.id} className="border-b border-slate-100 hover:bg-slate-50">
+                            <td className="py-2 px-3 sticky left-0 bg-white hover:bg-slate-50 font-medium text-slate-700 whitespace-nowrap">
+                              {v.numeroVoluntario && <span className="font-mono text-indigo-600 mr-1.5">{v.numeroVoluntario}</span>}
+                              {v.nombre}
+                            </td>
+                            <td className="py-2 px-3 text-slate-500 whitespace-nowrap">{v.area}</td>
+                            {v.meses.map((m: any, i: number) => (
+                              <td key={i} className="py-2 px-1 text-center">
+                                {m.total === 0 ? (
+                                  <span className="text-slate-200">—</span>
+                                ) : (
+                                  <span
+                                    className={`inline-block min-w-[22px] px-1 py-0.5 rounded font-bold ${m.cumple ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}
+                                    title={`M:${m.manana} T:${m.tarde} N:${m.noche}`}
+                                  >
+                                    {m.total}
+                                  </span>
+                                )}
+                              </td>
+                            ))}
+                            <td className="py-2 px-3 text-center font-bold text-slate-800">{v.totalAnio}</td>
+                            <td className="py-2 px-3 text-center">
+                              <span className={`font-bold ${v.pctCumplimiento >= 75 ? 'text-emerald-600' : v.pctCumplimiento >= 50 ? 'text-amber-600' : 'text-red-500'}`}>
+                                {v.pctCumplimiento}%
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                        {turnosPorMes.length === 0 && (
+                          <tr><td colSpan={16} className="py-8 text-center text-slate-400">Sin datos de turnos</td></tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                  <p className="text-xs text-slate-400 mt-2">
+                    Verde = ≥2 turnos en el mes · Ámbar = 1 turno · Porcentaje calculado sobre 12 meses con ≥2 guardias cada uno
+                  </p>
+                </Panel>
+
+                {/* ── Tabla exclusiva J-44 (solo superadmin) ───────────── */}
+                {esSuperadmin && statsJ44 && (
+                  <Panel title={`Perfil J-44 — ${statsJ44.nombre} · Solo visible para Superadmin`}>
+                    <div className="mb-4 flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg">
+                      <Shield size={14} className="text-amber-600 flex-shrink-0" />
+                      <span className="text-xs text-amber-700 font-medium">Información confidencial — Acceso restringido a superadmin</span>
+                    </div>
+                    {/* Resumen general J-44 */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+                      {[
+                        { label: 'Guardias totales', value: statsJ44.totalGuardias, color: 'indigo' },
+                        { label: 'Turno mañana',     value: statsJ44.guardiasMañana, color: 'sky' },
+                        { label: 'Turno tarde',      value: statsJ44.guardiasTarde,  color: 'orange' },
+                        { label: 'Turno noche',      value: statsJ44.guardiasNoche,  color: 'violet' },
+                        { label: 'Horas de servicio',value: `${statsJ44.horas} h`,   color: 'teal' },
+                        { label: 'Días con dieta',   value: statsJ44.diasServicio,   color: 'green' },
+                        { label: 'Importe dietas',   value: `${statsJ44.importeDietas.toFixed(2)} €`, color: 'emerald' },
+                        { label: 'Km desplazamiento',value: `${statsJ44.km.toFixed(0)} km`, color: 'blue' },
+                      ].map(k => (
+                        <div key={k.label} className={`bg-${k.color}-50 border border-${k.color}-100 rounded-xl p-3 text-center`}>
+                          <p className={`text-${k.color}-600 text-xs font-semibold mb-1`}>{k.label}</p>
+                          <p className={`text-${k.color}-800 text-xl font-black`}>{k.value}</p>
+                        </div>
+                      ))}
+                    </div>
+                    {/* Detalle mensual J-44 */}
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm min-w-[600px]">
+                        <thead>
+                          <tr className="bg-slate-50 border-b border-slate-200">
+                            <th className="text-left py-2 px-3 text-xs font-bold text-slate-500 uppercase">Mes</th>
+                            <th className="text-center py-2 px-3 text-xs font-bold text-slate-500 uppercase">Total guardias</th>
+                            <th className="text-center py-2 px-3 text-xs font-bold text-slate-500 uppercase">Mañana</th>
+                            <th className="text-center py-2 px-3 text-xs font-bold text-slate-500 uppercase">Tarde</th>
+                            <th className="text-center py-2 px-3 text-xs font-bold text-slate-500 uppercase">Noche</th>
+                            <th className="text-center py-2 px-3 text-xs font-bold text-slate-500 uppercase">Horas</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {statsJ44.meses.map((m: any) => (
+                            <tr key={m.mes} className="border-b border-slate-100 hover:bg-slate-50">
+                              <td className="py-2 px-3 font-semibold text-slate-700">{m.mes}</td>
+                              <td className="py-2 px-3 text-center">
+                                {m.total > 0
+                                  ? <span className={`inline-block px-2 py-0.5 rounded font-bold text-xs ${m.total >= 2 ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>{m.total}</span>
+                                  : <span className="text-slate-300">—</span>}
+                              </td>
+                              <td className="py-2 px-3 text-center text-slate-600">{m.manana || '—'}</td>
+                              <td className="py-2 px-3 text-center text-slate-600">{m.tarde || '—'}</td>
+                              <td className="py-2 px-3 text-center text-slate-600">{m.noche || '—'}</td>
+                              <td className="py-2 px-3 text-center text-slate-500">{m.total > 0 ? `${m.manana*6 + m.tarde*5 + m.noche*9} h` : '—'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                        <tfoot>
+                          <tr className="bg-slate-50 border-t-2 border-slate-200 font-bold">
+                            <td className="py-2 px-3 text-xs text-slate-500 uppercase">Total año</td>
+                            <td className="py-2 px-3 text-center text-slate-800">{statsJ44.totalGuardias}</td>
+                            <td className="py-2 px-3 text-center text-sky-700">{statsJ44.guardiasMañana}</td>
+                            <td className="py-2 px-3 text-center text-orange-700">{statsJ44.guardiasTarde}</td>
+                            <td className="py-2 px-3 text-center text-violet-700">{statsJ44.guardiasNoche}</td>
+                            <td className="py-2 px-3 text-center text-teal-700">{statsJ44.horas} h</td>
+                          </tr>
+                        </tfoot>
+                      </table>
+                    </div>
+                  </Panel>
+                )}
               </div>
             )}
 

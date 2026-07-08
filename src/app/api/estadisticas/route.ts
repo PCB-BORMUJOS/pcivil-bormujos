@@ -223,6 +223,80 @@ export async function GET(request: NextRequest) {
       }
     }).sort((a, b) => b.guardias - a.guardias)
 
+    // ── Turnos por mes por voluntario ─────────────────────────────────────────
+    // Turno esperado por mes: 1 mañana + 1 tarde (ajustable; usamos 2 como referencia)
+    const TURNOS_ESPERADOS_MES = 2
+    const turnosPorMes = todosVoluntarios
+      .filter(v => v.activo && (v.fichaVoluntario as any)?.indicativo2 !== 'B-12')
+      .map(v => {
+        const gv = (guardias as any[]).filter(g => g.usuarioId === v.id)
+        const meses = Array.from({ length: 12 }, (_, i) => {
+          const gm = gv.filter(g => new Date(g.fecha).getMonth() === i)
+          const total = gm.length
+          const cumple = total >= TURNOS_ESPERADOS_MES
+          return {
+            total,
+            manana: gm.filter(g => g.turno === 'mañana').length,
+            tarde:  gm.filter(g => g.turno === 'tarde').length,
+            noche:  gm.filter(g => g.turno === 'noche').length,
+            cumple,
+          }
+        })
+        const totalAnio = gv.length
+        const mesesCumplidos = meses.filter(m => m.cumple).length
+        return {
+          id: v.id,
+          numeroVoluntario: v.numeroVoluntario,
+          nombre: `${v.nombre} ${v.apellidos}`.trim(),
+          area: (v.fichaVoluntario as any)?.areaAsignada || 'Sin área',
+          indicativo2: (v.fichaVoluntario as any)?.indicativo2 || null,
+          meses,
+          totalAnio,
+          mesesCumplidos,
+          pctCumplimiento: Math.round((mesesCumplidos / 12) * 100),
+        }
+      })
+      .sort((a, b) => b.totalAnio - a.totalAnio)
+
+    // ── Datos exclusivos J-44 (solo superadmin) ───────────────────────────────
+    let statsJ44: any = null
+    if (rol === 'superadmin') {
+      const usuarioJ44 = todosVoluntarios.find(v =>
+        (v.fichaVoluntario as any)?.indicativo2 === 'J-44'
+      )
+      if (usuarioJ44) {
+        const gJ44 = (guardias as any[]).filter(g => g.usuarioId === usuarioJ44.id)
+        const dJ44 = (dietas as any[]).filter(d => d.usuarioId === usuarioJ44.id)
+        const mesesJ44 = Array.from({ length: 12 }, (_, i) => {
+          const gm = gJ44.filter(g => new Date(g.fecha).getMonth() === i)
+          return {
+            mes: MESES_ES[i],
+            total: gm.length,
+            manana: gm.filter(g => g.turno === 'mañana').length,
+            tarde:  gm.filter(g => g.turno === 'tarde').length,
+            noche:  gm.filter(g => g.turno === 'noche').length,
+          }
+        })
+        statsJ44 = {
+          id: usuarioJ44.id,
+          numeroVoluntario: usuarioJ44.numeroVoluntario,
+          nombre: `${usuarioJ44.nombre} ${usuarioJ44.apellidos}`.trim(),
+          area: (usuarioJ44.fichaVoluntario as any)?.areaAsignada || 'Sin área',
+          categoria: (usuarioJ44.fichaVoluntario as any)?.categoria || 'VOLUNTARIO',
+          activo: usuarioJ44.activo,
+          totalGuardias: gJ44.length,
+          guardiasMañana: gJ44.filter(g => g.turno === 'mañana').length,
+          guardiasTarde:  gJ44.filter(g => g.turno === 'tarde').length,
+          guardiasNoche:  gJ44.filter(g => g.turno === 'noche').length,
+          horas: gJ44.reduce((a: number, g: any) => a + (HORAS[g.turno] || 0), 0),
+          importeDietas: dJ44.reduce((a: number, d: any) => a + Number(d.totalDieta || 0), 0),
+          km: dJ44.reduce((a: number, d: any) => a + Number(d.kilometros || 0), 0),
+          diasServicio: dJ44.length,
+          meses: mesesJ44,
+        }
+      }
+    }
+
     // ── Stats por área ────────────────────────────────────────────────────────
     const areasMap: Record<string, { guardias: number; horas: number; voluntarios: number }> = {}
     statsVoluntarios.forEach(v => {
@@ -444,7 +518,8 @@ export async function GET(request: NextRequest) {
         ingresos, gastos, saldo: ingresos - gastos,
       },
       guardiasPorMes, guardiasPorRol,
-      statsVoluntarios, statsPorArea, dietasPorMes,
+      statsVoluntarios, turnosPorMes, statsJ44,
+      statsPorArea, dietasPorMes,
       eventosPorMes, eventosTipo,
       statsFormacion,
       stockPorArea, peticionesEstados, peticionesPorArea, peticionesPorMes,
