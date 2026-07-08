@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Settings, Shield, CreditCard, History, Users, TrendingUp, Download, Edit, Loader2, Plus, X, Eye, EyeOff, Trash2, Save, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
+import { useSession } from 'next-auth/react';
+import { Settings, Shield, CreditCard, History, Users, TrendingUp, Download, Edit, Loader2, Plus, X, Eye, EyeOff, Trash2, Save, ArrowUp, ArrowDown, ArrowUpDown, Lock } from 'lucide-react';
 import TrazabilidadPanel from '@/components/configuracion/TrazabilidadPanel';
 
 interface Usuario {
@@ -43,6 +44,9 @@ interface Servicio {
 }
 
 export default function ConfiguracionPage() {
+  const { data: session } = useSession()
+  const esSuperadmin = (session?.user as any)?.rol === 'superadmin'
+
   const [activeTab, setActiveTab] = useState<'liquidaciones' | 'roles' | 'criterios' | 'audit'>('roles');
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().substring(0, 7));
   const [loading, setLoading] = useState(false);
@@ -98,17 +102,28 @@ export default function ConfiguracionPage() {
   const [precioKm, setPrecioKm] = useState(0.19);
   const [savingBaremo, setSavingBaremo] = useState(false);
   const [baremoSaved, setBaremoSaved] = useState(false);
+  // Baremo exclusivo J-44 (Jefe de Servicio) — solo superadmin
+  const [baremoJ44, setBaremoJ44] = useState({ importeMensual: 0, concepto: 'Complemento Jefe de Servicio' });
+  const [savingJ44, setSavingJ44] = useState(false);
+  const [savedJ44, setSavedJ44] = useState(false);
 
-  const generateReport = () => {
+  const generateReport = async () => {
+    if (!selectedMonth) return;
     setLoading(true);
-    setTimeout(() => {
-      setReportData([
-        { indicativo: 'J-44', nombre: 'EMILIO SIMÓN', municipio: 'Bormujos', kmUnitario: 0, numTurnos: 5, subtotalDietas: 145, subtotalKm: 0, total: 145 },
-        { indicativo: 'S-01', nombre: 'TANYA GONZÁLEZ', municipio: 'Mairena', kmUnitario: 5.25, numTurnos: 8, subtotalDietas: 232, subtotalKm: 42, total: 274 },
-        { indicativo: 'B-29', nombre: 'JOSE C. BAILÓN', municipio: 'Tomares', kmUnitario: 3.50, numTurnos: 6, subtotalDietas: 174, subtotalKm: 21, total: 195 },
-      ]);
-      setLoading(false);
-    }, 1500);
+    setReportData([]);
+    try {
+      const res = await fetch(`/api/admin/dietas?mes=${selectedMonth}`);
+      const data = await res.json();
+      const filas = (data.resumen || []).map((r: any) => ({
+        indicativo: r.indicativo || '—',
+        nombre: `${r.nombre || ''} ${r.apellidos || ''}`.trim(),
+        dias: r.dias || 0,
+        subtotalDietas: Number(r.subtotalDietas || 0),
+        subtotalKm: Number(r.subtotalKm || 0),
+        total: Number(r.totalDietas || 0),
+      }));
+      setReportData(filas);
+    } catch { setReportData([]); } finally { setLoading(false); }
   };
 
   // Cargar usuarios, roles y servicios
@@ -154,6 +169,12 @@ export default function ConfiguracionPage() {
           if (data.config?.valor?.precio) {
             setPrecioKm(data.config.valor.precio);
           }
+        })
+        .catch(() => {});
+      fetch('/api/configuracion?clave=baremo_j44')
+        .then(r => r.json())
+        .then(data => {
+          if (data.config?.valor) setBaremoJ44(data.config.valor as any);
         })
         .catch(() => {});
     }
@@ -471,11 +492,60 @@ export default function ConfiguracionPage() {
                 </button>
               </div>
             </div>
+
+            {/* ── Baremo J-44 (solo superadmin) ──────────────────────── */}
+            {esSuperadmin && (
+              <div className="bg-amber-50 border border-amber-200 p-6 rounded-xl shadow-sm">
+                <h3 className="font-bold text-amber-800 mb-1 flex items-center gap-2">
+                  <Lock size={16} className="text-amber-600" /> Baremo J-44 — Jefe de Servicio
+                </h3>
+                <p className="text-xs text-amber-600 mb-4 flex items-center gap-1.5">
+                  <Shield size={11} /> Sección confidencial · Solo visible para Superadmin
+                </p>
+                <div className="space-y-3">
+                  <div className="p-3 bg-white rounded-lg border border-amber-200">
+                    <label className="text-xs text-amber-700 font-bold block mb-2">Concepto</label>
+                    <input
+                      type="text"
+                      className="w-full border border-amber-200 rounded p-2 text-sm focus:outline-none focus:border-amber-400"
+                      value={baremoJ44.concepto}
+                      onChange={e => setBaremoJ44(prev => ({ ...prev, concepto: e.target.value }))}
+                      placeholder="Ej: Complemento Jefe de Servicio"
+                    />
+                  </div>
+                  <div className="p-3 bg-white rounded-lg border border-amber-200">
+                    <label className="text-xs text-amber-700 font-bold block mb-2">Importe mensual €</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      className="w-full border border-amber-200 rounded p-2 text-sm focus:outline-none focus:border-amber-400"
+                      value={baremoJ44.importeMensual}
+                      onChange={e => setBaremoJ44(prev => ({ ...prev, importeMensual: parseFloat(e.target.value) || 0 }))}
+                      placeholder="0.00"
+                    />
+                  </div>
+                  <button
+                    onClick={async () => {
+                      setSavingJ44(true);
+                      try {
+                        await fetch('/api/configuracion', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ clave: 'baremo_j44', valor: baremoJ44, descripcion: 'Baremo exclusivo J-44 Jefe de Servicio' }) });
+                        setSavedJ44(true);
+                        setTimeout(() => setSavedJ44(false), 3000);
+                      } catch(e) { console.error(e); } finally { setSavingJ44(false); }
+                    }}
+                    disabled={savingJ44}
+                    className="w-full py-2 bg-amber-600 text-white rounded-lg text-sm font-bold hover:bg-amber-700 disabled:opacity-50"
+                  >
+                    {savingJ44 ? 'Guardando...' : savedJ44 ? '¡Guardado!' : 'Guardar Baremo J-44'}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="lg:col-span-2 bg-white rounded-xl border shadow-sm overflow-hidden">
             <div className="p-4 border-b bg-slate-50 flex justify-between items-center">
-              <h3 className="font-bold text-slate-800">Generador de Informe Mensual</h3>
+              <h3 className="font-bold text-slate-800">Generador de Informe Mensual de Dietas</h3>
               <div className="flex gap-4">
                 <input type="month" className="border rounded p-2 text-sm" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} />
                 <button onClick={generateReport} disabled={loading} className="bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 disabled:opacity-50">
@@ -485,48 +555,49 @@ export default function ConfiguracionPage() {
             </div>
 
             {reportData.length > 0 ? (
-              <table className="w-full text-left">
-                <thead className="bg-slate-50 border-b">
-                  <tr>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left min-w-[500px]">
+                  <thead className="bg-slate-50 border-b">
+                    <tr>
                       <th className="p-4 text-xs font-bold text-slate-400 uppercase">Indicativo</th>
                       <th className="p-4 text-xs font-bold text-slate-400 uppercase">Nombre</th>
-                      <th className="p-4 text-xs font-bold text-slate-400 uppercase text-center">Jefe Serv.</th>
-                      <th className="p-4 text-xs font-bold text-slate-400 uppercase text-center">Operativo</th>
-                      <th className="p-4 text-xs font-bold text-slate-400 uppercase text-center">Responsable</th>
-                      <th className="p-4 text-xs font-bold text-slate-400 uppercase text-center">Conductor</th>
-                      <th className="p-4 text-xs font-bold text-slate-400 uppercase">Experiencia</th>
-                      <th className="p-4 text-xs font-bold text-slate-400 uppercase">Compromiso</th>
-                      <th className="p-4 text-xs font-bold text-slate-400 uppercase text-center">Estado</th>
+                      <th className="p-4 text-xs font-bold text-slate-400 uppercase text-center">Días</th>
+                      <th className="p-4 text-xs font-bold text-slate-400 uppercase text-right">Dietas</th>
+                      <th className="p-4 text-xs font-bold text-slate-400 uppercase text-right">Km</th>
+                      <th className="p-4 text-xs font-bold text-slate-400 uppercase text-right">Total</th>
                     </tr>
                   </thead>
-                <tbody className="divide-y">
-                  {reportData.map((row, i) => (
-                    <tr key={i} className="hover:bg-slate-50">
-                      <td className="p-4 font-mono font-bold text-slate-700">{row.indicativo}</td>
-                      <td className="p-4 font-bold text-slate-800">{row.nombre}</td>
-                      <td className="p-4 text-sm text-slate-600">{row.municipio}</td>
-                      <td className="p-4 text-center font-bold">{row.numTurnos}</td>
-                      <td className="p-4 text-right">{row.subtotalDietas.toFixed(2)}€</td>
-                      <td className="p-4 text-right">{row.subtotalKm.toFixed(2)}€</td>
-                      <td className="p-4 text-right"><span className="bg-slate-900 text-white px-3 py-1 rounded-lg font-bold">{row.total.toFixed(2)}€</span></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                  <tbody className="divide-y">
+                    {reportData.map((row, i) => (
+                      <tr key={i} className="hover:bg-slate-50">
+                        <td className="p-4 font-mono font-bold text-slate-700">{row.indicativo}</td>
+                        <td className="p-4 font-medium text-slate-800">{row.nombre}</td>
+                        <td className="p-4 text-center text-slate-600">{row.dias}</td>
+                        <td className="p-4 text-right text-slate-600">{row.subtotalDietas.toFixed(2)} €</td>
+                        <td className="p-4 text-right text-slate-600">{row.subtotalKm.toFixed(2)} €</td>
+                        <td className="p-4 text-right">
+                          <span className="bg-slate-900 text-white px-3 py-1 rounded-lg font-bold text-sm">{row.total.toFixed(2)} €</span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             ) : (
               <div className="p-20 text-center text-slate-400">
                 <CreditCard size={48} className="mx-auto mb-4 opacity-20" />
-                <p className="text-sm">Seleccione periodo y genere el informe</p>
+                <p className="text-sm">{loading ? 'Cargando datos...' : 'Seleccione el mes y pulse Generar'}</p>
               </div>
             )}
 
             {reportData.length > 0 && (
               <div className="p-6 bg-slate-900 text-white flex justify-between items-center">
                 <div>
-                  <p className="text-xs text-slate-400 uppercase">Total {selectedMonth}</p>
+                  <p className="text-xs text-slate-400 uppercase">Total dietas {selectedMonth}</p>
                   <p className="text-3xl font-bold">{reportData.reduce((acc, r) => acc + r.total, 0).toFixed(2)} €</p>
+                  <p className="text-xs text-slate-400 mt-1">{reportData.length} voluntario(s) · {reportData.reduce((acc, r) => acc + r.dias, 0)} días de servicio</p>
                 </div>
-                <button className="bg-white text-slate-900 px-6 py-3 rounded-xl font-bold flex items-center gap-2"><Download size={18} /> Exportar PDF</button>
+                <button className="bg-white text-slate-900 px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-slate-100 transition-colors"><Download size={18} /> Exportar PDF</button>
               </div>
             )}
           </div>
