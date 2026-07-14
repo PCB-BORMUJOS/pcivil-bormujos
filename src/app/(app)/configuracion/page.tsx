@@ -103,7 +103,8 @@ export default function ConfiguracionPage() {
   const [savingBaremo, setSavingBaremo] = useState(false);
   const [baremoSaved, setBaremoSaved] = useState(false);
   // Baremo exclusivo J-44 (Jefe de Servicio) — solo superadmin
-  const [baremoJ44, setBaremoJ44] = useState({ importeMensual: 0, concepto: 'Complemento Jefe de Servicio' });
+  // Importe fijo por día de servicio, independiente del número de turnos
+  const [baremoJ44, setBaremoJ44] = useState({ importePorDia: 0, concepto: 'Dieta Jefe de Servicio (importe/día)' });
   const [savingJ44, setSavingJ44] = useState(false);
   const [savedJ44, setSavedJ44] = useState(false);
 
@@ -124,6 +125,63 @@ export default function ConfiguracionPage() {
       }));
       setReportData(filas);
     } catch { setReportData([]); } finally { setLoading(false); }
+  };
+
+  const exportarPDF = () => {
+    const totalImporte = reportData.reduce((acc, r) => acc + r.total, 0);
+    const totalDietas = reportData.reduce((acc, r) => acc + r.subtotalDietas, 0);
+    const totalKm = reportData.reduce((acc, r) => acc + r.subtotalKm, 0);
+    const totalDias = reportData.reduce((acc, r) => acc + r.dias, 0);
+    const filas = reportData.map(r => `
+      <tr>
+        <td>${r.indicativo}</td>
+        <td>${r.nombre}</td>
+        <td style="text-align:center">${r.dias}</td>
+        <td style="text-align:right">${r.subtotalDietas.toFixed(2)} €</td>
+        <td style="text-align:right">${r.subtotalKm.toFixed(2)} €</td>
+        <td style="text-align:right;font-weight:bold">${r.total.toFixed(2)} €</td>
+      </tr>`).join('');
+    const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
+      <title>Informe Dietas ${selectedMonth}</title>
+      <style>
+        body{font-family:Arial,sans-serif;font-size:12px;margin:20px;color:#111}
+        h1{font-size:16px;margin-bottom:4px}
+        p.sub{font-size:11px;color:#555;margin-bottom:16px}
+        table{width:100%;border-collapse:collapse}
+        th{background:#1e293b;color:#fff;padding:8px 10px;text-align:left;font-size:11px;text-transform:uppercase}
+        td{padding:7px 10px;border-bottom:1px solid #e2e8f0}
+        tr:nth-child(even) td{background:#f8fafc}
+        tfoot td{border-top:2px solid #1e293b;font-weight:bold;background:#f1f5f9}
+        .total-box{margin-top:20px;background:#1e293b;color:#fff;padding:14px 18px;border-radius:8px;display:flex;justify-content:space-between;align-items:center}
+        .total-box .amount{font-size:22px;font-weight:bold}
+        .total-box .meta{font-size:11px;color:#94a3b8;margin-top:4px}
+        @media print{body{margin:0}}
+      </style></head><body>
+      <h1>Protección Civil Bormujos — Informe de Dietas</h1>
+      <p class="sub">Período: ${selectedMonth} · Generado el ${new Date().toLocaleDateString('es-ES', { timeZone: 'Europe/Madrid' })}</p>
+      <table>
+        <thead><tr>
+          <th>Indicativo</th><th>Nombre</th><th style="text-align:center">Días</th>
+          <th style="text-align:right">Dietas</th><th style="text-align:right">Km</th><th style="text-align:right">Total</th>
+        </tr></thead>
+        <tbody>${filas}</tbody>
+        <tfoot><tr>
+          <td colspan="2">TOTALES</td>
+          <td style="text-align:center">${totalDias}</td>
+          <td style="text-align:right">${totalDietas.toFixed(2)} €</td>
+          <td style="text-align:right">${totalKm.toFixed(2)} €</td>
+          <td style="text-align:right">${totalImporte.toFixed(2)} €</td>
+        </tr></tfoot>
+      </table>
+      <div class="total-box">
+        <div><div class="amount">${totalImporte.toFixed(2)} €</div>
+        <div class="meta">${reportData.length} voluntario(s) · ${totalDias} dieta(s) registrada(s)</div></div>
+        <div style="font-size:11px;color:#94a3b8">Protección Civil Bormujos</div>
+      </div>
+      <script>window.onload=function(){window.print();}<\/script>
+      </body></html>`;
+    const win = window.open('', '_blank');
+    if (win) { win.document.write(html); win.document.close(); }
   };
 
   // Cargar usuarios, roles y servicios
@@ -514,15 +572,18 @@ export default function ConfiguracionPage() {
                     />
                   </div>
                   <div className="p-3 bg-white rounded-lg border border-amber-200">
-                    <label className="text-xs text-amber-700 font-bold block mb-2">Importe mensual €</label>
+                    <label className="text-xs text-amber-700 font-bold block mb-2">Importe por día de servicio €</label>
                     <input
                       type="number"
                       step="0.01"
                       className="w-full border border-amber-200 rounded p-2 text-sm focus:outline-none focus:border-amber-400"
-                      value={baremoJ44.importeMensual}
-                      onChange={e => setBaremoJ44(prev => ({ ...prev, importeMensual: parseFloat(e.target.value) || 0 }))}
+                      value={baremoJ44.importePorDia}
+                      onChange={e => setBaremoJ44(prev => ({ ...prev, importePorDia: parseFloat(e.target.value) || 0 }))}
                       placeholder="0.00"
                     />
+                    <p className="text-xs text-amber-500 mt-1.5">
+                      Importe fijo diario independiente del nº de turnos. Total = días de servicio × {baremoJ44.importePorDia.toFixed(2)} €/día
+                    </p>
                   </div>
                   <button
                     onClick={async () => {
@@ -550,6 +611,9 @@ export default function ConfiguracionPage() {
                 <input type="month" className="border rounded p-2 text-sm" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} />
                 <button onClick={generateReport} disabled={loading} className="bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 disabled:opacity-50">
                   {loading ? <Loader2 size={16} className="animate-spin" /> : null} Generar
+                </button>
+                <button onClick={exportarPDF} disabled={reportData.length === 0} className="bg-slate-800 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 disabled:opacity-50 hover:bg-slate-900">
+                  <Download size={16} /> PDF
                 </button>
               </div>
             </div>
