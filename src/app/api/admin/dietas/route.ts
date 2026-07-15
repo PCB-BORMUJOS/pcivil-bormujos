@@ -77,7 +77,22 @@ export async function GET(request: NextRequest) {
       r.totalDietas += Number(d.totalDieta)
     })
 
-    const resumen = Array.from(resumenMap.values()).sort((a, b) => 
+    // Baremo exclusivo J-44 (Jefe de Servicio): importe fijo por día de
+    // servicio que sustituye al cálculo normal de dietas (sin Km).
+    const cfgJ44 = await prisma.configuracion.findUnique({ where: { clave: 'baremo_j44' } })
+    const valorJ44 = (cfgJ44?.valor ?? {}) as { importePorDia?: number; importeMensual?: number }
+    const importePorDiaJ44 = Number(valorJ44.importePorDia ?? valorJ44.importeMensual ?? 0)
+    if (importePorDiaJ44 > 0) {
+      Array.from(resumenMap.values())
+        .filter(r => r.indicativo === 'J-44')
+        .forEach(r => {
+          r.subtotalDietas = importePorDiaJ44 * r.dias
+          r.subtotalKm = 0
+          r.totalDietas = r.subtotalDietas
+        })
+    }
+
+    const resumen = Array.from(resumenMap.values()).sort((a, b) =>
       (a.indicativo || '').localeCompare(b.indicativo || '')
     )
 
