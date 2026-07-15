@@ -124,7 +124,7 @@ export default function PracticasPage() {
 
   const cargarVoluntarios = async () => {
     try {
-      const res = await fetch('/api/admin/personal?roles=true')
+      const res = await fetch('/api/practicas/personal')
       const data = await res.json()
       setVoluntarios(data.voluntarios || [])
     } catch (e) { console.error(e) }
