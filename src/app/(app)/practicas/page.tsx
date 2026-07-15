@@ -70,6 +70,16 @@ function getFamiliaStyle(familia: string) {
   return FAMILIAS.find(f => f.id === familia)?.color || 'bg-gray-100 text-gray-700 border-gray-200'
 }
 
+// Divide el material necesario en ítems, aceptando tanto saltos de línea
+// como comas o punto y coma como separadores, y limpia viñetas iniciales.
+function parseMaterial(texto?: string): string[] {
+  if (!texto) return []
+  return texto
+    .split(/[\n,;]+/)
+    .map(item => item.replace(/^[-•]\s*/, '').trim())
+    .filter(Boolean)
+}
+
 export default function PracticasPage() {
   const { data: session } = useSession()
   const [practicas, setPracticas] = useState<Practica[]>([])
@@ -358,9 +368,22 @@ export default function PracticasPage() {
     }
 
     // ── MATERIAL ──────────────────────────────────────────────────────────
-    if (practica.materialNecesario) {
+    const materialItems = parseMaterial(practica.materialNecesario)
+    if (materialItems.length > 0) {
       seccion('Material necesario')
-      bloque(practica.materialNecesario)
+      doc.setTextColor(51, 65, 85)
+      doc.setFontSize(9)
+      doc.setFont('helvetica', 'normal')
+      materialItems.forEach(item => {
+        const lines = doc.splitTextToSize(item, W - margin * 2 - 8)
+        lines.forEach((line: string, idx: number) => {
+          if (y > 265) { doc.addPage(); y = 20 }
+          if (idx === 0) doc.text('•', margin + 3, y)
+          doc.text(line, margin + 7, y)
+          y += 5
+        })
+      })
+      y += 3
     }
 
     // ── CONCLUSIONES ──────────────────────────────────────────────────────
@@ -1023,10 +1046,10 @@ export default function PracticasPage() {
                                     <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5">
                                       <p className="text-xs font-black text-amber-700 uppercase tracking-widest mb-3">Material necesario</p>
                                       <div className="space-y-2">
-                                        {p.materialNecesario.split('\n').filter(Boolean).map((item, i) => (
+                                        {parseMaterial(p.materialNecesario).map((item, i) => (
                                           <div key={i} className="flex items-center gap-2.5">
                                             <div className="w-1.5 h-1.5 rounded-full bg-amber-500 flex-shrink-0" />
-                                            <p className="text-sm text-slate-700">{item.replace(/^[-•]\s*/, '')}</p>
+                                            <p className="text-sm text-slate-700">{item}</p>
                                           </div>
                                         ))}
                                       </div>
