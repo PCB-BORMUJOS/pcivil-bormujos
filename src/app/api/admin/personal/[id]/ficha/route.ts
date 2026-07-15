@@ -27,7 +27,34 @@ export async function GET(
       where: { usuarioId: params.id }
     })
 
-    return NextResponse.json({ ficha })
+    // Historial de prácticas del voluntario, como responsable o participante.
+    const registrosPracticas = await prisma.registroPractica.findMany({
+      where: {
+        OR: [
+          { responsableId: params.id },
+          { participantes: { array_contains: params.id } },
+        ],
+      },
+      include: {
+        practica: { select: { numero: true, titulo: true, familia: true } },
+        responsable: { select: { numeroVoluntario: true, nombre: true, apellidos: true } },
+      },
+      orderBy: { fecha: 'desc' },
+      take: 200,
+    })
+
+    const practicas = registrosPracticas.map(r => ({
+      id: r.id,
+      fecha: r.fecha,
+      turno: r.turno,
+      resultado: r.resultado,
+      duracionReal: r.duracionReal,
+      practica: r.practica,
+      rol: r.responsableId === params.id ? 'responsable' : 'participante',
+      responsable: r.responsable,
+    }))
+
+    return NextResponse.json({ ficha, practicas })
   } catch (error) {
     console.error('Error al obtener ficha:', error)
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })

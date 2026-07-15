@@ -12,7 +12,14 @@ export async function GET(request: NextRequest) {
   const usuarioId = searchParams.get('usuarioId')
   const where: any = {}
   if (practicaId) where.practicaId = practicaId
-  if (usuarioId) where.participantes = { path: '$', array_contains: usuarioId }
+  // Un voluntario consta en una práctica tanto si fue responsable como si fue
+  // participante. array_contains (sin path) es la sintaxis válida en PostgreSQL.
+  if (usuarioId) {
+    where.OR = [
+      { responsableId: usuarioId },
+      { participantes: { array_contains: usuarioId } },
+    ]
+  }
   try {
     const registros = await prisma.registroPractica.findMany({
       where,

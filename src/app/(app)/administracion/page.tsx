@@ -525,6 +525,7 @@ export default function AdministracionPage() {
   const [showNuevoVoluntario, setShowNuevoVoluntario] = useState(false);
   const [selectedVoluntario, setSelectedVoluntario] = useState<Voluntario | null>(null);
   const [fichaData, setFichaData] = useState<any>({});
+  const [historialPracticas, setHistorialPracticas] = useState<any[]>([]);
 
   // Estados para Disponibilidad
   const [disponibilidades, setDisponibilidades] = useState<DisponibilidadAdmin[]>([]);
@@ -730,6 +731,7 @@ export default function AdministracionPage() {
     try {
       const res = await fetch(`/api/admin/personal/${voluntario.id}/ficha`);
       const data = await res.json();
+      setHistorialPracticas(data.practicas || []);
       setFichaData({
         ...data.ficha,
         rolId: voluntario.rolId, // Inicializar con el rol actual
@@ -3089,6 +3091,43 @@ export default function AdministracionPage() {
                   className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
                 />
               </div>
+            </div>
+
+            {/* Historial de prácticas realizadas */}
+            <div className="border border-slate-200 rounded-xl p-4 bg-slate-50">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-2 h-2 rounded-full bg-orange-500" />
+                <p className="text-xs font-bold text-slate-600 uppercase tracking-wide">Historial de prácticas ({historialPracticas.length})</p>
+              </div>
+              {historialPracticas.length === 0 ? (
+                <p className="text-xs text-slate-400">Sin prácticas registradas todavía.</p>
+              ) : (
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {historialPracticas.map((r: any) => (
+                    <div key={r.id} className="flex items-center justify-between gap-3 bg-white border border-slate-200 rounded-lg px-3 py-2">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-xs font-bold text-slate-700">{r.practica?.numero || '—'}</span>
+                          <span className="text-sm font-medium text-slate-800 truncate">{r.practica?.titulo || 'Práctica'}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-slate-400 mt-0.5">
+                          <span>{new Date(r.fecha).toLocaleDateString('es-ES', { timeZone: 'Europe/Madrid' })}</span>
+                          <span>· {r.turno === 'mañana' ? 'Mañana' : r.turno === 'tarde' ? 'Tarde' : 'Noche'}</span>
+                          {r.duracionReal && <span>· {r.duracionReal} min</span>}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${r.rol === 'responsable' ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-600'}`}>
+                          {r.rol === 'responsable' ? 'Responsable' : 'Participante'}
+                        </span>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${r.resultado === 'completado' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+                          {r.resultado === 'completado' ? 'Completado' : 'Pend. firma'}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Permisos extra */}
