@@ -8,6 +8,8 @@ import {
   ClipboardList, CheckCircle2, RefreshCw, Settings, ZoomIn, FileText, Upload
 } from 'lucide-react'
 import ModalImportarPDF from '@/components/practicas/ModalImportarPDF'
+import AsistenteIAPracticas from '@/components/practicas/AsistenteIAPracticas'
+import RevisarIAButton from '@/components/practicas/RevisarIAButton'
 
 const FAMILIAS = [
   { id: 'socorrismo', label: 'Socorrismo', color: 'bg-pink-100 text-pink-700 border-pink-200' },
@@ -873,6 +875,10 @@ export default function PracticasPage() {
                   <button onClick={() => { setPracticaEditando(null); setShowNueva(true) }} className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-white font-bold text-sm transition-all shadow-lg" style={{background: 'linear-gradient(135deg, #f97316, #ea580c)'}}>
                     <Plus size={16} /> Nueva práctica
                   </button>
+                  <AsistenteIAPracticas
+                    familias={[...FAMILIAS.map(f => ({ id: f.id, label: f.label })), ...familiasDinamicas.map(f => ({ id: f.slug, label: f.nombre }))]}
+                    onGuardado={cargarDatos}
+                  />
                 </>
               )}
             </div>
@@ -1114,6 +1120,7 @@ export default function PracticasPage() {
                                     {isAdmin && <>
                                       <button onClick={() => { setPracticaEditando(p); setShowNueva(true) }} className="flex items-center gap-2 px-4 py-2.5 border-2 border-slate-200 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-50 transition-colors"><Edit size={15} />Editar</button>
                                       <button onClick={() => handleEliminar(p.id)} className="flex items-center gap-2 px-4 py-2.5 border-2 border-red-100 rounded-xl text-sm font-bold text-red-500 hover:bg-red-50 transition-colors"><Trash2 size={15} />Desactivar</button>
+                                      <RevisarIAButton practicaId={p.id} />
                                     </>}
                                   </div>
                                   <button onClick={() => { setPracticaParaRegistro(p); setShowRegistro(true); setPasoRegistro(1); setParticipantesSeleccionados([]); setFirmaResp(''); setFirmaJefe('') }} className="flex items-center gap-2 px-6 py-2.5 text-white font-black text-sm rounded-xl transition-all hover:scale-105 shadow-lg" style={{background: 'linear-gradient(135deg, #f97316, #ea580c)'}}><ClipboardList size={16} />Registrar realización</button>

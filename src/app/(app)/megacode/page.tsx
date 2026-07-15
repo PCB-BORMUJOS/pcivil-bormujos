@@ -6,6 +6,7 @@ import {
   CheckCircle2, Circle, X, BookOpen, AlertTriangle,
   FileText, Edit, Trash2, Target, Shield, Settings
 } from 'lucide-react'
+import AsistenteIAMegacode from '@/components/megacode/AsistenteIAMegacode'
 
 const FAMILIAS: Record<string, { label: string; color: string }> = {
   socorrismo: { label: 'Socorrismo', color: 'bg-pink-100 text-pink-700 border-pink-200' },
@@ -210,6 +211,7 @@ export default function MegacodePage() {
                     style={{background: 'linear-gradient(135deg, #7c3aed, #6d28d9)'}}>
                     <Zap size={16} /> Generar Auto
                   </button>
+                  <AsistenteIAMegacode onGuardado={cargarDatos} />
                 </>
               )}
             </div>
