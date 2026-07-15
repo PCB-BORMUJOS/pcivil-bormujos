@@ -175,7 +175,7 @@ export default function ConfiguracionPage() {
       </table>
       <div class="total-box">
         <div><div class="amount">${totalImporte.toFixed(2)} €</div>
-        <div class="meta">${reportData.length} voluntario(s) · ${totalDias} dieta(s) registrada(s)</div></div>
+        <div class="meta">${reportData.length} efectivo(s) · ${totalDias} dieta(s) registrada(s)</div></div>
         <div style="font-size:11px;color:#94a3b8">Protección Civil Bormujos</div>
       </div>
       <script>window.onload=function(){window.print();}<\/script>
@@ -659,7 +659,7 @@ export default function ConfiguracionPage() {
                 <div>
                   <p className="text-xs text-slate-400 uppercase">Total dietas {selectedMonth}</p>
                   <p className="text-3xl font-bold">{reportData.reduce((acc, r) => acc + r.total, 0).toFixed(2)} €</p>
-                  <p className="text-xs text-slate-400 mt-1">{reportData.length} voluntario(s) · {reportData.reduce((acc, r) => acc + r.dias, 0)} días de servicio</p>
+                  <p className="text-xs text-slate-400 mt-1">{reportData.length} efectivo(s) · {reportData.reduce((acc, r) => acc + r.dias, 0)} días de servicio</p>
                 </div>
                 <button className="bg-white text-slate-900 px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-slate-100 transition-colors"><Download size={18} /> Exportar PDF</button>
               </div>
