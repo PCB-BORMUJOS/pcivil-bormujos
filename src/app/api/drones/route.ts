@@ -314,10 +314,43 @@ export async function PUT(request: NextRequest) {
     }
 
     if (tipo === 'vuelo') {
-      const vuelo = await prisma.vuelo.update({
-        where: { id },
-        data: { estado: data.estado, horaInicio: data.horaInicio || undefined, horaFin: data.horaFin || undefined, duracionMinutos: data.duracionMinutos ? parseInt(data.duracionMinutos) : undefined, incidencias: data.incidencias ?? undefined, observaciones: data.observaciones ?? undefined, resultadoMision: data.resultadoMision ?? undefined }
-      })
+      // Actualiza solo los campos presentes en la petición (permite edición
+      // completa del parte de vuelo sin borrar los que no se envíen).
+      const has = (k: string) => Object.prototype.hasOwnProperty.call(data, k)
+      const str = (v: any) => (v === '' || v == null ? null : v)
+      const num = (v: any) => (v === '' || v == null ? null : (typeof v === 'number' ? v : parseFloat(v)))
+      const int = (v: any) => (v === '' || v == null ? null : (typeof v === 'number' ? v : parseInt(v)))
+      const d: any = {}
+      if (has('droneId') && data.droneId) d.droneId = data.droneId
+      if (has('pilotoId') && data.pilotoId) d.pilotoId = data.pilotoId
+      if (has('fecha') && data.fecha) d.fecha = new Date(data.fecha)
+      if (has('horaInicio')) d.horaInicio = str(data.horaInicio)
+      if (has('horaFin')) d.horaFin = str(data.horaFin)
+      if (has('duracionMinutos')) d.duracionMinutos = int(data.duracionMinutos)
+      if (has('tipoOperacion')) d.tipoOperacion = data.tipoOperacion || 'reconocimiento'
+      if (has('categoriaAESA')) d.categoriaAESA = str(data.categoriaAESA)
+      if (has('municipio')) d.municipio = data.municipio || 'Bormujos'
+      if (has('lugarDespegue')) d.lugarDespegue = str(data.lugarDespegue)
+      if (has('lugarAterrizaje')) d.lugarAterrizaje = str(data.lugarAterrizaje)
+      if (has('descripcionZona')) d.descripcionZona = str(data.descripcionZona)
+      if (has('zonaAerea')) d.zonaAerea = str(data.zonaAerea)
+      if (has('latitudInicio')) d.latitudInicio = num(data.latitudInicio)
+      if (has('longitudInicio')) d.longitudInicio = num(data.longitudInicio)
+      if (has('alturaMaxima')) d.alturaMaxima = num(data.alturaMaxima)
+      if (has('alturaMedia')) d.alturaMedia = num(data.alturaMedia)
+      if (has('condicionesMeteo')) d.condicionesMeteo = data.condicionesMeteo ?? undefined
+      if (has('condicionesVuelo')) d.condicionesVuelo = str(data.condicionesVuelo)
+      if (has('notamConsultado')) d.notamConsultado = !!data.notamConsultado
+      if (has('notamReferencia')) d.notamReferencia = str(data.notamReferencia)
+      if (has('objetivoMision')) d.objetivoMision = str(data.objetivoMision)
+      if (has('resultadoMision')) d.resultadoMision = str(data.resultadoMision)
+      if (has('personalApoyo')) d.personalApoyo = str(data.personalApoyo)
+      if (has('numeroVccOperador')) d.numeroVccOperador = str(data.numeroVccOperador)
+      if (has('incidencias')) d.incidencias = str(data.incidencias)
+      if (has('observaciones')) d.observaciones = str(data.observaciones)
+      if (has('bateriasUsadas')) d.bateriasUsadas = data.bateriasUsadas ?? undefined
+      if (has('estado')) d.estado = data.estado || 'completado'
+      const vuelo = await prisma.vuelo.update({ where: { id }, data: d })
       return NextResponse.json({ vuelo })
     }
 

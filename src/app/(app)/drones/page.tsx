@@ -343,21 +343,38 @@ export default function DronesPage() {
     e.preventDefault()
     if (!vueloSeleccionado) return
     const f = new FormData(e.currentTarget)
-    const horaFin = f.get('horaFin') as string
-    const incidencias = f.get('incidencias') as string
-    const duracion = f.get('duracionMinutos') ? parseInt(f.get('duracionMinutos') as string) : null
-    let nuevoEstado = vueloSeleccionado.estado
-    if (horaFin) nuevoEstado = 'completado'
-    if (incidencias?.trim()) nuevoEstado = 'incidencia'
+    const g = (k: string) => (f.get(k) as string) ?? ''
     try {
       setSaving(true)
       await fetch('/api/drones', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
         tipo: 'vuelo', id: vueloSeleccionado.id,
-        estado: nuevoEstado,
-        horaFin, duracionMinutos: duracion,
-        incidencias: incidencias || null,
-        observaciones: f.get('observaciones'),
-        resultadoMision: f.get('resultadoMision'),
+        droneId: g('droneId'),
+        pilotoId: g('pilotoId'),
+        fecha: g('fecha'),
+        horaInicio: g('horaInicio'),
+        horaFin: g('horaFin'),
+        duracionMinutos: g('duracionMinutos'),
+        tipoOperacion: g('tipoOperacion'),
+        categoriaAESA: g('categoriaAESA'),
+        municipio: g('municipio'),
+        lugarDespegue: g('lugarDespegue'),
+        lugarAterrizaje: g('lugarAterrizaje'),
+        descripcionZona: g('descripcionZona'),
+        zonaAerea: g('zonaAerea'),
+        latitudInicio: g('latitudInicio'),
+        longitudInicio: g('longitudInicio'),
+        alturaMaxima: g('alturaMaxima'),
+        alturaMedia: g('alturaMedia'),
+        condicionesVuelo: g('condicionesVuelo'),
+        notamConsultado: f.get('notamConsultado') === 'on',
+        notamReferencia: g('notamReferencia'),
+        objetivoMision: g('objetivoMision'),
+        resultadoMision: g('resultadoMision'),
+        personalApoyo: g('personalApoyo'),
+        numeroVccOperador: g('numeroVccOperador'),
+        incidencias: g('incidencias'),
+        observaciones: g('observaciones'),
+        estado: g('estado'),
       })})
       setShowEditarVuelo(false)
       cargarDatos()
@@ -2163,24 +2180,41 @@ export default function DronesPage() {
             <div className="flex items-center justify-between p-6 border-b">
               <div>
                 <h3 className="text-lg font-bold text-slate-900">Editar vuelo {vueloSeleccionado.numero}</h3>
-                <p className="text-xs text-slate-500">Actualiza los datos del vuelo. Si registras hora fin → estado Completado. Si hay incidencias → estado Incidencia.</p>
+                <p className="text-xs text-slate-500">Puedes corregir cualquier dato del parte de vuelo.</p>
               </div>
               <button onClick={() => setShowEditarVuelo(false)}><X size={20} className="text-slate-400" /></button>
             </div>
-            <form onSubmit={handleGuardarVuelo} className="p-6 space-y-5">
-              {/* Estado */}
-              <div>
-                <label className={labelCls}>Estado del vuelo</label>
-                <select name="estado" defaultValue={vueloSeleccionado.estado} className={inputCls}>
-                  <option value="planificado">Planificado</option>
-                  <option value="en_curso">En curso</option>
-                  <option value="completado">Completado</option>
-                  <option value="incidencia">Incidencia</option>
-                </select>
-                <p className="text-[10px] text-slate-400 mt-1">Se actualiza automaticamente: hora fin registrada → Completado · incidencias → Incidencia</p>
+            <form key={vueloSeleccionado.id} onSubmit={handleGuardarVuelo} className="p-6 space-y-5">
+              {/* Aeronave y piloto */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className={labelCls}>Dron</label>
+                  <select name="droneId" defaultValue={(vueloSeleccionado as any).droneId || ''} className={inputCls}>
+                    {drones.map(d => <option key={d.id} value={d.id}>{d.codigo} — {d.modelo}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className={labelCls}>Piloto</label>
+                  <select name="pilotoId" defaultValue={(vueloSeleccionado as any).pilotoId || ''} className={inputCls}>
+                    {pilotos.map(p => <option key={p.id} value={p.id}>{p.nombre} {p.apellidos}</option>)}
+                  </select>
+                </div>
               </div>
-              {/* Horas */}
-              <div className="grid grid-cols-3 gap-4">
+              {/* Estado, fecha y horas */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                  <label className={labelCls}>Estado</label>
+                  <select name="estado" defaultValue={vueloSeleccionado.estado} className={inputCls}>
+                    <option value="planificado">Planificado</option>
+                    <option value="en_curso">En curso</option>
+                    <option value="completado">Completado</option>
+                    <option value="incidencia">Incidencia</option>
+                  </select>
+                </div>
+                <div>
+                  <label className={labelCls}>Fecha</label>
+                  <input name="fecha" type="date" defaultValue={vueloSeleccionado.fecha ? new Date(vueloSeleccionado.fecha).toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' }) : ''} className={inputCls} />
+                </div>
                 <div>
                   <label className={labelCls}>Hora inicio</label>
                   <input name="horaInicio" type="time" defaultValue={vueloSeleccionado.horaInicio || ''} className={inputCls} />
@@ -2189,22 +2223,85 @@ export default function DronesPage() {
                   <label className={labelCls}>Hora fin</label>
                   <input name="horaFin" type="time" defaultValue={vueloSeleccionado.horaFin || ''} className={inputCls} />
                 </div>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 <div>
-                  <label className={labelCls}>Duracion (min)</label>
+                  <label className={labelCls}>Duración (min)</label>
                   <input name="duracionMinutos" type="number" defaultValue={vueloSeleccionado.duracionMinutos || ''} className={inputCls} />
                 </div>
+                <div>
+                  <label className={labelCls}>Tipo de operación</label>
+                  <select name="tipoOperacion" defaultValue={(vueloSeleccionado as any).tipoOperacion || ''} className={inputCls}>
+                    {Object.entries(TIPO_OPERACION).map(([k, v]) => <option key={k} value={k}>{v as string}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className={labelCls}>Categoría AESA</label>
+                  <select name="categoriaAESA" defaultValue={(vueloSeleccionado as any).categoriaAESA || ''} className={inputCls}>
+                    <option value="">— Seleccionar —</option>
+                    <option value="OPEN_A1">OPEN A1 — Sobre personas no implicadas</option>
+                    <option value="OPEN_A2">OPEN A2 — Cerca de personas</option>
+                    <option value="OPEN_A3">OPEN A3 — Lejos de personas</option>
+                    <option value="SPECIFIC_STS01">SPECIFIC STS-01</option>
+                    <option value="SPECIFIC_STS02">SPECIFIC STS-02</option>
+                    <option value="SPECIFIC_PDRA">SPECIFIC PDRA</option>
+                  </select>
+                </div>
               </div>
-              {/* Resultado mision */}
+              {/* Zona */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div><label className={labelCls}>Municipio</label><input name="municipio" defaultValue={vueloSeleccionado.municipio || ''} className={inputCls} /></div>
+                <div><label className={labelCls}>Nº Operador UAS / VCC</label><input name="numeroVccOperador" defaultValue={(vueloSeleccionado as any).numeroVccOperador || ''} className={inputCls} /></div>
+                <div><label className={labelCls}>Lugar de despegue</label><input name="lugarDespegue" defaultValue={(vueloSeleccionado as any).lugarDespegue || ''} className={inputCls} /></div>
+                <div><label className={labelCls}>Lugar de aterrizaje</label><input name="lugarAterrizaje" defaultValue={(vueloSeleccionado as any).lugarAterrizaje || ''} className={inputCls} /></div>
+                <div><label className={labelCls}>Zona aérea</label><input name="zonaAerea" defaultValue={(vueloSeleccionado as any).zonaAerea || ''} className={inputCls} /></div>
+                <div>
+                  <label className={labelCls}>Condiciones de vuelo</label>
+                  <select name="condicionesVuelo" defaultValue={(vueloSeleccionado as any).condicionesVuelo || ''} className={inputCls}>
+                    <option value="">— Seleccionar —</option>
+                    <option value="VLOS_DIA">VLOS diurno</option>
+                    <option value="VLOS_NOCHE">VLOS nocturno</option>
+                    <option value="EVLOS">EVLOS</option>
+                    <option value="BVLOS">BVLOS (requiere autorización)</option>
+                  </select>
+                </div>
+              </div>
               <div>
-                <label className={labelCls}>Resultado de la mision</label>
-                <textarea name="resultadoMision" rows={2} defaultValue={vueloSeleccionado.resultadoMision || ''} placeholder="Describe el resultado operativo del vuelo..." className={inputCls} />
+                <label className={labelCls}>Descripción de la zona</label>
+                <textarea name="descripcionZona" rows={2} defaultValue={(vueloSeleccionado as any).descripcionZona || ''} className={inputCls} />
               </div>
-              {/* Incidencias */}
+              {/* Coordenadas y alturas */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div><label className={labelCls}>Latitud</label><input name="latitudInicio" type="number" step="any" defaultValue={(vueloSeleccionado as any).latitudInicio ?? ''} className={inputCls} /></div>
+                <div><label className={labelCls}>Longitud</label><input name="longitudInicio" type="number" step="any" defaultValue={(vueloSeleccionado as any).longitudInicio ?? ''} className={inputCls} /></div>
+                <div><label className={labelCls}>Altura máx. (m)</label><input name="alturaMaxima" type="number" step="any" defaultValue={(vueloSeleccionado as any).alturaMaxima ?? ''} className={inputCls} /></div>
+                <div><label className={labelCls}>Altura media (m)</label><input name="alturaMedia" type="number" step="any" defaultValue={(vueloSeleccionado as any).alturaMedia ?? ''} className={inputCls} /></div>
+              </div>
+              {/* NOTAM */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+                <label className="flex items-center gap-2 text-sm text-slate-600">
+                  <input name="notamConsultado" type="checkbox" defaultChecked={!!(vueloSeleccionado as any).notamConsultado} className="w-4 h-4 accent-teal-500" />
+                  NOTAM consultado
+                </label>
+                <div><label className={labelCls}>Referencia NOTAM</label><input name="notamReferencia" defaultValue={(vueloSeleccionado as any).notamReferencia || ''} className={inputCls} /></div>
+              </div>
+              {/* Misión */}
+              <div>
+                <label className={labelCls}>Objetivo de la misión</label>
+                <textarea name="objetivoMision" rows={2} defaultValue={(vueloSeleccionado as any).objetivoMision || ''} className={inputCls} />
+              </div>
+              <div>
+                <label className={labelCls}>Resultado de la misión</label>
+                <textarea name="resultadoMision" rows={2} defaultValue={vueloSeleccionado.resultadoMision || ''} className={inputCls} />
+              </div>
+              <div>
+                <label className={labelCls}>Personal de apoyo</label>
+                <input name="personalApoyo" defaultValue={(vueloSeleccionado as any).personalApoyo || ''} className={inputCls} />
+              </div>
               <div>
                 <label className={labelCls}>Incidencias durante el vuelo</label>
-                <textarea name="incidencias" rows={2} defaultValue={vueloSeleccionado.incidencias || ''} placeholder="Si hubo incidencias describirlas aqui. El estado cambiara automaticamente a Incidencia." className={inputCls} />
+                <textarea name="incidencias" rows={2} defaultValue={vueloSeleccionado.incidencias || ''} className={inputCls} />
               </div>
-              {/* Observaciones */}
               <div>
                 <label className={labelCls}>Observaciones</label>
                 <textarea name="observaciones" rows={2} defaultValue={vueloSeleccionado.observaciones || ''} className={inputCls} />
