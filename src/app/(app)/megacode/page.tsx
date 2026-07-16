@@ -93,7 +93,7 @@ export default function MegacodePage() {
       setLoading(true)
       const [resMeg, resVol, resPrac] = await Promise.all([
         fetch('/api/megacode?tipo=lista'),
-        fetch('/api/admin/personal?roles=true'),
+        fetch('/api/practicas/personal'),
         fetch('/api/megacode?tipo=practicas')
       ])
       const [dataMeg, dataVol, dataPrac] = await Promise.all([resMeg.json(), resVol.json(), resPrac.json()])
