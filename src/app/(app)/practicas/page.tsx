@@ -592,29 +592,32 @@ export default function PracticasPage() {
   const iniciarFirma = (canvasId: string, setter: (v: string) => void) => {
     const canvas = document.getElementById(canvasId) as HTMLCanvasElement
     if (!canvas) return
+    // Inicializar los listeners una sola vez por elemento (el ref se dispara en
+    // cada render y, sin este guard, se acumularían manejadores duplicados que
+    // provocan un trazo errático y cortado).
+    if ((canvas as any).__firmaInit) return
+    ;(canvas as any).__firmaInit = true
+
     const ctx = canvas.getContext('2d')!
     let drawing = false
-    let lastX = 0, lastY = 0
-    // Datos biométricos del Apple Pencil
+    let lastX = 0, lastY = 0        // último punto real
+    let lastMidX = 0, lastMidY = 0  // último punto medio (inicio del tramo)
     const biometricData: Array<{x:number,y:number,pressure:number,tiltX:number,tiltY:number,t:number}> = []
 
     ctx.lineCap = 'round'
     ctx.lineJoin = 'round'
+    ctx.strokeStyle = 'rgb(30,41,59)'
 
-    const getPos = (e: PointerEvent | MouseEvent | TouchEvent) => {
+    const getPos = (e: PointerEvent) => {
       const rect = canvas.getBoundingClientRect()
       const scaleX = canvas.width / rect.width
       const scaleY = canvas.height / rect.height
-      if ('touches' in e && !('pointerId' in e)) {
-        return { x: (e.touches[0].clientX - rect.left) * scaleX, y: (e.touches[0].clientY - rect.top) * scaleY, pressure: 0.5, tiltX: 0, tiltY: 0 }
-      }
-      const pe = e as PointerEvent
       return {
-        x: (pe.clientX - rect.left) * scaleX,
-        y: (pe.clientY - rect.top) * scaleY,
-        pressure: pe.pressure > 0 ? pe.pressure : 0.5,
-        tiltX: pe.tiltX || 0,
-        tiltY: pe.tiltY || 0
+        x: (e.clientX - rect.left) * scaleX,
+        y: (e.clientY - rect.top) * scaleY,
+        pressure: e.pressure > 0 ? e.pressure : 0.5,
+        tiltX: e.tiltX || 0,
+        tiltY: e.tiltY || 0
       }
     }
 
@@ -622,36 +625,48 @@ export default function PracticasPage() {
       drawing = true
       const p = getPos(e)
       lastX = p.x; lastY = p.y
+      lastMidX = p.x; lastMidY = p.y
+      // Punto inicial: un pequeño relleno para que un toque simple deje marca.
       ctx.beginPath()
-      ctx.moveTo(p.x, p.y)
+      ctx.arc(p.x, p.y, Math.max(0.6, p.pressure * 1.6), 0, Math.PI * 2)
+      ctx.fillStyle = 'rgb(30,41,59)'
+      ctx.fill()
       biometricData.push({ x: p.x, y: p.y, pressure: p.pressure, tiltX: p.tiltX, tiltY: p.tiltY, t: Date.now() })
+      canvas.setPointerCapture?.(e.pointerId)
       e.preventDefault()
     }
 
     const move = (e: PointerEvent) => {
       if (!drawing) return
-      const p = getPos(e)
-      // Grosor variable según presión del Apple Pencil
-      const lineWidth = Math.max(0.8, Math.min(4, p.pressure * 5))
-      ctx.strokeStyle = `rgba(30,41,59,${0.7 + p.pressure * 0.3})`
-      ctx.lineWidth = lineWidth
-      // Curva suave entre puntos
-      ctx.beginPath()
-      ctx.moveTo(lastX, lastY)
-      const midX = (lastX + p.x) / 2
-      const midY = (lastY + p.y) / 2
-      ctx.quadraticCurveTo(lastX, lastY, midX, midY)
-      ctx.stroke()
-      lastX = p.x; lastY = p.y
-      biometricData.push({ x: p.x, y: p.y, pressure: p.pressure, tiltX: p.tiltX, tiltY: p.tiltY, t: Date.now() })
+      // Usar coalesced events para no perder puntos en trazos rápidos.
+      const eventos = (e.getCoalescedEvents?.() as PointerEvent[] | undefined) || [e]
+      for (const ev of eventos) {
+        const p = getPos(ev)
+        ctx.lineWidth = Math.max(1, Math.min(3.5, p.pressure * 4))
+        // Suavizado continuo: del punto medio anterior, con el punto anterior
+        // como control, hasta el nuevo punto medio. No deja huecos entre tramos.
+        const midX = (lastX + p.x) / 2
+        const midY = (lastY + p.y) / 2
+        ctx.beginPath()
+        ctx.moveTo(lastMidX, lastMidY)
+        ctx.quadraticCurveTo(lastX, lastY, midX, midY)
+        ctx.stroke()
+        lastX = p.x; lastY = p.y
+        lastMidX = midX; lastMidY = midY
+        biometricData.push({ x: p.x, y: p.y, pressure: p.pressure, tiltX: p.tiltX, tiltY: p.tiltY, t: Date.now() })
+      }
       e.preventDefault()
     }
 
     const up = (e: PointerEvent) => {
       if (!drawing) return
       drawing = false
-      const dataUrl = canvas.toDataURL('image/png', 0.95)
-      // Guardar imagen + metadata biométrica en base64
+      // Cerrar el trazo hasta el último punto real.
+      ctx.beginPath()
+      ctx.moveTo(lastMidX, lastMidY)
+      ctx.lineTo(lastX, lastY)
+      ctx.stroke()
+      const dataUrl = canvas.toDataURL('image/png')
       const meta = JSON.stringify({
         puntos: biometricData.length,
         presionMedia: biometricData.length > 0 ? (biometricData.reduce((a,b) => a + b.pressure, 0) / biometricData.length).toFixed(3) : 0,
@@ -659,7 +674,7 @@ export default function PracticasPage() {
         dispositivo: navigator.userAgent.includes('iPad') ? 'iPad' : 'otro',
         timestamp: new Date().toISOString()
       })
-      setter(dataUrl + '||META:' + btoa(meta))
+      setter(dataUrl + '||META:' + btoa(unescape(encodeURIComponent(meta))))
       e.preventDefault()
     }
 
@@ -667,9 +682,7 @@ export default function PracticasPage() {
     canvas.addEventListener('pointermove', move)
     canvas.addEventListener('pointerup', up)
     canvas.addEventListener('pointercancel', up)
-    canvas.setPointerCapture && canvas.addEventListener('pointerdown', (e: Event) => {
-      canvas.setPointerCapture((e as PointerEvent).pointerId)
-    })
+    canvas.addEventListener('pointerleave', up)
   }
 
   const limpiarFirma = (canvasId: string, setter: (v: string) => void) => {
