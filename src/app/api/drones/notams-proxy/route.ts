@@ -3,12 +3,12 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 
 // ─── ENAIRE APIs públicas sin autenticación ───────────────────────────────────
-// 1. NOTAMs activos (ÍCARO): https://servais.enaire.es/insignias/rest/services/InfoARES/NOTAM_APP_V3/FeatureServer
+// 1. NOTAMs activos (ÍCARO): https://servais.enaire.es/insignias/rest/services/NOTAM/NOTAM_APP_V3/FeatureServer
 // 2. Zonas UAS RD517/2024:   https://servais.enaire.es/insignia/rest/services/NSF_SRV/SRV_UAS_ZG_V1/FeatureServer
 // 3. Espacio aéreo VIGOR:    https://servais.enaire.es/insignia/rest/services/INSIGNIA_SRV/Aero_SRV_VIGOR_V1/MapServer
 // ─────────────────────────────────────────────────────────────────────────────
 
-const NOTAM_BASE = 'https://servais.enaire.es/insignias/rest/services/InfoARES/NOTAM_APP_V3/FeatureServer'
+const NOTAM_BASE = 'https://servais.enaire.es/insignias/rest/services/NOTAM/NOTAM_APP_V3/FeatureServer'
 const UAS_BASE   = 'https://servais.enaire.es/insignia/rest/services/NSF_SRV/SRV_UAS_ZG_V1/FeatureServer'
 const VIGOR_BASE = 'https://servais.enaire.es/insignia/rest/services/INSIGNIA_SRV/Aero_SRV_VIGOR_V1/MapServer'
 
