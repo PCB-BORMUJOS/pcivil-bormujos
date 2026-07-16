@@ -526,6 +526,7 @@ export default function AdministracionPage() {
   const [selectedVoluntario, setSelectedVoluntario] = useState<Voluntario | null>(null);
   const [fichaData, setFichaData] = useState<any>({});
   const [historialPracticas, setHistorialPracticas] = useState<any[]>([]);
+  const [carenciasPracticas, setCarenciasPracticas] = useState<any[]>([]);
 
   // Estados para Disponibilidad
   const [disponibilidades, setDisponibilidades] = useState<DisponibilidadAdmin[]>([]);
@@ -732,6 +733,7 @@ export default function AdministracionPage() {
       const res = await fetch(`/api/admin/personal/${voluntario.id}/ficha`);
       const data = await res.json();
       setHistorialPracticas(data.practicas || []);
+      setCarenciasPracticas(data.carencias || []);
       setFichaData({
         ...data.ficha,
         rolId: voluntario.rolId, // Inicializar con el rol actual
@@ -3125,6 +3127,26 @@ export default function AdministracionPage() {
                         </span>
                       </div>
                     </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Carencias: prácticas pendientes de realizar */}
+            <div className="border border-red-200 rounded-xl p-4 bg-red-50/40">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-2 h-2 rounded-full bg-red-500" />
+                <p className="text-xs font-bold text-slate-600 uppercase tracking-wide">Carencias — prácticas pendientes ({carenciasPracticas.length})</p>
+              </div>
+              {carenciasPracticas.length === 0 ? (
+                <p className="text-xs text-green-600 font-medium">Sin carencias: ha realizado todas las prácticas del catálogo.</p>
+              ) : (
+                <div className="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto">
+                  {carenciasPracticas.map((p: any) => (
+                    <span key={p.id} className="inline-flex items-center gap-1 bg-white border border-red-200 rounded-full px-2.5 py-1 text-xs">
+                      <span className="font-mono font-bold text-red-600">{p.numero}</span>
+                      <span className="text-slate-600 truncate max-w-[180px]">{p.titulo}</span>
+                    </span>
                   ))}
                 </div>
               )}

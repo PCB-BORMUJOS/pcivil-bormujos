@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { autorizarIA, crearClienteIA, MODELO_IA, SISTEMA_EXPERTO, textoRespuesta } from '@/lib/ia-formacion'
+import { catalogoPracticas, practicasRealizadasPorUsuario } from '@/lib/practicas-cobertura'
 
 export const maxDuration = 120
 
@@ -12,30 +13,40 @@ export async function POST(request: NextRequest) {
   if (!cliente) return NextResponse.json({ error: 'ANTHROPIC_API_KEY no configurada' }, { status: 500 })
 
   try {
-    const { cantidad, instrucciones, nivel } = await request.json()
+    const { cantidad, instrucciones, nivel, participantes } = await request.json()
     const nProp = Math.min(Math.max(parseInt(cantidad) || 2, 1), 4)
 
     // Catálogo de prácticas disponibles para encadenar en los escenarios.
-    const practicas = await prisma.practica.findMany({
-      where: { activa: true },
-      select: { numero: true, titulo: true, familia: true, duracionEstimada: true, nivel: true },
-      orderBy: [{ familia: 'asc' }, { numero: 'asc' }],
-    })
+    const practicas = await catalogoPracticas()
 
     if (practicas.length === 0) {
       return NextResponse.json({ error: 'No hay prácticas en el catálogo para componer escenarios' }, { status: 400 })
     }
 
     const catalogo = practicas
-      .map(p => `- [${p.numero}] ${p.titulo} — familia ${p.familia}, nivel ${p.nivel}, ${p.duracionEstimada} min`)
+      .map(p => `- [${p.numero}] ${p.titulo} — familia ${p.familia}, nivel ${p.nivel}`)
       .join('\n')
+
+    // Si se indican participantes, calcular sus carencias comunes para dirigir
+    // el megacode hacia lo que el grupo aún NO ha practicado.
+    let bloqueCarencias = ''
+    const ids: string[] = Array.isArray(participantes) ? participantes.filter((x: any) => typeof x === 'string') : []
+    if (ids.length > 0) {
+      const mapa = await practicasRealizadasPorUsuario(ids)
+      const carencias = practicas.filter(p => !ids.some(uid => mapa.get(uid)?.has(p.id)))
+      if (carencias.length > 0) {
+        bloqueCarencias = `\nCARENCIAS DEL GRUPO (prácticas que NINGUNO de los ${ids.length} participantes seleccionados ha realizado todavía — prioriza entrenarlas):\n${carencias.map(p => `- [${p.numero}] ${p.titulo}`).join('\n')}\n`
+      } else {
+        bloqueCarencias = `\n(El grupo seleccionado ya ha practicado todo el catálogo; propón escenarios de refuerzo y mayor complejidad.)\n`
+      }
+    }
 
     const promptUsuario = `Un megacode es un escenario de simulacro integral que encadena varias prácticas formativas para entrenar una respuesta operativa completa y realista.
 
 CATÁLOGO DE PRÁCTICAS DISPONIBLES (usa sus números para componer las secuencias):
 ${catalogo}
-
-${nivel ? `Nivel de dificultad objetivo: ${nivel}.\n` : ''}${instrucciones ? `INDICACIONES DEL RESPONSABLE:\n${instrucciones}\n\n` : ''}Como experto, propón ${nProp} escenario(s) de megacode que combinen de forma coherente prácticas del catálogo anterior, formando simulacros progresivos y realistas que amplíen la destreza operativa. Encadena solo prácticas que existan en el catálogo, referenciándolas por su número exacto.
+${bloqueCarencias}
+${nivel ? `Nivel de dificultad objetivo: ${nivel}.\n` : ''}${instrucciones ? `INDICACIONES DEL RESPONSABLE:\n${instrucciones}\n\n` : ''}Como experto, propón ${nProp} escenario(s) de megacode que combinen de forma coherente prácticas del catálogo anterior, formando simulacros progresivos y realistas que amplíen la destreza operativa.${bloqueCarencias ? ' Da prioridad a las carencias del grupo indicadas arriba.' : ''} Encadena solo prácticas que existan en el catálogo, referenciándolas por su número exacto.
 
 Devuelve SOLO este JSON:
 {

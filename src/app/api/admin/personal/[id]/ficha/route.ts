@@ -3,6 +3,7 @@ import { authOptions } from '@/lib/auth'
 import { getServerSession } from 'next-auth'
 import { registrarAudit, getUsuarioAudit } from '@/lib/audit'
 import { prisma } from '@/lib/db'
+import { carenciasUsuario } from '@/lib/practicas-cobertura'
 
 export async function GET(
   request: NextRequest,
@@ -54,7 +55,10 @@ export async function GET(
       responsable: r.responsable,
     }))
 
-    return NextResponse.json({ ficha, practicas })
+    // Carencias: prácticas del catálogo que este voluntario aún no ha realizado.
+    const { pendientes } = await carenciasUsuario(params.id)
+
+    return NextResponse.json({ ficha, practicas, carencias: pendientes })
   } catch (error) {
     console.error('Error al obtener ficha:', error)
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })

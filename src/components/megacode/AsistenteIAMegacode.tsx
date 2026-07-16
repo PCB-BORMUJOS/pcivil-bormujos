@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
-import { Sparkles, X, Loader2, Check, ChevronDown, ChevronUp, Save } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Sparkles, X, Loader2, Check, ChevronDown, ChevronUp, Save, Users, AlertTriangle } from 'lucide-react'
 import { usePermisos } from '@/lib/permisos'
 
+interface Voluntario { id: string; numeroVoluntario: string; nombre: string; apellidos: string }
 interface PracticaRef { id: string; numero: string; titulo: string }
 interface Escenario {
   titulo: string; nivelDificultad?: string; escenario?: string; objetivos?: string
@@ -28,15 +29,45 @@ export default function AsistenteIAMegacode({ onGuardado }: { onGuardado: () => 
   const [expandido, setExpandido] = useState<number | null>(0)
   const [guardados, setGuardados] = useState<Set<number>>(new Set())
   const [guardando, setGuardando] = useState<number | null>(null)
+  // Participantes y análisis de cobertura del grupo.
+  const [voluntarios, setVoluntarios] = useState<Voluntario[]>([])
+  const [seleccionados, setSeleccionados] = useState<string[]>([])
+  const [carenciasComunes, setCarenciasComunes] = useState<PracticaRef[] | null>(null)
+  const [calculandoCob, setCalculandoCob] = useState(false)
+
+  useEffect(() => {
+    if (abierto && voluntarios.length === 0) {
+      fetch('/api/practicas/personal').then(r => r.json()).then(d => setVoluntarios(d.voluntarios || [])).catch(() => {})
+    }
+  }, [abierto, voluntarios.length])
 
   if (!isAdmin) return null
+
+  const toggle = (id: string) => {
+    setSeleccionados(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
+    setCarenciasComunes(null)
+  }
+
+  const analizarCobertura = async () => {
+    if (seleccionados.length === 0) return
+    setCalculandoCob(true); setError('')
+    try {
+      const res = await fetch('/api/megacode/cobertura', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ usuarioIds: seleccionados }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Error al analizar')
+      setCarenciasComunes(data.carenciasComunes || [])
+    } catch (e: any) { setError(e.message) } finally { setCalculandoCob(false) }
+  }
 
   const generar = async () => {
     setCargando(true); setError(''); setEscenarios([]); setGuardados(new Set())
     try {
       const res = await fetch('/api/megacode/ia/generar', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cantidad, nivel, instrucciones }),
+        body: JSON.stringify({ cantidad, nivel, instrucciones, participantes: seleccionados }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Error al generar')
@@ -118,6 +149,36 @@ export default function AsistenteIAMegacode({ onGuardado }: { onGuardado: () => 
                     {cargando ? '…' : 'Generar'}
                   </button>
                 </div>
+              </div>
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="flex items-center gap-1.5 text-xs font-bold text-slate-500 uppercase"><Users size={13} /> Participantes ({seleccionados.length})</label>
+                  {seleccionados.length > 0 && (
+                    <button onClick={analizarCobertura} disabled={calculandoCob}
+                      className="flex items-center gap-1 text-xs font-bold text-indigo-600 hover:underline disabled:opacity-50">
+                      {calculandoCob ? <Loader2 size={12} className="animate-spin" /> : <AlertTriangle size={12} />} Ver carencias del grupo
+                    </button>
+                  )}
+                </div>
+                <p className="text-[11px] text-slate-400 mb-1.5">Opcional. Si seleccionas participantes, el agente priorizará las prácticas que el grupo aún no ha realizado.</p>
+                <div className="border border-slate-200 rounded-lg max-h-36 overflow-y-auto divide-y divide-slate-50">
+                  {voluntarios.map(v => (
+                    <label key={v.id} className={`flex items-center gap-2 px-3 py-1.5 cursor-pointer text-sm ${seleccionados.includes(v.id) ? 'bg-indigo-50' : 'hover:bg-slate-50'}`}>
+                      <input type="checkbox" checked={seleccionados.includes(v.id)} onChange={() => toggle(v.id)} className="w-4 h-4 accent-indigo-500" />
+                      <span className="font-mono text-xs font-bold text-slate-600">{v.numeroVoluntario}</span>
+                      <span className="text-slate-700 truncate">{v.nombre} {v.apellidos}</span>
+                    </label>
+                  ))}
+                  {voluntarios.length === 0 && <p className="px-3 py-2 text-xs text-slate-400">Cargando efectivos…</p>}
+                </div>
+                {carenciasComunes !== null && (
+                  <div className="mt-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                    <p className="text-xs font-bold text-red-700 mb-1">Carencias comunes del grupo ({carenciasComunes.length}) — nadie las ha practicado:</p>
+                    {carenciasComunes.length === 0
+                      ? <p className="text-xs text-green-600">El grupo ya ha practicado todo el catálogo.</p>
+                      : <div className="flex flex-wrap gap-1">{carenciasComunes.map(p => <span key={p.id} className="bg-white border border-red-200 rounded-full px-2 py-0.5 text-[11px]"><b className="font-mono text-red-600">{p.numero}</b> {p.titulo}</span>)}</div>}
+                  </div>
+                )}
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1.5">Indicaciones (opcional)</label>
