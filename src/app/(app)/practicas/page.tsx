@@ -104,6 +104,9 @@ export default function PracticasPage() {
   const [showFirmaJefe, setShowFirmaJefe] = useState(false)
   const [subiendoImagen, setSubiendoImagen] = useState(false)
   const [registroParaFirma, setRegistroParaFirma] = useState<RegistroPractica | null>(null)
+  const [firmaVB, setFirmaVB] = useState<string>('')
+  const [nombreVB, setNombreVB] = useState<string>('')
+  const [firmandoVB, setFirmandoVB] = useState(false)
   const [practicaEditando, setPracticaEditando] = useState<Practica | null>(null)
   const [familiasDinamicas, setFamiliasDinamicas] = useState<FamiliaPractica[]>([])
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null)
@@ -248,6 +251,34 @@ export default function PracticasPage() {
     const dataRegs = await resRegs.json()
     setRegistros(dataRegs.registros || [])
     alert('Registro guardado correctamente')
+  }
+
+  const handleFirmarVB = async () => {
+    if (!registroParaFirma) return
+    if (!firmaVB) { alert('La firma del jefe es obligatoria'); return }
+    setFirmandoVB(true)
+    const res = await fetch('/api/practicas/registros', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: registroParaFirma.id,
+        firmaJefe: getFirmaImagen(firmaVB),
+        firmadoJefeNombre: nombreVB || (session?.user as any)?.name || null,
+      })
+    })
+    setFirmandoVB(false)
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      alert('Error al firmar: ' + (err.error || res.status))
+      return
+    }
+    setRegistroParaFirma(null)
+    setFirmaVB('')
+    setNombreVB('')
+    const resRegs = await fetch('/api/practicas/registros')
+    const dataRegs = await resRegs.json()
+    setRegistros(dataRegs.registros || [])
+    alert('Práctica firmada correctamente')
   }
 
 
@@ -1291,6 +1322,35 @@ export default function PracticasPage() {
                 </div>
               )}
             </form>
+          </div>
+        </div>
+      )}
+      {registroParaFirma && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[1100] p-4" onClick={() => setRegistroParaFirma(null)}>
+          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-5 border-b" style={{background: 'linear-gradient(135deg, #ea580c, #c2410c)'}}>
+              <div className="flex items-center gap-2"><CheckCircle2 size={18} className="text-white" /><h3 className="font-black text-white text-base">Visto bueno del Jefe de Servicio</h3></div>
+              <button onClick={() => setRegistroParaFirma(null)}><X size={18} className="text-white/80 hover:text-white" /></button>
+            </div>
+            <div className="p-5 space-y-4">
+              <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm">
+                <p className="font-bold text-slate-800">{registroParaFirma.practica?.numero} — {registroParaFirma.practica?.titulo}</p>
+                <p className="text-xs text-slate-500 mt-0.5">{registroParaFirma.participantes.length} participante/s · Resp: {registroParaFirma.responsable ? `${registroParaFirma.responsable.nombre} ${registroParaFirma.responsable.apellidos}` : '—'}</p>
+              </div>
+              <div>
+                <label className={labelCls}>Nombre del jefe de servicio</label>
+                <input value={nombreVB} onChange={e => setNombreVB(e.target.value)} placeholder="Nombre completo" className={inputCls} />
+              </div>
+              <div>
+                <div className="flex items-center justify-between mb-2"><label className={labelCls}>Firma (VB) *</label><button type="button" onClick={() => limpiarFirma('firmaVBCanvas', setFirmaVB)} className="text-xs text-red-500 hover:underline font-medium">Limpiar</button></div>
+                <div className="border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50 overflow-hidden"><canvas id="firmaVBCanvas" width={560} height={160} className="w-full touch-none cursor-crosshair" ref={el => { if (el) iniciarFirma('firmaVBCanvas', setFirmaVB) }} /></div>
+                {firmaVB && <p className="text-xs text-green-600 mt-1 flex items-center gap-1 font-medium"><CheckCircle2 size={12} />Firma capturada</p>}
+              </div>
+              <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                <button onClick={() => setRegistroParaFirma(null)} className="px-4 py-2.5 border-2 border-slate-200 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-50">Cancelar</button>
+                <button onClick={handleFirmarVB} disabled={firmandoVB || !firmaVB} className={`px-8 py-2.5 text-sm font-black rounded-xl transition-all ${firmaVB ? 'bg-orange-500 text-white hover:bg-orange-600 shadow-lg' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}>{firmandoVB ? 'Firmando...' : 'Firmar VB'}</button>
+              </div>
+            </div>
           </div>
         </div>
       )}
