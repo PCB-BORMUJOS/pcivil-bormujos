@@ -3141,14 +3141,15 @@ export default function AdministracionPage() {
               {carenciasPracticas.length === 0 ? (
                 <p className="text-xs text-green-600 font-medium">Sin carencias: ha realizado todas las prácticas del catálogo.</p>
               ) : (
-                <div className="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto">
+                <ul className="divide-y divide-red-100 max-h-56 overflow-y-auto border border-red-100 rounded-lg bg-white">
                   {carenciasPracticas.map((p: any) => (
-                    <span key={p.id} className="inline-flex items-center gap-1 bg-white border border-red-200 rounded-full px-2.5 py-1 text-xs">
-                      <span className="font-mono font-bold text-red-600">{p.numero}</span>
-                      <span className="text-slate-600 truncate max-w-[180px]">{p.titulo}</span>
-                    </span>
+                    <li key={p.id} className="flex items-center gap-3 px-3 py-2 text-sm">
+                      <span className="font-mono text-xs font-bold text-red-600 w-16 flex-shrink-0">{p.numero}</span>
+                      <span className="text-slate-700 flex-1 min-w-0">{p.titulo}</span>
+                      {p.familia && <span className="text-[10px] text-slate-400 uppercase flex-shrink-0">{p.familia}</span>}
+                    </li>
                   ))}
-                </div>
+                </ul>
               )}
             </div>
 

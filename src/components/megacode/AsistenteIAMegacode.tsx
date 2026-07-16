@@ -176,7 +176,14 @@ export default function AsistenteIAMegacode({ onGuardado }: { onGuardado: () => 
                     <p className="text-xs font-bold text-red-700 mb-1">Carencias comunes del grupo ({carenciasComunes.length}) — nadie las ha practicado:</p>
                     {carenciasComunes.length === 0
                       ? <p className="text-xs text-green-600">El grupo ya ha practicado todo el catálogo.</p>
-                      : <div className="flex flex-wrap gap-1">{carenciasComunes.map(p => <span key={p.id} className="bg-white border border-red-200 rounded-full px-2 py-0.5 text-[11px]"><b className="font-mono text-red-600">{p.numero}</b> {p.titulo}</span>)}</div>}
+                      : <ul className="divide-y divide-red-100 border border-red-100 rounded-lg bg-white max-h-40 overflow-y-auto">
+                          {carenciasComunes.map(p => (
+                            <li key={p.id} className="flex items-center gap-2 px-2.5 py-1.5 text-[11px]">
+                              <span className="font-mono font-bold text-red-600 w-14 flex-shrink-0">{p.numero}</span>
+                              <span className="text-slate-700 flex-1 min-w-0">{p.titulo}</span>
+                            </li>
+                          ))}
+                        </ul>}
                   </div>
                 )}
               </div>
