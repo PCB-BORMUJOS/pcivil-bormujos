@@ -3114,7 +3114,7 @@ export default function AdministracionPage() {
                         </div>
                         <div className="flex items-center gap-2 text-xs text-slate-400 mt-0.5">
                           <span>{new Date(r.fecha).toLocaleDateString('es-ES', { timeZone: 'Europe/Madrid' })}</span>
-                          <span>· {r.turno === 'mañana' ? 'Mañana' : r.turno === 'tarde' ? 'Tarde' : 'Noche'}</span>
+                          <span>· {(r.turno === 'manana' || r.turno === 'mañana') ? 'Mañana' : r.turno === 'tarde' ? 'Tarde' : 'Noche'}</span>
                           {r.duracionReal && <span>· {r.duracionReal} min</span>}
                         </div>
                       </div>

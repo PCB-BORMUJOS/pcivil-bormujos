@@ -212,7 +212,7 @@ export default function PracticasPage() {
     if (!firmaResp) { alert('La firma del responsable es obligatoria'); return }
     setSaving(true)
     const userId = (session?.user as any)?.id
-    await fetch('/api/practicas/registros', {
+    const res = await fetch('/api/practicas/registros', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -231,6 +231,12 @@ export default function PracticasPage() {
         firmadoJefeNombre: f.get('firmadoJefeNombre') || null,
       })
     })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      setSaving(false)
+      alert('Error al guardar el registro: ' + (err.error || res.status))
+      return
+    }
     setSaving(false)
     setShowRegistro(false)
     setPracticaParaRegistro(null)
@@ -1231,8 +1237,7 @@ export default function PracticasPage() {
             </div>
             <form onSubmit={handleGuardarRegistro} className="p-6 space-y-5">
               <div className="flex gap-3 mb-2">{[1,2,3].map(paso => <div key={paso} className={`flex-1 h-1.5 rounded-full transition-colors ${pasoRegistro >= paso ? 'bg-orange-500' : 'bg-slate-200'}`} />)}</div>
-              {pasoRegistro === 1 && (
-                <div className="space-y-4">
+              <div className={pasoRegistro === 1 ? 'space-y-4' : 'hidden'}>
                   <p className="text-xs font-black text-slate-500 uppercase tracking-widest">Paso 1 — Datos de la realización</p>
                   <div className="grid grid-cols-2 gap-4">
                     <div><label className={labelCls}>Turno *</label><select name="turno" required className={inputCls}><option value="manana">Mañana</option><option value="tarde">Tarde</option><option value="noche">Noche</option></select></div>
@@ -1242,8 +1247,7 @@ export default function PracticasPage() {
                   <div><label className={labelCls}>Resultado</label><select name="resultado" className={inputCls}><option value="completado">Completado</option><option value="parcial">Parcial</option><option value="pendiente_jefe">Pendiente VB Jefe</option></select></div>
                   <div><label className={labelCls}>Observaciones</label><textarea name="observaciones" rows={3} placeholder="Observaciones..." className={inputCls} /></div>
                   <div className="flex justify-end"><button type="button" onClick={() => setPasoRegistro(2)} className="px-6 py-2.5 bg-orange-500 text-white text-sm font-black rounded-xl hover:bg-orange-600">Siguiente → Participantes</button></div>
-                </div>
-              )}
+              </div>
               {pasoRegistro === 2 && (
                 <div className="space-y-4">
                   <p className="text-xs font-black text-slate-500 uppercase tracking-widest">Paso 2 — Participantes</p>
