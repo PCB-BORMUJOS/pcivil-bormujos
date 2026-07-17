@@ -419,15 +419,19 @@ export default function LogisticaPage() {
   };
 
   // ---- Gestión Familias (Familias = CategoriaInventario hija, Subfamilias = FamiliaArticulo) ----
+  // Categoría (área) actualmente seleccionada, p.ej. formación, vestuario…
+  const getAreaActualCat = () =>
+    categorias.find(c => c.slug === inventarioActual) || areas.find(a => a.slug === inventarioActual);
+
   const handleCrearFamiliaCat = async () => {
     if (!nuevaFamiliaCatText.trim()) { alert('El nombre es requerido'); return; }
-    const catVestuario = categorias.find(c => c.slug === 'vestuario') || areas.find(a => a.slug === 'vestuario');
-    if (!catVestuario) { alert('No se encontró la categoría vestuario'); return; }
+    const areaCat = getAreaActualCat();
+    if (!areaCat) { alert('Selecciona primero un área concreta'); return; }
     try {
       const res = await fetch('/api/logistica', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tipo: 'familia-cat', nombre: nuevaFamiliaCatText.trim(), padreId: catVestuario.id })
+        body: JSON.stringify({ tipo: 'familia-cat', nombre: nuevaFamiliaCatText.trim(), padreId: areaCat.id })
       });
       const data = await res.json();
       if (data.success || data.categoria) { setNuevaFamiliaCatText(''); cargarDatos(); }
@@ -451,9 +455,8 @@ export default function LogisticaPage() {
         if (data.success) { setFamiliaEditando(null); cargarDatos(); }
         else alert('Error: ' + (data.error || 'No se pudo actualizar'));
       } else {
-        // Subfamilia: usar la familia (subcategoría) seleccionada, o vestuario como fallback
-        const catVestuario = categorias.find(c => c.slug === 'vestuario') || areas.find(a => a.slug === 'vestuario');
-        const categoriaId = subfamiliaParentId || catVestuario?.id;
+        // Subfamilia: usar la familia (subcategoría) seleccionada, o el área actual como fallback
+        const categoriaId = subfamiliaParentId || getAreaActualCat()?.id;
         if (!categoriaId) { alert('Selecciona una familia o crea una primero'); return; }
         const res = await fetch('/api/logistica', {
           method: 'POST',
@@ -913,8 +916,8 @@ export default function LogisticaPage() {
             ))}
           </div>
           <div className="flex items-center gap-2">
-            {inventarioActual === 'vestuario' && (
-              <button onClick={() => setShowGestionFamilias(true)} className="flex items-center gap-2 px-3 py-2 text-sm bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 font-medium">
+            {inventarioActual !== 'all' && (
+              <button onClick={() => setShowGestionFamilias(true)} className="flex items-center gap-2 px-3 py-2 text-sm rounded-lg font-medium text-white hover:opacity-90" style={{ backgroundColor: COLORES_AREA[inventarioActual] || '#8b5cf6' }}>
                 <Tag size={16} />
                 Familias
               </button>
@@ -1241,11 +1244,32 @@ export default function LogisticaPage() {
               <input type="text" value={nuevoArticulo.nombre} onChange={e => setNuevoArticulo({ ...nuevoArticulo, nombre: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm" />
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Familia *</label>
-              <select value={nuevoArticulo.familiaId} onChange={e => setNuevoArticulo({ ...nuevoArticulo, familiaId: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm">
-                <option value="">Seleccionar...</option>
-                {familias.map(f => <option key={f.id} value={f.id}>{f.categoria.nombre} → {f.nombre}</option>)}
-              </select>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-bold text-slate-500 uppercase">Familia *</label>
+                {inventarioActual !== 'all' && (
+                  <button type="button" onClick={() => setShowGestionFamilias(true)} className="flex items-center gap-1 text-xs font-bold hover:underline" style={{ color: COLORES_AREA[inventarioActual] || '#8b5cf6' }}>
+                    <Tag size={12} /> Gestionar familias
+                  </button>
+                )}
+              </div>
+              {(() => {
+                const areaCat = categorias.find(c => c.slug === inventarioActual) || areas.find(a => a.slug === inventarioActual);
+                const familiasArea = inventarioActual === 'all' ? familias : familias.filter(f => {
+                  const catPadreId = categorias.find(c => c.id === f.categoria?.id)?.padreId;
+                  return catPadreId === areaCat?.id || f.categoria?.id === areaCat?.id;
+                });
+                return (
+                  <>
+                    <select value={nuevoArticulo.familiaId} onChange={e => setNuevoArticulo({ ...nuevoArticulo, familiaId: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm">
+                      <option value="">Seleccionar...</option>
+                      {familiasArea.map(f => <option key={f.id} value={f.id}>{f.categoria.nombre} → {f.nombre}</option>)}
+                    </select>
+                    {familiasArea.length === 0 && inventarioActual !== 'all' && (
+                      <p className="text-xs text-amber-600 mt-1">No hay familias en {AREAS_NOMBRE[inventarioActual] || 'esta área'}. Pulsa «Gestionar familias» para crear una.</p>
+                    )}
+                  </>
+                );
+              })()}
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -1289,7 +1313,7 @@ export default function LogisticaPage() {
             )}
             <div className="flex gap-3 pt-4">
               <button onClick={() => setShowNuevoArticulo(false)} className="flex-1 py-2.5 border border-slate-300 text-slate-700 rounded-lg font-medium hover:bg-slate-50">Cancelar</button>
-              <button onClick={handleGuardarArticulo} className="flex-1 py-2.5 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700">Guardar</button>
+              <button onClick={handleGuardarArticulo} className="flex-1 py-2.5 text-white rounded-lg font-medium hover:opacity-90" style={{ backgroundColor: COLORES_AREA[inventarioActual] || '#8b5cf6' }}>Guardar</button>
             </div>
           </div>
         </Modal>
@@ -1398,22 +1422,23 @@ export default function LogisticaPage() {
         </Modal>
       )}
 
-      {/* Modal: Gestión de Familias / Subfamilias - Vestuario */}
+      {/* Modal: Gestión de Familias / Subfamilias del área actual */}
       {showGestionFamilias && (() => {
-        const vestuarioCat = categorias.find(c => c.slug === 'vestuario') || areas.find(a => a.slug === 'vestuario');
-        const familiasVestuario = categorias.filter(c => c.padreId === vestuarioCat?.id);
+        const areaCat = categorias.find(c => c.slug === inventarioActual) || areas.find(a => a.slug === inventarioActual);
+        const familiasVestuario = categorias.filter(c => c.padreId === areaCat?.id);
         const subfamiliasVestuario = familias.filter(f => {
           const catPadreId = categorias.find(c => c.id === f.categoria?.id)?.padreId;
-          return catPadreId === vestuarioCat?.id || f.categoria?.id === vestuarioCat?.id;
+          return catPadreId === areaCat?.id || f.categoria?.id === areaCat?.id;
         });
+        const accent = COLORES_AREA[inventarioActual] || '#8b5cf6';
         return (
-          <Modal title="Vestuario — Familias y Subfamilias" onClose={() => { setShowGestionFamilias(false); setFamiliaEditando(null); setNuevaFamiliaText(''); setNuevaFamiliaCatText(''); setGestionTab('familias'); }} size="lg">
+          <Modal title={`${AREAS_NOMBRE[inventarioActual] || 'Área'} — Familias y Subfamilias`} onClose={() => { setShowGestionFamilias(false); setFamiliaEditando(null); setNuevaFamiliaText(''); setNuevaFamiliaCatText(''); setGestionTab('familias'); }} size="lg">
             {/* Tabs */}
             <div className="flex border-b border-slate-200 mb-4">
-              <button onClick={() => setGestionTab('familias')} className={`px-5 py-2.5 text-sm font-medium border-b-2 transition-colors ${gestionTab === 'familias' ? 'border-purple-500 text-purple-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
+              <button onClick={() => setGestionTab('familias')} className="px-5 py-2.5 text-sm font-medium border-b-2 transition-colors" style={gestionTab === 'familias' ? { borderColor: accent, color: accent } : { borderColor: 'transparent', color: '#64748b' }}>
                 Familias ({familiasVestuario.length})
               </button>
-              <button onClick={() => setGestionTab('subfamilias')} className={`px-5 py-2.5 text-sm font-medium border-b-2 transition-colors ${gestionTab === 'subfamilias' ? 'border-purple-500 text-purple-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
+              <button onClick={() => setGestionTab('subfamilias')} className="px-5 py-2.5 text-sm font-medium border-b-2 transition-colors" style={gestionTab === 'subfamilias' ? { borderColor: accent, color: accent } : { borderColor: 'transparent', color: '#64748b' }}>
                 Subfamilias ({subfamiliasVestuario.length})
               </button>
             </div>
@@ -1430,7 +1455,7 @@ export default function LogisticaPage() {
                     className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm"
                     onKeyDown={e => e.key === 'Enter' && handleCrearFamiliaCat()}
                   />
-                  <button onClick={handleCrearFamiliaCat} className="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700">Añadir</button>
+                  <button onClick={handleCrearFamiliaCat} className="px-4 py-2 text-white rounded-lg text-sm font-medium hover:opacity-90" style={{ backgroundColor: accent }}>Añadir</button>
                 </div>
                 <div className="space-y-2 max-h-72 overflow-y-auto">
                   {familiasVestuario.length === 0 ? (
@@ -1465,13 +1490,13 @@ export default function LogisticaPage() {
                     {familiaEditando ? (
                       <>
                         <input type="text" value={familiaEditando.nombre} onChange={e => setFamiliaEditando({ ...familiaEditando, nombre: e.target.value })} className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm" />
-                        <button onClick={handleGuardarFamilia} className="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700">Actualizar</button>
+                        <button onClick={handleGuardarFamilia} className="px-4 py-2 text-white rounded-lg text-sm font-medium hover:opacity-90" style={{ backgroundColor: accent }}>Actualizar</button>
                         <button onClick={() => { setFamiliaEditando(null); setNuevaFamiliaText(''); }} className="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-300">Cancelar</button>
                       </>
                     ) : (
                       <>
                         <input type="text" value={nuevaFamiliaText} onChange={e => setNuevaFamiliaText(e.target.value)} placeholder="Nombre de la subfamilia..." className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm" onKeyDown={e => e.key === 'Enter' && handleGuardarFamilia()} />
-                        <button onClick={handleGuardarFamilia} className="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700">Añadir</button>
+                        <button onClick={handleGuardarFamilia} className="px-4 py-2 text-white rounded-lg text-sm font-medium hover:opacity-90" style={{ backgroundColor: accent }}>Añadir</button>
                       </>
                     )}
                   </div>
