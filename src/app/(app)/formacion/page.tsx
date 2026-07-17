@@ -316,6 +316,12 @@ export default function FormacionPage() {
   // Modales de Inventario
   const [showNuevoArticulo, setShowNuevoArticulo] = useState(false);
   const [showNuevaPeticion, setShowNuevaPeticion] = useState(false);
+  // Gestión de familias del inventario de formación
+  const [categoriaIdFormacion, setCategoriaIdFormacion] = useState('');
+  const [showGestionFamilias, setShowGestionFamilias] = useState(false);
+  const [nuevaFamiliaNombre, setNuevaFamiliaNombre] = useState('');
+  const [familiaEditando, setFamiliaEditando] = useState<{ id: string; nombre: string } | null>(null);
+  const [guardandoFamilia, setGuardandoFamilia] = useState(false);
 
   // Formularios
   const [nuevoArticulo, setNuevoArticulo] = useState({
@@ -657,7 +663,48 @@ export default function FormacionPage() {
       const data = await res.json();
       setArticulos(data.articulos || []);
       setFamilias(data.familias || []);
+      if (data.categoriaId) setCategoriaIdFormacion(data.categoriaId);
     } catch (error) { console.error("Error en operación:", error) }
+  };
+
+  // ---- Gestión de familias del inventario de formación ----
+  const handleCrearFamilia = async () => {
+    if (!nuevaFamiliaNombre.trim()) { alert('El nombre es requerido'); return; }
+    if (!categoriaIdFormacion) { alert('No se encontró la categoría de formación'); return; }
+    setGuardandoFamilia(true);
+    try {
+      const res = await fetch('/api/logistica', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tipo: 'familia', nombre: nuevaFamiliaNombre.trim(), categoriaId: categoriaIdFormacion })
+      });
+      const data = await res.json();
+      if (data.success || data.familia) { setNuevaFamiliaNombre(''); cargarInventario(); }
+      else alert('Error: ' + (data.error || 'No se pudo crear'));
+    } catch { alert('Error al crear familia'); } finally { setGuardandoFamilia(false); }
+  };
+
+  const handleGuardarFamiliaEdit = async () => {
+    if (!familiaEditando || !familiaEditando.nombre.trim()) { alert('El nombre es requerido'); return; }
+    setGuardandoFamilia(true);
+    try {
+      const res = await fetch('/api/logistica', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tipo: 'familia', id: familiaEditando.id, nombre: familiaEditando.nombre.trim(), categoriaId: categoriaIdFormacion })
+      });
+      const data = await res.json();
+      if (data.success) { setFamiliaEditando(null); cargarInventario(); }
+      else alert('Error: ' + (data.error || 'No se pudo actualizar'));
+    } catch { alert('Error al actualizar familia'); } finally { setGuardandoFamilia(false); }
+  };
+
+  const handleEliminarFamilia = async (id: string, nombre: string) => {
+    if (!confirm(`¿Eliminar la familia "${nombre}"? Solo se puede si no tiene artículos.`)) return;
+    try {
+      const res = await fetch(`/api/logistica?tipo=familia&id=${id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success) cargarInventario();
+      else alert('Error: ' + (data.error || 'No se pudo eliminar. Puede que tenga artículos asociados.'));
+    } catch { alert('Error al eliminar familia'); }
   };
 
   const cargarPeticiones = async () => {
@@ -1336,6 +1383,9 @@ export default function FormacionPage() {
                         <option key={fam.id} value={fam.id}>{fam.nombre}</option>
                       ))}
                     </select>
+                    <button onClick={() => setShowGestionFamilias(true)} className="flex items-center gap-2 px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm font-medium whitespace-nowrap">
+                      <Tag size={16} /> Familias
+                    </button>
                   </div>
 
                   {loading && !articulos.length ? (
@@ -2114,11 +2164,19 @@ export default function FormacionPage() {
                 <input type="text" className="w-full border rounded-lg p-2" value={nuevoArticulo.codigo} onChange={e => setNuevoArticulo({ ...nuevoArticulo, codigo: e.target.value })} placeholder="Ej. MAT-FORM-001" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Familia/Categoría <span className="text-red-500">*</span></label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-sm font-medium text-slate-700">Familia/Categoría <span className="text-red-500">*</span></label>
+                  <button type="button" onClick={() => setShowGestionFamilias(true)} className="flex items-center gap-1 text-xs font-bold text-purple-600 hover:underline">
+                    <Tag size={12} /> Gestionar familias
+                  </button>
+                </div>
                 <select className="w-full border rounded-lg p-2" value={nuevoArticulo.familiaId} onChange={e => setNuevoArticulo({ ...nuevoArticulo, familiaId: e.target.value })}>
                   <option value="">Seleccionar familia...</option>
                   {familias.map(f => <option key={f.id} value={f.id}>{f.nombre}</option>)}
                 </select>
+                {familias.length === 0 && (
+                  <p className="text-xs text-amber-600 mt-1">No hay familias en Formación. Pulsa «Gestionar familias» para crear una.</p>
+                )}
               </div>
             </div>
 
@@ -2159,7 +2217,60 @@ export default function FormacionPage() {
 
             <div className="flex justify-end gap-2 pt-4 bg-slate-50 -mx-6 -mb-6 p-4 mt-4 border-t">
               <button onClick={() => setShowNuevoArticulo(false)} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg font-medium">Cancelar</button>
-              <button onClick={handleGuardarArticulo} className="px-6 py-2 bg-yellow-500 text-black rounded-lg hover:bg-yellow-400 font-medium text-sm flex-shrink-0 text-white rounded-lg hover:bg-purple-700 shadow-sm font-medium">Crear Artículo</button>
+              <button onClick={handleGuardarArticulo} className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 shadow-sm font-medium text-sm">Crear Artículo</button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {showGestionFamilias && (
+        <Modal title="Formación — Familias del inventario" onClose={() => { setShowGestionFamilias(false); setFamiliaEditando(null); setNuevaFamiliaNombre(''); }} size="lg">
+          <div className="space-y-4">
+            <p className="text-xs text-slate-500">Las familias agrupan el material de formación (ej: Manuales, Material didáctico, Maniquíes).</p>
+            <div className="bg-slate-50 rounded-xl p-4 flex gap-2">
+              <input
+                type="text"
+                value={nuevaFamiliaNombre}
+                onChange={e => setNuevaFamiliaNombre(e.target.value)}
+                placeholder="Nombre de la nueva familia..."
+                className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm"
+                onKeyDown={e => e.key === 'Enter' && handleCrearFamilia()}
+              />
+              <button onClick={handleCrearFamilia} disabled={guardandoFamilia} className="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 disabled:opacity-50">Añadir</button>
+            </div>
+            <div className="space-y-2 max-h-80 overflow-y-auto">
+              {familias.length === 0 ? (
+                <p className="text-center py-8 text-slate-400 text-sm">No hay familias creadas todavía</p>
+              ) : familias.map((fam: any) => (
+                <div key={fam.id} className="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-lg">
+                  {familiaEditando && familiaEditando.id === fam.id ? (
+                    <>
+                      <input
+                        type="text"
+                        value={familiaEditando.nombre}
+                        onChange={e => setFamiliaEditando({ ...familiaEditando, nombre: e.target.value })}
+                        className="flex-1 border border-slate-200 rounded-lg px-3 py-1.5 text-sm mr-2"
+                        onKeyDown={e => e.key === 'Enter' && handleGuardarFamiliaEdit()}
+                      />
+                      <div className="flex items-center gap-2">
+                        <button onClick={handleGuardarFamiliaEdit} disabled={guardandoFamilia} className="px-3 py-1.5 bg-purple-600 text-white rounded-lg text-xs font-medium hover:bg-purple-700 disabled:opacity-50">Guardar</button>
+                        <button onClick={() => setFamiliaEditando(null)} className="px-3 py-1.5 bg-slate-200 text-slate-700 rounded-lg text-xs font-medium hover:bg-slate-300">Cancelar</button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div>
+                        <p className="font-medium text-slate-800">{fam.nombre}</p>
+                        <p className="text-xs text-slate-400">{fam._count?.articulos ?? 0} artículo(s)</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button onClick={() => setFamiliaEditando({ id: fam.id, nombre: fam.nombre })} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg"><Edit size={14} /></button>
+                        <button onClick={() => handleEliminarFamilia(fam.id, fam.nombre)} className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg"><Trash2 size={14} /></button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              ))}
             </div>
           </div>
         </Modal>
