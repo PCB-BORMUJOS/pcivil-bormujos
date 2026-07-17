@@ -244,6 +244,9 @@ export default function LogisticaPage() {
   const [soloAlertas, setSoloAlertas] = useState(false);
   const [paginaActual, setPaginaActual] = useState(1);
   const [filtroPeticiones, setFiltroPeticiones] = useState('all');
+  // Filtros de la pestaña de asignaciones (vestuario)
+  const [busquedaAsig, setBusquedaAsig] = useState('');
+  const [indicativoFiltro, setIndicativoFiltro] = useState('all');
 
   // Datos
   const [articulos, setArticulos] = useState<Articulo[]>([]);
@@ -1092,27 +1095,69 @@ export default function LogisticaPage() {
                   Asignar Vestuario
                 </button>
               </div>
-              <div className="mb-4">
-                <input
-                  type="text"
-                  placeholder="Filtrar por voluntario o prenda..."
-                  onChange={e => {
-                    const term = e.target.value.toLowerCase();
-                    if (!term) { cargarAsignaciones(); return; }
-                  }}
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"
-                  id="filtro-asignaciones"
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Ver material de un indicativo</label>
+                  <select
+                    value={indicativoFiltro}
+                    onChange={e => setIndicativoFiltro(e.target.value)}
+                    className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"
+                  >
+                    <option value="all">Todos los indicativos</option>
+                    {[...usuarios]
+                      .sort((a, b) => (a.numeroVoluntario || '').localeCompare(b.numeroVoluntario || ''))
+                      .map(u => (
+                        <option key={u.id} value={u.id}>
+                          {u.numeroVoluntario ? `${u.numeroVoluntario} — ` : ''}{u.nombre} {u.apellidos}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Buscar</label>
+                  <input
+                    type="text"
+                    value={busquedaAsig}
+                    onChange={e => setBusquedaAsig(e.target.value)}
+                    placeholder="Filtrar por voluntario, indicativo o prenda..."
+                    className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"
+                  />
+                </div>
               </div>
 
-              {asignaciones.length === 0 ? (
+              {(() => {
+                const term = busquedaAsig.trim().toLowerCase();
+                const asignacionesFiltradas = asignaciones.filter((asig: any) => {
+                  if (indicativoFiltro !== 'all' && asig.usuario?.id !== indicativoFiltro) return false;
+                  if (!term) return true;
+                  const u = asig.usuario || {};
+                  return [u.nombre, u.apellidos, u.numeroVoluntario, asig.tipoPrenda, asig.talla, asig.observaciones]
+                    .filter(Boolean)
+                    .some((v: string) => String(v).toLowerCase().includes(term));
+                });
+                const usuarioSel = indicativoFiltro !== 'all' ? usuarios.find(u => u.id === indicativoFiltro) : null;
+                const totalPrendas = asignacionesFiltradas
+                  .filter((a: any) => String(a.estado).toLowerCase() === 'asignado')
+                  .reduce((acc: number, a: any) => acc + (a.cantidad || 0), 0);
+                return (
+              <>
+              {usuarioSel && (
+                <div className="mb-3 flex items-center justify-between bg-purple-50 border border-purple-200 rounded-xl px-4 py-2.5">
+                  <p className="text-sm text-purple-800">
+                    <span className="font-bold">{usuarioSel.numeroVoluntario}</span> · {usuarioSel.nombre} {usuarioSel.apellidos} —
+                    <span className="font-bold"> {asignacionesFiltradas.length}</span> asignación(es), <span className="font-bold">{totalPrendas}</span> prenda(s) en vigor
+                  </p>
+                  <button onClick={() => setIndicativoFiltro('all')} className="text-xs font-bold text-purple-600 hover:underline">Quitar filtro</button>
+                </div>
+              )}
+              {asignacionesFiltradas.length === 0 ? (
                 <div className="text-center py-12 text-slate-500">
                   <Users className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                  <p>No hay asignaciones registradas</p>
+                  <p>{asignaciones.length === 0 ? 'No hay asignaciones registradas' : 'Ningún resultado para el filtro'}</p>
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {asignaciones.map((asig: any) => (
+                  {asignacionesFiltradas.map((asig: any) => (
                     <div key={asig.id} className="flex items-center gap-4 p-4 bg-white border border-slate-200 rounded-xl hover:shadow-sm transition-shadow">
                       <div className="w-12 h-12 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center font-bold text-lg">
                         {asig.usuario.nombre?.charAt(0)}{asig.usuario.apellidos?.charAt(0)}
@@ -1159,6 +1204,9 @@ export default function LogisticaPage() {
                   ))}
                 </div>
               )}
+              </>
+              );
+              })()}
             </>
           )}
         </div>
