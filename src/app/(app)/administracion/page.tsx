@@ -454,14 +454,14 @@ export default function AdministracionPage() {
           case 'nombre': return v.nombre || '';
           case 'apellidos': return v.apellidos || '';
           case 'dniNie': return f?.dniNie || '';
-          case 'fechaNacimiento': return f?.fechaNacimiento ? new Date(f.fechaNacimiento).toLocaleDateString('es-ES') : '';
+          case 'fechaNacimiento': return f?.fechaNacimiento ? new Date(f.fechaNacimiento).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '';
           case 'email': return v.email || '';
           case 'telefono': return (v as any).telefono || '';
           case 'telefonoFijo': return f?.telefonoFijo || '';
           case 'rol': return (v as any).rol?.nombre || '';
           case 'areaAsignada': return f?.areaAsignada || '';
           case 'categoria': return f?.categoria || '';
-          case 'fechaAlta': return f?.fechaAlta ? new Date(f.fechaAlta).toLocaleDateString('es-ES') : '';
+          case 'fechaAlta': return f?.fechaAlta ? new Date(f.fechaAlta).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '';
           case 'estado': return (v as any).activo ? 'Activo' : 'Baja';
           case 'direccion': return f ? [f.domicilio, f.numero].filter(Boolean).join(' ') : '';
           case 'localidad': return f?.localidad || '';
