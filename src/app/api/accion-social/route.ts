@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
     if (tipo === 'directorio') {
       const categoria = searchParams.get('categoria')
       const contactos = await prisma.contactoDirectorio.findMany({
-        where: { activo: true, ambito: 'accion_social', ...(categoria && categoria !== 'all' ? { categoria } : {}) },
+        where: { activo: true, ambitos: { has: 'accion_social' }, ...(categoria && categoria !== 'all' ? { categoria } : {}) },
         orderBy: { nombre: 'asc' }
       })
       return NextResponse.json({ contactos })
@@ -118,7 +118,7 @@ export async function GET(request: NextRequest) {
       const [espacios, centros, contactos, casosActivos] = await Promise.all([
         prisma.espacioAcogida.count({ where: { estado: 'activo' } }),
         prisma.centroEmergencia.count({ where: { activo: true } }),
-        prisma.contactoDirectorio.count({ where: { activo: true } }),
+        prisma.contactoDirectorio.count({ where: { activo: true, ambitos: { has: 'accion_social' } } }),
         prisma.casoViogen.count({ where: { estado: 'activo' } })
       ])
       const plazasTotal = await prisma.espacioAcogida.aggregate({
@@ -178,7 +178,7 @@ export async function POST(request: NextRequest) {
           cargo: body.cargo || null, telefono: body.telefono,
           telefonoAlt: body.telefonoAlt || null, email: body.email || null,
           disponibilidad: body.disponibilidad || null, notas: body.notas || null,
-          ambito: 'accion_social'
+          ambito: 'accion_social', ambitos: ['accion_social']
         }
       })
       return NextResponse.json({ contacto })

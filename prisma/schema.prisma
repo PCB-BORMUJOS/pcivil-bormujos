@@ -1557,7 +1557,8 @@ model ContactoDirectorio {
   extension3cx   String?  @map("extension_3cx")
   disponibilidad String?  // 24h, horario_oficina, guardia
   notas          String?
-  ambito         String   @default("accion_social") // "accion_social" | "cecopal"
+  ambito         String   @default("accion_social") // legacy: se mantiene por compatibilidad
+  ambitos        String[] @default([]) // ["accion_social", "cecopal"] — un contacto puede estar en varios
   activo         Boolean  @default(true)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
