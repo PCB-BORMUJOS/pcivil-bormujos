@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
     ] = await Promise.all([
       prisma.usuario.findMany({
         include: {
-          fichaVoluntario: { select: { areaAsignada: true, areaSecundaria: true, fechaAlta: true, kmDesplazamiento: true, categoria: true } },
+          fichaVoluntario: { select: { indicativo2: true, areaAsignada: true, areaSecundaria: true, fechaAlta: true, kmDesplazamiento: true, categoria: true } },
           rol: { select: { nombre: true } },
         },
         orderBy: [{ numeroVoluntario: "asc" }]
@@ -134,7 +134,7 @@ export async function GET(request: NextRequest) {
     // ── Recordatorios de disponibilidad por voluntario ──────────────────────────
     const recordatoriosRaw = await prisma.auditLog.groupBy({
       by: ['usuarioId'],
-      where: { accion: 'RECORDATORIO', entidad: 'Disponibilidad' },
+      where: { accion: 'RECORDATORIO', entidad: 'Disponibilidad', createdAt: { gte: fechaInicio, lte: fechaFin } },
       _count: { id: true },
       _max: { createdAt: true },
     }).catch(() => [])
@@ -196,11 +196,24 @@ export async function GET(request: NextRequest) {
       guardiasPorRol[r] = (guardiasPorRol[r] || 0) + 1
     })
 
+    // ── Helpers de coherencia ─────────────────────────────────────────────────
+    const hoy = new Date()
+    // Solo guardias ya realizadas (fecha <= hoy): las programadas a futuro no
+    // deben contar como servicio prestado.
+    const guardiasReal = (guardias as any[]).filter(g => new Date(g.fecha) <= hoy)
+    const esManana = (g: any) => g.turno === 'mañana' || g.turno === 'manana'
+    // Duración real del turno si está registrada; si no, estimación por tipo.
+    const horasGuardia = (g: any) => g.horasTurno != null
+      ? Number(g.horasTurno)
+      : (HORAS[esManana(g) ? 'mañana' : g.turno] || 0)
+    // Meses transcurridos del periodo (para % de cumplimiento justo a mitad de año).
+    const mesesTranscurridos = year < hoy.getFullYear() ? 12 : (year > hoy.getFullYear() ? 0 : hoy.getMonth() + 1)
+
     // ── Stats por voluntario ──────────────────────────────────────────────────
     const statsVoluntarios = todosVoluntarios.map(v => {
-      const gv = (guardias as any[]).filter(g => g.usuarioId === v.id)
+      const gv = guardiasReal.filter(g => g.usuarioId === v.id)
       const dv = (dietas as any[]).filter(d => d.usuarioId === v.id)
-      const horas = gv.reduce((a: number, g: any) => a + (HORAS[g.turno] || 0), 0)
+      const horas = gv.reduce((a: number, g: any) => a + horasGuardia(g), 0)
       return {
         id: v.id,
         numeroVoluntario: v.numeroVoluntario,
@@ -211,7 +224,7 @@ export async function GET(request: NextRequest) {
         categoria: (v.fichaVoluntario as any)?.categoria || "VOLUNTARIO",
         rol: (v.rol as any)?.nombre || "voluntario",
         guardias: gv.length,
-        guardiasMañana: gv.filter(g => g.turno === "mañana").length,
+        guardiasMañana: gv.filter(esManana).length,
         guardiasTarde:  gv.filter(g => g.turno === "tarde").length,
         guardiasNoche:  gv.filter(g => g.turno === "noche").length,
         horas,
@@ -227,23 +240,27 @@ export async function GET(request: NextRequest) {
     // Turno esperado por mes: 1 mañana + 1 tarde (ajustable; usamos 2 como referencia)
     const TURNOS_ESPERADOS_MES = 2
     const turnosPorMes = todosVoluntarios
-      .filter(v => v.activo && (v.fichaVoluntario as any)?.indicativo2 !== 'B-12')
+      .filter(v => {
+        const ind = (v.fichaVoluntario as any)?.indicativo2
+        return v.activo && ind !== 'B-12' && ind !== 'J-44'
+      })
       .map(v => {
-        const gv = (guardias as any[]).filter(g => g.usuarioId === v.id)
+        const gv = guardiasReal.filter(g => g.usuarioId === v.id)
         const meses = Array.from({ length: 12 }, (_, i) => {
           const gm = gv.filter(g => new Date(g.fecha).getMonth() === i)
           const total = gm.length
           const cumple = total >= TURNOS_ESPERADOS_MES
           return {
             total,
-            manana: gm.filter(g => g.turno === 'mañana').length,
+            manana: gm.filter(esManana).length,
             tarde:  gm.filter(g => g.turno === 'tarde').length,
             noche:  gm.filter(g => g.turno === 'noche').length,
             cumple,
           }
         })
         const totalAnio = gv.length
-        const mesesCumplidos = meses.filter(m => m.cumple).length
+        // Solo se evalúan los meses ya transcurridos del periodo.
+        const mesesCumplidos = meses.slice(0, mesesTranscurridos || 12).filter(m => m.cumple).length
         return {
           id: v.id,
           numeroVoluntario: v.numeroVoluntario,
@@ -253,7 +270,7 @@ export async function GET(request: NextRequest) {
           meses,
           totalAnio,
           mesesCumplidos,
-          pctCumplimiento: Math.round((mesesCumplidos / 12) * 100),
+          pctCumplimiento: mesesTranscurridos > 0 ? Math.round((mesesCumplidos / mesesTranscurridos) * 100) : 0,
         }
       })
       .sort((a, b) => b.totalAnio - a.totalAnio)

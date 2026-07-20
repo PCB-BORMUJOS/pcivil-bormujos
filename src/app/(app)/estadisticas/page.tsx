@@ -114,7 +114,7 @@ function ChartTooltip({ active, payload, label, formatter }: any) {
   )
 }
 
-function DataTable({ heads, rows, empty='Sin datos disponibles' }: {heads:string[];rows:any[][];empty?:string}) {
+function DataTable({ heads, rows, empty='Sin datos disponibles' }: {heads:React.ReactNode[];rows:any[][];empty?:string}) {
   if (!rows.length) return (
     <div className="flex flex-col items-center justify-center py-12 text-slate-400">
       <FileText size={32} className="mb-2 opacity-30"/>
@@ -205,6 +205,38 @@ export default function EstadisticasPage() {
 
   const statsVoluntarios: any[] = data.statsVoluntarios  || []
   const turnosPorMes: any[]     = data.turnosPorMes       || []
+
+  // ── Ordenación de las tablas de personal ──────────────────────────────
+  const [sortVol, setSortVol] = useState<{ key: string; dir: 'asc' | 'desc' }>({ key: 'guardias', dir: 'desc' })
+  const [sortTurnos, setSortTurnos] = useState<{ key: string; dir: 'asc' | 'desc' }>({ key: 'totalAnio', dir: 'desc' })
+  const toggleSort = (setter: any) => (key: string) =>
+    setter((s: any) => s.key === key ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'desc' })
+  const ordenar = (arr: any[], key: string, dir: 'asc' | 'desc', val: (o: any) => any) =>
+    [...arr].sort((a, b) => {
+      const va = val(a), vb = val(b)
+      const r = typeof va === 'number' && typeof vb === 'number' ? va - vb : String(va ?? '').localeCompare(String(vb ?? ''), 'es')
+      return dir === 'asc' ? r : -r
+    })
+  const valVol = (v: any) => ({
+    numeroVoluntario: v.numeroVoluntario || '', nombre: `${v.nombre} ${v.apellidos}`.toLowerCase(),
+    area: v.area || '', categoria: v.categoria || '', guardias: v.guardias || 0, horas: v.horas || 0,
+    importeDietas: v.importeDietas || 0, km: v.km || 0, recordatorios: v.recordatorios || 0, activo: v.activo ? 1 : 0,
+  } as any)[sortVol.key]
+  const valTurno = (v: any) => ({
+    nombre: v.nombre?.toLowerCase() || '', area: v.area || '', totalAnio: v.totalAnio || 0, pctCumplimiento: v.pctCumplimiento || 0,
+  } as any)[sortTurnos.key]
+  const statsVolOrdenado = ordenar(statsVoluntarios, sortVol.key, sortVol.dir, valVol)
+  const turnosOrdenado = ordenar(turnosPorMes, sortTurnos.key, sortTurnos.dir, valTurno)
+  const thVol = (label: string, key: string) => (
+    <button onClick={() => toggleSort(setSortVol)(key)} className="inline-flex items-center gap-1 hover:text-indigo-600 transition-colors">
+      {label}<span className="text-[8px] opacity-60">{sortVol.key === key ? (sortVol.dir === 'asc' ? '▲' : '▼') : '↕'}</span>
+    </button>
+  )
+  const thTurno = (label: string, key: string) => (
+    <button onClick={() => toggleSort(setSortTurnos)(key)} className="inline-flex items-center gap-1 hover:text-indigo-600 transition-colors">
+      {label}<span className="text-[8px] opacity-60">{sortTurnos.key === key ? (sortTurnos.dir === 'asc' ? '▲' : '▼') : '↕'}</span>
+    </button>
+  )
   const statsJ44: any           = data.statsJ44           || null
   const statsPorArea: any[]     = data.statsPorArea       || []
   const voluntarios: any[]      = data.todosVoluntarios   || []
@@ -387,8 +419,12 @@ export default function EstadisticasPage() {
                 </Panel>
                 <Panel title="Detalle por voluntario">
                   <DataTable
-                    heads={['Nº Vol.','Nombre completo','Área','Categoría','Guardias','Horas','Dietas','Km','Avisos disp.','Estado']}
-                    rows={statsVoluntarios.map((v:any)=>[
+                    heads={[
+                      thVol('Nº Vol.','numeroVoluntario'), thVol('Nombre completo','nombre'), thVol('Área','area'),
+                      thVol('Categoría','categoria'), thVol('Guardias','guardias'), thVol('Horas','horas'),
+                      thVol('Dietas','importeDietas'), thVol('Km','km'), thVol('Avisos disp.','recordatorios'), thVol('Estado','activo'),
+                    ]}
+                    rows={statsVolOrdenado.map((v:any)=>[
                       <span key="n" className="font-mono text-xs font-bold text-indigo-600">{v.numeroVoluntario||'—'}</span>,
                       `${v.nombre} ${v.apellidos}`.trim(),
                       <Badge key="a" label={v.area} variant="indigo"/>,
@@ -412,17 +448,17 @@ export default function EstadisticasPage() {
                     <table className="w-full text-xs min-w-[900px]">
                       <thead>
                         <tr className="bg-slate-50 border-b border-slate-200">
-                          <th className="text-left py-2 px-3 font-bold text-slate-500 uppercase sticky left-0 bg-slate-50">Voluntario</th>
-                          <th className="text-left py-2 px-3 font-bold text-slate-500 uppercase">Área</th>
+                          <th className="text-left py-2 px-3 font-bold text-slate-500 uppercase sticky left-0 bg-slate-50">{thTurno('Voluntario','nombre')}</th>
+                          <th className="text-left py-2 px-3 font-bold text-slate-500 uppercase">{thTurno('Área','area')}</th>
                           {['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'].map(m => (
                             <th key={m} className="text-center py-2 px-2 font-bold text-slate-500 uppercase w-12">{m}</th>
                           ))}
-                          <th className="text-center py-2 px-3 font-bold text-slate-500 uppercase">Total</th>
-                          <th className="text-center py-2 px-3 font-bold text-slate-500 uppercase">% Cumpl.</th>
+                          <th className="text-center py-2 px-3 font-bold text-slate-500 uppercase">{thTurno('Total','totalAnio')}</th>
+                          <th className="text-center py-2 px-3 font-bold text-slate-500 uppercase">{thTurno('% Cumpl.','pctCumplimiento')}</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {turnosPorMes.map((v: any) => (
+                        {turnosOrdenado.map((v: any) => (
                           <tr key={v.id} className="border-b border-slate-100 hover:bg-slate-50">
                             <td className="py-2 px-3 sticky left-0 bg-white hover:bg-slate-50 font-medium text-slate-700 whitespace-nowrap">
                               {v.numeroVoluntario && <span className="font-mono text-indigo-600 mr-1.5">{v.numeroVoluntario}</span>}
@@ -458,7 +494,7 @@ export default function EstadisticasPage() {
                     </table>
                   </div>
                   <p className="text-xs text-slate-400 mt-2">
-                    Verde = ≥2 turnos en el mes · Ámbar = 1 turno · Porcentaje calculado sobre 12 meses con ≥2 guardias cada uno
+                    Verde = ≥2 turnos en el mes · Ámbar = 1 turno · Solo cuenta guardias ya realizadas · % = meses cumplidos (≥2 turnos) sobre los meses transcurridos del año · Haz clic en las cabeceras para ordenar
                   </p>
                 </Panel>
 
