@@ -1383,7 +1383,7 @@ export default function FormacionPage() {
                         <option key={fam.id} value={fam.id}>{fam.nombre}</option>
                       ))}
                     </select>
-                    <button onClick={() => setShowGestionFamilias(true)} className="flex items-center gap-2 px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm font-medium whitespace-nowrap">
+                    <button onClick={() => setShowGestionFamilias(true)} className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium whitespace-nowrap">
                       <Tag size={16} /> Familias
                     </button>
                   </div>
@@ -2166,7 +2166,7 @@ export default function FormacionPage() {
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="block text-sm font-medium text-slate-700">Familia/Categoría <span className="text-red-500">*</span></label>
-                  <button type="button" onClick={() => setShowGestionFamilias(true)} className="flex items-center gap-1 text-xs font-bold text-purple-600 hover:underline">
+                  <button type="button" onClick={() => setShowGestionFamilias(true)} className="flex items-center gap-1 text-xs font-bold text-green-600 hover:underline">
                     <Tag size={12} /> Gestionar familias
                   </button>
                 </div>
@@ -2217,7 +2217,7 @@ export default function FormacionPage() {
 
             <div className="flex justify-end gap-2 pt-4 bg-slate-50 -mx-6 -mb-6 p-4 mt-4 border-t">
               <button onClick={() => setShowNuevoArticulo(false)} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg font-medium">Cancelar</button>
-              <button onClick={handleGuardarArticulo} className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 shadow-sm font-medium text-sm">Crear Artículo</button>
+              <button onClick={handleGuardarArticulo} className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 shadow-sm font-medium text-sm">Crear Artículo</button>
             </div>
           </div>
         </Modal>
@@ -2236,7 +2236,7 @@ export default function FormacionPage() {
                 className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm"
                 onKeyDown={e => e.key === 'Enter' && handleCrearFamilia()}
               />
-              <button onClick={handleCrearFamilia} disabled={guardandoFamilia} className="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 disabled:opacity-50">Añadir</button>
+              <button onClick={handleCrearFamilia} disabled={guardandoFamilia} className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50">Añadir</button>
             </div>
             <div className="space-y-2 max-h-80 overflow-y-auto">
               {familias.length === 0 ? (
@@ -2253,7 +2253,7 @@ export default function FormacionPage() {
                         onKeyDown={e => e.key === 'Enter' && handleGuardarFamiliaEdit()}
                       />
                       <div className="flex items-center gap-2">
-                        <button onClick={handleGuardarFamiliaEdit} disabled={guardandoFamilia} className="px-3 py-1.5 bg-purple-600 text-white rounded-lg text-xs font-medium hover:bg-purple-700 disabled:opacity-50">Guardar</button>
+                        <button onClick={handleGuardarFamiliaEdit} disabled={guardandoFamilia} className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-xs font-medium hover:bg-green-700 disabled:opacity-50">Guardar</button>
                         <button onClick={() => setFamiliaEditando(null)} className="px-3 py-1.5 bg-slate-200 text-slate-700 rounded-lg text-xs font-medium hover:bg-slate-300">Cancelar</button>
                       </div>
                     </>
