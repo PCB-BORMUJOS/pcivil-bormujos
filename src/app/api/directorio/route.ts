@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 
-const AMBITOS_VALIDOS = ["accion_social", "cecopal"]
+const AMBITOS_VALIDOS = ["accion_social", "cecopal", "proveedor"]
 
 function nivel(session: any): number {
   const rol = (session?.user as any)?.rol ?? 'voluntario'
@@ -107,13 +107,13 @@ export async function POST(req: NextRequest) {
     }
 
     const { nombre, entidad, categoria, cargo, telefono, telefonoAlt, email, extension3cx, disponibilidad, notas } = body
-    if (!nombre || !telefono || !categoria) {
-      return NextResponse.json({ error: "Nombre, teléfono y categoría son obligatorios" }, { status: 400 })
+    if (!nombre || !telefono) {
+      return NextResponse.json({ error: "Nombre y teléfono son obligatorios" }, { status: 400 })
     }
     const ambitos = parseAmbitos(body)
     const contacto = await prisma.contactoDirectorio.create({
       data: {
-        nombre, entidad: entidad || null, categoria, cargo: cargo || null, telefono,
+        nombre, entidad: entidad || null, categoria: categoria || 'general', cargo: cargo || null, telefono,
         telefonoAlt: telefonoAlt || null, email: email || null, extension3cx: extension3cx || null,
         disponibilidad: disponibilidad || null, notas: notas || null,
         ambito: ambitos[0], ambitos,
@@ -155,7 +155,7 @@ export async function PUT(req: NextRequest) {
     const contacto = await prisma.contactoDirectorio.update({
       where: { id },
       data: {
-        nombre, entidad: entidad || null, categoria, cargo: cargo || null, telefono,
+        nombre, entidad: entidad || null, categoria: categoria || 'general', cargo: cargo || null, telefono,
         telefonoAlt: telefonoAlt || null, email: email || null, extension3cx: extension3cx || null,
         disponibilidad: disponibilidad || null, notas: notas || null,
         ambito: ambitos[0], ambitos,
