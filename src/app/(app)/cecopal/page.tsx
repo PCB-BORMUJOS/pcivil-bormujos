@@ -109,8 +109,14 @@ export default function CecopalPage() {
   const [dirCategoria, setDirCategoria] = useState('')
   const [dirModal, setDirModal] = useState<'nuevo' | 'editar' | 'categoria' | null>(null)
   const [dirContactoSel, setDirContactoSel] = useState<any>(null)
-  const [dirForm, setDirForm] = useState({ nombre: '', entidad: '', categoria: '', cargo: '', telefono: '', telefonoAlt: '', email: '', extension3cx: '', disponibilidad: '', notas: '' })
+  const [dirForm, setDirForm] = useState<{ nombre: string; entidad: string; categoria: string; cargo: string; telefono: string; telefonoAlt: string; email: string; extension3cx: string; disponibilidad: string; notas: string; ambitos: string[] }>({ nombre: '', entidad: '', categoria: '', cargo: '', telefono: '', telefonoAlt: '', email: '', extension3cx: '', disponibilidad: '', notas: '', ambitos: ['cecopal'] })
   const [dirNuevaCat, setDirNuevaCat] = useState({ nombre: '', color: '#3b82f6' })
+  // Pestaña de ámbito y proveedores
+  const [dirTab, setDirTab] = useState<'todos' | 'accion_social' | 'cecopal' | 'proveedores'>('todos')
+  const [dirProveedores, setDirProveedores] = useState<any[]>([])
+  const [provModal, setProvModal] = useState<'nuevo' | 'editar' | null>(null)
+  const [provSel, setProvSel] = useState<any>(null)
+  const [provForm, setProvForm] = useState({ nombre: '', cif: '', contacto: '', telefono: '', email: '', web: '', direccion: '', notas: '' })
 
   const cargarDatos = useCallback(async () => {
     try {
@@ -163,12 +169,14 @@ export default function CecopalPage() {
       const p = new URLSearchParams()
       if (busqueda) p.set('busqueda', busqueda)
       if (categoria) p.set('categoria', categoria)
-      const [rC, rCat] = await Promise.all([
+      const [rC, rCat, rProv] = await Promise.all([
         fetch('/api/directorio?' + p.toString()).then(r => r.json()),
         fetch('/api/directorio?tipo=categorias').then(r => r.json()),
+        fetch('/api/directorio?tipo=proveedores' + (busqueda ? '&busqueda=' + encodeURIComponent(busqueda) : '')).then(r => r.json()),
       ])
       setDirContactos(rC.contactos || [])
       setDirCategorias(rCat.categorias || [])
+      setDirProveedores(rProv.proveedores || [])
     } catch { /* silencioso */ }
   }
 
@@ -459,12 +467,22 @@ export default function CecopalPage() {
             <div className="flex items-center gap-2">
               <BookUser size={15} className="text-purple-400" />
               <span className="text-white text-sm font-semibold uppercase tracking-wider">Directorio Operativo</span>
-              <span className="text-slate-500 text-xs">({dirContactos.length} contactos)</span>
+              <span className="text-slate-500 text-xs">({dirTab === 'proveedores' ? `${dirProveedores.length} proveedores` : `${dirContactos.length} contactos`})</span>
             </div>
             <div className="flex items-center gap-2">
-              <button onClick={() => setDirModal('categoria')} className="px-3 py-1.5 text-xs bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg transition-colors">Categorías</button>
-              <button onClick={() => { setDirForm({ nombre: '', entidad: '', categoria: '', cargo: '', telefono: '', telefonoAlt: '', email: '', extension3cx: '', disponibilidad: '', notas: '' }); setDirContactoSel(null); setDirModal('nuevo') }} className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors"><Plus size={12} /> Nuevo contacto</button>
+              {dirTab !== 'proveedores' && <button onClick={() => setDirModal('categoria')} className="px-3 py-1.5 text-xs bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg transition-colors">Categorías</button>}
+              {dirTab === 'proveedores' ? (
+                <button onClick={() => { setProvForm({ nombre: '', cif: '', contacto: '', telefono: '', email: '', web: '', direccion: '', notas: '' }); setProvSel(null); setProvModal('nuevo') }} className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-medium transition-colors"><Plus size={12} /> Nuevo proveedor</button>
+              ) : (
+                <button onClick={() => { setDirForm({ nombre: '', entidad: '', categoria: '', cargo: '', telefono: '', telefonoAlt: '', email: '', extension3cx: '', disponibilidad: '', notas: '', ambitos: dirTab === 'accion_social' ? ['accion_social'] : ['cecopal'] }); setDirContactoSel(null); setDirModal('nuevo') }} className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors"><Plus size={12} /> Nuevo contacto</button>
+              )}
             </div>
+          </div>
+          {/* Pestañas por ámbito */}
+          <div className="flex gap-1 px-3 pt-3">
+            {([['todos','Todos'],['accion_social','Acción Social'],['cecopal','CECOPAL'],['proveedores','Proveedores']] as const).map(([id,label]) => (
+              <button key={id} onClick={() => setDirTab(id)} className={`px-3 py-1.5 text-xs font-semibold rounded-t-lg transition-colors ${dirTab === id ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-slate-200'}`}>{label}</button>
+            ))}
           </div>
           <div className="p-3 border-b border-slate-700 flex gap-3">
             <div className="relative flex-1">
@@ -477,18 +495,58 @@ export default function CecopalPage() {
             </select>
           </div>
           <div className="overflow-x-auto">
+            {dirTab === 'proveedores' ? (
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-slate-700">
+                    {['Proveedor / CIF', 'Contacto', 'Teléfono', 'Email', 'Web', ''].map(h => (
+                      <th key={h} className="text-left px-4 py-2.5 text-slate-500 uppercase tracking-wider font-semibold whitespace-nowrap">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-700/50">
+                  {dirProveedores.length === 0 ? (
+                    <tr><td colSpan={6} className="px-4 py-10 text-center text-slate-500">Sin proveedores. Añade el primero con «Nuevo proveedor».</td></tr>
+                  ) : dirProveedores.map((pv: any) => (
+                    <tr key={pv.id} className="hover:bg-slate-700/30 transition-colors group">
+                      <td className="px-4 py-2.5"><p className="text-white font-semibold">{pv.nombre}</p>{pv.cif && <p className="text-slate-400 font-mono">{pv.cif}</p>}</td>
+                      <td className="px-4 py-2.5 text-slate-300">{pv.contacto || '—'}</td>
+                      <td className="px-4 py-2.5">{pv.telefono ? <a href={`tel:${pv.telefono}`} className="text-emerald-400 hover:text-emerald-300 font-mono">{pv.telefono}</a> : <span className="text-slate-600">—</span>}</td>
+                      <td className="px-4 py-2.5 text-slate-400">{pv.email || '—'}</td>
+                      <td className="px-4 py-2.5">{pv.web ? <a href={pv.web.startsWith('http') ? pv.web : `https://${pv.web}`} target="_blank" rel="noreferrer" className="text-blue-400 hover:underline">{pv.web}</a> : <span className="text-slate-600">—</span>}</td>
+                      <td className="px-4 py-2.5">
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button onClick={() => { setProvForm({ nombre: pv.nombre, cif: pv.cif || '', contacto: pv.contacto || '', telefono: pv.telefono || '', email: pv.email || '', web: pv.web || '', direccion: pv.direccion || '', notas: pv.notas || '' }); setProvSel(pv); setProvModal('editar') }} className="p-1.5 text-slate-400 hover:text-blue-400 rounded" title="Editar"><Pencil size={12} /></button>
+                          <button onClick={async () => { if (!confirm('¿Eliminar proveedor?')) return; await fetch(`/api/directorio?tipo=proveedor&id=${pv.id}`, { method: 'DELETE' }); cargarDirectorio(dirBusqueda, dirCategoria) }} className="p-1.5 text-slate-400 hover:text-red-400 rounded" title="Eliminar"><Trash2 size={12} /></button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
             <table className="w-full text-xs">
               <thead>
                 <tr className="border-b border-slate-700">
-                  {['Nombre / Entidad', 'Categoría', 'Teléfono', '3CX', 'Disponibilidad', 'Email', ''].map(h => (
+                  {['Nombre / Entidad', 'Categoría', 'Ámbito', 'Teléfono', '3CX', 'Disponibilidad', 'Email', ''].map(h => (
                     <th key={h} className="text-left px-4 py-2.5 text-slate-500 uppercase tracking-wider font-semibold whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-700/50">
-                {dirContactos.length === 0 ? (
-                  <tr><td colSpan={7} className="px-4 py-10 text-center text-slate-500">Sin contactos. Añade el primero con «Nuevo contacto».</td></tr>
-                ) : dirContactos.map((ct: any) => (
+                {(() => {
+                  const lista = dirContactos.filter((ct: any) => {
+                    const ambs: string[] = ct.ambitos && ct.ambitos.length ? ct.ambitos : [ct.ambito]
+                    if (dirTab === 'accion_social') return ambs.includes('accion_social')
+                    if (dirTab === 'cecopal') return ambs.includes('cecopal')
+                    return true
+                  })
+                  if (lista.length === 0) return (
+                    <tr><td colSpan={8} className="px-4 py-10 text-center text-slate-500">Sin contactos en este ámbito.</td></tr>
+                  )
+                  return lista.map((ct: any) => {
+                    const ambs: string[] = ct.ambitos && ct.ambitos.length ? ct.ambitos : [ct.ambito]
+                    return (
                   <tr key={ct.id} className="hover:bg-slate-700/30 transition-colors group">
                     <td className="px-4 py-2.5">
                       <p className="text-white font-semibold">{ct.nombre}</p>
@@ -496,7 +554,13 @@ export default function CecopalPage() {
                     </td>
                     <td className="px-4 py-2.5">
                       <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-slate-700 text-slate-300 border border-slate-600">{ct.categoria}</span>
-                      {ct.ambito === 'accion_social' && <span className="ml-1 px-1.5 py-0.5 rounded text-xs bg-rose-900/40 text-rose-300 border border-rose-700/30">AS</span>}
+                    </td>
+                    <td className="px-4 py-2.5 whitespace-nowrap">
+                      {ambs.length > 1
+                        ? <span className="px-1.5 py-0.5 rounded text-xs bg-purple-900/40 text-purple-300 border border-purple-700/30">Compartido</span>
+                        : ambs.includes('accion_social')
+                          ? <span className="px-1.5 py-0.5 rounded text-xs bg-rose-900/40 text-rose-300 border border-rose-700/30">Acción Social</span>
+                          : <span className="px-1.5 py-0.5 rounded text-xs bg-sky-900/40 text-sky-300 border border-sky-700/30">CECOPAL</span>}
                     </td>
                     <td className="px-4 py-2.5">
                       <a href={`tel:${ct.telefono}`} className="text-emerald-400 hover:text-emerald-300 font-mono transition-colors">{ct.telefono}</a>
@@ -512,18 +576,16 @@ export default function CecopalPage() {
                     <td className="px-4 py-2.5 text-slate-400">{ct.email || '—'}</td>
                     <td className="px-4 py-2.5">
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        {ct.ambito !== 'accion_social' && (
-                          <>
-                            <button onClick={() => { setDirForm({ nombre: ct.nombre, entidad: ct.entidad || '', categoria: ct.categoria, cargo: ct.cargo || '', telefono: ct.telefono, telefonoAlt: ct.telefonoAlt || '', email: ct.email || '', extension3cx: ct.extension3cx || '', disponibilidad: ct.disponibilidad || '', notas: ct.notas || '' }); setDirContactoSel(ct); setDirModal('editar') }} className="p-1.5 text-slate-400 hover:text-blue-400 rounded transition-colors" title="Editar"><Pencil size={12} /></button>
-                            <button onClick={async () => { if (!confirm('¿Eliminar contacto?')) return; await fetch(`/api/directorio?id=${ct.id}`, { method: 'DELETE' }); cargarDirectorio(dirBusqueda, dirCategoria) }} className="p-1.5 text-slate-400 hover:text-red-400 rounded transition-colors" title="Eliminar"><Trash2 size={12} /></button>
-                          </>
-                        )}
+                        <button onClick={() => { setDirForm({ nombre: ct.nombre, entidad: ct.entidad || '', categoria: ct.categoria, cargo: ct.cargo || '', telefono: ct.telefono, telefonoAlt: ct.telefonoAlt || '', email: ct.email || '', extension3cx: ct.extension3cx || '', disponibilidad: ct.disponibilidad || '', notas: ct.notas || '', ambitos: ambs.length ? ambs : ['cecopal'] }); setDirContactoSel(ct); setDirModal('editar') }} className="p-1.5 text-slate-400 hover:text-blue-400 rounded transition-colors" title="Editar"><Pencil size={12} /></button>
+                        <button onClick={async () => { if (!confirm('¿Eliminar contacto?')) return; await fetch(`/api/directorio?id=${ct.id}`, { method: 'DELETE' }); cargarDirectorio(dirBusqueda, dirCategoria) }} className="p-1.5 text-slate-400 hover:text-red-400 rounded transition-colors" title="Eliminar"><Trash2 size={12} /></button>
                       </div>
                     </td>
                   </tr>
-                ))}
+                  )})
+                })()}
               </tbody>
             </table>
+            )}
           </div>
         </div>
       </div>
@@ -533,7 +595,7 @@ export default function CecopalPage() {
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[3000] p-4">
           <div className="bg-slate-800 rounded-xl border border-slate-600 w-full max-w-lg overflow-hidden">
             <div className="flex items-center justify-between px-5 py-4 border-b border-slate-700">
-              <h3 className="text-white font-semibold text-sm">{dirModal === 'editar' ? 'Editar contacto' : 'Nuevo contacto CECOPAL'}</h3>
+              <h3 className="text-white font-semibold text-sm">{dirModal === 'editar' ? 'Editar contacto' : 'Nuevo contacto'}</h3>
               <button onClick={() => setDirModal(null)} className="text-slate-500 hover:text-white"><X size={16} /></button>
             </div>
             <div className="p-5 space-y-3 max-h-[70vh] overflow-y-auto">
@@ -559,12 +621,26 @@ export default function CecopalPage() {
                     <option value="guardia">Guardia</option>
                   </select>
                 </div>
+                <div className="col-span-2">
+                  <label className="block text-xs text-slate-400 mb-1.5">Ámbito * (marca uno o varios; ambos = compartido)</label>
+                  <div className="flex gap-2">
+                    {([['accion_social','Acción Social'],['cecopal','CECOPAL']] as const).map(([id,label]) => {
+                      const on = dirForm.ambitos.includes(id)
+                      return (
+                        <button key={id} type="button" onClick={() => setDirForm(p => ({ ...p, ambitos: on ? p.ambitos.filter(a => a !== id) : [...p.ambitos, id] }))}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${on ? (id==='accion_social' ? 'bg-rose-600 border-rose-500 text-white' : 'bg-sky-600 border-sky-500 text-white') : 'bg-slate-700 border-slate-600 text-slate-300 hover:border-slate-500'}`}>
+                          {on ? '✓ ' : ''}{label}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
                 <div className="col-span-2"><label className="block text-xs text-slate-400 mb-1">Notas</label><textarea value={dirForm.notas} onChange={e => setDirForm(p => ({...p, notas: e.target.value}))} rows={2} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-purple-500 resize-none" /></div>
               </div>
               <div className="flex justify-end gap-3 pt-2 border-t border-slate-700">
                 <button onClick={() => setDirModal(null)} className="px-4 py-2 text-slate-400 hover:text-white text-sm transition-colors">Cancelar</button>
                 <button onClick={async () => {
-                  if (!dirForm.nombre || !dirForm.telefono || !dirForm.categoria) return
+                  if (!dirForm.nombre || !dirForm.telefono || !dirForm.categoria || dirForm.ambitos.length === 0) return
                   if (dirModal === 'editar' && dirContactoSel) {
                     await fetch('/api/directorio', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...dirForm, id: dirContactoSel.id }) })
                   } else {
@@ -572,7 +648,44 @@ export default function CecopalPage() {
                   }
                   setDirModal(null)
                   cargarDirectorio(dirBusqueda, dirCategoria)
-                }} disabled={!dirForm.nombre || !dirForm.telefono || !dirForm.categoria} className="flex items-center gap-2 px-5 py-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-40 text-white rounded-lg text-sm font-medium transition-colors">Guardar</button>
+                }} disabled={!dirForm.nombre || !dirForm.telefono || !dirForm.categoria || dirForm.ambitos.length === 0} className="flex items-center gap-2 px-5 py-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-40 text-white rounded-lg text-sm font-medium transition-colors">Guardar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal nuevo / editar proveedor */}
+      {(provModal === 'nuevo' || provModal === 'editar') && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[3000] p-4">
+          <div className="bg-slate-800 rounded-xl border border-slate-600 w-full max-w-lg overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-700">
+              <h3 className="text-white font-semibold text-sm">{provModal === 'editar' ? 'Editar proveedor' : 'Nuevo proveedor'}</h3>
+              <button onClick={() => setProvModal(null)} className="text-slate-500 hover:text-white"><X size={16} /></button>
+            </div>
+            <div className="p-5 space-y-3 max-h-[70vh] overflow-y-auto">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="col-span-2"><label className="block text-xs text-slate-400 mb-1">Nombre *</label><input value={provForm.nombre} onChange={e => setProvForm(p => ({...p, nombre: e.target.value}))} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-amber-500" /></div>
+                <div><label className="block text-xs text-slate-400 mb-1">CIF</label><input value={provForm.cif} onChange={e => setProvForm(p => ({...p, cif: e.target.value}))} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-amber-500" /></div>
+                <div><label className="block text-xs text-slate-400 mb-1">Persona de contacto</label><input value={provForm.contacto} onChange={e => setProvForm(p => ({...p, contacto: e.target.value}))} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-amber-500" /></div>
+                <div><label className="block text-xs text-slate-400 mb-1">Teléfono</label><input value={provForm.telefono} onChange={e => setProvForm(p => ({...p, telefono: e.target.value}))} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-amber-500" /></div>
+                <div><label className="block text-xs text-slate-400 mb-1">Email</label><input type="email" value={provForm.email} onChange={e => setProvForm(p => ({...p, email: e.target.value}))} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-amber-500" /></div>
+                <div className="col-span-2"><label className="block text-xs text-slate-400 mb-1">Web</label><input value={provForm.web} onChange={e => setProvForm(p => ({...p, web: e.target.value}))} placeholder="https://…" className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-amber-500" /></div>
+                <div className="col-span-2"><label className="block text-xs text-slate-400 mb-1">Dirección</label><input value={provForm.direccion} onChange={e => setProvForm(p => ({...p, direccion: e.target.value}))} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-amber-500" /></div>
+                <div className="col-span-2"><label className="block text-xs text-slate-400 mb-1">Notas</label><textarea value={provForm.notas} onChange={e => setProvForm(p => ({...p, notas: e.target.value}))} rows={2} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-amber-500 resize-none" /></div>
+              </div>
+              <div className="flex justify-end gap-3 pt-2 border-t border-slate-700">
+                <button onClick={() => setProvModal(null)} className="px-4 py-2 text-slate-400 hover:text-white text-sm transition-colors">Cancelar</button>
+                <button onClick={async () => {
+                  if (!provForm.nombre) return
+                  if (provModal === 'editar' && provSel) {
+                    await fetch('/api/directorio', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'proveedor', ...provForm, id: provSel.id }) })
+                  } else {
+                    await fetch('/api/directorio', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'proveedor', ...provForm }) })
+                  }
+                  setProvModal(null)
+                  cargarDirectorio(dirBusqueda, dirCategoria)
+                }} disabled={!provForm.nombre} className="flex items-center gap-2 px-5 py-2 bg-amber-600 hover:bg-amber-700 disabled:opacity-40 text-white rounded-lg text-sm font-medium transition-colors">Guardar</button>
               </div>
             </div>
           </div>
