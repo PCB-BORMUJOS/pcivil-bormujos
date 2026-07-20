@@ -174,6 +174,9 @@ export default function CecopalPage() {
     } catch { /* silencioso */ }
   }
 
+  // Cargar el directorio al abrir la página.
+  useEffect(() => { cargarDirectorio() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
   const getMeteoIcon = (code: number) => {
     if (code === 0) return '☀️'
     if (code <= 3) return '⛅'
