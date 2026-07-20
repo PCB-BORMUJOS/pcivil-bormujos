@@ -1,6 +1,7 @@
 'use client'
 import TicketOCRUploader from '@/components/admin/TicketOCRUploader'
 import { PERMISOS_DISPONIBLES } from '@/lib/permisos';
+import { generarPdfPersonal, ordenIndicativo } from '@/lib/pdf-personal';
 
 import {
   DndContext,
@@ -410,6 +411,8 @@ export default function AdministracionPage() {
   const [exportCampos, setExportCampos] = useState<Set<string>>(new Set(['indicativo','nombre','apellidos','dniNie','fechaNacimiento','email','telefono','rol','areaAsignada']));
   const [exportFormato, setExportFormato] = useState<'pdf' | 'sheets' | 'csv'>('pdf');
   const [exportando, setExportando] = useState(false);
+  const [exportTitulo, setExportTitulo] = useState('Listado de personal');
+  const [exportPersonas, setExportPersonas] = useState<Set<string>>(new Set());
 
   const EXPORT_CAMPOS_OPTIONS = [
     { key: 'indicativo', label: 'Indicativo' },
@@ -442,7 +445,8 @@ export default function AdministracionPage() {
   const handleExportarPDF = () => {
     const campos = Array.from(exportCampos);
     const headers = EXPORT_CAMPOS_OPTIONS.filter(o => campos.includes(o.key)).map(o => o.label);
-    const rows = (voluntarios || []).map(v => {
+    const seleccion = personasOrdenadas.filter((v: any) => exportPersonas.has(v.id));
+    const filas = seleccion.map((v: any) => {
       const f = (v as any).fichaVoluntario;
       return campos.map(c => {
         switch(c) {
@@ -467,18 +471,8 @@ export default function AdministracionPage() {
         }
       });
     });
-    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Personal PCB</title>
-    <style>body{font-family:Arial,sans-serif;font-size:11px}table{width:100%;border-collapse:collapse}
-    th{background:#003366;color:#fff;padding:6px 4px;text-align:left}
-    td{padding:4px;border-bottom:1px solid #ddd}tr:nth-child(even){background:#f5f5f5}
-    h2{color:#003366}@media print{button{display:none}}</style></head>
-    <body><h2>Listado Personal — Protección Civil Bormujos</h2>
-    <p style="color:#666;font-size:10px">Generado: ${new Date().toLocaleDateString('es-ES')}</p>
-    <table><thead><tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead>
-    <tbody>${rows.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('')}</tbody>
-    </table></body></html>`;
-    const win = window.open('', '_blank');
-    if (win) { win.document.write(html); win.document.close(); setTimeout(() => win.print(), 500); }
+    if (filas.length === 0) { alert('Selecciona al menos una persona para el informe'); return; }
+    generarPdfPersonal({ titulo: exportTitulo, headers, filas });
     setShowExportModal(false);
   };
 
@@ -517,6 +511,15 @@ export default function AdministracionPage() {
 
   // Estados para Personal
   const [voluntarios, setVoluntarios] = useState<Voluntario[]>([]);
+  // Personal ordenado según la estructura interna: J-44, luego S**, luego B**.
+  const personasOrdenadas = [...(voluntarios || [])].sort((a: any, b: any) => {
+    const oa = ordenIndicativo(a.numeroVoluntario); const ob = ordenIndicativo(b.numeroVoluntario);
+    return oa[0] - ob[0] || oa[1] - ob[1] || oa[2].localeCompare(ob[2]);
+  });
+  // Al abrir el modal de exportación, seleccionar por defecto a todo el personal.
+  useEffect(() => {
+    if (showExportModal) setExportPersonas(new Set((voluntarios || []).map((v: any) => v.id)));
+  }, [showExportModal]); // eslint-disable-line react-hooks/exhaustive-deps
   const [roles, setRoles] = useState<any[]>([]);
   const [servicios, setServicios] = useState<any[]>([]);
   const [nuevoPassword, setNuevoPassword] = useState('');
@@ -3726,11 +3729,49 @@ export default function AdministracionPage() {
               </div>
             </div>
 
+            {exportFormato === 'pdf' && (
+              <>
+                <div>
+                  <p className="text-xs font-bold text-slate-500 uppercase mb-2">Título del documento</p>
+                  <input
+                    type="text"
+                    value={exportTitulo}
+                    onChange={e => setExportTitulo(e.target.value)}
+                    placeholder="Ej: Listado de personal operativo 2026"
+                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+                  />
+                </div>
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs font-bold text-slate-500 uppercase">Personas a incluir ({exportPersonas.size})</p>
+                    <div className="flex gap-2 text-xs">
+                      <button onClick={() => setExportPersonas(new Set(personasOrdenadas.map((v: any) => v.id)))} className="font-bold text-blue-600 hover:underline">Todos</button>
+                      <button onClick={() => setExportPersonas(new Set())} className="font-bold text-slate-500 hover:underline">Ninguno</button>
+                    </div>
+                  </div>
+                  <div className="border border-slate-200 rounded-lg max-h-52 overflow-y-auto divide-y divide-slate-50">
+                    {personasOrdenadas.map((v: any) => (
+                      <label key={v.id} className={`flex items-center gap-2 px-3 py-1.5 cursor-pointer text-sm ${exportPersonas.has(v.id) ? 'bg-blue-50' : 'hover:bg-slate-50'}`}>
+                        <input
+                          type="checkbox"
+                          checked={exportPersonas.has(v.id)}
+                          onChange={() => setExportPersonas(prev => { const n = new Set(prev); n.has(v.id) ? n.delete(v.id) : n.add(v.id); return n; })}
+                          className="rounded"
+                        />
+                        <span className="font-mono text-xs font-bold text-slate-600 w-12">{v.numeroVoluntario || '—'}</span>
+                        <span className="text-slate-700 truncate">{v.nombre} {v.apellidos}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+
             <div>
               <p className="text-xs font-bold text-slate-500 uppercase mb-2">Formato de exportación</p>
               <div className="flex flex-col gap-2">
                 {[
-                  { value: 'pdf', label: 'PDF (impresión)' },
+                  { value: 'pdf', label: 'PDF (informe oficial)' },
                   { value: 'sheets', label: 'Google Sheets' },
                   { value: 'csv', label: 'CSV (descarga)' },
                 ].map(f => (
