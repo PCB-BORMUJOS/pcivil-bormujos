@@ -38,8 +38,8 @@ export async function cargarImagen(url: string): Promise<ImagenCargada | null> {
 }
 
 // Cabecera azul: SOLO los dos logotipos — Ayuntamiento (izq.) y Protección Civil (der.).
-export function drawHeaderCorporativo(doc: jsPDF, opts: { titulo?: string; subtitulo?: string; aytoLogo?: ImagenCargada | null }) {
-  const { aytoLogo } = opts
+export function drawHeaderCorporativo(doc: jsPDF, opts: { titulo?: string; subtitulo?: string; aytoLogo?: ImagenCargada | null; pcLogo?: ImagenCargada | null }) {
+  const { aytoLogo, pcLogo } = opts
   doc.setFillColor(...BLUE)
   doc.rect(0, 0, PAGE_W, HEADER_H, 'F')
 
@@ -50,10 +50,16 @@ export function drawHeaderCorporativo(doc: jsPDF, opts: { titulo?: string; subti
     try { doc.addImage(aytoLogo.dataUrl, 'PNG', MARGIN, (HEADER_H - h) / 2, w, h) } catch { /* noop */ }
   }
 
-  // Logo de Protección Civil (derecha).
-  const logoW = 50
-  const logoH = logoW * (333 / 1024)
-  try { doc.addImage(LOGO_BASE64, 'PNG', PAGE_W - MARGIN - logoW, (HEADER_H - logoH) / 2, logoW, logoH) } catch { /* noop */ }
+  // Logo de Protección Civil (derecha). Usa el proporcionado o el embebido.
+  if (pcLogo) {
+    const h = 12
+    const w = h * (pcLogo.w / pcLogo.h)
+    try { doc.addImage(pcLogo.dataUrl, 'PNG', PAGE_W - MARGIN - w, (HEADER_H - h) / 2, w, h) } catch { /* noop */ }
+  } else {
+    const logoW = 50
+    const logoH = logoW * (333 / 1024)
+    try { doc.addImage(LOGO_BASE64, 'PNG', PAGE_W - MARGIN - logoW, (HEADER_H - logoH) / 2, logoW, logoH) } catch { /* noop */ }
+  }
 }
 
 // Pie azul: SOLO el texto central del servicio (sin logotipos).

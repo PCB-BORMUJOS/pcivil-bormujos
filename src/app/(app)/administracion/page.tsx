@@ -1150,6 +1150,7 @@ export default function AdministracionPage() {
 
     // Logo del Ayuntamiento (versión horizontal blanca) y tickets subidos.
     const aytoLogo = await cargarImagen('/images/logo-ayuntamiento.png')
+    const pcLogo = await cargarImagen('/images/logo-pc-blanco.png')
     const ticketsConImagen = ticketsCombustible.filter((t: any) => t.ticketUrl)
     const imagenesTickets: { img: ImagenCargada | null; caption: string }[] = []
     for (const t of ticketsConImagen) {
@@ -1164,7 +1165,7 @@ export default function AdministracionPage() {
     const margin = 14
     const tituloDoc = 'Informe de combustible'
 
-    drawHeaderCorporativo(doc, { titulo: tituloDoc, aytoLogo })
+    drawHeaderCorporativo(doc, { titulo: tituloDoc, aytoLogo, pcLogo })
     drawFooterCorporativo(doc)
 
     doc.setTextColor(0, 0, 0)
@@ -1266,7 +1267,7 @@ export default function AdministracionPage() {
     for (let i = 0; i < Math.max(imagenesTickets.length, 0); i += 2) {
       const grupo = imagenesTickets.slice(i, i + 2)
       doc.addPage()
-      drawHeaderCorporativo(doc, { titulo: tituloDoc, aytoLogo })
+      drawHeaderCorporativo(doc, { titulo: tituloDoc, aytoLogo, pcLogo })
       drawFooterCorporativo(doc)
       doc.setTextColor(40, 54, 102)
       doc.setFontSize(12)
