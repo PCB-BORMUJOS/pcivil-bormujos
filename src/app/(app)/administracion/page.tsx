@@ -1162,44 +1162,44 @@ export default function AdministracionPage() {
     const doc = new (jsPDF as any)({ format: 'a4', unit: 'mm' })
     const W = 210
     const H = 297
-    const margin = 20
+    const margin = 14
     const tituloDoc = 'Informe de combustible'
 
     drawHeaderCorporativo(doc, { titulo: tituloDoc, aytoLogo })
     drawFooterCorporativo(doc)
 
     doc.setTextColor(0, 0, 0)
-    doc.setFontSize(9)
+    doc.setFontSize(11)
     doc.setFont('helvetica', 'normal')
-    let y = 32
+    let y = 30
     doc.text('A/A: D.Luis Alberto Paniagua Lopez', margin, y)
-      doc.text('Delegado de Economia y Hacienda', margin, y + 5)
-      doc.text('C/C: Maria Irene Martinez Criado', margin, y + 12)
-      doc.text('Dpto. de intervencion', margin, y + 17)
+      doc.text('Delegado de Economia y Hacienda', margin, y + 6)
+      doc.text('C/C: Maria Irene Martinez Criado', margin, y + 14)
+      doc.text('Dpto. de intervencion', margin, y + 20)
 
-      y = 66
+      y = 64
       doc.setFont('helvetica', 'bold')
       doc.text('REF: ' + refInvertida + ' Informe tarjeta SOLRED 9724990031420621', margin, y)
-      doc.text('ASUNTO: Informe sobre el uso de la tarjeta SOLRED asignada al Servicio de Proteccion Civil.', margin, y + 7)
+      doc.text('ASUNTO: Informe sobre el uso de la tarjeta SOLRED asignada al Servicio de Proteccion Civil.', margin, y + 8)
 
-      y = 81
+      y = 80
       doc.setDrawColor(200, 200, 200)
       doc.line(margin, y, W - margin, y)
 
-      y = 89
+      y = 88
       doc.setFont('helvetica', 'normal')
-      doc.setFontSize(9)
+      doc.setFontSize(11)
       const t1 = 'Por medio del presente Emilio Simon Gomez en calidad de Jefe de Proteccion Civil y Emergencias del Ayuntamiento de Bormujos informa para que surta los efectos oportunos.'
       const l1 = doc.splitTextToSize(t1, W - margin * 2)
-      doc.text(l1, margin, y); y += l1.length * 5 + 4
+      doc.text(l1, margin, y); y += l1.length * 6 + 4
 
       const t2 = 'Los vehiculos no requieren del reportaje con esta tarjeta ya que todos son de Gasoil y su reportaje se realiza en la nave de obras y servicios con el correspondiente control por parte del personal de las propias instalaciones.'
       const l2 = doc.splitTextToSize(t2, W - margin * 2)
-      doc.text(l2, margin, y); y += l2.length * 5 + 4
+      doc.text(l2, margin, y); y += l2.length * 6 + 4
 
       const t3 = 'Los gastos cargados a esta tarjeta corresponden al gasto en gasolina destinada a herramientas mecanicas como motosierras, motobombas del VIR y grupos electrogenos.'
       const l3 = doc.splitTextToSize(t3, W - margin * 2)
-      doc.text(l3, margin, y); y += l3.length * 5 + 4
+      doc.text(l3, margin, y); y += l3.length * 6 + 4
 
       doc.text('En relacion al documento recibido aparecen los siguientes gastos de combustible (gasolina):', margin, y)
       y += 8
@@ -1208,41 +1208,42 @@ export default function AdministracionPage() {
       doc.rect(margin, y, W - margin * 2, 8, 'F')
       doc.setTextColor(255, 255, 255)
       doc.setFont('helvetica', 'bold')
-      doc.setFontSize(8)
-      const cols = [40, 32, 42, 22, 34]
+      doc.setFontSize(11)
+      const cols = [46, 28, 48, 22, 34]
       const hdrs = ['DESTINO', 'FECHA', 'CONCEPTO', 'LITROS', 'IMPORTE']
       let x = margin + 2
-      hdrs.forEach((h, i) => { doc.text(h, x, y + 5); x += cols[i] })
+      hdrs.forEach((h, i) => { doc.text(h, x, y + 5.5); x += cols[i] })
       y += 8
 
       doc.setTextColor(0, 0, 0)
       doc.setFont('helvetica', 'normal')
       ticketsCombustible.forEach((t: any, idx: number) => {
-        if (idx % 2 === 0) { doc.setFillColor(245, 245, 245); doc.rect(margin, y, W - margin * 2, 7, 'F') }
+        if (idx % 2 === 0) { doc.setFillColor(245, 245, 245); doc.rect(margin, y, W - margin * 2, 7.5, 'F') }
         x = margin + 2
         const row = [
           t.destino || '',
-          new Date(t.fecha).toLocaleDateString('es-ES'),
+          new Date(t.fecha).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' }),
           t.concepto || '',
           Number(t.litros).toFixed(2),
           Number(t.importeFinal).toFixed(2) + ' EUR'
         ]
         row.forEach((val, i) => { doc.text(String(val), x, y + 5); x += cols[i] })
-        y += 7
+        y += 7.5
       })
 
       doc.setFillColor(220, 220, 220)
-      doc.rect(margin, y, W - margin * 2, 7, 'F')
+      doc.rect(margin, y, W - margin * 2, 7.5, 'F')
       doc.setFont('helvetica', 'bold')
       const total = ticketsCombustible.reduce((s: number, t: any) => s + Number(t.importeFinal), 0).toFixed(2)
       doc.text('TOTAL', margin + 2, y + 5)
       doc.text(total + ' EUR', margin + 2 + cols[0] + cols[1] + cols[2] + cols[3], y + 5)
-      y += 14
+      y += 15
 
       doc.setFont('helvetica', 'normal')
+      doc.setFontSize(11)
       const tadj = 'Se adjuntan los tickets correspondientes a los repostajes mencionados confirmando que son correctos en relacion a la factura remitida via mail por el Dpto. de Intervencion.'
       const ladj = doc.splitTextToSize(tadj, W - margin * 2)
-      doc.text(ladj, margin, y); y += ladj.length * 5 + 10
+      doc.text(ladj, margin, y); y += ladj.length * 6 + 10
 
       doc.text('Sin mas que anadir se firma el presente para que surta los efectos que proceda.', margin, y)
       y += 10

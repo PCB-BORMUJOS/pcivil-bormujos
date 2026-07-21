@@ -37,34 +37,26 @@ export async function cargarImagen(url: string): Promise<ImagenCargada | null> {
   } catch { return null }
 }
 
-// Cabecera azul con logo del Ayuntamiento (izq., opcional), título y logo PC (der.).
-export function drawHeaderCorporativo(doc: jsPDF, opts: { titulo: string; subtitulo?: string; aytoLogo?: ImagenCargada | null }) {
-  const { titulo, subtitulo = 'PROTECCIÓN CIVIL BORMUJOS', aytoLogo } = opts
+// Cabecera azul: SOLO los dos logotipos — Ayuntamiento (izq.) y Protección Civil (der.).
+export function drawHeaderCorporativo(doc: jsPDF, opts: { titulo?: string; subtitulo?: string; aytoLogo?: ImagenCargada | null }) {
+  const { aytoLogo } = opts
   doc.setFillColor(...BLUE)
   doc.rect(0, 0, PAGE_W, HEADER_H, 'F')
 
-  let textX = MARGIN + 2
+  // Logo del Ayuntamiento (izquierda), centrado verticalmente.
   if (aytoLogo) {
-    const h = 11
+    const h = 12
     const w = h * (aytoLogo.w / aytoLogo.h)
     try { doc.addImage(aytoLogo.dataUrl, 'PNG', MARGIN, (HEADER_H - h) / 2, w, h) } catch { /* noop */ }
-    textX = MARGIN + w + 5
   }
 
-  doc.setTextColor(...WHITE)
-  doc.setFontSize(8)
-  doc.setFont('helvetica', 'normal')
-  doc.text(subtitulo, textX, 7)
-  doc.setFontSize(13)
-  doc.setFont('helvetica', 'bold')
-  doc.text(titulo || '', textX, 14)
-
-  const logoW = 46
+  // Logo de Protección Civil (derecha).
+  const logoW = 50
   const logoH = logoW * (333 / 1024)
   try { doc.addImage(LOGO_BASE64, 'PNG', PAGE_W - MARGIN - logoW, (HEADER_H - logoH) / 2, logoW, logoH) } catch { /* noop */ }
 }
 
-// Pie idéntico al de los partes de servicio / informe de personal.
+// Pie azul: SOLO el texto central del servicio (sin logotipos).
 export function drawFooterCorporativo(doc: jsPDF) {
   const footerY = PAGE_H - FOOTER_H
   doc.setFillColor(...BLUE)
@@ -84,8 +76,4 @@ export function drawFooterCorporativo(doc: jsPDF) {
   doc.text('Ayuntamiento de Bormujos (Sevilla)', centerX, textStartY + lineHeight, { align: 'center' })
   doc.text('C/ Maestro Francisco Rodríguez s/n | Avda. Universidad de Salamanca', centerX, textStartY + lineHeight * 2, { align: 'center' })
   doc.text('info.pcivil@bormujos.net | www.proteccioncivilbormujos.es', centerX, textStartY + lineHeight * 3, { align: 'center' })
-
-  const pcLogoW = 34
-  const pcLogoH = pcLogoW * (333 / 1024)
-  try { doc.addImage(LOGO_BASE64, 'PNG', PAGE_W - MARGIN - pcLogoW, footerY + (FOOTER_H - pcLogoH) / 2, pcLogoW, pcLogoH) } catch { /* noop */ }
 }
