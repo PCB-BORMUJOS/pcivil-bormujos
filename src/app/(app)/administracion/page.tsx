@@ -1147,7 +1147,6 @@ export default function AdministracionPage() {
     const fechaHoy = hoy.toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' })
     const diaStr = hoy.getDate().toString().padStart(2, '0')
     const refNormal = `${anio}${mes}${diaStr}`
-    const refInvertida = refNormal.split('').reverse().join('')
 
     // Logo del Ayuntamiento (versión horizontal blanca) y tickets subidos.
     const aytoLogo = await cargarImagen('/images/logo-ayuntamiento.png')
@@ -1170,16 +1169,21 @@ export default function AdministracionPage() {
 
     doc.setTextColor(0, 0, 0)
     doc.setFontSize(11)
-    doc.setFont('helvetica', 'normal')
+    const rightX = W - margin
     let y = 30
-    doc.text('A/A: D.Luis Alberto Paniagua Lopez', margin, y)
-      doc.text('Delegado de Economia y Hacienda', margin, y + 6)
-      doc.text('C/C: Maria Irene Martinez Criado', margin, y + 14)
-      doc.text('Dpto. de intervencion', margin, y + 20)
+    // Destinatario (A/A) y copia (C/C), justificados a la derecha, nombre en negrita.
+    doc.setFont('helvetica', 'bold')
+    doc.text('A/A: D.Luis Alberto Paniagua Lopez', rightX, y, { align: 'right' })
+      doc.setFont('helvetica', 'normal')
+      doc.text('Delegado de Economia y Hacienda', rightX, y + 6, { align: 'right' })
+      doc.setFont('helvetica', 'bold')
+      doc.text('C/C: Maria Irene Martinez Criado', rightX, y + 14, { align: 'right' })
+      doc.setFont('helvetica', 'normal')
+      doc.text('Dpto. de intervencion', rightX, y + 20, { align: 'right' })
 
       y = 64
       doc.setFont('helvetica', 'bold')
-      doc.text('REF: ' + refInvertida + ' Informe tarjeta SOLRED 9724990031420621', margin, y)
+      doc.text('REF: ' + refNormal + ' Informe tarjeta SOLRED 9724990031420621', margin, y)
       doc.text('ASUNTO: Informe sobre el uso de la tarjeta SOLRED asignada al Servicio de Proteccion Civil.', margin, y + 8)
 
       y = 80
@@ -1246,14 +1250,16 @@ export default function AdministracionPage() {
       doc.text(ladj, margin, y); y += ladj.length * 6 + 10
 
       doc.text('Sin mas que anadir se firma el presente para que surta los efectos que proceda.', margin, y)
-      y += 10
-      doc.text('En Bormujos a ' + fechaHoy, margin, y)
+      y += 12
+      // Firma y VB centrados.
+      const cx = W / 2
+      doc.text('En Bormujos a ' + fechaHoy, cx, y, { align: 'center' })
       y += 16
       doc.setFont('helvetica', 'bold')
-      doc.text('Emilio Simon Gomez', margin, y)
+      doc.text('Emilio Simon Gomez', cx, y, { align: 'center' })
       doc.setFont('helvetica', 'normal')
-      doc.text('Jefe de Proteccion Civil y Emergencias', margin, y + 5)
-      doc.text('Ayuntamiento de Bormujos', margin, y + 10)
+      doc.text('Jefe de Proteccion Civil y Emergencias', cx, y + 5, { align: 'center' })
+      doc.text('Ayuntamiento de Bormujos', cx, y + 10, { align: 'center' })
 
     // ── SEGUNDA PÁGINA: DOCUMENTOS ADJUNTOS (tickets subidos) ──
     // Dos campos verticales por página; hasta 2 tickets por hoja.
