@@ -2,6 +2,7 @@
 import TicketOCRUploader from '@/components/admin/TicketOCRUploader'
 import { PERMISOS_DISPONIBLES } from '@/lib/permisos';
 import { generarPdfPersonal, ordenIndicativo } from '@/lib/pdf-personal';
+import { drawHeaderCorporativo, drawFooterCorporativo, cargarImagen, type ImagenCargada } from '@/lib/pdf-corporativo';
 
 import {
   DndContext,
@@ -1139,7 +1140,7 @@ export default function AdministracionPage() {
     } catch { alert('Error al guardar los cambios') }
   }
 
-  const generarInformeCombustible = () => {
+  const generarInformeCombustible = async () => {
     const periodo = mesCombustible || new Date().toISOString().slice(0, 7)
     const [anio, mes] = periodo.split('-')
     const hoy = new Date()
@@ -1148,27 +1149,30 @@ export default function AdministracionPage() {
     const refNormal = `${anio}${mes}${diaStr}`
     const refInvertida = refNormal.split('').reverse().join('')
 
-    import('jspdf').then(({ jsPDF }) => {
-      const doc = new (jsPDF as any)({ format: 'a4', unit: 'mm' })
-      const W = 210
-      const margin = 20
+    // Logo del Ayuntamiento (versión horizontal blanca) y tickets subidos.
+    const aytoLogo = await cargarImagen('/images/logo-ayuntamiento-bormujos.png')
+    const ticketsConImagen = ticketsCombustible.filter((t: any) => t.ticketUrl)
+    const imagenesTickets: { img: ImagenCargada | null; caption: string }[] = []
+    for (const t of ticketsConImagen) {
+      const img = await cargarImagen(t.ticketUrl as string)
+      imagenesTickets.push({ img, caption: `${new Date(t.fecha).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })} · ${Number(t.importeFinal).toFixed(2)} €` })
+    }
 
-      doc.setFillColor(0, 51, 102)
-      doc.rect(0, 0, W, 28, 'F')
-      doc.setTextColor(255, 255, 255)
-      doc.setFontSize(11)
-      doc.setFont('helvetica', 'bold')
-      doc.text('PROTECCION CIVIL BORMUJOS', W - margin, 12, { align: 'right' })
-      doc.setFontSize(8)
-      doc.setFont('helvetica', 'normal')
-      doc.text('Servicio Local de Proteccion Civil', W - margin, 18, { align: 'right' })
-      doc.text('Excmo. Ayto. De Bormujos (Sevilla)', W - margin, 23, { align: 'right' })
+    const { jsPDF } = await import('jspdf')
+    const doc = new (jsPDF as any)({ format: 'a4', unit: 'mm' })
+    const W = 210
+    const H = 297
+    const margin = 20
+    const tituloDoc = 'Informe de combustible'
 
-      doc.setTextColor(0, 0, 0)
-      doc.setFontSize(9)
-      doc.setFont('helvetica', 'normal')
-      let y = 38
-      doc.text('A/A: D.Luis Alberto Paniagua Lopez', margin, y)
+    drawHeaderCorporativo(doc, { titulo: tituloDoc, aytoLogo })
+    drawFooterCorporativo(doc)
+
+    doc.setTextColor(0, 0, 0)
+    doc.setFontSize(9)
+    doc.setFont('helvetica', 'normal')
+    let y = 32
+    doc.text('A/A: D.Luis Alberto Paniagua Lopez', margin, y)
       doc.text('Delegado de Economia y Hacienda', margin, y + 5)
       doc.text('C/C: Maria Irene Martinez Criado', margin, y + 12)
       doc.text('Dpto. de intervencion', margin, y + 17)
@@ -1250,13 +1254,49 @@ export default function AdministracionPage() {
       doc.text('Jefe de Proteccion Civil y Emergencias', margin, y + 5)
       doc.text('Ayuntamiento de Bormujos', margin, y + 10)
 
-      doc.setFontSize(7)
-      doc.setTextColor(130, 130, 130)
-      doc.text('Calle Maestro D. Francisco Rodriguez esq. Avda. Universidad de Salamanca', W / 2, 285, { align: 'center' })
-      doc.text('www.proteccioncivilbormujos.es | info.pcivil@bormujos.net', W / 2, 289, { align: 'center' })
+    // ── SEGUNDA PÁGINA: DOCUMENTOS ADJUNTOS (tickets subidos) ──
+    // Dos campos verticales por página; hasta 2 tickets por hoja.
+    for (let i = 0; i < Math.max(imagenesTickets.length, 0); i += 2) {
+      const grupo = imagenesTickets.slice(i, i + 2)
+      doc.addPage()
+      drawHeaderCorporativo(doc, { titulo: tituloDoc, aytoLogo })
+      drawFooterCorporativo(doc)
+      doc.setTextColor(40, 54, 102)
+      doc.setFontSize(12)
+      doc.setFont('helvetica', 'bold')
+      doc.text('DOCUMENTOS ADJUNTOS', W / 2, 30, { align: 'center' })
 
-      doc.save('Informe-SOLRED-' + periodo + '.pdf')
-    })
+      const gap = 8
+      const areaTop = 36
+      const areaBottom = H - 18 - 6
+      const areaH = areaBottom - areaTop
+      const colW = (W - margin * 2 - gap) / 2
+      grupo.forEach((it, idx) => {
+        const colX = margin + idx * (colW + gap)
+        doc.setDrawColor(200, 200, 200)
+        doc.setLineWidth(0.3)
+        doc.rect(colX, areaTop, colW, areaH)
+        doc.setFontSize(8)
+        doc.setFont('helvetica', 'bold')
+        doc.setTextColor(80, 80, 80)
+        doc.text(it.caption, colX + colW / 2, areaTop + 5, { align: 'center' })
+        if (it.img) {
+          const maxW = colW - 6
+          const maxH = areaH - 12
+          const ratio = Math.min(maxW / it.img.w, maxH / it.img.h)
+          const w = it.img.w * ratio
+          const h = it.img.h * ratio
+          const fmt = it.img.dataUrl.substring(11, it.img.dataUrl.indexOf(';')).toUpperCase()
+          try { doc.addImage(it.img.dataUrl, fmt, colX + (colW - w) / 2, areaTop + 9, w, h) } catch { /* noop */ }
+        } else {
+          doc.setFont('helvetica', 'italic')
+          doc.setTextColor(150, 150, 150)
+          doc.text('Ticket no disponible', colX + colW / 2, areaTop + areaH / 2, { align: 'center' })
+        }
+      })
+    }
+
+    doc.save('Informe-combustible-' + periodo + '.pdf')
   }
 
   const handleGuardarTicket = async () => {
