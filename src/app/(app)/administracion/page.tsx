@@ -1150,7 +1150,7 @@ export default function AdministracionPage() {
     const refInvertida = refNormal.split('').reverse().join('')
 
     // Logo del Ayuntamiento (versión horizontal blanca) y tickets subidos.
-    const aytoLogo = await cargarImagen('/images/logo-ayuntamiento-bormujos.png')
+    const aytoLogo = await cargarImagen('/images/logo-ayuntamiento.png')
     const ticketsConImagen = ticketsCombustible.filter((t: any) => t.ticketUrl)
     const imagenesTickets: { img: ImagenCargada | null; caption: string }[] = []
     for (const t of ticketsConImagen) {
