@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { registrarAudit, getUsuarioAudit } from '@/lib/audit'
+import { devolverVestuarioPorBaja } from '@/lib/vestuario-baja'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 
@@ -77,34 +78,12 @@ export async function PUT(
       const { usuarioId, usuarioNombre } = getUsuarioAudit(session)
       await registrarAudit({ accion: 'UPDATE', entidad: 'Usuario', entidadId: usuario.id, descripcion: `Usuario actualizado: ${usuario.nombre} ${usuario.apellidos}`, usuarioId, usuarioNombre, modulo: 'Administracion', datosNuevos: { nombre: usuario.nombre, email: usuario.email } })
 
-      // Al dar de baja, el vestuario asignado vuelve automáticamente al almacén.
+      // Al dar de baja, el vestuario asignado vuelve automáticamente al almacén
+      // y se avisa a los indicativos de Logística.
       let vestuarioDevuelto = 0
       if (dataToUpdate.activo === false) {
-        const pendientes = await prisma.asignacionVestuario.findMany({
-          where: { usuarioId: params.id, estado: { notIn: ['DEVUELTO', 'devuelto'] } },
-        })
-        for (const asig of pendientes) {
-          await prisma.asignacionVestuario.update({
-            where: { id: asig.id },
-            data: { estado: 'DEVUELTO', fechaBaja: new Date() },
-          })
-          // Liberar el stock: disponible = stockActual - stockAsignado
-          const art = await prisma.articulo.findFirst({ where: { nombre: asig.tipoPrenda } })
-          if (art) {
-            await prisma.articulo.update({
-              where: { id: art.id },
-              data: { stockAsignado: { decrement: asig.cantidad } },
-            })
-          }
-          vestuarioDevuelto++
-        }
-        if (vestuarioDevuelto > 0) {
-          await registrarAudit({
-            accion: 'UNASSIGN', entidad: 'Vestuario', entidadId: usuario.id,
-            descripcion: `Baja de ${usuario.nombre} ${usuario.apellidos}: ${vestuarioDevuelto} prenda(s) devueltas automáticamente al almacén`,
-            usuarioId, usuarioNombre, modulo: 'Logística',
-          })
-        }
+        const r = await devolverVestuarioPorBaja(params.id, { usuarioId, usuarioNombre })
+        vestuarioDevuelto = r.devueltas
       }
 
       return NextResponse.json({ success: true, usuario, vestuarioDevuelto })

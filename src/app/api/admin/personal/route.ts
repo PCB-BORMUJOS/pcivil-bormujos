@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { registrarAudit, getUsuarioAudit } from '@/lib/audit'
+import { devolverVestuarioPorBaja } from '@/lib/vestuario-baja'
 import { prisma } from '@/lib/db'
 import { hash } from 'bcryptjs'
 
@@ -286,34 +287,12 @@ export async function PUT(request: NextRequest) {
         datosNuevos: { activo }
       })
 
-      // Al dar de baja, su vestuario vuelve automáticamente al almacén.
+      // Al dar de baja, su vestuario vuelve automáticamente al almacén y se
+      // avisa a los indicativos de Logística.
       let vestuarioDevuelto = 0
       if (activo === false) {
-        const pendientes = await prisma.asignacionVestuario.findMany({
-          where: { usuarioId: id, estado: { notIn: ['DEVUELTO', 'devuelto'] } },
-        })
-        for (const asig of pendientes) {
-          await prisma.asignacionVestuario.update({
-            where: { id: asig.id },
-            data: { estado: 'DEVUELTO', fechaBaja: new Date() },
-          })
-          // Liberar stock: disponible = stockActual - stockAsignado
-          const art = await prisma.articulo.findFirst({ where: { nombre: asig.tipoPrenda } })
-          if (art) {
-            await prisma.articulo.update({
-              where: { id: art.id },
-              data: { stockAsignado: { decrement: asig.cantidad } },
-            })
-          }
-          vestuarioDevuelto++
-        }
-        if (vestuarioDevuelto > 0) {
-          await registrarAudit({
-            accion: 'UNASSIGN', entidad: 'Vestuario', entidadId: id,
-            descripcion: `Baja de ${usuarioExistente.nombre} ${usuarioExistente.apellidos}: ${vestuarioDevuelto} prenda(s) devueltas automáticamente al almacén`,
-            usuarioId, usuarioNombre, modulo: 'Logística',
-          })
-        }
+        const r = await devolverVestuarioPorBaja(id, { usuarioId, usuarioNombre })
+        vestuarioDevuelto = r.devueltas
       }
 
       return NextResponse.json({ success: true, usuario, vestuarioDevuelto })
