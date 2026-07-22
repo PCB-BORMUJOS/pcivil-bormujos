@@ -43,13 +43,16 @@ export function drawHeaderCorporativo(doc: jsPDF, opts: { titulo?: string; subti
   doc.setFillColor(...BLUE)
   doc.rect(0, 0, PAGE_W, HEADER_H, 'F')
 
-  // Ambos logotipos se dibujan exactamente con la misma altura.
   const LOGO_H = 13
+  // El logo del Ayuntamiento es más estrecho de proporción (≈4,25 frente a
+  // ≈5,05), así que a igual altura se ve más pequeño: se compensa dándole algo
+  // más de altura para equilibrarlos ópticamente.
+  const AYTO_H = 15.5
 
   // Logo del Ayuntamiento (izquierda), centrado verticalmente.
   if (aytoLogo) {
-    const w = LOGO_H * (aytoLogo.w / aytoLogo.h)
-    try { doc.addImage(aytoLogo.dataUrl, 'PNG', MARGIN, (HEADER_H - LOGO_H) / 2, w, LOGO_H) } catch { /* noop */ }
+    const w = AYTO_H * (aytoLogo.w / aytoLogo.h)
+    try { doc.addImage(aytoLogo.dataUrl, 'PNG', MARGIN, (HEADER_H - AYTO_H) / 2, w, AYTO_H) } catch { /* noop */ }
   }
 
   // Logo de Protección Civil (derecha). Usa el proporcionado o el embebido.
