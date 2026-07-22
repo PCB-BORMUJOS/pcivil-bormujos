@@ -102,6 +102,7 @@ interface Poliza {
   estado: string;
   vehiculoId?: string;
   notas?: string;
+  documentoUrl?: string;
 }
 
 interface Aspirante {
@@ -571,9 +572,10 @@ export default function AdministracionPage() {
   const [polizas, setPolizas] = useState<Poliza[]>([]);
   const [showNuevaPoliza, setShowNuevaPoliza] = useState(false);
   const [polizaEditando, setPolizaEditando] = useState<Poliza | null>(null);
+  const [subiendoDocPoliza, setSubiendoDocPoliza] = useState(false);
   const [nuevaPoliza, setNuevaPoliza] = useState({
     tipo: 'vehiculo', numero: '', compania: '', descripcion: '',
-    fechaInicio: '', fechaVencimiento: '', primaAnual: 0, vehiculoId: '', notas: ''
+    fechaInicio: '', fechaVencimiento: '', primaAnual: 0, vehiculoId: '', notas: '', documentoUrl: ''
   });
 
   // Estados para Aspirantes
@@ -1421,13 +1423,14 @@ export default function AdministracionPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(polizaEditando ? { id: polizaEditando.id, ...polizaData } : polizaData)
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { alert('No se pudo guardar la póliza: ' + (data.error || `error ${res.status}`)); return; }
       if (data.success) {
         setShowNuevaPoliza(false);
         setPolizaEditando(null);
         setNuevaPoliza({
           tipo: 'vehiculo', numero: '', compania: '', descripcion: '',
-          fechaInicio: '', fechaVencimiento: '', primaAnual: 0, vehiculoId: '', notas: ''
+          fechaInicio: '', fechaVencimiento: '', primaAnual: 0, vehiculoId: '', notas: '', documentoUrl: ''
         });
         cargarPolizas();
       } else {
@@ -2666,6 +2669,17 @@ export default function AdministracionPage() {
                               {p.primaAnual && <p className="text-sm text-slate-600">{Number(p.primaAnual).toFixed(2)} €/año</p>}
                             </div>
                             <div className="flex items-center gap-2">
+                              {p.documentoUrl && (
+                                <a
+                                  href={p.documentoUrl}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  title="Ver documento de la póliza"
+                                  className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                >
+                                  <FileText size={18} />
+                                </a>
+                              )}
                               <button
                                 onClick={() => { setPolizaEditando(p); setShowNuevaPoliza(true); }}
                                 className="p-2 text-slate-400 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
@@ -3680,9 +3694,51 @@ export default function AdministracionPage() {
                 className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
               />
             </div>
+            {/* Documento de la póliza */}
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Documento de la póliza (PDF o imagen)</label>
+              {(polizaEditando?.documentoUrl || nuevaPoliza.documentoUrl) ? (
+                <div className="flex items-center justify-between gap-3 border border-slate-200 rounded-lg p-2.5">
+                  <a href={polizaEditando?.documentoUrl || nuevaPoliza.documentoUrl} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-sm font-medium text-blue-600 hover:underline truncate">
+                    <FileText size={16} /> Ver documento adjunto
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => polizaEditando ? setPolizaEditando({ ...polizaEditando, documentoUrl: '' }) : setNuevaPoliza({ ...nuevaPoliza, documentoUrl: '' })}
+                    className="text-xs font-bold text-red-500 hover:underline flex-shrink-0"
+                  >
+                    Quitar
+                  </button>
+                </div>
+              ) : (
+                <input
+                  type="file"
+                  accept="application/pdf,image/*"
+                  disabled={subiendoDocPoliza}
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    setSubiendoDocPoliza(true);
+                    try {
+                      const fd = new FormData();
+                      fd.append('file', file);
+                      const res = await fetch('/api/admin/polizas/documento', { method: 'POST', body: fd });
+                      const data = await res.json().catch(() => ({}));
+                      if (!res.ok || !data.url) { alert('No se pudo subir el documento: ' + (data.error || `error ${res.status}`)); return; }
+                      if (polizaEditando) setPolizaEditando({ ...polizaEditando, documentoUrl: data.url });
+                      else setNuevaPoliza({ ...nuevaPoliza, documentoUrl: data.url });
+                    } catch { alert('Error al subir el documento'); }
+                    finally { setSubiendoDocPoliza(false); }
+                  }}
+                  className="w-full border border-slate-200 rounded-lg p-2.5 text-sm file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-orange-50 file:text-orange-700 file:font-medium"
+                />
+              )}
+              {subiendoDocPoliza && <p className="text-xs text-slate-500 mt-1.5">Subiendo documento…</p>}
+            </div>
+
             <div className="flex gap-3 pt-2">
               <button type="button" onClick={() => { setShowNuevaPoliza(false); setPolizaEditando(null); }} className="flex-1 py-2.5 border border-slate-300 text-slate-700 rounded-lg font-medium hover:bg-slate-50 transition-colors">Cancelar</button>
-              <button type="button" onClick={handleGuardarPoliza} className="flex-1 py-2.5 bg-orange-500 text-white rounded-lg font-medium hover:bg-orange-600 transition-colors">
+              <button type="button" disabled={subiendoDocPoliza} onClick={handleGuardarPoliza} className="flex-1 py-2.5 bg-orange-500 text-white rounded-lg font-medium hover:bg-orange-600 transition-colors disabled:opacity-50">
                 {polizaEditando ? 'Actualizar' : 'Guardar'}
               </button>
             </div>

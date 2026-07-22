@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { tipo, numero, compania, descripcion, fechaInicio, fechaVencimiento, primaAnual, vehiculoId, notas } = body
+    const { tipo, numero, compania, descripcion, fechaInicio, fechaVencimiento, primaAnual, vehiculoId, notas, documentoUrl } = body
 
     if (!tipo || !compania || !fechaInicio || !fechaVencimiento) {
       return NextResponse.json({ error: 'Faltan campos requeridos' }, { status: 400 })
@@ -68,8 +68,9 @@ export async function POST(request: NextRequest) {
         fechaVencimiento: vencimiento,
         primaAnual: primaAnual ? Number(primaAnual) : null,
         estado,
-        vehiculoId,
-        notas
+        vehiculoId: vehiculoId || null,
+        notas,
+        documentoUrl: documentoUrl || null
       }
     })
 
