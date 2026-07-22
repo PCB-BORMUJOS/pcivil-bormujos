@@ -37,6 +37,34 @@ export async function cargarImagen(url: string): Promise<ImagenCargada | null> {
   } catch { return null }
 }
 
+// Carga una imagen y la reescala/recomprime para el PDF. Las fotos de móvil
+// llegan a 3000-4000 px, muy por encima de lo que se imprime: a ~1800 px el
+// lado mayor, un ticket ocupa unos 80 mm en papel → más de 500 ppp, el doble de
+// lo necesario para imprenta (300 ppp). Reduce mucho el peso sin pérdida
+// visible. Solo para fotos: los logotipos deben seguir en PNG (transparencia).
+export async function cargarImagenOptimizada(url: string, maxLado = 1800, calidad = 0.9): Promise<ImagenCargada | null> {
+  const base = await cargarImagen(url)
+  if (!base) return null
+  const escala = Math.min(1, maxLado / Math.max(base.w, base.h))
+  // Ya está en JPEG y dentro de tamaño: no hay nada que ganar.
+  if (escala >= 1 && base.dataUrl.startsWith('data:image/jpeg')) return base
+  try {
+    const img = new Image()
+    await new Promise<void>((res, rej) => { img.onload = () => res(); img.onerror = () => rej(); img.src = base.dataUrl })
+    const w = Math.max(1, Math.round(base.w * escala))
+    const h = Math.max(1, Math.round(base.h * escala))
+    const canvas = document.createElement('canvas')
+    canvas.width = w; canvas.height = h
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return base
+    ctx.imageSmoothingQuality = 'high'
+    ctx.fillStyle = '#ffffff'
+    ctx.fillRect(0, 0, w, h)
+    ctx.drawImage(img, 0, 0, w, h)
+    return { dataUrl: canvas.toDataURL('image/jpeg', calidad), w, h }
+  } catch { return base }
+}
+
 // Cabecera azul: SOLO los dos logotipos — Ayuntamiento (izq.) y Protección Civil (der.).
 export function drawHeaderCorporativo(doc: jsPDF, opts: { titulo?: string; subtitulo?: string; aytoLogo?: ImagenCargada | null; pcLogo?: ImagenCargada | null }) {
   const { aytoLogo, pcLogo } = opts

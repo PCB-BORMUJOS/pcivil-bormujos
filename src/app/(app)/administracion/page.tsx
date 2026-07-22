@@ -2,7 +2,7 @@
 import TicketOCRUploader from '@/components/admin/TicketOCRUploader'
 import { PERMISOS_DISPONIBLES } from '@/lib/permisos';
 import { generarPdfPersonal, ordenIndicativo } from '@/lib/pdf-personal';
-import { drawHeaderCorporativo, drawFooterCorporativo, cargarImagen, type ImagenCargada } from '@/lib/pdf-corporativo';
+import { drawHeaderCorporativo, drawFooterCorporativo, cargarImagen, cargarImagenOptimizada, type ImagenCargada } from '@/lib/pdf-corporativo';
 
 import {
   DndContext,
@@ -1154,12 +1154,12 @@ export default function AdministracionPage() {
     const ticketsConImagen = ticketsCombustible.filter((t: any) => t.ticketUrl)
     const imagenesTickets: { img: ImagenCargada | null; caption: string }[] = []
     for (const t of ticketsConImagen) {
-      const img = await cargarImagen(t.ticketUrl as string)
+      const img = await cargarImagenOptimizada(t.ticketUrl as string)
       imagenesTickets.push({ img, caption: `${new Date(t.fecha).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })} · ${Number(t.importeFinal).toFixed(2)} €` })
     }
 
     const { jsPDF } = await import('jspdf')
-    const doc = new (jsPDF as any)({ format: 'a4', unit: 'mm' })
+    const doc = new (jsPDF as any)({ format: 'a4', unit: 'mm', compress: true })
     const W = 210
     const H = 297
     const margin = 14
