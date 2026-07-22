@@ -1171,7 +1171,7 @@ export default function AdministracionPage() {
     doc.setTextColor(0, 0, 0)
     doc.setFontSize(11)
     const rightX = W - margin
-    let y = 30
+    let y = 37
     // Destinatario (A/A) y copia (C/C), justificados a la derecha, nombre en negrita.
     doc.setFont('helvetica', 'bold')
     doc.text('A/A: D.Luis Alberto Paniagua Lopez', rightX, y, { align: 'right' })
@@ -1273,10 +1273,10 @@ export default function AdministracionPage() {
       doc.setTextColor(40, 54, 102)
       doc.setFontSize(12)
       doc.setFont('helvetica', 'bold')
-      doc.text('DOCUMENTOS ADJUNTOS', W / 2, 30, { align: 'center' })
+      doc.text('DOCUMENTOS ADJUNTOS', W / 2, 35, { align: 'center' })
 
       const gap = 8
-      const areaTop = 36
+      const areaTop = 41
       const areaBottom = H - 18 - 6
       const areaH = areaBottom - areaTop
       const colW = (W - margin * 2 - gap) / 2

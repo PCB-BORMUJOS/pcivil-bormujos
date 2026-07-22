@@ -8,7 +8,7 @@ export const WHITE: [number, number, number] = [255, 255, 255]
 export const PAGE_W = 210
 export const PAGE_H = 297
 export const MARGIN = 8
-export const HEADER_H = 18
+export const HEADER_H = 25
 export const FOOTER_H = 18
 
 export interface ImagenCargada { dataUrl: string; w: number; h: number }
