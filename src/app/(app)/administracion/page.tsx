@@ -1182,29 +1182,30 @@ export default function AdministracionPage() {
       doc.setFont('helvetica', 'normal')
       doc.text('Dpto. de intervencion', rightX, y + 20, { align: 'right' })
 
-      y = 64
+      // Dos saltos de línea de separación respecto al bloque anterior.
+      y = 76
       doc.setFont('helvetica', 'bold')
       doc.text('REF: ' + refNormal + ' Informe tarjeta SOLRED 9724990031420621', margin, y)
       doc.text('ASUNTO: Informe sobre el uso de la tarjeta SOLRED asignada al Servicio de Proteccion Civil.', margin, y + 8)
 
-      y = 80
+      y = 92
       doc.setDrawColor(200, 200, 200)
       doc.line(margin, y, W - margin, y)
 
-      y = 88
+      y = 100
       doc.setFont('helvetica', 'normal')
       doc.setFontSize(11)
-      const t1 = 'Por medio del presente Emilio Simon Gomez en calidad de Jefe de Proteccion Civil y Emergencias del Ayuntamiento de Bormujos informa para que surta los efectos oportunos.'
-      const l1 = doc.splitTextToSize(t1, W - margin * 2)
-      doc.text(l1, margin, y); y += l1.length * 6 + 4
+      const anchoTexto = W - margin * 2
+      // Párrafos justificados a ambos lados.
+      const parrafo = (txt: string) => {
+        const lineas = doc.splitTextToSize(txt, anchoTexto)
+        doc.text(txt, margin, y, { maxWidth: anchoTexto, align: 'justify' })
+        y += lineas.length * 6 + 4
+      }
 
-      const t2 = 'Los vehiculos no requieren del reportaje con esta tarjeta ya que todos son de Gasoil y su reportaje se realiza en la nave de obras y servicios con el correspondiente control por parte del personal de las propias instalaciones.'
-      const l2 = doc.splitTextToSize(t2, W - margin * 2)
-      doc.text(l2, margin, y); y += l2.length * 6 + 4
-
-      const t3 = 'Los gastos cargados a esta tarjeta corresponden al gasto en gasolina destinada a herramientas mecanicas como motosierras, motobombas del VIR y grupos electrogenos.'
-      const l3 = doc.splitTextToSize(t3, W - margin * 2)
-      doc.text(l3, margin, y); y += l3.length * 6 + 4
+      parrafo('Por medio del presente Emilio Simon Gomez en calidad de Jefe de Proteccion Civil y Emergencias del Ayuntamiento de Bormujos informa para que surta los efectos oportunos.')
+      parrafo('Los vehiculos no requieren del reportaje con esta tarjeta ya que todos son de Gasoil y su reportaje se realiza en la nave de obras y servicios con el correspondiente control por parte del personal de las propias instalaciones.')
+      parrafo('Los gastos cargados a esta tarjeta corresponden al gasto en gasolina destinada a herramientas mecanicas como motosierras, motobombas del VIR y grupos electrogenos.')
 
       doc.text('En relacion al documento recibido aparecen los siguientes gastos de combustible (gasolina):', margin, y)
       y += 8
@@ -1248,7 +1249,7 @@ export default function AdministracionPage() {
       doc.setFontSize(11)
       const tadj = 'Se adjuntan los tickets correspondientes a los repostajes mencionados confirmando que son correctos en relacion a la factura remitida via mail por el Dpto. de Intervencion.'
       const ladj = doc.splitTextToSize(tadj, W - margin * 2)
-      doc.text(ladj, margin, y); y += ladj.length * 6 + 10
+      doc.text(tadj, margin, y, { maxWidth: W - margin * 2, align: 'justify' }); y += ladj.length * 6 + 10
 
       doc.text('Sin mas que anadir se firma el presente para que surta los efectos que proceda.', margin, y)
       y += 12

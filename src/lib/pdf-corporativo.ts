@@ -43,22 +43,22 @@ export function drawHeaderCorporativo(doc: jsPDF, opts: { titulo?: string; subti
   doc.setFillColor(...BLUE)
   doc.rect(0, 0, PAGE_W, HEADER_H, 'F')
 
+  // Ambos logotipos se dibujan exactamente con la misma altura.
+  const LOGO_H = 13
+
   // Logo del Ayuntamiento (izquierda), centrado verticalmente.
   if (aytoLogo) {
-    const h = 12
-    const w = h * (aytoLogo.w / aytoLogo.h)
-    try { doc.addImage(aytoLogo.dataUrl, 'PNG', MARGIN, (HEADER_H - h) / 2, w, h) } catch { /* noop */ }
+    const w = LOGO_H * (aytoLogo.w / aytoLogo.h)
+    try { doc.addImage(aytoLogo.dataUrl, 'PNG', MARGIN, (HEADER_H - LOGO_H) / 2, w, LOGO_H) } catch { /* noop */ }
   }
 
   // Logo de Protección Civil (derecha). Usa el proporcionado o el embebido.
   if (pcLogo) {
-    const h = 12
-    const w = h * (pcLogo.w / pcLogo.h)
-    try { doc.addImage(pcLogo.dataUrl, 'PNG', PAGE_W - MARGIN - w, (HEADER_H - h) / 2, w, h) } catch { /* noop */ }
+    const w = LOGO_H * (pcLogo.w / pcLogo.h)
+    try { doc.addImage(pcLogo.dataUrl, 'PNG', PAGE_W - MARGIN - w, (HEADER_H - LOGO_H) / 2, w, LOGO_H) } catch { /* noop */ }
   } else {
-    const logoW = 50
-    const logoH = logoW * (333 / 1024)
-    try { doc.addImage(LOGO_BASE64, 'PNG', PAGE_W - MARGIN - logoW, (HEADER_H - logoH) / 2, logoW, logoH) } catch { /* noop */ }
+    const w = LOGO_H * (1024 / 333)
+    try { doc.addImage(LOGO_BASE64, 'PNG', PAGE_W - MARGIN - w, (HEADER_H - LOGO_H) / 2, w, LOGO_H) } catch { /* noop */ }
   }
 }
 
