@@ -911,6 +911,9 @@ export default function AdministracionPage() {
       });
       const data = await res.json();
       if (data.success) {
+        if (data.vestuarioDevuelto > 0) {
+          alert(`Baja registrada. ${data.vestuarioDevuelto} prenda(s) de vestuario han vuelto automáticamente al almacén.`);
+        }
         cargarVoluntarios();
       }
     } catch (error) {
