@@ -2,13 +2,15 @@
 
 import { useState } from 'react'
 import { signIn } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
-import { Shield, Mail, Lock, Loader2, AlertCircle } from 'lucide-react'
+import { Mail, Lock, Loader2, AlertCircle, Eye, EyeOff } from 'lucide-react'
+
+// Azul corporativo del servicio (#283666), el mismo de partes e informes.
+const AZUL = '#283666'
 
 export default function LoginPage() {
-  const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [verPassword, setVerPassword] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -18,115 +20,159 @@ export default function LoginPage() {
     setLoading(true)
 
     try {
-      const result = await signIn('credentials', {
-        email,
-        password,
-        redirect: false,
-      })
-
+      const result = await signIn('credentials', { email, password, redirect: false })
       if (result?.error) {
         setError(result.error)
         setLoading(false)
         return
       }
-
       window.location.href = '/dashboard'
-    } catch (err) {
+    } catch {
       setError('Error al iniciar sesión')
       setLoading(false)
     }
   }
 
+  // Trama fina en marca de agua que da textura al fondo.
+  const trama = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48'%3E%3Cpath d='M48 0H0v48' fill='none' stroke='%23ffffff' stroke-width='0.6' opacity='0.5'/%3E%3C/svg%3E")`
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        {/* Logo */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-orange-500 mb-4">
-            <Shield className="w-10 h-10 text-white" />
-          </div>
-          <h1 className="text-2xl font-bold text-white">Protección Civil</h1>
-          <p className="text-orange-500 font-semibold">BORMUJOS</p>
-        </div>
+    <div
+      className="relative min-h-screen flex items-center justify-center p-4 overflow-hidden"
+      style={{ background: `linear-gradient(160deg, #31406f 0%, ${AZUL} 45%, #1b2545 100%)` }}
+    >
+      {/* Trama geométrica */}
+      <div aria-hidden className="absolute inset-0 opacity-[0.07]" style={{ backgroundImage: trama, backgroundSize: '48px 48px' }} />
 
-        {/* Form */}
-        <div className="bg-white rounded-2xl shadow-2xl p-8">
-          <h2 className="text-xl font-bold text-slate-800 mb-6 text-center">
-            Acceso al Sistema
-          </h2>
+      {/* Marca de agua del logotipo */}
+      <div aria-hidden className="absolute inset-0 flex items-center justify-center overflow-hidden">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/images/logo-pc-blanco.png"
+          alt=""
+          className="w-[1100px] max-w-none opacity-[0.035] select-none -rotate-6"
+        />
+      </div>
 
-          {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-700 text-sm">
-              <AlertCircle size={18} />
-              {error}
-            </div>
-          )}
+      {/* Volumen: luz superior, viñeta inferior y destello cálido */}
+      <div aria-hidden className="absolute inset-0" style={{ background: 'radial-gradient(70% 55% at 50% -5%, rgba(255,255,255,0.16), transparent 65%)' }} />
+      <div aria-hidden className="absolute inset-0" style={{ background: 'radial-gradient(45% 40% at 85% 105%, rgba(255,122,0,0.13), transparent 70%)' }} />
+      <div aria-hidden className="absolute inset-0" style={{ boxShadow: 'inset 0 0 220px rgba(0,0,0,0.55)' }} />
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Email
-              </label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
-                  placeholder="tu@email.com"
-                  autoComplete="email"
-                  required
-                  suppressHydrationWarning
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Contraseña
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
-                  placeholder="••••••••"
-                  autoComplete="current-password"
-                  required
-                  suppressHydrationWarning
-                />
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="animate-spin" size={20} />
-                  Entrando...
-                </>
-              ) : (
-                'Entrar'
-              )}
-            </button>
-          </form>
-
-          <div className="mt-6 pt-6 border-t border-slate-200 text-center text-sm text-slate-500">
-            <p>¿Problemas para acceder?</p>
-            <p>Contacta con tu coordinador</p>
+      <div className="relative w-full max-w-[420px]">
+        {/* Identidad */}
+        <div className="text-center mb-9">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/images/logo-pc-blanco.png"
+            alt="Protección Civil Bormujos"
+            className="h-[58px] w-auto mx-auto drop-shadow-[0_4px_16px_rgba(0,0,0,0.45)]"
+          />
+          <div className="mt-5 flex items-center justify-center gap-3">
+            <span className="h-px w-8 bg-white/25" />
+            <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-white/65">
+              Sistema de Gestión
+            </p>
+            <span className="h-px w-8 bg-white/25" />
           </div>
         </div>
 
-        {/* Footer */}
-        <p className="text-center text-slate-500 text-sm mt-6">
-          © 2024 Protección Civil Bormujos
-        </p>
+        {/* Tarjeta de acceso */}
+        <div className="rounded-2xl bg-white shadow-[0_35px_70px_-20px_rgba(0,0,0,0.65)] ring-1 ring-black/5 overflow-hidden">
+          <div className="h-1" style={{ background: 'linear-gradient(90deg, #ff7a00, #ffa04d)' }} />
+          <div className="p-8">
+            <h1 className="text-[19px] font-bold text-slate-900 text-center">Acceso al sistema</h1>
+            <p className="text-[13px] text-slate-500 text-center mt-1.5">
+              Introduce tus credenciales para continuar
+            </p>
+
+            {error && (
+              <div className="mt-5 p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2 text-red-700 text-sm">
+                <AlertCircle size={17} className="flex-shrink-0 mt-0.5" />
+                <span>{error}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+              <div>
+                <label htmlFor="email" className="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1.5">
+                  Correo electrónico
+                </label>
+                <div className="relative">
+                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={17} />
+                  <input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full pl-11 pr-4 py-3 text-[15px] bg-slate-50 border border-slate-200 rounded-xl outline-none transition-all focus:bg-white focus:border-slate-400 focus:ring-4 focus:ring-slate-900/5"
+                    placeholder="nombre@ejemplo.com"
+                    autoComplete="email"
+                    required
+                    suppressHydrationWarning
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="password" className="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1.5">
+                  Contraseña
+                </label>
+                <div className="relative">
+                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={17} />
+                  <input
+                    id="password"
+                    type={verPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full pl-11 pr-11 py-3 text-[15px] bg-slate-50 border border-slate-200 rounded-xl outline-none transition-all focus:bg-white focus:border-slate-400 focus:ring-4 focus:ring-slate-900/5"
+                    placeholder="••••••••"
+                    autoComplete="current-password"
+                    required
+                    suppressHydrationWarning
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setVerPassword(v => !v)}
+                    aria-label={verPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                  >
+                    {verPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+                  </button>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full text-white font-bold text-[15px] py-3.5 rounded-xl transition-all shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40 hover:brightness-110 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                style={{ background: 'linear-gradient(180deg, #ff8a1a, #ef6c00)' }}
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="animate-spin" size={19} />
+                    Accediendo…
+                  </>
+                ) : (
+                  'Acceder'
+                )}
+              </button>
+            </form>
+
+            <div className="mt-7 pt-5 border-t border-slate-100 text-center">
+              <p className="text-[13px] text-slate-500">
+                ¿Problemas para acceder? Contacta con tu coordinador.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Pie */}
+        <div className="mt-7 text-center">
+          <p className="text-[12px] text-white/45">
+            © {new Date().getFullYear()} Emilio Simón Gómez
+          </p>
+        </div>
       </div>
     </div>
   )
