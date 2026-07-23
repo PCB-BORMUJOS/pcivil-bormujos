@@ -454,8 +454,18 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-
-    const body = await request.json()
+    // Las subidas de fichero llegan como multipart; el resto como JSON.
+    const esMultipart = (request.headers.get('content-type') || '').includes('multipart/form-data')
+    let formDataPost: FormData | null = null
+    let body: any = {}
+    if (esMultipart) {
+      formDataPost = await request.formData()
+      formDataPost.forEach((valor, clave) => {
+        if (typeof valor === 'string') body[clave] = valor
+      })
+    } else {
+      body = await request.json()
+    }
     const { tipo } = body
 
     // ===== ARTÍCULO =====
@@ -976,7 +986,10 @@ export async function POST(request: NextRequest) {
 
     // POST Subir manual
     if (tipo === 'manual') {
-      const formData = await request.formData()
+      const formData = formDataPost
+      if (!formData) {
+        return NextResponse.json({ error: 'La subida del manual debe enviarse como formulario con el archivo adjunto' }, { status: 400 })
+      }
       const file = formData.get('file') as File
       const titulo = formData.get('titulo') as string
       const descripcion = formData.get('descripcion') as string
@@ -1075,9 +1088,13 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({ error: 'Tipo no válido' }, { status: 400 })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error en POST /api/logistica:', error)
-    return NextResponse.json({ error: 'Error interno' }, { status: 500 })
+    if (error?.code === 'P2002') {
+      return NextResponse.json({ error: 'Ya existe un registro con ese identificador' }, { status: 409 })
+    }
+    const detalle = typeof error?.message === 'string' ? error.message : ''
+    return NextResponse.json({ error: 'Error interno al procesar la petición', detalle }, { status: 500 })
   }
 }
 
