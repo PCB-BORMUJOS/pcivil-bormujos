@@ -58,6 +58,7 @@ model Usuario {
   vehiculosAsignados     VehiculoAsignacion[]
   documentosVehiculo    DocumentoVehiculo[]
   mantenimientosVehiculo MantenimientoVehiculo[]
+  siniestrosVehiculo     SiniestroVehiculo[]
 
   manuales              Manual[]
   partesPSI             PartePSI[]
@@ -300,6 +301,7 @@ model Vehiculo {
   mantenimientos  MantenimientoVehiculo[]
   repostajes      RepostajeVehiculo[]
   fluidos         RegistroFluidoVehiculo[]
+  siniestros      SiniestroVehiculo[]
 
   ubicaciones     UbicacionVehiculo[]
   @@map("vehiculos")
@@ -946,6 +948,40 @@ model MantenimientoVehiculo {
   @@index([usuarioId])
   @@index([fecha])
   @@map("mantenimientos_vehiculo")
+}
+
+model SiniestroVehiculo {
+  id              String    @id @default(cuid())
+  vehiculoId      String    @map("vehiculo_id")
+  vehiculo        Vehiculo  @relation(fields: [vehiculoId], references: [id], onDelete: Cascade)
+  fecha           DateTime
+  hora            String?
+  tipo            String    // colision, alcance, salida_via, atropello, vandalismo, robo, incendio, granizo, otros
+  gravedad        String    @default("leve") // leve, moderado, grave
+  lugar           String?
+  descripcion     String
+  kilometraje     Int?
+  conductor       String?
+  terceroImplicado String?  @map("tercero_implicado")
+  matriculaTercero String?  @map("matricula_tercero")
+  aseguradora     String?
+  numeroSiniestro String?   @map("numero_siniestro")
+  atestado        String?   // Cuerpo que instruye atestado (Policía Local, Guardia Civil...)
+  heridos         Boolean   @default(false)
+  costeReparacion Float?    @map("coste_reparacion")
+  estado          String    @default("abierto") // abierto, en_tramite, reparado, cerrado
+  observaciones   String?
+  parteUrl        String?   @map("parte_url")
+  parteNombre     String?   @map("parte_nombre")
+  parteBlobKey    String?   @map("parte_blob_key")
+  usuarioId       String    @map("usuario_id")
+  usuario         Usuario   @relation(fields: [usuarioId], references: [id])
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  @@index([vehiculoId])
+  @@index([fecha])
+  @@map("siniestros_vehiculo")
 }
 
 model EquipoRadio {

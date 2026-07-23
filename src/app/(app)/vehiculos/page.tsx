@@ -32,6 +32,7 @@ interface Documento { id: string; tipo: string; nombre: string; url: string; fec
 interface Mantenimiento { id: string; fecha: string; tipo: string; descripcion: string; kilometraje?: number; coste?: number; proximaRevision?: string; realizadoPor?: string; observaciones?: string }
 interface Repostaje { id: string; fecha: string; vehiculoId: string; litros: number; precioLitro?: number; costeTotal?: number; kilometraje: number; tipoCarburante: string; gasolinera?: string }
 interface RegistroFluido { id: string; fecha: string; vehiculoId: string; tipoFluido: string; accion: string; cantidad?: number; unidad?: string; kilometraje?: number; observaciones?: string }
+interface Siniestro { id: string; fecha: string; hora?: string; tipo: string; gravedad: string; lugar?: string; descripcion: string; kilometraje?: number; conductor?: string; terceroImplicado?: string; matriculaTercero?: string; aseguradora?: string; numeroSiniestro?: string; atestado?: string; heridos: boolean; costeReparacion?: number; estado: string; observaciones?: string; parteUrl?: string; parteNombre?: string; createdAt: string; usuario?: { nombre: string; apellidos: string } }
 
 const ESTADOS_VEHICULO: Record<string, { label: string; color: string; bg: string }> = {
   disponible: { label: 'Disponible', color: 'text-emerald-700', bg: 'bg-emerald-50 border-emerald-200' },
@@ -53,6 +54,22 @@ const TIPOS_FLUIDO = [
   { value: 'filtro_particulas', label: 'Aditivo filtro partículas', icon: Filter },
   { value: 'inyectores', label: 'Limpiador de inyectores', icon: Activity },
 ]
+const TIPOS_SINIESTRO: Record<string, string> = {
+  colision: 'Colisión', alcance: 'Alcance', salida_via: 'Salida de vía', atropello: 'Atropello',
+  vuelco: 'Vuelco', vandalismo: 'Vandalismo', robo: 'Robo', incendio: 'Incendio',
+  granizo: 'Granizo / Fenómeno meteorológico', danos_aparcado: 'Daños estando aparcado', otros: 'Otros',
+}
+const GRAVEDAD_SINIESTRO: Record<string, { label: string; color: string }> = {
+  leve: { label: 'Leve', color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+  moderado: { label: 'Moderado', color: 'bg-amber-50 text-amber-700 border-amber-200' },
+  grave: { label: 'Grave', color: 'bg-red-50 text-red-700 border-red-200' },
+}
+const ESTADOS_SINIESTRO: Record<string, { label: string; color: string }> = {
+  abierto: { label: 'Abierto', color: 'bg-red-50 text-red-700 border-red-200' },
+  en_tramite: { label: 'En trámite', color: 'bg-amber-50 text-amber-700 border-amber-200' },
+  reparado: { label: 'Reparado', color: 'bg-blue-50 text-blue-700 border-blue-200' },
+  cerrado: { label: 'Cerrado', color: 'bg-slate-100 text-slate-600 border-slate-200' },
+}
 const NIVELES = [
   { value: 'lleno', label: 'Lleno', color: 'bg-emerald-500' },
   { value: 'ok', label: 'Correcto', color: 'bg-blue-500' },
@@ -93,7 +110,7 @@ export default function VehiculosPage() {
   const { data: session } = useSession()
   const [mainTab, setMainTab] = useState<'inventario' | 'flota' | 'documentacion' | 'localizacion'>('inventario')
   const [inventoryTab, setInventoryTab] = useState<'stock' | 'peticiones' | 'movimientos'>('stock')
-  const [vehicleDetailTab, setVehicleDetailTab] = useState<'ficha' | 'niveles' | 'repostajes' | 'documentos' | 'mantenimiento'>('ficha')
+  const [vehicleDetailTab, setVehicleDetailTab] = useState<'ficha' | 'niveles' | 'repostajes' | 'documentos' | 'mantenimiento' | 'siniestros'>('ficha')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [articulos, setArticulos] = useState<Articulo[]>([])
@@ -131,6 +148,9 @@ export default function VehiculosPage() {
   const [mantenimientos, setMantenimientos] = useState<Mantenimiento[]>([])
   const [repostajes, setRepostajes] = useState<Repostaje[]>([])
   const [registrosFluidos, setRegistrosFluidos] = useState<RegistroFluido[]>([])
+  const [siniestros, setSiniestros] = useState<Siniestro[]>([])
+  const [siniestroExpandido, setSiniestroExpandido] = useState<string | null>(null)
+  const [siniestroSeguimiento, setSiniestroSeguimiento] = useState<Siniestro | null>(null)
   const nivelPorFluido = useMemo(() => {
     const npr: Record<string, string> = {}
     TIPOS_FLUIDO.forEach(fl => {
@@ -165,6 +185,7 @@ export default function VehiculosPage() {
   const [repoPrecio, setRepoPrecio] = useState('')
   const [showNuevoFluido, setShowNuevoFluido] = useState(false)
   const [showNuevoMantenimiento, setShowNuevoMantenimiento] = useState(false)
+  const [showNuevoSiniestro, setShowNuevoSiniestro] = useState(false)
   const [showSubirDocumento, setShowSubirDocumento] = useState(false)
   const [articuloSeleccionado, setArticuloSeleccionado] = useState<Articulo | null>(null)
   const [nuevaFamilia, setNuevaFamilia] = useState('')
@@ -184,9 +205,10 @@ export default function VehiculosPage() {
   const cargarMantenimientos = useCallback(async (vid: string) => { try { const r = await fetch(`/api/vehiculos?tipo=mantenimientos&vehiculoId=${vid}`); const d = await r.json(); setMantenimientos(d.mantenimientos || []) } catch (e) { /* error silenciado */ } }, [])
   const cargarRepostajes = useCallback(async (vid: string) => { try { const r = await fetch(`/api/vehiculos?tipo=repostajes&vehiculoId=${vid}`); const d = await r.json(); setRepostajes(d.repostajes || []) } catch (e) { /* error silenciado */ } }, [])
   const cargarRegistrosFluidos = useCallback(async (vid: string) => { try { const r = await fetch(`/api/vehiculos?tipo=fluidos&vehiculoId=${vid}`); const d = await r.json(); setRegistrosFluidos(d.registros || []) } catch (e) { /* error silenciado */ } }, [])
+  const cargarSiniestros = useCallback(async (vid: string) => { try { const r = await fetch(`/api/vehiculos?tipo=siniestros&vehiculoId=${vid}`); const d = await r.json(); setSiniestros(d.siniestros || []) } catch (e) { /* error silenciado */ } }, [])
 
   useEffect(() => { cargarDatos() }, [cargarDatos])
-  useEffect(() => { if (vehiculoSeleccionado && showDetalleVehiculo) { cargarDocumentos(vehiculoSeleccionado.id); cargarMantenimientos(vehiculoSeleccionado.id); cargarRepostajes(vehiculoSeleccionado.id); cargarRegistrosFluidos(vehiculoSeleccionado.id) } }, [vehiculoSeleccionado, showDetalleVehiculo, cargarDocumentos, cargarMantenimientos, cargarRepostajes, cargarRegistrosFluidos])
+  useEffect(() => { if (vehiculoSeleccionado && showDetalleVehiculo) { cargarDocumentos(vehiculoSeleccionado.id); cargarMantenimientos(vehiculoSeleccionado.id); cargarRepostajes(vehiculoSeleccionado.id); cargarRegistrosFluidos(vehiculoSeleccionado.id); cargarSiniestros(vehiculoSeleccionado.id) } }, [vehiculoSeleccionado, showDetalleVehiculo, cargarDocumentos, cargarMantenimientos, cargarRepostajes, cargarRegistrosFluidos, cargarSiniestros])
 
   useEffect(() => {
     const fetchGPS = async () => {
@@ -211,6 +233,38 @@ export default function VehiculosPage() {
     if (!confirm('¿Eliminar este mantenimiento?')) return
     const r = await fetch('/api/vehiculos?tipo=mantenimiento&id=' + id, { method: 'DELETE' })
     if (r.ok && vehiculoSeleccionado) cargarMantenimientos(vehiculoSeleccionado.id)
+  }
+
+  const handleNuevoSiniestro = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    if (!vehiculoSeleccionado) return
+    const f = new FormData(e.currentTarget)
+    f.append('vehiculoId', vehiculoSeleccionado.id)
+    f.set('heridos', f.get('heridos') === 'on' ? 'true' : 'false')
+    try {
+      setSaving(true)
+      const r = await fetch('/api/vehiculos?tipo=siniestro', { method: 'POST', body: f })
+      if (r.ok) { setShowNuevoSiniestro(false); cargarSiniestros(vehiculoSeleccionado.id) }
+      else { const d = await r.json().catch(() => ({})); alert(d.error || 'Error al registrar el siniestro') }
+    } catch (err) { alert('Error al registrar el siniestro') } finally { setSaving(false) }
+  }
+
+  const handleActualizarSiniestro = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    if (!siniestroSeguimiento || !vehiculoSeleccionado) return
+    const f = new FormData(e.currentTarget)
+    try {
+      setSaving(true)
+      const r = await fetch('/api/vehiculos?tipo=siniestro', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: siniestroSeguimiento.id, estado: f.get('estado'), aseguradora: f.get('aseguradora'), numeroSiniestro: f.get('numeroSiniestro'), costeReparacion: f.get('costeReparacion'), observaciones: f.get('observaciones') }) })
+      if (r.ok) { setSiniestroSeguimiento(null); cargarSiniestros(vehiculoSeleccionado.id) }
+      else { const d = await r.json().catch(() => ({})); alert(d.error || 'Error al actualizar el siniestro') }
+    } catch (err) { alert('Error al actualizar el siniestro') } finally { setSaving(false) }
+  }
+
+  const handleEliminarSiniestro = async (id: string) => {
+    if (!confirm('¿Eliminar este siniestro? También se borrará el parte adjunto.')) return
+    const r = await fetch('/api/vehiculos?tipo=siniestro&id=' + id, { method: 'DELETE' })
+    if (r.ok && vehiculoSeleccionado) cargarSiniestros(vehiculoSeleccionado.id)
   }
 
   const handleEliminarFluido = async (id: string) => {
@@ -572,6 +626,7 @@ export default function VehiculosPage() {
                   { key: 'repostajes', label: 'Repostajes', icon: Fuel },
                   { key: 'documentos', label: 'Documentación', icon: FileText },
                   { key: 'mantenimiento', label: 'Mantenimiento', icon: Wrench },
+                  { key: 'siniestros', label: 'Siniestros', icon: AlertTriangle },
                 ].map(tab => (
                   <button key={tab.key} onClick={() => setVehicleDetailTab(tab.key as any)} className={`flex items-center gap-1.5 px-3 py-3 text-sm font-medium border-b-2 transition-colors ${vehicleDetailTab === tab.key ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
                     <tab.icon className="w-4 h-4" />{tab.label}
@@ -654,6 +709,98 @@ export default function VehiculosPage() {
                       <tbody className="divide-y divide-slate-100">{mantenimientos.length === 0 ? (<tr><td colSpan={7} className="text-center py-8 text-slate-400"><Settings className="w-8 h-8 mx-auto mb-2 opacity-30" /><p className="text-sm">No hay registros</p></td></tr>) : mantenimientos.map(m => (<tr key={m.id} className="hover:bg-slate-50"><td className="px-4 py-3 text-slate-600">{new Date(m.fecha).toLocaleDateString('es-ES')}</td><td className="px-4 py-3"><span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 whitespace-nowrap">{m.tipo}</span></td><td className="px-4 py-3 text-slate-800 max-w-[200px]"><p className="truncate text-sm" title={m.descripcion}>{m.descripcion}</p></td><td className="px-4 py-3 text-right text-slate-600">{m.kilometraje?.toLocaleString() || '-'}</td><td className="px-4 py-3 text-right font-medium">{m.coste ? `${m.coste.toFixed(2)} €` : '-'}</td><td className="px-4 py-3 text-slate-500 text-sm whitespace-nowrap">{m.realizadoPor || '—'}</td><td className="px-4 py-3 text-right"><button onClick={() => handleEliminarMantenimiento(m.id)} className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500"><Trash2 className="w-3.5 h-3.5" /></button></td></tr>))}</tbody>
                     </table>
                   </div>
+                </div>
+              )}
+
+              {vehicleDetailTab === 'siniestros' && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3 text-sm text-slate-500">
+                      <span><strong className="text-slate-800">{siniestros.length}</strong> siniestro{siniestros.length === 1 ? '' : 's'}</span>
+                      {siniestros.filter(s => s.estado === 'abierto' || s.estado === 'en_tramite').length > 0 && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">{siniestros.filter(s => s.estado === 'abierto' || s.estado === 'en_tramite').length} en curso</span>
+                      )}
+                    </div>
+                    {canEdit && <button onClick={() => setShowNuevoSiniestro(true)} className="flex items-center gap-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-medium"><Plus className="w-4 h-4" />Registrar Siniestro</button>}
+                  </div>
+
+                  {siniestros.length === 0 ? (
+                    <div className="border border-slate-200 rounded-xl text-center py-12 text-slate-400"><AlertTriangle className="w-8 h-8 mx-auto mb-2 opacity-30" /><p className="text-sm">No hay siniestros registrados</p></div>
+                  ) : (
+                    <div className="space-y-3">
+                      {siniestros.map(s => {
+                        const grav = GRAVEDAD_SINIESTRO[s.gravedad] || GRAVEDAD_SINIESTRO.leve
+                        const est = ESTADOS_SINIESTRO[s.estado] || ESTADOS_SINIESTRO.abierto
+                        const abierto = siniestroExpandido === s.id
+                        return (
+                          <div key={s.id} className="border border-slate-200 rounded-xl overflow-hidden">
+                            <button onClick={() => setSiniestroExpandido(abierto ? null : s.id)} className="w-full flex items-start justify-between gap-3 p-4 text-left hover:bg-slate-50 transition-colors">
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap mb-1">
+                                  <span className="text-sm font-semibold text-slate-800">{TIPOS_SINIESTRO[s.tipo] || s.tipo}</span>
+                                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${grav.color}`}>{grav.label}</span>
+                                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${est.color}`}>{est.label}</span>
+                                  {s.heridos && <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border bg-red-50 text-red-700 border-red-200">Con heridos</span>}
+                                  {s.parteUrl && <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border bg-blue-50 text-blue-700 border-blue-200"><FileCheck className="w-3 h-3" />Parte</span>}
+                                </div>
+                                <p className="text-sm text-slate-600 truncate">{s.descripcion}</p>
+                                <p className="text-xs text-slate-400 mt-1">{new Date(s.fecha).toLocaleDateString('es-ES')}{s.hora ? ` · ${s.hora}` : ''}{s.lugar ? ` · ${s.lugar}` : ''}</p>
+                              </div>
+                              {abierto ? <ChevronDown className="w-4 h-4 text-slate-400 shrink-0 mt-1" /> : <ChevronRight className="w-4 h-4 text-slate-400 shrink-0 mt-1" />}
+                            </button>
+
+                            {abierto && (
+                              <div className="border-t border-slate-100 bg-slate-50/50 p-4 space-y-4">
+                                <div className="grid grid-cols-2 gap-x-6 gap-y-1">
+                                  {[
+                                    { l: 'Conductor', v: s.conductor },
+                                    { l: 'Kilometraje', v: s.kilometraje ? `${s.kilometraje.toLocaleString()} km` : null },
+                                    { l: 'Tercero implicado', v: s.terceroImplicado },
+                                    { l: 'Matrícula tercero', v: s.matriculaTercero },
+                                    { l: 'Aseguradora', v: s.aseguradora },
+                                    { l: 'Nº de siniestro', v: s.numeroSiniestro },
+                                    { l: 'Atestado', v: s.atestado },
+                                    { l: 'Coste reparación', v: s.costeReparacion ? `${Number(s.costeReparacion).toFixed(2)} €` : null },
+                                  ].map(r => (
+                                    <div key={r.l} className="flex justify-between items-center py-1.5 border-b border-slate-100">
+                                      <span className="text-xs text-slate-400 font-medium">{r.l}</span>
+                                      <span className="text-sm font-medium text-slate-800">{r.v || '—'}</span>
+                                    </div>
+                                  ))}
+                                </div>
+
+                                <div>
+                                  <p className="text-xs text-slate-400 font-medium mb-1">Descripción</p>
+                                  <p className="text-sm text-slate-700 whitespace-pre-wrap">{s.descripcion}</p>
+                                </div>
+
+                                {s.observaciones && (
+                                  <div>
+                                    <p className="text-xs text-slate-400 font-medium mb-1">Observaciones / Seguimiento</p>
+                                    <p className="text-sm text-slate-700 whitespace-pre-wrap">{s.observaciones}</p>
+                                  </div>
+                                )}
+
+                                <p className="text-xs text-slate-400">Registrado por {s.usuario ? `${s.usuario.nombre} ${s.usuario.apellidos}` : '—'} el {new Date(s.createdAt).toLocaleDateString('es-ES')}</p>
+
+                                <div className="flex items-center justify-between gap-2 pt-1">
+                                  {s.parteUrl ? (
+                                    <a href={s.parteUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg"><Download className="w-4 h-4" />{s.parteNombre || 'Ver parte'}</a>
+                                  ) : <span className="text-xs text-slate-400">Sin parte adjunto</span>}
+                                  {canEdit && (
+                                    <div className="flex items-center gap-2">
+                                      <button onClick={() => setSiniestroSeguimiento(s)} className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg"><Edit className="w-4 h-4" />Seguimiento</button>
+                                      <button onClick={() => handleEliminarSiniestro(s.id)} className="p-2 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -805,7 +952,7 @@ export default function VehiculosPage() {
             <div className="p-5 border-b border-slate-200 flex items-center justify-between"><h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2"><Droplets className="w-5 h-5 text-blue-500" />Registro de Fluido — {vehiculoSeleccionado.indicativo}</h3><button onClick={() => setShowNuevoFluido(false)} className="p-1 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5 text-slate-400" /></button></div>
             <form onSubmit={handleNuevoFluido} className="p-5 space-y-4">
               <div className="grid grid-cols-2 gap-4"><div><label className="block text-sm font-medium text-slate-700 mb-1">Tipo de Fluido *</label><select name="tipoFluido" required className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20">{TIPOS_FLUIDO.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}</select></div><div><label className="block text-sm font-medium text-slate-700 mb-1">Acción *</label><select name="accion" required className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"><option value="relleno">Relleno</option><option value="cambio_completo">Cambio completo</option><option value="revision">Revisión / Control</option></select></div></div>
-              <div className="grid grid-cols-3 gap-4"><div><label className="block text-sm font-medium text-slate-700 mb-1">Fecha *</label><input name="fecha" type="date" required defaultValue={new Date().toISOString().split('T')[0]} className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20" /></div><div><label className="block text-sm font-medium text-slate-700 mb-1">Cantidad</label><input name="cantidad" type="number" step="any" min="0" placeholder="Ej: 0,33" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20" /></div><div><label className="block text-sm font-medium text-slate-700 mb-1">Unidad</label><select name="unidad" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"><option value="L">Litros</option><option value="mL">Mililitros</option><option value="kg">Kilogramos</option></select></div></div>
+              <div className="grid grid-cols-3 gap-4"><div><label className="block text-sm font-medium text-slate-700 mb-1">Fecha *</label><input name="fecha" type="date" required defaultValue={new Date().toISOString().split('T')[0]} className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20" /></div><div><label className="block text-sm font-medium text-slate-700 mb-1">Cantidad</label><input name="cantidad" type="number" step="any" min="0" placeholder="Ej: 0,33" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20" /></div><div><label className="block text-sm font-medium text-slate-700 mb-1">Unidad</label><select name="unidad" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"><option value="L">Litros</option><option value="mL">Mililitros</option></select></div></div>
               <div className="grid grid-cols-2 gap-4"><div><label className="block text-sm font-medium text-slate-700 mb-1">Kilometraje</label><input name="kilometraje" type="number" min="0" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20" /></div><div><label className="block text-sm font-medium text-slate-700 mb-1">Observaciones</label><input name="observaciones" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20" /></div></div>
               <div className="flex justify-end gap-2 pt-2"><button type="button" onClick={() => setShowNuevoFluido(false)} className="px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-xl">Cancelar</button><button type="submit" disabled={saving} className="px-5 py-2.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl disabled:opacity-50">{saving ? 'Guardando...' : 'Registrar'}</button></div>
             </form>
@@ -824,6 +971,75 @@ export default function VehiculosPage() {
               <div className="grid grid-cols-3 gap-4"><div><label className="block text-sm font-medium text-slate-700 mb-1">Kilometraje</label><input name="kilometraje" type="number" min="0" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20" /></div><div><label className="block text-sm font-medium text-slate-700 mb-1">Coste €</label><input name="coste" type="number" step="0.01" min="0" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20" /></div><div><label className="block text-sm font-medium text-slate-700 mb-1">Próxima revisión</label><input name="proximaRevision" type="date" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20" /></div></div>
               <div className="grid grid-cols-2 gap-4"><div><label className="block text-sm font-medium text-slate-700 mb-1">Realizado por</label><input name="realizadoPor" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20" /></div><div><label className="block text-sm font-medium text-slate-700 mb-1">Observaciones</label><input name="observaciones" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20" /></div></div>
               <div className="flex justify-end gap-2 pt-2"><button type="button" onClick={() => setShowNuevoMantenimiento(false)} className="px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-xl">Cancelar</button><button type="submit" disabled={saving} className="px-5 py-2.5 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl disabled:opacity-50">{saving ? 'Guardando...' : 'Registrar'}</button></div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: NUEVO SINIESTRO */}
+      {showNuevoSiniestro && vehiculoSeleccionado && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1001] p-4" onClick={() => setShowNuevoSiniestro(false)}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="bg-red-600 p-5 text-white flex items-center justify-between flex-shrink-0">
+              <div className="flex items-center gap-3"><AlertTriangle className="w-5 h-5" /><h3 className="text-lg font-bold">Registrar Siniestro — {vehiculoSeleccionado.indicativo}</h3></div>
+              <button onClick={() => setShowNuevoSiniestro(false)} className="hover:bg-red-700 rounded-lg p-1 transition-colors"><X className="w-5 h-5" /></button>
+            </div>
+            <form onSubmit={handleNuevoSiniestro} className="p-5 space-y-4 overflow-y-auto">
+              <div className="grid grid-cols-4 gap-4">
+                <div><label className="block text-sm font-medium text-slate-700 mb-1">Fecha *</label><input name="fecha" type="date" required defaultValue={new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' })} className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20" /></div>
+                <div><label className="block text-sm font-medium text-slate-700 mb-1">Hora</label><input name="hora" type="time" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20" /></div>
+                <div><label className="block text-sm font-medium text-slate-700 mb-1">Tipo *</label><select name="tipo" required className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20">{Object.entries(TIPOS_SINIESTRO).map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></div>
+                <div><label className="block text-sm font-medium text-slate-700 mb-1">Gravedad *</label><select name="gravedad" required defaultValue="leve" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20">{Object.entries(GRAVEDAD_SINIESTRO).map(([v, g]) => <option key={v} value={v}>{g.label}</option>)}</select></div>
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="col-span-2"><label className="block text-sm font-medium text-slate-700 mb-1">Lugar</label><input name="lugar" placeholder="Ej: Avda. de Sevilla, rotonda del Aljarafe" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20" /></div>
+                <div><label className="block text-sm font-medium text-slate-700 mb-1">Kilometraje</label><input name="kilometraje" type="number" min="0" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20" /></div>
+              </div>
+              <div><label className="block text-sm font-medium text-slate-700 mb-1">Descripción de los hechos *</label><textarea name="descripcion" required rows={3} className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20" /></div>
+              <div className="grid grid-cols-3 gap-4">
+                <div><label className="block text-sm font-medium text-slate-700 mb-1">Conductor</label><input name="conductor" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20" /></div>
+                <div><label className="block text-sm font-medium text-slate-700 mb-1">Tercero implicado</label><input name="terceroImplicado" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20" /></div>
+                <div><label className="block text-sm font-medium text-slate-700 mb-1">Matrícula tercero</label><input name="matriculaTercero" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20" /></div>
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                <div><label className="block text-sm font-medium text-slate-700 mb-1">Aseguradora</label><input name="aseguradora" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20" /></div>
+                <div><label className="block text-sm font-medium text-slate-700 mb-1">Nº de siniestro</label><input name="numeroSiniestro" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20" /></div>
+                <div><label className="block text-sm font-medium text-slate-700 mb-1">Atestado / Instruye</label><input name="atestado" placeholder="Policía Local, Guardia Civil..." className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20" /></div>
+              </div>
+              <div className="grid grid-cols-3 gap-4 items-end">
+                <div><label className="block text-sm font-medium text-slate-700 mb-1">Estado</label><select name="estado" defaultValue="abierto" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20">{Object.entries(ESTADOS_SINIESTRO).map(([v, e]) => <option key={v} value={v}>{e.label}</option>)}</select></div>
+                <div><label className="block text-sm font-medium text-slate-700 mb-1">Coste reparación €</label><input name="costeReparacion" type="number" step="0.01" min="0" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20" /></div>
+                <label className="flex items-center gap-2 px-3 py-2.5 border border-slate-200 rounded-xl text-sm cursor-pointer hover:bg-slate-50"><input name="heridos" type="checkbox" className="w-4 h-4 rounded border-slate-300 text-red-600 focus:ring-red-500" /><span className="font-medium text-slate-700">Hubo heridos</span></label>
+              </div>
+              <div><label className="block text-sm font-medium text-slate-700 mb-1">Observaciones</label><textarea name="observaciones" rows={2} className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20" /></div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Parte del siniestro (opcional)</label>
+                <input name="parte" type="file" accept="application/pdf,image/jpeg,image/png" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-red-50 file:text-red-600 hover:file:bg-red-100" />
+                <p className="text-xs text-slate-400 mt-1">PDF, JPG o PNG · máx. 10 MB</p>
+              </div>
+              <div className="flex justify-end gap-2 pt-2"><button type="button" onClick={() => setShowNuevoSiniestro(false)} className="px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-xl">Cancelar</button><button type="submit" disabled={saving} className="px-5 py-2.5 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-xl disabled:opacity-50">{saving ? 'Guardando...' : 'Registrar Siniestro'}</button></div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: SEGUIMIENTO SINIESTRO */}
+      {siniestroSeguimiento && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1001] p-4" onClick={() => setSiniestroSeguimiento(null)}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg" onClick={e => e.stopPropagation()}>
+            <div className="p-5 border-b border-slate-200 flex items-center justify-between"><h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2"><History className="w-5 h-5 text-red-500" />Seguimiento del siniestro</h3><button onClick={() => setSiniestroSeguimiento(null)} className="p-1 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5 text-slate-400" /></button></div>
+            <form onSubmit={handleActualizarSiniestro} className="p-5 space-y-4">
+              <p className="text-sm text-slate-500">{TIPOS_SINIESTRO[siniestroSeguimiento.tipo] || siniestroSeguimiento.tipo} · {new Date(siniestroSeguimiento.fecha).toLocaleDateString('es-ES')}</p>
+              <div className="grid grid-cols-2 gap-4">
+                <div><label className="block text-sm font-medium text-slate-700 mb-1">Estado</label><select name="estado" defaultValue={siniestroSeguimiento.estado} className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20">{Object.entries(ESTADOS_SINIESTRO).map(([v, e]) => <option key={v} value={v}>{e.label}</option>)}</select></div>
+                <div><label className="block text-sm font-medium text-slate-700 mb-1">Coste reparación €</label><input name="costeReparacion" type="number" step="0.01" min="0" defaultValue={siniestroSeguimiento.costeReparacion ?? ''} className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20" /></div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div><label className="block text-sm font-medium text-slate-700 mb-1">Aseguradora</label><input name="aseguradora" defaultValue={siniestroSeguimiento.aseguradora || ''} className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20" /></div>
+                <div><label className="block text-sm font-medium text-slate-700 mb-1">Nº de siniestro</label><input name="numeroSiniestro" defaultValue={siniestroSeguimiento.numeroSiniestro || ''} className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20" /></div>
+              </div>
+              <div><label className="block text-sm font-medium text-slate-700 mb-1">Observaciones / Seguimiento</label><textarea name="observaciones" rows={4} defaultValue={siniestroSeguimiento.observaciones || ''} className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20" /></div>
+              <div className="flex justify-end gap-2 pt-2"><button type="button" onClick={() => setSiniestroSeguimiento(null)} className="px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-xl">Cancelar</button><button type="submit" disabled={saving} className="px-5 py-2.5 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-xl disabled:opacity-50">{saving ? 'Guardando...' : 'Guardar'}</button></div>
             </form>
           </div>
         </div>

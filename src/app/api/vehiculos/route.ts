@@ -60,6 +60,16 @@ export async function GET(request: NextRequest) {
 
       return NextResponse.json({ mantenimientos })
     }
+    // GET Siniestros de un vehículo
+    if (tipo === 'siniestros') {
+      if (!vehiculoId) return NextResponse.json({ error: 'vehiculoId requerido' }, { status: 400 })
+      const siniestros = await prisma.siniestroVehiculo.findMany({
+        where: { vehiculoId },
+        include: { usuario: { select: { nombre: true, apellidos: true } } },
+        orderBy: { fecha: 'desc' }
+      })
+      return NextResponse.json({ siniestros })
+    }
     if (tipo === 'repostajes') {
       const vehiculoId = searchParams.get('vehiculoId')
       if (!vehiculoId) return NextResponse.json({ error: 'vehiculoId requerido' }, { status: 400 })
@@ -261,6 +271,82 @@ export async function POST(request: NextRequest) {
       })
       return NextResponse.json({ mantenimiento })
     }
+    // POST Crear siniestro (multipart: campos + parte opcional)
+    if (tipo === 'siniestro') {
+      const formData = await request.formData()
+      const str = (k: string) => { const v = formData.get(k); return typeof v === 'string' && v.trim() !== '' ? v.trim() : null }
+      const vehiculoId = str('vehiculoId')
+      const fecha = str('fecha')
+      const tipoSin = str('tipo')
+      const descripcion = str('descripcion')
+
+      if (!vehiculoId || !fecha || !tipoSin || !descripcion) {
+        return NextResponse.json({ error: 'vehiculoId, fecha, tipo y descripción son obligatorios' }, { status: 400 })
+      }
+
+      let parteUrl: string | null = null
+      let parteNombre: string | null = null
+      let parteBlobKey: string | null = null
+      const file = formData.get('parte') as File | null
+      if (file && typeof file !== 'string' && file.size > 0) {
+        const permitidos = ['application/pdf', 'image/jpeg', 'image/png']
+        if (!permitidos.includes(file.type)) {
+          return NextResponse.json({ error: 'El parte debe ser PDF, JPG o PNG' }, { status: 400 })
+        }
+        if (file.size > 10 * 1024 * 1024) {
+          return NextResponse.json({ error: 'Archivo muy grande (máx 10MB)' }, { status: 400 })
+        }
+        const blob = await put(`vehiculos/${vehiculoId}/siniestros/${Date.now()}-${file.name}`, file, {
+          access: 'public',
+          addRandomSuffix: false
+        })
+        parteUrl = blob.url
+        parteNombre = file.name
+        parteBlobKey = blob.pathname
+      }
+
+      const siniestro = await prisma.siniestroVehiculo.create({
+        data: {
+          vehiculoId,
+          fecha: new Date(fecha),
+          hora: str('hora'),
+          tipo: tipoSin,
+          gravedad: str('gravedad') || 'leve',
+          lugar: str('lugar'),
+          descripcion,
+          kilometraje: str('kilometraje') ? parseInt(str('kilometraje') as string) : null,
+          conductor: str('conductor'),
+          terceroImplicado: str('terceroImplicado'),
+          matriculaTercero: str('matriculaTercero'),
+          aseguradora: str('aseguradora'),
+          numeroSiniestro: str('numeroSiniestro'),
+          atestado: str('atestado'),
+          heridos: formData.get('heridos') === 'true',
+          costeReparacion: str('costeReparacion') ? parseFloat(str('costeReparacion') as string) : null,
+          estado: str('estado') || 'abierto',
+          observaciones: str('observaciones'),
+          parteUrl,
+          parteNombre,
+          parteBlobKey,
+          usuarioId: session.user.id
+        },
+        include: { usuario: { select: { nombre: true, apellidos: true } } }
+      })
+
+      const _auditSin = getUsuarioAudit(session)
+      await registrarAudit({
+        accion: 'CREATE',
+        entidad: 'Vehículo',
+        entidadId: vehiculoId,
+        descripcion: `Siniestro registrado (${tipoSin}, ${siniestro.gravedad}): ${descripcion}`,
+        usuarioId: _auditSin.usuarioId,
+        usuarioNombre: _auditSin.usuarioNombre,
+        modulo: 'Vehículos',
+        datosNuevos: { tipo: tipoSin, gravedad: siniestro.gravedad, fecha, parte: parteNombre }
+      })
+
+      return NextResponse.json({ siniestro })
+    }
     if (tipo === 'repostaje') {
       const body = await request.clone().json()
       const { vehiculoId, fecha, litros, precioLitro, costeTotal, kilometraje, tipoCarburante, gasolinera, observaciones } = body
@@ -448,6 +534,43 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ mantenimiento })
     }
 
+    // PUT Siniestro (seguimiento: estado, aseguradora, coste, observaciones)
+    if (tipo === 'siniestro') {
+      const body = await request.json()
+      const { id, estado, aseguradora, numeroSiniestro, costeReparacion, observaciones } = body
+      if (!id) return NextResponse.json({ error: 'ID requerido' }, { status: 400 })
+
+      const anterior = await prisma.siniestroVehiculo.findUnique({ where: { id } })
+      if (!anterior) return NextResponse.json({ error: 'Siniestro no encontrado' }, { status: 404 })
+
+      const siniestro = await prisma.siniestroVehiculo.update({
+        where: { id },
+        data: {
+          estado: estado || undefined,
+          aseguradora: aseguradora ?? undefined,
+          numeroSiniestro: numeroSiniestro ?? undefined,
+          costeReparacion: costeReparacion !== undefined && costeReparacion !== null && costeReparacion !== '' ? parseFloat(costeReparacion) : undefined,
+          observaciones: observaciones ?? undefined
+        },
+        include: { usuario: { select: { nombre: true, apellidos: true } } }
+      })
+
+      const { usuarioId, usuarioNombre } = getUsuarioAudit(session)
+      await registrarAudit({
+        accion: 'UPDATE',
+        entidad: 'Vehículo',
+        entidadId: siniestro.vehiculoId,
+        descripcion: `Siniestro actualizado (${siniestro.tipo}) — estado: ${anterior.estado} → ${siniestro.estado}`,
+        usuarioId,
+        usuarioNombre,
+        modulo: 'Vehículos',
+        datosAnteriores: anterior,
+        datosNuevos: siniestro
+      })
+
+      return NextResponse.json({ siniestro })
+    }
+
     // PUT Repostaje
     if (tipo === 'repostaje') {
       const body = await request.json()
@@ -555,6 +678,22 @@ export async function DELETE(request: NextRequest) {
         })
       }
 
+      return NextResponse.json({ success: true })
+    }
+
+    // DELETE Siniestro
+    if (tipo === 'siniestro') {
+      const sin = await prisma.siniestroVehiculo.findUnique({ where: { id } })
+      if (!sin) return NextResponse.json({ error: 'Siniestro no encontrado' }, { status: 404 })
+
+      if (sin.parteBlobKey) {
+        try { await del(sin.parteBlobKey) } catch (blobError) { console.error('Error eliminando parte de Blob:', blobError) }
+      }
+
+      await prisma.siniestroVehiculo.delete({ where: { id } })
+
+      const { usuarioId, usuarioNombre } = getUsuarioAudit(session)
+      await registrarAudit({ accion: 'DELETE', entidad: 'Vehículo', entidadId: sin.vehiculoId, descripcion: `Siniestro eliminado: ${sin.tipo} del ${sin.fecha.toLocaleDateString('es-ES')}`, usuarioId, usuarioNombre, modulo: 'Vehículos', datosAnteriores: sin })
       return NextResponse.json({ success: true })
     }
 
