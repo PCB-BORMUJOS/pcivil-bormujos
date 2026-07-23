@@ -551,14 +551,102 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ mantenimiento })
     }
 
-    // PUT Siniestro (seguimiento: estado, aseguradora, coste, observaciones)
-    if (tipo === 'siniestro') {
+    // PUT Registro de fluido
+    if (tipo === 'fluido') {
       const body = await request.json()
-      const { id, estado, aseguradora, numeroSiniestro, costeReparacion, observaciones } = body
+      const { id, fecha, tipoFluido, accion, cantidad, unidad, kilometraje, observaciones } = body
+      if (!id) return NextResponse.json({ error: 'ID requerido' }, { status: 400 })
+
+      const anterior = await prisma.registroFluidoVehiculo.findUnique({ where: { id } })
+      if (!anterior) return NextResponse.json({ error: 'Registro no encontrado' }, { status: 404 })
+
+      const registro = await prisma.registroFluidoVehiculo.update({
+        where: { id },
+        data: {
+          fecha: fecha ? new Date(fecha) : undefined,
+          tipoFluido: tipoFluido || undefined,
+          accion: accion || undefined,
+          cantidad: cantidad !== undefined && cantidad !== null && cantidad !== '' ? parseFloat(cantidad) : null,
+          unidad: unidad || null,
+          kilometraje: kilometraje !== undefined && kilometraje !== null && kilometraje !== '' ? parseInt(kilometraje) : null,
+          observaciones: observaciones || null,
+        },
+        include: {
+          usuario: {
+            select: {
+              nombre: true, apellidos: true, numeroVoluntario: true,
+              fichaVoluntario: { select: { indicativo2: true } }
+            }
+          }
+        }
+      })
+
+      const { usuarioId, usuarioNombre } = getUsuarioAudit(session)
+      await registrarAudit({
+        accion: 'UPDATE',
+        entidad: 'Vehículo',
+        entidadId: registro.vehiculoId,
+        descripcion: `Registro de fluido actualizado: ${registro.tipoFluido} — ${registro.accion}${registro.kilometraje ? ' — ' + registro.kilometraje.toLocaleString('es-ES') + ' km' : ''}`,
+        usuarioId,
+        usuarioNombre,
+        modulo: 'Vehículos',
+        datosAnteriores: anterior,
+        datosNuevos: registro
+      })
+
+      return NextResponse.json({ registro })
+    }
+
+    // PUT Siniestro (edición completa; acepta JSON o multipart con parte nuevo)
+    if (tipo === 'siniestro') {
+      const esMultipart = (request.headers.get('content-type') || '').includes('multipart/form-data')
+      let body: Record<string, any>
+      let fileParte: File | null = null
+      if (esMultipart) {
+        const formData = await request.formData()
+        body = {}
+        formData.forEach((value, key) => {
+          if (typeof value === 'string') body[key] = value.trim() === '' ? null : value.trim()
+        })
+        body.heridos = formData.get('heridos') === 'true'
+        const f = formData.get('parte')
+        if (f && typeof f !== 'string' && (f as File).size > 0) fileParte = f as File
+      } else {
+        body = await request.json()
+      }
+      const {
+        id, estado, aseguradora, numeroSiniestro, costeReparacion, observaciones,
+        fecha, hora, tipo: tipoSin, gravedad, lugar, descripcion, kilometraje,
+        conductor, terceroImplicado, matriculaTercero, atestado, heridos
+      } = body
       if (!id) return NextResponse.json({ error: 'ID requerido' }, { status: 400 })
 
       const anterior = await prisma.siniestroVehiculo.findUnique({ where: { id } })
       if (!anterior) return NextResponse.json({ error: 'Siniestro no encontrado' }, { status: 404 })
+
+      // Sustitución / adjunto del parte
+      let parteUrl: string | undefined
+      let parteNombre: string | undefined
+      let parteBlobKey: string | undefined
+      if (fileParte) {
+        const permitidos = ['application/pdf', 'image/jpeg', 'image/png']
+        if (!permitidos.includes(fileParte.type)) {
+          return NextResponse.json({ error: 'El parte debe ser PDF, JPG o PNG' }, { status: 400 })
+        }
+        if (fileParte.size > 10 * 1024 * 1024) {
+          return NextResponse.json({ error: 'Archivo muy grande (máx 10MB)' }, { status: 400 })
+        }
+        const blob = await put(`vehiculos/${anterior.vehiculoId}/siniestros/${Date.now()}-${fileParte.name}`, fileParte, {
+          access: 'public',
+          addRandomSuffix: false
+        })
+        if (anterior.parteBlobKey) {
+          try { await del(anterior.parteBlobKey) } catch (blobError) { console.error('Error eliminando parte anterior:', blobError) }
+        }
+        parteUrl = blob.url
+        parteNombre = fileParte.name
+        parteBlobKey = blob.pathname
+      }
 
       const siniestro = await prisma.siniestroVehiculo.update({
         where: { id },
@@ -567,7 +655,20 @@ export async function PUT(request: NextRequest) {
           aseguradora: aseguradora ?? undefined,
           numeroSiniestro: numeroSiniestro ?? undefined,
           costeReparacion: costeReparacion !== undefined && costeReparacion !== null && costeReparacion !== '' ? parseFloat(costeReparacion) : undefined,
-          observaciones: observaciones ?? undefined
+          observaciones: observaciones ?? undefined,
+          fecha: fecha ? new Date(fecha) : undefined,
+          hora: hora ?? undefined,
+          tipo: tipoSin || undefined,
+          gravedad: gravedad || undefined,
+          lugar: lugar ?? undefined,
+          descripcion: descripcion || undefined,
+          kilometraje: kilometraje !== undefined ? (kilometraje !== null && kilometraje !== '' ? parseInt(kilometraje) : null) : undefined,
+          conductor: conductor ?? undefined,
+          terceroImplicado: terceroImplicado ?? undefined,
+          matriculaTercero: matriculaTercero ?? undefined,
+          atestado: atestado ?? undefined,
+          heridos: typeof heridos === 'boolean' ? heridos : undefined,
+          parteUrl, parteNombre, parteBlobKey,
         },
         include: { usuario: { select: { nombre: true, apellidos: true } } }
       })

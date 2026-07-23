@@ -97,6 +97,8 @@ function createVehicleIcon(estado: string) {
   return L.divIcon({ html: `<div style="background:${color};width:32px;height:32px;border-radius:50%;border:3px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 17h4V5H2v12h3"/><path d="M20 17h2v-3.34a4 4 0 0 0-1.17-2.83L19 9h-5"/><path d="M14 17h1"/><circle cx="7.5" cy="17.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg></div>`, className: '', iconSize: [32, 32], iconAnchor: [16, 16], popupAnchor: [0, -20] })
 }
 
+const toDateInput = (d?: string | null) => d ? new Date(d).toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' }) : ''
+
 function NivelIndicador({ nivel }: { nivel?: string }) {
   const n = NIVELES.find(x => x.value === nivel) || NIVELES[4]
   return (<div className="flex items-center gap-2"><div className={`w-3 h-3 rounded-full ${n.color}`} /><span className="text-sm text-slate-600">{n.label}</span></div>)
@@ -150,7 +152,6 @@ export default function VehiculosPage() {
   const [registrosFluidos, setRegistrosFluidos] = useState<RegistroFluido[]>([])
   const [siniestros, setSiniestros] = useState<Siniestro[]>([])
   const [siniestroExpandido, setSiniestroExpandido] = useState<string | null>(null)
-  const [siniestroSeguimiento, setSiniestroSeguimiento] = useState<Siniestro | null>(null)
   const nivelPorFluido = useMemo(() => {
     const npr: Record<string, string> = {}
     TIPOS_FLUIDO.forEach(fl => {
@@ -186,6 +187,9 @@ export default function VehiculosPage() {
   const [showNuevoFluido, setShowNuevoFluido] = useState(false)
   const [showNuevoMantenimiento, setShowNuevoMantenimiento] = useState(false)
   const [showNuevoSiniestro, setShowNuevoSiniestro] = useState(false)
+  const [fluidoEditando, setFluidoEditando] = useState<RegistroFluido | null>(null)
+  const [mantenimientoEditando, setMantenimientoEditando] = useState<Mantenimiento | null>(null)
+  const [siniestroEditando, setSiniestroEditando] = useState<Siniestro | null>(null)
   const [showSubirDocumento, setShowSubirDocumento] = useState(false)
   const [articuloSeleccionado, setArticuloSeleccionado] = useState<Articulo | null>(null)
   const [nuevaFamilia, setNuevaFamilia] = useState('')
@@ -235,30 +239,19 @@ export default function VehiculosPage() {
     if (r.ok && vehiculoSeleccionado) cargarMantenimientos(vehiculoSeleccionado.id)
   }
 
-  const handleNuevoSiniestro = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleGuardarSiniestro = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (!vehiculoSeleccionado) return
     const f = new FormData(e.currentTarget)
-    f.append('vehiculoId', vehiculoSeleccionado.id)
+    const editando = siniestroEditando
     f.set('heridos', f.get('heridos') === 'on' ? 'true' : 'false')
+    if (editando) f.append('id', editando.id); else f.append('vehiculoId', vehiculoSeleccionado.id)
     try {
       setSaving(true)
-      const r = await fetch('/api/vehiculos?tipo=siniestro', { method: 'POST', body: f })
-      if (r.ok) { setShowNuevoSiniestro(false); cargarSiniestros(vehiculoSeleccionado.id) }
-      else { const d = await r.json().catch(() => ({})); alert(d.error || 'Error al registrar el siniestro') }
-    } catch (err) { alert('Error al registrar el siniestro') } finally { setSaving(false) }
-  }
-
-  const handleActualizarSiniestro = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    if (!siniestroSeguimiento || !vehiculoSeleccionado) return
-    const f = new FormData(e.currentTarget)
-    try {
-      setSaving(true)
-      const r = await fetch('/api/vehiculos?tipo=siniestro', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: siniestroSeguimiento.id, estado: f.get('estado'), aseguradora: f.get('aseguradora'), numeroSiniestro: f.get('numeroSiniestro'), costeReparacion: f.get('costeReparacion'), observaciones: f.get('observaciones') }) })
-      if (r.ok) { setSiniestroSeguimiento(null); cargarSiniestros(vehiculoSeleccionado.id) }
-      else { const d = await r.json().catch(() => ({})); alert(d.error || 'Error al actualizar el siniestro') }
-    } catch (err) { alert('Error al actualizar el siniestro') } finally { setSaving(false) }
+      const r = await fetch('/api/vehiculos?tipo=siniestro', { method: editando ? 'PUT' : 'POST', body: f })
+      if (r.ok) { setShowNuevoSiniestro(false); setSiniestroEditando(null); cargarSiniestros(vehiculoSeleccionado.id) }
+      else { const d = await r.json().catch(() => ({})); alert(d.error || 'Error al guardar el siniestro') }
+    } catch (err) { alert('Error al guardar el siniestro') } finally { setSaving(false) }
   }
 
   const handleEliminarSiniestro = async (id: string) => {
@@ -273,7 +266,20 @@ export default function VehiculosPage() {
     if (r.ok && vehiculoSeleccionado) cargarRegistrosFluidos(vehiculoSeleccionado.id)
   }
 
-  const handleNuevoMantenimiento = async (e: React.FormEvent<HTMLFormElement>) => { e.preventDefault(); if (!vehiculoSeleccionado) return; const f = new FormData(e.currentTarget); try { setSaving(true); const r = await fetch('/api/vehiculos?tipo=mantenimiento', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ vehiculoId: vehiculoSeleccionado.id, fecha: f.get('fecha'), tipo: f.get('tipo'), descripcion: f.get('descripcion'), kilometraje: parseInt(f.get('kilometraje') as string) || null, coste: parseFloat(f.get('coste') as string) || null, proximaRevision: f.get('proximaRevision') || null, realizadoPor: f.get('realizadoPor'), observaciones: f.get('observaciones') }) }); if (r.ok) { setShowNuevoMantenimiento(false); cargarMantenimientos(vehiculoSeleccionado.id) } } catch (e) { /* error silenciado */ } finally { setSaving(false) } }
+  const handleGuardarMantenimiento = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    if (!vehiculoSeleccionado) return
+    const f = new FormData(e.currentTarget)
+    const editando = mantenimientoEditando
+    const payload: any = { fecha: f.get('fecha'), tipo: f.get('tipo'), descripcion: f.get('descripcion'), kilometraje: parseInt(f.get('kilometraje') as string) || null, coste: parseFloat(f.get('coste') as string) || null, proximaRevision: f.get('proximaRevision') || null, realizadoPor: f.get('realizadoPor'), observaciones: f.get('observaciones') }
+    if (editando) payload.id = editando.id; else payload.vehiculoId = vehiculoSeleccionado.id
+    try {
+      setSaving(true)
+      const r = await fetch('/api/vehiculos?tipo=mantenimiento', { method: editando ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+      if (r.ok) { setShowNuevoMantenimiento(false); setMantenimientoEditando(null); cargarMantenimientos(vehiculoSeleccionado.id) }
+      else { const d = await r.json().catch(() => ({})); alert(d.error || 'Error al guardar el mantenimiento') }
+    } catch (err) { alert('Error al guardar el mantenimiento') } finally { setSaving(false) }
+  }
   const handleEditarRepostaje = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (!repostajeSeleccionado || !vehiculoSeleccionado) return
@@ -293,7 +299,20 @@ export default function VehiculosPage() {
   }
 
   const handleNuevoRepostaje = async (e: React.FormEvent<HTMLFormElement>) => { e.preventDefault(); if (!vehiculoSeleccionado) return; const f = new FormData(e.currentTarget); try { setSaving(true); const r = await fetch('/api/vehiculos?tipo=repostaje', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ vehiculoId: vehiculoSeleccionado.id, fecha: f.get('fecha'), litros: parseFloat(f.get('litros') as string), precioLitro: parseFloat(f.get('precioLitro') as string) || null, costeTotal: parseFloat(f.get('costeTotal') as string) || null, kilometraje: parseInt(f.get('kilometraje') as string), tipoCarburante: f.get('tipoCarburante'), gasolinera: f.get('gasolinera') }) }); if (r.ok) { setShowNuevoRepostaje(false); setRepoLitros(''); setRepoPrecio(''); cargarRepostajes(vehiculoSeleccionado.id) } } catch (e) { /* error silenciado */ } finally { setSaving(false) } }
-  const handleNuevoFluido = async (e: React.FormEvent<HTMLFormElement>) => { e.preventDefault(); if (!vehiculoSeleccionado) return; const f = new FormData(e.currentTarget); try { setSaving(true); const r = await fetch('/api/vehiculos?tipo=fluido', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ vehiculoId: vehiculoSeleccionado.id, fecha: f.get('fecha'), tipoFluido: f.get('tipoFluido'), accion: f.get('accion'), cantidad: parseFloat(f.get('cantidad') as string) || null, unidad: f.get('unidad'), kilometraje: parseInt(f.get('kilometraje') as string) || null, observaciones: f.get('observaciones') }) }); if (r.ok) { setShowNuevoFluido(false); cargarRegistrosFluidos(vehiculoSeleccionado.id) } } catch (e) { /* error silenciado */ } finally { setSaving(false) } }
+  const handleGuardarFluido = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    if (!vehiculoSeleccionado) return
+    const f = new FormData(e.currentTarget)
+    const editando = fluidoEditando
+    const payload: any = { fecha: f.get('fecha'), tipoFluido: f.get('tipoFluido'), accion: f.get('accion'), cantidad: parseFloat(f.get('cantidad') as string) || null, unidad: f.get('unidad'), kilometraje: parseInt(f.get('kilometraje') as string) || null, observaciones: f.get('observaciones') }
+    if (editando) payload.id = editando.id; else payload.vehiculoId = vehiculoSeleccionado.id
+    try {
+      setSaving(true)
+      const r = await fetch('/api/vehiculos?tipo=fluido', { method: editando ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+      if (r.ok) { setShowNuevoFluido(false); setFluidoEditando(null); cargarRegistrosFluidos(vehiculoSeleccionado.id) }
+      else { const d = await r.json().catch(() => ({})); alert(d.error || 'Error al guardar el registro') }
+    } catch (err) { alert('Error al guardar el registro') } finally { setSaving(false) }
+  }
   const abrirDetalleVehiculo = (v: Vehiculo) => { setVehiculoSeleccionado(v); setVehicleDetailTab('ficha'); setShowDetalleVehiculo(true) }
 
   const articulosFiltrados = articulos.filter(a => { const ms = !searchTerm || a.nombre.toLowerCase().includes(searchTerm.toLowerCase()) || (a.codigo && a.codigo.toLowerCase().includes(searchTerm.toLowerCase())); return ms && (selectedFamiliaFilter === 'all' || a.familia?.id === selectedFamiliaFilter) })
@@ -674,7 +693,7 @@ export default function VehiculosPage() {
                     {registrosFluidos.length === 0 ? (<div className="text-center py-8 text-slate-400"><Droplets className="w-8 h-8 mx-auto mb-2 opacity-30" /><p className="text-sm">No hay registros</p></div>) : (
                       <div className="overflow-x-auto">
                         <table className="w-full text-sm">
-                          <thead><tr className="bg-slate-50 border-b border-slate-200"><th className="text-left px-3 py-2.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Fecha</th><th className="text-left px-3 py-2.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Fluido</th><th className="text-left px-3 py-2.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Acción</th><th className="text-right px-3 py-2.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Cantidad</th><th className="text-right px-3 py-2.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Km</th><th className="text-left px-3 py-2.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Registrado por</th><th className="text-left px-3 py-2.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Observaciones</th><th className="w-10 px-3 py-2.5"></th></tr></thead>
+                          <thead><tr className="bg-slate-50 border-b border-slate-200"><th className="text-left px-3 py-2.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Fecha</th><th className="text-left px-3 py-2.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Fluido</th><th className="text-left px-3 py-2.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Acción</th><th className="text-right px-3 py-2.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Cantidad</th><th className="text-right px-3 py-2.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Km</th><th className="text-left px-3 py-2.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Registrado por</th><th className="text-left px-3 py-2.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Observaciones</th><th className="w-20 px-3 py-2.5"></th></tr></thead>
                           <tbody className="divide-y divide-slate-100">
                             {registrosFluidos.map(reg => {
                               const ti = TIPOS_FLUIDO.find(t => t.value === reg.tipoFluido)
@@ -688,7 +707,7 @@ export default function VehiculosPage() {
                                   <td className="px-3 py-2.5 text-right font-medium text-slate-700 whitespace-nowrap">{reg.kilometraje ? `${reg.kilometraje.toLocaleString('es-ES')} km` : '—'}</td>
                                   <td className="px-3 py-2.5 whitespace-nowrap">{reg.usuario ? (<div className="flex items-center gap-1.5"><span className="font-bold text-blue-700 text-xs">{ind || '—'}</span><span className="text-xs text-slate-500">{reg.usuario.nombre} {reg.usuario.apellidos}</span></div>) : <span className="text-xs text-slate-400">—</span>}</td>
                                   <td className="px-3 py-2.5 text-slate-500 text-xs max-w-[180px]"><p className="truncate" title={reg.observaciones || ''}>{reg.observaciones || '—'}</p></td>
-                                  <td className="px-3 py-2.5 text-right"><button onClick={() => handleEliminarFluido(reg.id)} className="p-1 rounded hover:bg-red-50 text-slate-400 hover:text-red-500"><Trash2 className="w-3.5 h-3.5" /></button></td>
+                                  <td className="px-3 py-2.5 text-right"><div className="flex items-center justify-end gap-1">{canEdit && <button onClick={() => { setFluidoEditando(reg); setShowNuevoFluido(true) }} className="p-1 rounded hover:bg-blue-50 text-slate-400 hover:text-blue-500" title="Editar"><Edit className="w-3.5 h-3.5" /></button>}<button onClick={() => handleEliminarFluido(reg.id)} className="p-1 rounded hover:bg-red-50 text-slate-400 hover:text-red-500" title="Eliminar"><Trash2 className="w-3.5 h-3.5" /></button></div></td>
                                 </tr>
                               )
                             })}
@@ -730,7 +749,7 @@ export default function VehiculosPage() {
                   <div className="border border-slate-200 rounded-xl overflow-hidden">
                     <table className="w-full text-sm">
                       <thead><tr className="bg-slate-50 border-b border-slate-200"><th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Fecha</th><th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Tipo</th><th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Descripción</th><th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Km</th><th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Coste</th><th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Realizado por</th><th className="w-10 px-4 py-3"></th></tr></thead>
-                      <tbody className="divide-y divide-slate-100">{mantenimientos.length === 0 ? (<tr><td colSpan={7} className="text-center py-8 text-slate-400"><Settings className="w-8 h-8 mx-auto mb-2 opacity-30" /><p className="text-sm">No hay registros</p></td></tr>) : mantenimientos.map(m => (<tr key={m.id} className="hover:bg-slate-50"><td className="px-4 py-3 text-slate-600">{new Date(m.fecha).toLocaleDateString('es-ES')}</td><td className="px-4 py-3"><span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 whitespace-nowrap">{m.tipo}</span></td><td className="px-4 py-3 text-slate-800 max-w-[200px]"><p className="truncate text-sm" title={m.descripcion}>{m.descripcion}</p></td><td className="px-4 py-3 text-right text-slate-600">{m.kilometraje?.toLocaleString() || '-'}</td><td className="px-4 py-3 text-right font-medium">{m.coste ? `${m.coste.toFixed(2)} €` : '-'}</td><td className="px-4 py-3 text-slate-500 text-sm whitespace-nowrap">{m.realizadoPor || '—'}</td><td className="px-4 py-3 text-right"><button onClick={() => handleEliminarMantenimiento(m.id)} className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500"><Trash2 className="w-3.5 h-3.5" /></button></td></tr>))}</tbody>
+                      <tbody className="divide-y divide-slate-100">{mantenimientos.length === 0 ? (<tr><td colSpan={7} className="text-center py-8 text-slate-400"><Settings className="w-8 h-8 mx-auto mb-2 opacity-30" /><p className="text-sm">No hay registros</p></td></tr>) : mantenimientos.map(m => (<tr key={m.id} className="hover:bg-slate-50"><td className="px-4 py-3 text-slate-600">{new Date(m.fecha).toLocaleDateString('es-ES')}</td><td className="px-4 py-3"><span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 whitespace-nowrap">{m.tipo}</span></td><td className="px-4 py-3 text-slate-800 max-w-[200px]"><p className="truncate text-sm" title={m.descripcion}>{m.descripcion}</p></td><td className="px-4 py-3 text-right text-slate-600">{m.kilometraje?.toLocaleString() || '-'}</td><td className="px-4 py-3 text-right font-medium">{m.coste ? `${m.coste.toFixed(2)} €` : '-'}</td><td className="px-4 py-3 text-slate-500 text-sm whitespace-nowrap">{m.realizadoPor || '—'}</td><td className="px-4 py-3 text-right"><div className="flex items-center justify-end gap-1">{canEdit && <button onClick={() => { setMantenimientoEditando(m); setShowNuevoMantenimiento(true) }} className="p-1.5 rounded-lg hover:bg-blue-50 text-slate-400 hover:text-blue-500" title="Editar"><Edit className="w-3.5 h-3.5" /></button>}<button onClick={() => handleEliminarMantenimiento(m.id)} className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500" title="Eliminar"><Trash2 className="w-3.5 h-3.5" /></button></div></td></tr>))}</tbody>
                     </table>
                   </div>
                 </div>
@@ -813,7 +832,7 @@ export default function VehiculosPage() {
                                   ) : <span className="text-xs text-slate-400">Sin parte adjunto</span>}
                                   {canEdit && (
                                     <div className="flex items-center gap-2">
-                                      <button onClick={() => setSiniestroSeguimiento(s)} className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg"><Edit className="w-4 h-4" />Seguimiento</button>
+                                      <button onClick={() => { setSiniestroEditando(s); setShowNuevoSiniestro(true) }} className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg"><Edit className="w-4 h-4" />Editar</button>
                                       <button onClick={() => handleEliminarSiniestro(s.id)} className="p-2 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
                                     </div>
                                   )}
@@ -969,105 +988,95 @@ export default function VehiculosPage() {
         </div>
       )}
 
-      {/* MODAL: NUEVO FLUIDO */}
-      {showNuevoFluido && vehiculoSeleccionado && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1001] p-4" onClick={() => setShowNuevoFluido(false)}>
+      {/* MODAL: NUEVO / EDITAR FLUIDO */}
+      {showNuevoFluido && vehiculoSeleccionado && (() => {
+        const ed = fluidoEditando
+        const cerrar = () => { setShowNuevoFluido(false); setFluidoEditando(null) }
+        return (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1001] p-4" onClick={cerrar}>
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg" onClick={e => e.stopPropagation()}>
-            <div className="p-5 border-b border-slate-200 flex items-center justify-between"><h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2"><Droplets className="w-5 h-5 text-blue-500" />Registro de Fluido — {vehiculoSeleccionado.indicativo}</h3><button onClick={() => setShowNuevoFluido(false)} className="p-1 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5 text-slate-400" /></button></div>
-            <form onSubmit={handleNuevoFluido} className="p-5 space-y-4">
-              <div className="grid grid-cols-2 gap-4"><div><label className="block text-sm font-medium text-slate-700 mb-1">Tipo de Fluido *</label><select name="tipoFluido" required className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20">{TIPOS_FLUIDO.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}</select></div><div><label className="block text-sm font-medium text-slate-700 mb-1">Acción *</label><select name="accion" required className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"><option value="relleno">Relleno</option><option value="cambio_completo">Cambio completo</option><option value="revision">Revisión / Control</option></select></div></div>
-              <div className="grid grid-cols-3 gap-4"><div><label className="block text-sm font-medium text-slate-700 mb-1">Fecha *</label><input name="fecha" type="date" required defaultValue={new Date().toISOString().split('T')[0]} className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20" /></div><div><label className="block text-sm font-medium text-slate-700 mb-1">Cantidad</label><input name="cantidad" type="number" step="any" min="0" placeholder="Ej: 0,33" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20" /></div><div><label className="block text-sm font-medium text-slate-700 mb-1">Unidad</label><select name="unidad" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"><option value="L">Litros</option><option value="mL">Mililitros</option></select></div></div>
-              <div className="grid grid-cols-2 gap-4"><div><label className="block text-sm font-medium text-slate-700 mb-1">Kilometraje *</label><input name="kilometraje" type="number" min="0" required defaultValue={vehiculoSeleccionado.kmActual || ''} className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20" /></div><div><label className="block text-sm font-medium text-slate-700 mb-1">Observaciones</label><input name="observaciones" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20" /></div></div>
-              <div className="flex justify-end gap-2 pt-2"><button type="button" onClick={() => setShowNuevoFluido(false)} className="px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-xl">Cancelar</button><button type="submit" disabled={saving} className="px-5 py-2.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl disabled:opacity-50">{saving ? 'Guardando...' : 'Registrar'}</button></div>
+            <div className="p-5 border-b border-slate-200 flex items-center justify-between"><h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2"><Droplets className="w-5 h-5 text-blue-500" />{ed ? 'Editar Registro de Fluido' : 'Registro de Fluido'} — {vehiculoSeleccionado.indicativo}</h3><button onClick={cerrar} className="p-1 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5 text-slate-400" /></button></div>
+            <form onSubmit={handleGuardarFluido} className="p-5 space-y-4">
+              <div className="grid grid-cols-2 gap-4"><div><label className="block text-sm font-medium text-slate-700 mb-1">Tipo de Fluido *</label><select name="tipoFluido" required defaultValue={ed?.tipoFluido} className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20">{TIPOS_FLUIDO.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}</select></div><div><label className="block text-sm font-medium text-slate-700 mb-1">Acción *</label><select name="accion" required defaultValue={ed?.accion} className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"><option value="relleno">Relleno</option><option value="cambio_completo">Cambio completo</option><option value="revision">Revisión / Control</option></select></div></div>
+              <div className="grid grid-cols-3 gap-4"><div><label className="block text-sm font-medium text-slate-700 mb-1">Fecha *</label><input name="fecha" type="date" required defaultValue={ed ? toDateInput(ed.fecha) : new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' })} className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20" /></div><div><label className="block text-sm font-medium text-slate-700 mb-1">Cantidad</label><input name="cantidad" type="number" step="any" min="0" placeholder="Ej: 0,33" defaultValue={ed?.cantidad ?? ''} className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20" /></div><div><label className="block text-sm font-medium text-slate-700 mb-1">Unidad</label><select name="unidad" defaultValue={ed?.unidad || 'L'} className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"><option value="L">Litros</option><option value="mL">Mililitros</option></select></div></div>
+              <div className="grid grid-cols-2 gap-4"><div><label className="block text-sm font-medium text-slate-700 mb-1">Kilometraje *</label><input name="kilometraje" type="number" min="0" required defaultValue={ed ? (ed.kilometraje ?? '') : (vehiculoSeleccionado.kmActual || '')} className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20" /></div><div><label className="block text-sm font-medium text-slate-700 mb-1">Observaciones</label><input name="observaciones" defaultValue={ed?.observaciones || ''} className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20" /></div></div>
+              <div className="flex justify-end gap-2 pt-2"><button type="button" onClick={cerrar} className="px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-xl">Cancelar</button><button type="submit" disabled={saving} className="px-5 py-2.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl disabled:opacity-50">{saving ? 'Guardando...' : ed ? 'Guardar cambios' : 'Registrar'}</button></div>
             </form>
           </div>
         </div>
-      )}
+        )
+      })()}
 
       {/* MODAL: NUEVO MANTENIMIENTO */}
-      {showNuevoMantenimiento && vehiculoSeleccionado && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1001] p-4" onClick={() => setShowNuevoMantenimiento(false)}>
+      {showNuevoMantenimiento && vehiculoSeleccionado && (() => {
+        const ed = mantenimientoEditando
+        const cerrar = () => { setShowNuevoMantenimiento(false); setMantenimientoEditando(null) }
+        return (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1001] p-4" onClick={cerrar}>
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg" onClick={e => e.stopPropagation()}>
-            <div className="p-5 border-b border-slate-200 flex items-center justify-between"><h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2"><Wrench className="w-5 h-5 text-emerald-500" />Registrar Mantenimiento — {vehiculoSeleccionado.indicativo}</h3><button onClick={() => setShowNuevoMantenimiento(false)} className="p-1 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5 text-slate-400" /></button></div>
-            <form onSubmit={handleNuevoMantenimiento} className="p-5 space-y-4">
-              <div className="grid grid-cols-2 gap-4"><div><label className="block text-sm font-medium text-slate-700 mb-1">Fecha *</label><input name="fecha" type="date" required defaultValue={new Date().toISOString().split('T')[0]} className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20" /></div><div><label className="block text-sm font-medium text-slate-700 mb-1">Tipo *</label><select name="tipo" required className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20">{TIPOS_MANTENIMIENTO.map(t => <option key={t} value={t}>{t}</option>)}</select></div></div>
-              <div><label className="block text-sm font-medium text-slate-700 mb-1">Descripción *</label><textarea name="descripcion" required rows={2} className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20" /></div>
-              <div className="grid grid-cols-3 gap-4"><div><label className="block text-sm font-medium text-slate-700 mb-1">Kilometraje</label><input name="kilometraje" type="number" min="0" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20" /></div><div><label className="block text-sm font-medium text-slate-700 mb-1">Coste €</label><input name="coste" type="number" step="0.01" min="0" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20" /></div><div><label className="block text-sm font-medium text-slate-700 mb-1">Próxima revisión</label><input name="proximaRevision" type="date" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20" /></div></div>
-              <div className="grid grid-cols-2 gap-4"><div><label className="block text-sm font-medium text-slate-700 mb-1">Realizado por</label><input name="realizadoPor" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20" /></div><div><label className="block text-sm font-medium text-slate-700 mb-1">Observaciones</label><input name="observaciones" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20" /></div></div>
-              <div className="flex justify-end gap-2 pt-2"><button type="button" onClick={() => setShowNuevoMantenimiento(false)} className="px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-xl">Cancelar</button><button type="submit" disabled={saving} className="px-5 py-2.5 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl disabled:opacity-50">{saving ? 'Guardando...' : 'Registrar'}</button></div>
+            <div className="p-5 border-b border-slate-200 flex items-center justify-between"><h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2"><Wrench className="w-5 h-5 text-emerald-500" />{ed ? 'Editar Mantenimiento' : 'Registrar Mantenimiento'} — {vehiculoSeleccionado.indicativo}</h3><button onClick={cerrar} className="p-1 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5 text-slate-400" /></button></div>
+            <form onSubmit={handleGuardarMantenimiento} className="p-5 space-y-4">
+              <div className="grid grid-cols-2 gap-4"><div><label className="block text-sm font-medium text-slate-700 mb-1">Fecha *</label><input name="fecha" type="date" required defaultValue={ed ? toDateInput(ed.fecha) : new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' })} className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20" /></div><div><label className="block text-sm font-medium text-slate-700 mb-1">Tipo *</label><select name="tipo" required defaultValue={ed?.tipo} className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20">{TIPOS_MANTENIMIENTO.map(t => <option key={t} value={t}>{t}</option>)}</select></div></div>
+              <div><label className="block text-sm font-medium text-slate-700 mb-1">Descripción *</label><textarea name="descripcion" required rows={2} defaultValue={ed?.descripcion || ''} className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20" /></div>
+              <div className="grid grid-cols-3 gap-4"><div><label className="block text-sm font-medium text-slate-700 mb-1">Kilometraje</label><input name="kilometraje" type="number" min="0" defaultValue={ed?.kilometraje ?? ''} className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20" /></div><div><label className="block text-sm font-medium text-slate-700 mb-1">Coste €</label><input name="coste" type="number" step="0.01" min="0" defaultValue={ed?.coste ?? ''} className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20" /></div><div><label className="block text-sm font-medium text-slate-700 mb-1">Próxima revisión</label><input name="proximaRevision" type="date" defaultValue={toDateInput(ed?.proximaRevision)} className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20" /></div></div>
+              <div className="grid grid-cols-2 gap-4"><div><label className="block text-sm font-medium text-slate-700 mb-1">Realizado por</label><input name="realizadoPor" defaultValue={ed?.realizadoPor || ''} className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20" /></div><div><label className="block text-sm font-medium text-slate-700 mb-1">Observaciones</label><input name="observaciones" defaultValue={ed?.observaciones || ''} className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20" /></div></div>
+              <div className="flex justify-end gap-2 pt-2"><button type="button" onClick={cerrar} className="px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-xl">Cancelar</button><button type="submit" disabled={saving} className="px-5 py-2.5 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl disabled:opacity-50">{saving ? 'Guardando...' : ed ? 'Guardar cambios' : 'Registrar'}</button></div>
             </form>
           </div>
         </div>
-      )}
+        )
+      })()}
 
-      {/* MODAL: NUEVO SINIESTRO */}
-      {showNuevoSiniestro && vehiculoSeleccionado && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1001] p-4" onClick={() => setShowNuevoSiniestro(false)}>
+      {/* MODAL: NUEVO / EDITAR SINIESTRO */}
+      {showNuevoSiniestro && vehiculoSeleccionado && (() => {
+        const ed = siniestroEditando
+        const cerrar = () => { setShowNuevoSiniestro(false); setSiniestroEditando(null) }
+        return (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1001] p-4" onClick={cerrar}>
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
             <div className="bg-red-600 p-5 text-white flex items-center justify-between flex-shrink-0">
-              <div className="flex items-center gap-3"><AlertTriangle className="w-5 h-5" /><h3 className="text-lg font-bold">Registrar Siniestro — {vehiculoSeleccionado.indicativo}</h3></div>
-              <button onClick={() => setShowNuevoSiniestro(false)} className="hover:bg-red-700 rounded-lg p-1 transition-colors"><X className="w-5 h-5" /></button>
+              <div className="flex items-center gap-3"><AlertTriangle className="w-5 h-5" /><h3 className="text-lg font-bold">{ed ? 'Editar Siniestro' : 'Registrar Siniestro'} — {vehiculoSeleccionado.indicativo}</h3></div>
+              <button onClick={cerrar} className="hover:bg-red-700 rounded-lg p-1 transition-colors"><X className="w-5 h-5" /></button>
             </div>
-            <form onSubmit={handleNuevoSiniestro} className="p-5 space-y-4 overflow-y-auto">
+            <form onSubmit={handleGuardarSiniestro} className="p-5 space-y-4 overflow-y-auto">
               <div className="grid grid-cols-4 gap-4">
-                <div><label className="block text-sm font-medium text-slate-700 mb-1">Fecha *</label><input name="fecha" type="date" required defaultValue={new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' })} className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20" /></div>
-                <div><label className="block text-sm font-medium text-slate-700 mb-1">Hora</label><input name="hora" type="time" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20" /></div>
-                <div><label className="block text-sm font-medium text-slate-700 mb-1">Tipo *</label><select name="tipo" required className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20">{Object.entries(TIPOS_SINIESTRO).map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></div>
-                <div><label className="block text-sm font-medium text-slate-700 mb-1">Gravedad *</label><select name="gravedad" required defaultValue="leve" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20">{Object.entries(GRAVEDAD_SINIESTRO).map(([v, g]) => <option key={v} value={v}>{g.label}</option>)}</select></div>
+                <div><label className="block text-sm font-medium text-slate-700 mb-1">Fecha *</label><input name="fecha" type="date" required defaultValue={ed ? toDateInput(ed.fecha) : new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' })} className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20" /></div>
+                <div><label className="block text-sm font-medium text-slate-700 mb-1">Hora</label><input name="hora" type="time" defaultValue={ed?.hora || ''} className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20" /></div>
+                <div><label className="block text-sm font-medium text-slate-700 mb-1">Tipo *</label><select name="tipo" required defaultValue={ed?.tipo} className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20">{Object.entries(TIPOS_SINIESTRO).map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></div>
+                <div><label className="block text-sm font-medium text-slate-700 mb-1">Gravedad *</label><select name="gravedad" required defaultValue={ed?.gravedad || 'leve'} className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20">{Object.entries(GRAVEDAD_SINIESTRO).map(([v, g]) => <option key={v} value={v}>{g.label}</option>)}</select></div>
               </div>
               <div className="grid grid-cols-3 gap-4">
-                <div className="col-span-2"><label className="block text-sm font-medium text-slate-700 mb-1">Lugar</label><input name="lugar" placeholder="Ej: Avda. de Sevilla, rotonda del Aljarafe" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20" /></div>
-                <div><label className="block text-sm font-medium text-slate-700 mb-1">Kilometraje</label><input name="kilometraje" type="number" min="0" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20" /></div>
+                <div className="col-span-2"><label className="block text-sm font-medium text-slate-700 mb-1">Lugar</label><input name="lugar" defaultValue={ed?.lugar || ''} placeholder="Ej: Avda. de Sevilla, rotonda del Aljarafe" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20" /></div>
+                <div><label className="block text-sm font-medium text-slate-700 mb-1">Kilometraje</label><input name="kilometraje" type="number" min="0" defaultValue={ed ? (ed.kilometraje ?? '') : (vehiculoSeleccionado.kmActual || '')} className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20" /></div>
               </div>
-              <div><label className="block text-sm font-medium text-slate-700 mb-1">Descripción de los hechos *</label><textarea name="descripcion" required rows={3} className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20" /></div>
+              <div><label className="block text-sm font-medium text-slate-700 mb-1">Descripción de los hechos *</label><textarea name="descripcion" required rows={3} defaultValue={ed?.descripcion || ''} className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20" /></div>
               <div className="grid grid-cols-3 gap-4">
-                <div><label className="block text-sm font-medium text-slate-700 mb-1">Conductor</label><input name="conductor" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20" /></div>
-                <div><label className="block text-sm font-medium text-slate-700 mb-1">Tercero implicado</label><input name="terceroImplicado" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20" /></div>
-                <div><label className="block text-sm font-medium text-slate-700 mb-1">Matrícula tercero</label><input name="matriculaTercero" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20" /></div>
+                <div><label className="block text-sm font-medium text-slate-700 mb-1">Conductor</label><input name="conductor" defaultValue={ed?.conductor || ''} className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20" /></div>
+                <div><label className="block text-sm font-medium text-slate-700 mb-1">Tercero implicado</label><input name="terceroImplicado" defaultValue={ed?.terceroImplicado || ''} className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20" /></div>
+                <div><label className="block text-sm font-medium text-slate-700 mb-1">Matrícula tercero</label><input name="matriculaTercero" defaultValue={ed?.matriculaTercero || ''} className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20" /></div>
               </div>
               <div className="grid grid-cols-3 gap-4">
-                <div><label className="block text-sm font-medium text-slate-700 mb-1">Aseguradora</label><input name="aseguradora" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20" /></div>
-                <div><label className="block text-sm font-medium text-slate-700 mb-1">Nº de siniestro</label><input name="numeroSiniestro" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20" /></div>
-                <div><label className="block text-sm font-medium text-slate-700 mb-1">Atestado / Instruye</label><input name="atestado" placeholder="Policía Local, Guardia Civil..." className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20" /></div>
+                <div><label className="block text-sm font-medium text-slate-700 mb-1">Aseguradora</label><input name="aseguradora" defaultValue={ed?.aseguradora || ''} className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20" /></div>
+                <div><label className="block text-sm font-medium text-slate-700 mb-1">Nº de siniestro</label><input name="numeroSiniestro" defaultValue={ed?.numeroSiniestro || ''} className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20" /></div>
+                <div><label className="block text-sm font-medium text-slate-700 mb-1">Atestado / Instruye</label><input name="atestado" defaultValue={ed?.atestado || ''} placeholder="Policía Local, Guardia Civil..." className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20" /></div>
               </div>
               <div className="grid grid-cols-3 gap-4 items-end">
-                <div><label className="block text-sm font-medium text-slate-700 mb-1">Estado</label><select name="estado" defaultValue="abierto" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20">{Object.entries(ESTADOS_SINIESTRO).map(([v, e]) => <option key={v} value={v}>{e.label}</option>)}</select></div>
-                <div><label className="block text-sm font-medium text-slate-700 mb-1">Coste reparación €</label><input name="costeReparacion" type="number" step="0.01" min="0" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20" /></div>
-                <label className="flex items-center gap-2 px-3 py-2.5 border border-slate-200 rounded-xl text-sm cursor-pointer hover:bg-slate-50"><input name="heridos" type="checkbox" className="w-4 h-4 rounded border-slate-300 text-red-600 focus:ring-red-500" /><span className="font-medium text-slate-700">Hubo heridos</span></label>
+                <div><label className="block text-sm font-medium text-slate-700 mb-1">Estado</label><select name="estado" defaultValue={ed?.estado || 'abierto'} className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20">{Object.entries(ESTADOS_SINIESTRO).map(([v, e]) => <option key={v} value={v}>{e.label}</option>)}</select></div>
+                <div><label className="block text-sm font-medium text-slate-700 mb-1">Coste reparación €</label><input name="costeReparacion" type="number" step="0.01" min="0" defaultValue={ed?.costeReparacion ?? ''} className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20" /></div>
+                <label className="flex items-center gap-2 px-3 py-2.5 border border-slate-200 rounded-xl text-sm cursor-pointer hover:bg-slate-50"><input name="heridos" type="checkbox" defaultChecked={ed?.heridos || false} className="w-4 h-4 rounded border-slate-300 text-red-600 focus:ring-red-500" /><span className="font-medium text-slate-700">Hubo heridos</span></label>
               </div>
-              <div><label className="block text-sm font-medium text-slate-700 mb-1">Observaciones</label><textarea name="observaciones" rows={2} className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20" /></div>
+              <div><label className="block text-sm font-medium text-slate-700 mb-1">Observaciones / Seguimiento</label><textarea name="observaciones" rows={2} defaultValue={ed?.observaciones || ''} className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20" /></div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Parte del siniestro (opcional)</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">{ed?.parteUrl ? 'Sustituir parte del siniestro' : 'Parte del siniestro (opcional)'}</label>
                 <input name="parte" type="file" accept="application/pdf,image/jpeg,image/png" className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-red-50 file:text-red-600 hover:file:bg-red-100" />
-                <p className="text-xs text-slate-400 mt-1">PDF, JPG o PNG · máx. 10 MB</p>
+                <p className="text-xs text-slate-400 mt-1">PDF, JPG o PNG · máx. 10 MB{ed?.parteNombre ? ` · Actual: ${ed.parteNombre} (se conserva si no subes otro)` : ''}</p>
               </div>
-              <div className="flex justify-end gap-2 pt-2"><button type="button" onClick={() => setShowNuevoSiniestro(false)} className="px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-xl">Cancelar</button><button type="submit" disabled={saving} className="px-5 py-2.5 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-xl disabled:opacity-50">{saving ? 'Guardando...' : 'Registrar Siniestro'}</button></div>
+              <div className="flex justify-end gap-2 pt-2"><button type="button" onClick={cerrar} className="px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-xl">Cancelar</button><button type="submit" disabled={saving} className="px-5 py-2.5 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-xl disabled:opacity-50">{saving ? 'Guardando...' : ed ? 'Guardar cambios' : 'Registrar Siniestro'}</button></div>
             </form>
           </div>
         </div>
-      )}
-
-      {/* MODAL: SEGUIMIENTO SINIESTRO */}
-      {siniestroSeguimiento && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1001] p-4" onClick={() => setSiniestroSeguimiento(null)}>
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg" onClick={e => e.stopPropagation()}>
-            <div className="p-5 border-b border-slate-200 flex items-center justify-between"><h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2"><History className="w-5 h-5 text-red-500" />Seguimiento del siniestro</h3><button onClick={() => setSiniestroSeguimiento(null)} className="p-1 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5 text-slate-400" /></button></div>
-            <form onSubmit={handleActualizarSiniestro} className="p-5 space-y-4">
-              <p className="text-sm text-slate-500">{TIPOS_SINIESTRO[siniestroSeguimiento.tipo] || siniestroSeguimiento.tipo} · {new Date(siniestroSeguimiento.fecha).toLocaleDateString('es-ES')}</p>
-              <div className="grid grid-cols-2 gap-4">
-                <div><label className="block text-sm font-medium text-slate-700 mb-1">Estado</label><select name="estado" defaultValue={siniestroSeguimiento.estado} className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20">{Object.entries(ESTADOS_SINIESTRO).map(([v, e]) => <option key={v} value={v}>{e.label}</option>)}</select></div>
-                <div><label className="block text-sm font-medium text-slate-700 mb-1">Coste reparación €</label><input name="costeReparacion" type="number" step="0.01" min="0" defaultValue={siniestroSeguimiento.costeReparacion ?? ''} className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20" /></div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div><label className="block text-sm font-medium text-slate-700 mb-1">Aseguradora</label><input name="aseguradora" defaultValue={siniestroSeguimiento.aseguradora || ''} className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20" /></div>
-                <div><label className="block text-sm font-medium text-slate-700 mb-1">Nº de siniestro</label><input name="numeroSiniestro" defaultValue={siniestroSeguimiento.numeroSiniestro || ''} className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20" /></div>
-              </div>
-              <div><label className="block text-sm font-medium text-slate-700 mb-1">Observaciones / Seguimiento</label><textarea name="observaciones" rows={4} defaultValue={siniestroSeguimiento.observaciones || ''} className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20" /></div>
-              <div className="flex justify-end gap-2 pt-2"><button type="button" onClick={() => setSiniestroSeguimiento(null)} className="px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-xl">Cancelar</button><button type="submit" disabled={saving} className="px-5 py-2.5 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-xl disabled:opacity-50">{saving ? 'Guardando...' : 'Guardar'}</button></div>
-            </form>
-          </div>
-        </div>
-      )}
+        )
+      })()}
 
       {/* MODAL: SUBIR DOCUMENTO */}
       {showSubirDocumento && vehiculoSeleccionado && (
