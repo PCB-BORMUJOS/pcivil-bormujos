@@ -51,7 +51,7 @@ const YEARS = [currentYear, currentYear - 1, currentYear - 2]
 const fmtEur  = (n: any) => (Number(n)||0).toLocaleString('es-ES',{style:'currency',currency:'EUR',maximumFractionDigits:0})
 const fmtKm   = (n: any) => `${(Number(n)||0).toLocaleString('es-ES')} km`
 const fmtNum  = (n: any) => (Number(n)||0).toLocaleString('es-ES')
-const fmtDate = (d: any) => d ? new Date(d).toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit',year:'numeric'}) : '—'
+const fmtDate = (d: any) => d ? new Date(d).toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit',year:'numeric'}).replace(/\//g,'-') : '—'
 const fmtL    = (n: any) => `${(Number(n)||0).toLocaleString('es-ES',{maximumFractionDigits:1})} L`
 
 function KpiCard({ label, value, sub, color='indigo', icon: Icon }: any) {
@@ -451,7 +451,7 @@ export default function EstadisticasPage() {
                       v.importeDietas>0?<span key="d" className="font-semibold text-green-700">{fmtEur(v.importeDietas)}</span>:'—',
                       v.km>0?<span key="km">{fmtKm(v.km)}</span>:'—',
                       v.recordatorios>0
-                        ? <span key="rec" className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-red-100 text-red-700 rounded text-xs font-bold" title={v.ultimoRecordatorio ? `Último: ${new Date(v.ultimoRecordatorio).toLocaleDateString('es-ES')}` : ''}>⚠ {v.recordatorios}</span>
+                        ? <span key="rec" className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-red-100 text-red-700 rounded text-xs font-bold" title={v.ultimoRecordatorio ? `Último: ${fmtDate(v.ultimoRecordatorio)}` : ''}>⚠ {v.recordatorios}</span>
                         : <span key="rec" className="text-slate-300 text-xs">—</span>,
                       <Badge key="s" label={v.activo?'Activo':'Inactivo'} variant={v.activo?'green':'red'}/>,
                     ])}
