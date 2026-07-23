@@ -38,7 +38,7 @@ const CATEGORIA: Record<string, string> = {
 const fmtFecha = (d?: string) => d ? new Date(d).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-') : '—'
 
 export default function AgentesPage() {
-  const { isJefeArea } = usePermisos()
+  const { isAdmin } = usePermisos()
   const [perfiles, setPerfiles] = useState<Perfil[]>([])
   const [propuestas, setPropuestas] = useState<Propuesta[]>([])
   const [disponible, setDisponible] = useState(true)
@@ -107,10 +107,10 @@ export default function AgentesPage() {
   const pendientes = propuestas.filter(p => p.estado === 'pendiente')
   const porArea = (slug: string) => propuestas.filter(p => p.area === slug && p.estado === 'pendiente').length
 
-  if (!isJefeArea) return (
+  if (!isAdmin) return (
     <div className="flex flex-col items-center justify-center h-96 text-slate-400">
       <ShieldAlert className="w-10 h-10 mb-3 opacity-40" />
-      <p className="text-sm">Este panel está reservado a jefes de área y coordinación.</p>
+      <p className="text-sm">Este panel está reservado a coordinación y jefatura del servicio.</p>
     </div>
   )
 
@@ -128,7 +128,7 @@ export default function AgentesPage() {
         <div>
           <p className="text-sm font-bold text-blue-600 uppercase tracking-wide">INTELIGENCIA ARTIFICIAL</p>
           <h1 className="text-xl sm:text-2xl font-bold text-slate-800">Agentes por Área</h1>
-          <p className="text-sm text-slate-500 mt-1">Cada área cuenta con un agente especializado que asiste a su personal y revisa sus datos para proponer mejoras.</p>
+          <p className="text-sm text-slate-500 mt-1">Cada área cuenta con un agente especializado que asiste a la coordinación y revisa los datos del área para proponer mejoras.</p>
         </div>
       </div>
 

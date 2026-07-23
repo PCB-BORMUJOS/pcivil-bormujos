@@ -8,6 +8,7 @@ import { usePathname } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { Bot, X, Send, Sparkles, RefreshCw, ChevronDown } from 'lucide-react'
 import { perfilPorRuta } from '@/lib/agentes/perfiles'
+import { getNivel } from '@/lib/permisos'
 
 interface MensajeChat { rol: 'user' | 'assistant'; contenido: string }
 
@@ -61,7 +62,9 @@ export default function AgentePanel() {
     }
   }, [perfil.slug, conversacionId, enviando])
 
-  if (!session) return null
+  // El chat queda reservado a coordinación y jefatura del servicio.
+  const nivel = getNivel(((session?.user as any)?.rol ?? 'voluntario') as string)
+  if (!session || nivel < 4) return null
 
   return (
     <>

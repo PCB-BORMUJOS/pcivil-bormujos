@@ -9,7 +9,7 @@ export const maxDuration = 120
 
 // ── GET ──────────────────────────────────────────────────────────────────────
 export async function GET(request: NextRequest) {
-  const auth = await autorizar()
+  const auth = await autorizar(4)
   if (!auth.usuario) return NextResponse.json({ error: auth.error }, { status: auth.status })
 
   const { searchParams } = new URL(request.url)
@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (tipo === 'propuestas') {
-      if (auth.nivel < 3) return NextResponse.json({ error: 'Sin permisos suficientes' }, { status: 403 })
+      if (auth.nivel < 4) return NextResponse.json({ error: 'Sin permisos suficientes' }, { status: 403 })
       const area = searchParams.get('area')
       const estado = searchParams.get('estado')
       const propuestas = await prisma.propuestaAgente.findMany({
@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (tipo === 'revisiones') {
-      if (auth.nivel < 3) return NextResponse.json({ error: 'Sin permisos suficientes' }, { status: 403 })
+      if (auth.nivel < 4) return NextResponse.json({ error: 'Sin permisos suficientes' }, { status: 403 })
       const revisiones = await prisma.revisionAgente.findMany({
         include: {
           usuario: { select: { nombre: true, apellidos: true } },
@@ -77,9 +77,9 @@ export async function POST(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const tipo = searchParams.get('tipo')
 
-  // Chat con el agente del área: disponible para cualquier usuario autenticado.
+  // Chat con el agente del área: reservado a coordinación y jefatura del servicio.
   if (tipo === 'chat') {
-    const auth = await autorizar()
+    const auth = await autorizar(4)
     if (!auth.usuario) return NextResponse.json({ error: auth.error }, { status: auth.status })
 
     const cliente = crearCliente()
@@ -139,7 +139,7 @@ export async function POST(request: NextRequest) {
 
   // Revisión del área: genera propuestas y avisa al administrador.
   if (tipo === 'revision') {
-    const auth = await autorizar(3)
+    const auth = await autorizar(4)
     if (!auth.usuario) return NextResponse.json({ error: auth.error }, { status: auth.status })
 
     const cliente = crearCliente()
@@ -236,7 +236,7 @@ export async function POST(request: NextRequest) {
 
 // ── PUT: resolución de propuestas por el administrador ───────────────────────
 export async function PUT(request: NextRequest) {
-  const auth = await autorizar(3)
+  const auth = await autorizar(4)
   if (!auth.usuario) return NextResponse.json({ error: auth.error }, { status: auth.status })
 
   try {

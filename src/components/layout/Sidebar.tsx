@@ -84,7 +84,7 @@ const navigation: NavItem[] = [
   { name: 'Cuadrantes',        href: '/cuadrantes',     icon: Calendar,    minNivel: 4, visibleVisor: true },
   { name: 'Administración',    href: '/administracion', icon: ShieldCheck, minNivel: 4, visibleVisor: true },
   { name: 'Estadísticas',      href: '/estadisticas',   icon: BarChart2,   minNivel: 4, visibleVisor: true },
-  { name: 'Agentes IA',        href: '/agentes',        icon: Bot,         minNivel: 3, visibleVisor: false },
+  { name: 'Agentes IA',        href: '/agentes',        icon: Bot,         minNivel: 4, visibleVisor: false },
   { name: 'Gestión Económica', href: '/presupuesto',    icon: Wallet,      minNivel: 4, visibleVisor: true },
   { name: 'Configuración',     href: '/configuracion',  icon: Settings,    minNivel: 4, visibleVisor: false },
 ]
