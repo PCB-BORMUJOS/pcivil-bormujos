@@ -46,11 +46,13 @@ async function ctxVehiculos(): Promise<string> {
 }
 
 async function ctxIncendios(): Promise<string> {
-  const [equipos, hidrantes, edificios, articulos] = await Promise.all([
+  const [equipos, hidrantes, edificios, articulos, revisionesPci, accionesPci] = await Promise.all([
     prisma.equipoECI.findMany({ include: { edificio: { select: { nombre: true } } }, orderBy: { proximaRevision: 'asc' }, take: 80 }),
     prisma.hidrante.findMany({ orderBy: { proximaRevision: 'asc' }, take: 60 }),
     prisma.edificio.count(),
     prisma.articulo.findMany({ where: { activo: true, familia: { categoria: { slug: 'incendios' } } }, include: { familia: { select: { nombre: true } } }, take: 60 }),
+    prisma.revisionPCI.findMany({ include: { edificio: { select: { nombre: true, alias: true } }, _count: { select: { hallazgos: true } } }, orderBy: { fecha: 'desc' }, take: 60 }).catch(() => []),
+    prisma.accionCorrectivaPCI.findMany({ where: { estado: { notIn: ['EJECUTADO', 'VERIFICADO', 'FACTURADO'] } }, include: { edificio: { select: { nombre: true, alias: true } }, presupuesto: { select: { numero: true } } }, orderBy: { importe: 'desc' }, take: 60 }).catch(() => []),
   ])
 
   return [
@@ -61,6 +63,10 @@ async function ctxIncendios(): Promise<string> {
       `${h.codigo} · ${h.tipo} · ${h.ubicacion} · estado ${h.estado} · presión ${h.presion ?? '?'} · próxima revisión: ${venc(h.proximaRevision)}`)),
     bloque('Material de incendios en inventario', articulos.map(a =>
       `${a.nombre} · stock ${a.stockActual} ${a.unidad} (mínimo ${a.stockMinimo})${a.fechaCaducidad ? ' · caducidad ' + fecha(a.fechaCaducidad) : ''}`)),
+    bloque('Contrato PCI — últimas revisiones de edificios municipales', (revisionesPci as any[]).map(r =>
+      `${(r as any).campana} (${fecha((r as any).fecha)}) · ${(r as any).edificio?.alias || (r as any).edificio?.nombre} · ${(r as any).tipo} · ${(r as any).resultado} · ${(r as any)._count.hallazgos} defecto(s)`)),
+    bloque('Contrato PCI — actuaciones correctivas abiertas', (accionesPci as any[]).map(a =>
+      `${(a as any).edificio?.alias || (a as any).edificio?.nombre} · ${(a as any).descripcion} · prioridad ${(a as any).prioridad} · estado ${(a as any).estado} · ${(a as any).importe ? (a as any).importe + ' €' : 'sin importe'}${(a as any).recurrente ? ' · RECURRENTE detectado ' + (a as any).vecesDetectada + ' veces sin subsanar' : ''}${(a as any).presupuesto ? ' · ppto ' + (a as any).presupuesto.numero : ''}`)),
   ].join('\n')
 }
 

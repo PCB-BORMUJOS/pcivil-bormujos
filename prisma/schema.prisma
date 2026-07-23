@@ -669,10 +669,17 @@ model Edificio {
   updatedAt   DateTime    @updatedAt @map("updated_at")
   planoUrl    String?
   planoNombre String?
+  codigoCliente String?  @unique @map("codigo_cliente")
+  alias         String?
+  contratoPci   String?  @map("contrato_pci")
   deas        DEA[]
   equiposECI      EquipoECI[]
   planoMarcadores PlanoMarcador[]
   planos          PlanoEdificio[]
+  revisionesPci   RevisionPCI[]
+  presupuestosPci PresupuestoPCI[]
+  accionesPci     AccionCorrectivaPCI[]
+  facturasPci     FacturaPCI[]
 
   @@map("edificios")
 }
@@ -2282,4 +2289,131 @@ model PropuestaAgente {
   @@index([area, estado])
   @@index([revisionId])
   @@map("propuestas_agente")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CONTRATO PCI — REVISIONES DE PROTECCIÓN CONTRA INCENDIOS EN EDIFICIOS
+// Complementa (no sustituye) el inventario de EquipoECI del área de Incendios.
+// ─────────────────────────────────────────────────────────────────────────────
+
+model RevisionPCI {
+  id             String    @id @default(cuid())
+  numeroTrabajo  String?   @map("numero_trabajo")
+  documento      String?   // Documento_NNNNN.pdf de la mantenedora
+  edificioId     String    @map("edificio_id")
+  edificio       Edificio  @relation(fields: [edificioId], references: [id], onDelete: Cascade)
+  tipo           String    @default("TRIMESTRAL") // TRIMESTRAL | ANUAL | CORRECTIVO
+  campana        String    // "sep-2025", "dic-2025", "mar-2026", "jul-2026"
+  fecha          DateTime
+  resultado      String    @default("con_defectos") // favorable | con_defectos | desfavorable
+  tecnico        String?
+  equiposResumen String?   @map("equipos_resumen")
+  observaciones  String?
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  hallazgos      HallazgoPCI[]
+  presupuestos   PresupuestoPCI[]
+  acciones       AccionCorrectivaPCI[]
+
+  @@unique([edificioId, campana])
+  @@index([edificioId])
+  @@index([campana])
+  @@map("revisiones_pci")
+}
+
+model HallazgoPCI {
+  id            String      @id @default(cuid())
+  revisionId    String      @map("revision_id")
+  revision      RevisionPCI @relation(fields: [revisionId], references: [id], onDelete: Cascade)
+  elemento      String
+  ubicacion     String?
+  estado        String      @default("DEFECTO") // OK | DEFECTO | CADUCADO | NO_FUNCIONA | DESAPARECIDO
+  descripcion   String?
+  requiereIntervencion Boolean @default(true) @map("requiere_intervencion")
+  accionId      String?     @map("accion_id")
+  accion        AccionCorrectivaPCI? @relation(fields: [accionId], references: [id])
+  createdAt     DateTime    @default(now()) @map("created_at")
+
+  @@index([revisionId])
+  @@index([estado])
+  @@map("hallazgos_pci")
+}
+
+model PresupuestoPCI {
+  id          String       @id @default(cuid())
+  numero      String       @unique
+  edificioId  String       @map("edificio_id")
+  edificio    Edificio     @relation(fields: [edificioId], references: [id], onDelete: Cascade)
+  revisionId  String?      @map("revision_id")
+  revision    RevisionPCI? @relation(fields: [revisionId], references: [id])
+  fecha       DateTime
+  campana     String?
+  concepto    String
+  base        Float?
+  iva         Float?
+  total       Float
+  categoria   String       @default("PCI") // PCI | CCTV
+  estado      String       @default("PRESENTADO") // PRESENTADO | ACEPTADO | EJECUTADO | FACTURADO | RECHAZADO
+  notas       String?
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+
+  acciones    AccionCorrectivaPCI[]
+
+  @@index([edificioId])
+  @@index([estado])
+  @@index([categoria])
+  @@map("presupuestos_pci")
+}
+
+model AccionCorrectivaPCI {
+  id               String          @id @default(cuid())
+  edificioId       String          @map("edificio_id")
+  edificio         Edificio        @relation(fields: [edificioId], references: [id], onDelete: Cascade)
+  descripcion      String
+  detalle          String?
+  origenRevisionId String?         @map("origen_revision_id")
+  origenRevision   RevisionPCI?    @relation(fields: [origenRevisionId], references: [id])
+  presupuestoId    String?         @map("presupuesto_id")
+  presupuesto      PresupuestoPCI? @relation(fields: [presupuestoId], references: [id])
+  estado           String          @default("DETECTADO") // DETECTADO|PRESUPUESTADO|APROBADO|EN_EJECUCION|EJECUTADO|VERIFICADO|FACTURADO
+  prioridad        String          @default("media")     // baja | media | alta
+  categoria        String          @default("PCI")       // PCI | CCTV
+  importe          Float?
+  recurrente       Boolean         @default(false)
+  vecesDetectada   Int             @default(1) @map("veces_detectada")
+  primeraDeteccion DateTime?       @map("primera_deteccion")
+  ultimaDeteccion  DateTime?       @map("ultima_deteccion")
+  fechaAprobacion  DateTime?       @map("fecha_aprobacion")
+  fechaEjecucion   DateTime?       @map("fecha_ejecucion")
+  fechaVerificacion DateTime?      @map("fecha_verificacion")
+  responsable      String?
+  notas            String?
+  createdAt        DateTime        @default(now()) @map("created_at")
+  updatedAt        DateTime        @updatedAt @map("updated_at")
+
+  hallazgos        HallazgoPCI[]
+
+  @@index([edificioId])
+  @@index([estado])
+  @@index([prioridad])
+  @@map("acciones_correctivas_pci")
+}
+
+model FacturaPCI {
+  id          String    @id @default(cuid())
+  numero      String    @unique
+  edificioId  String?   @map("edificio_id")
+  edificio    Edificio? @relation(fields: [edificioId], references: [id])
+  fecha       DateTime
+  concepto    String
+  importe     Float?
+  conformada  Boolean   @default(false)
+  notas       String?
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  @@index([edificioId])
+  @@map("facturas_pci")
 }

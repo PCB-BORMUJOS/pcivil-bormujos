@@ -1,6 +1,7 @@
 'use client';
 import EditorPlano from '@/components/EditorPlano';
 import { usePermisos } from '@/lib/permisos'
+import ContratoPCI from '@/components/incendios/ContratoPCI'
 import PeticionesTab, { MovimientosTab } from '@/components/PeticionesTab'
 import React, { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
@@ -8,7 +9,7 @@ import 'leaflet/dist/leaflet.css';
 import {
   Flame, Package, Search, AlertTriangle, Plus, RefreshCw, Building2, Shield, MapPin,
   Edit, Trash2, Eye, X, Save, ArrowLeft, ShoppingCart, Layers, Clock, Check, CheckCircle,
-  Ban, Filter, User, Building, Calendar, History, Send, Download
+  Ban, Filter, User, Building, Calendar, History, Send, Download, ClipboardCheck
 } from 'lucide-react';
 
 // Iconos centralizados
@@ -174,7 +175,7 @@ export default function IncendiosPage() {
   const [filtroPeticiones, setFiltroPeticiones] = useState('all')
   const [showNuevaPeticion, setShowNuevaPeticion] = useState(false)
   const [peticionStats, setPeticionStats] = useState({ total: 0, pendientes: 0, aprobadas: 0, enCompra: 0, recibidas: 0, rechazadas: 0 })
-  const [mainTab, setMainTab] = useState<'inventario' | 'eci-edificios' | 'inventario-eci' | 'hidrantes'>('inventario');
+  const [mainTab, setMainTab] = useState<'inventario' | 'eci-edificios' | 'contrato-pci' | 'inventario-eci' | 'hidrantes'>('inventario');
   const [inventoryTab, setInventoryTab] = useState<'stock' | 'peticiones' | 'movimientos'>('stock');
 
   const [articulos, setArticulos] = useState<Articulo[]>([]);
@@ -667,6 +668,7 @@ export default function IncendiosPage() {
           {[
             { id: 'inventario', label: 'Inventario del Área', icon: Package },
             { id: 'eci-edificios', label: 'ECI Edificios', icon: Building2 },
+            { id: 'contrato-pci', label: 'Contrato PCI', icon: ClipboardCheck },
             { id: 'inventario-eci', label: 'Inventario ECI', icon: Layers },
             { id: 'hidrantes', label: 'Red de Hidrantes', icon: HidranteIcon },
           ].map(tab => (
@@ -1045,7 +1047,10 @@ export default function IncendiosPage() {
           </div>
         )}
 
-        {/* TAB: INVENTARIO ECI CONSOLIDADO */}
+        {/* TAB: CONTRATO PCI — REVISIONES DE EDIFICIOS MUNICIPALES */}
+        {mainTab === 'contrato-pci' && <ContratoPCI />}
+
+                {/* TAB: INVENTARIO ECI CONSOLIDADO */}
         {mainTab === 'inventario-eci' && (
           <div className="p-6">
             <div className="flex justify-between items-center mb-6">
