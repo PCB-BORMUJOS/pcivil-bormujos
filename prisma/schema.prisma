@@ -59,6 +59,7 @@ model Usuario {
   documentosVehiculo    DocumentoVehiculo[]
   mantenimientosVehiculo MantenimientoVehiculo[]
   siniestrosVehiculo     SiniestroVehiculo[]
+  fluidosVehiculo        RegistroFluidoVehiculo[]
 
   manuales              Manual[]
   partesPSI             PartePSI[]
@@ -1676,6 +1677,8 @@ model RegistroFluidoVehiculo {
   unidad        String?
   kilometraje   Int?
   observaciones String?
+  usuarioId     String?  @map("usuario_id")
+  usuario       Usuario? @relation(fields: [usuarioId], references: [id])
   createdAt     DateTime @default(now()) @map("created_at")
   vehiculo      Vehiculo @relation(fields: [vehiculoId], references: [id])
   @@map("registros_fluido_vehiculo")

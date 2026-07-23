@@ -38,6 +38,7 @@ export async function GET(request: NextRequest) {
       vehiculos, mantenimientos, peticionesLog, partesPSI,
       movimientosCaja, partidas, articulos, drones, vuelos,
       asignaciones, repostajes, ticketsCombustible, incidenciasCecopal, pilotosDrone,
+      fluidosVehiculo, siniestrosVehiculo,
     ] = await Promise.all([
       prisma.usuario.findMany({
         include: {
@@ -128,6 +129,24 @@ export async function GET(request: NextRequest) {
       // Pilotos con sus vuelos del período
       prisma.pilotoDrone.findMany({
         include: { vuelos: { where: { fecha: { gte: fechaInicio, lte: fechaFin } }, select: { duracionMinutos: true } } }
+      }).catch(() => []),
+      // Registros de niveles y fluidos de vehículos
+      prisma.registroFluidoVehiculo.findMany({
+        where: { fecha: { gte: fechaInicio, lte: fechaFin } },
+        include: {
+          vehiculo: { select: { id: true, indicativo: true, matricula: true } },
+          usuario: { select: { nombre: true, apellidos: true, numeroVoluntario: true, fichaVoluntario: { select: { indicativo2: true } } } },
+        },
+        orderBy: [{ fecha: 'desc' }, { createdAt: 'desc' }]
+      }).catch(() => []),
+      // Siniestros de vehículos
+      prisma.siniestroVehiculo.findMany({
+        where: { fecha: { gte: fechaInicio, lte: fechaFin } },
+        include: {
+          vehiculo: { select: { id: true, indicativo: true, matricula: true } },
+          usuario: { select: { nombre: true, apellidos: true, numeroVoluntario: true, fichaVoluntario: { select: { indicativo2: true } } } },
+        },
+        orderBy: { fecha: 'desc' }
       }).catch(() => []),
     ])
 
@@ -427,6 +446,8 @@ export async function GET(request: NextRequest) {
       const asig = (asignaciones as any[]).filter((a: any) => a.vehiculoId === v.id)
       const rep  = (repostajes as any[]).filter((r: any) => r.vehiculoId === v.id)
       const mant = (mantenimientos as any[]).filter((m: any) => m.vehiculoId === v.id)
+      const flu  = (fluidosVehiculo as any[]).filter((f: any) => f.vehiculoId === v.id)
+      const sin  = (siniestrosVehiculo as any[]).filter((s: any) => s.vehiculoId === v.id)
       const kmRec = asig.reduce((a: number, x: any) =>
         (x.kmFin && x.kmInicio) ? a + (x.kmFin - x.kmInicio) : a, 0)
       return {
@@ -443,8 +464,51 @@ export async function GET(request: NextRequest) {
         costeCombustible: +rep.reduce((a: number, r: any) => a + Number(r.costeTotal || 0), 0).toFixed(2),
         numMantenimientos: mant.length,
         costeMant: mant.reduce((a: number, m: any) => a + Number(m.coste || 0), 0),
+        numFluidos: flu.length,
+        ultimoFluido: flu.length ? flu[0].fecha : null,
+        ultimoFluidoKm: flu.length ? (flu[0].kilometraje || null) : null,
+        numSiniestros: sin.length,
+        siniestrosAbiertos: sin.filter((s: any) => s.estado === 'abierto' || s.estado === 'en_tramite').length,
+        costeSiniestros: +sin.reduce((a: number, s: any) => a + Number(s.costeReparacion || 0), 0).toFixed(2),
       }
     })
+
+    // ── Niveles y fluidos ─────────────────────────────────────────────────────
+    const fluidosPorTipoMap: Record<string, number> = {}
+    const fluidosPorAccionMap: Record<string, number> = {}
+    ;(fluidosVehiculo as any[]).forEach(f => {
+      fluidosPorTipoMap[f.tipoFluido] = (fluidosPorTipoMap[f.tipoFluido] || 0) + 1
+      fluidosPorAccionMap[f.accion] = (fluidosPorAccionMap[f.accion] || 0) + 1
+    })
+    const fluidosPorTipo = Object.entries(fluidosPorTipoMap).map(([name, value]) => ({ name, value }))
+    const fluidosPorAccion = Object.entries(fluidosPorAccionMap).map(([name, value]) => ({ name, value }))
+    const fluidosPorMes = Array.from({ length: 12 }, (_, i) => ({
+      mes: MESES_ES[i],
+      total: (fluidosVehiculo as any[]).filter(f => new Date(f.fecha).getMonth() === i).length,
+    }))
+    const fluidosRaw = (fluidosVehiculo as any[]).map(f => ({
+      id: f.id, fecha: f.fecha, tipoFluido: f.tipoFluido, accion: f.accion,
+      cantidad: f.cantidad !== null && f.cantidad !== undefined ? Number(f.cantidad) : null,
+      unidad: f.unidad, kilometraje: f.kilometraje, observaciones: f.observaciones,
+      vehiculo: f.vehiculo,
+      indicativoUsuario: f.usuario?.fichaVoluntario?.indicativo2 || f.usuario?.numeroVoluntario || null,
+      nombreUsuario: f.usuario ? `${f.usuario.nombre} ${f.usuario.apellidos}` : null,
+    }))
+
+    // ── Siniestros ────────────────────────────────────────────────────────────
+    const siniestrosPorTipoMap: Record<string, number> = {}
+    ;(siniestrosVehiculo as any[]).forEach(s => { siniestrosPorTipoMap[s.tipo] = (siniestrosPorTipoMap[s.tipo] || 0) + 1 })
+    const siniestrosPorTipo = Object.entries(siniestrosPorTipoMap).map(([name, value]) => ({ name, value }))
+    const siniestrosRaw = (siniestrosVehiculo as any[]).map(s => ({
+      id: s.id, fecha: s.fecha, tipo: s.tipo, gravedad: s.gravedad, estado: s.estado,
+      lugar: s.lugar, descripcion: s.descripcion, kilometraje: s.kilometraje,
+      conductor: s.conductor, heridos: s.heridos,
+      costeReparacion: s.costeReparacion !== null && s.costeReparacion !== undefined ? Number(s.costeReparacion) : null,
+      tieneParte: !!s.parteUrl,
+      vehiculo: s.vehiculo,
+      indicativoUsuario: s.usuario?.fichaVoluntario?.indicativo2 || s.usuario?.numeroVoluntario || null,
+    }))
+    const totalCosteSiniestros = +(siniestrosVehiculo as any[]).reduce((a: number, s: any) => a + Number(s.costeReparacion || 0), 0).toFixed(2)
 
     // ── Totales combustible (todas las fuentes) ───────────────────────────────
     const totalLitros = +(
@@ -543,6 +607,8 @@ export async function GET(request: NextRequest) {
       statsVehiculos,
       asignacionesPorMes, combustiblePorMes, mantPorTipo,
       statsVehiculosExt, totalLitros, totalCosteCombustible, totalKmGPS,
+      fluidosPorTipo, fluidosPorAccion, fluidosPorMes, fluidosRaw,
+      siniestrosPorTipo, siniestrosRaw, totalCosteSiniestros,
       cecopalPorMes, cecopalPorTipo,
       droneEstados, vuelosPorMes, statsPilotos,
       cajaPorMes, partidas,

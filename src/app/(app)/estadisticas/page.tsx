@@ -11,8 +11,20 @@ import {
   Package, FileText, RefreshCw, AlertTriangle, Activity, Truck,
   ShoppingCart, ArrowUpDown, DollarSign, Target, CheckCircle2,
   MapPin, Gauge, Wrench, GraduationCap, ClipboardList,
-  Fuel, Route, Plane, Shield
+  Fuel, Route, Plane, Shield, Droplets
 } from 'lucide-react'
+
+const LBL_FLUIDO: Record<string,string> = {
+  aceite_motor:'Aceite de motor', refrigerante:'Líquido refrigerante', direccion:'Líquido de dirección',
+  frenos:'Líquido de frenos', limpiaparabrisas:'Limpiaparabrisas', adblue:'AdBlue / Urea',
+  filtro_particulas:'Aditivo filtro partículas', inyectores:'Limpiador de inyectores',
+}
+const LBL_ACCION_FLUIDO: Record<string,string> = { relleno:'Relleno', cambio_completo:'Cambio completo', revision:'Revisión' }
+const LBL_SINIESTRO: Record<string,string> = {
+  colision:'Colisión', alcance:'Alcance', salida_via:'Salida de vía', atropello:'Atropello',
+  vuelco:'Vuelco', vandalismo:'Vandalismo', robo:'Robo', incendio:'Incendio',
+  granizo:'Granizo', danos_aparcado:'Daños aparcado', otros:'Otros',
+}
 
 const TABS = [
   { id: 'personal',  label: 'Personal',    icon: Users },
@@ -253,6 +265,11 @@ export default function EstadisticasPage() {
   const statsPilotos: any[]     = data.statsPilotos       || []
   const totalLitros: number     = data.totalLitros        || 0
   const totalCosteCombustible: number = data.totalCosteCombustible || 0
+  const fluidosRaw: any[]       = data.fluidosRaw          || []
+  const fluidosPorMes: any[]    = data.fluidosPorMes       || []
+  const fluidosPorTipo: any[]   = data.fluidosPorTipo      || []
+  const siniestrosRaw: any[]    = data.siniestrosRaw       || []
+  const totalCosteSiniestros: number = data.totalCosteSiniestros || 0
 
   const totalHoras  = resumen.totalHoras || 0
   const volActivos  = statsVoluntarios.filter((v:any)=>v.guardias>0)
@@ -826,6 +843,13 @@ export default function EstadisticasPage() {
                   <KpiCard label="Litros combustible" value={fmtL(totalLitros)} icon={Fuel} color="orange" sub="Repostajes + SOLRED"/>
                   <KpiCard label="Coste combustible" value={fmtEur(totalCosteCombustible)} icon={DollarSign} color="purple" sub={`Total ${year}`}/>
                 </div>
+                {/* KPIs fila 3 — niveles/fluidos y siniestros */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                  <KpiCard label="Registros de fluidos" value={fmtNum(fluidosRaw.length)} icon={Droplets} color="cyan" sub={`Revisiones y rellenos ${year}`}/>
+                  <KpiCard label="Cambios completos" value={fmtNum(fluidosRaw.filter((f:any)=>f.accion==='cambio_completo').length)} icon={RefreshCw} color="blue" sub="Sustituciones de fluido"/>
+                  <KpiCard label="Siniestros" value={fmtNum(siniestrosRaw.length)} icon={AlertTriangle} color="red" sub={`${siniestrosRaw.filter((s:any)=>s.estado==='abierto'||s.estado==='en_tramite').length} en curso`}/>
+                  <KpiCard label="Coste siniestros" value={fmtEur(totalCosteSiniestros)} icon={DollarSign} color="amber" sub={`Reparaciones ${year}`}/>
+                </div>
 
                 {/* Alertas ITV / Seguro */}
                 {vehAlertas.length>0 && (
@@ -939,7 +963,7 @@ export default function EstadisticasPage() {
                 {/* Tabla resumen por vehículo */}
                 <Panel title="Resumen por vehículo">
                   <DataTable
-                    heads={['Indicativo','Matrícula','Marca / Modelo','Km actual','Salidas','Km odóm.','Km GPS','Combustible','Coste comb.','Coste mant.','Estado']}
+                    heads={['Indicativo','Matrícula','Marca / Modelo','Km actual','Salidas','Km odóm.','Km GPS','Combustible','Coste comb.','Coste mant.','Fluidos','Siniestros','Estado']}
                     rows={statsVehiculosExt.map((v:any)=>[
                       <span key="i" className="font-black text-indigo-700 text-sm">{v.indicativo}</span>,
                       <span key="m" className="font-mono text-xs">{v.matricula}</span>,
@@ -951,6 +975,8 @@ export default function EstadisticasPage() {
                       v.litrosCombustible>0?<span key="l">{fmtL(v.litrosCombustible)}</span>:'—',
                       v.costeCombustible>0?<span key="cc" className="font-semibold text-orange-600">{fmtEur(v.costeCombustible)}</span>:'—',
                       v.costeMant>0?<span key="cm" className="font-semibold text-red-600">{fmtEur(v.costeMant)}</span>:'—',
+                      v.numFluidos>0?<span key="fl" className="font-semibold text-cyan-700" title={v.ultimoFluidoKm?`Último a ${fmtKm(v.ultimoFluidoKm)}`:undefined}>{v.numFluidos}</span>:'—',
+                      v.numSiniestros>0?<span key="si" className={`font-bold ${v.siniestrosAbiertos>0?'text-red-600':'text-slate-600'}`}>{v.numSiniestros}{v.siniestrosAbiertos>0?` (${v.siniestrosAbiertos})`:''}</span>:'—',
                       <Badge key="s" label={v.estado} variant={estadoBadge(v.estado)}/>,
                     ])}
                     empty="Sin vehículos registrados"
@@ -975,6 +1001,70 @@ export default function EstadisticasPage() {
                     />
                   </Panel>
                 )}
+
+                {/* Niveles y fluidos */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+                  <Panel title="Registros de fluidos por mes" className="lg:col-span-2">
+                    <ResponsiveContainer width="100%" height={220}>
+                      <BarChart data={fluidosPorMes}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false}/>
+                        <XAxis dataKey="mes" tick={{fontSize:11,fill:'#94a3b8'}} axisLine={false} tickLine={false}/>
+                        <YAxis tick={{fontSize:11,fill:'#94a3b8'}} axisLine={false} tickLine={false} allowDecimals={false}/>
+                        <Tooltip content={<ChartTooltip formatter={(name:string,val:any)=>[`${val}`,name]}/>} cursor={{fill:'#f8fafc'}}/>
+                        <Bar dataKey="total" name="Registros" fill={PALETTE.cyan} radius={[4,4,0,0]} barSize={18}/>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </Panel>
+                  <Panel title="Fluidos por tipo">
+                    <ResponsiveContainer width="100%" height={220}>
+                      <PieChart>
+                        <Pie data={fluidosPorTipo.length?fluidosPorTipo.map((f:any)=>({name:LBL_FLUIDO[f.name]||f.name,value:f.value})):[{name:'Sin datos',value:1}]} dataKey="value" nameKey="name" cx="50%" cy="45%" outerRadius={75} innerRadius={35} paddingAngle={2}>
+                          {fluidosPorTipo.map((_:any,i:number)=><Cell key={i} fill={CHART_COLORS[i%CHART_COLORS.length]}/>)}
+                        </Pie>
+                        <Tooltip/><Legend wrapperStyle={{fontSize:10,color:'#64748b'}}/>
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </Panel>
+                </div>
+
+                <Panel title={`Niveles y fluidos — historial ${year} (últimos 50)`}>
+                  <DataTable
+                    heads={['Fecha','Vehículo','Fluido','Acción','Cantidad','Km','Indicativo','Registrado por','Observaciones']}
+                    rows={fluidosRaw.slice(0,50).map((f:any)=>[
+                      fmtDate(f.fecha),
+                      <span key="v" className="font-black text-indigo-700 text-xs">{f.vehiculo?.indicativo||f.vehiculo?.matricula||'—'}</span>,
+                      LBL_FLUIDO[f.tipoFluido]||f.tipoFluido,
+                      <Badge key="a" label={LBL_ACCION_FLUIDO[f.accion]||f.accion} variant={f.accion==='cambio_completo'?'blue':f.accion==='relleno'?'green':'amber'}/>,
+                      f.cantidad?<span key="c" className="font-medium">{f.cantidad} {f.unidad||'L'}</span>:'—',
+                      f.kilometraje?<span key="km" className="font-semibold text-teal-700">{fmtKm(f.kilometraje)}</span>:'—',
+                      <span key="i" className="font-black text-blue-700 text-xs">{f.indicativoUsuario||'—'}</span>,
+                      <span key="n" className="text-xs text-slate-500">{f.nombreUsuario||'—'}</span>,
+                      <span key="o" className="text-xs text-slate-500">{f.observaciones||'—'}</span>,
+                    ])}
+                    empty="Sin registros de fluidos en este período"
+                  />
+                </Panel>
+
+                {/* Siniestros */}
+                <Panel title={`Siniestros — ${year}`}>
+                  <DataTable
+                    heads={['Fecha','Vehículo','Tipo','Gravedad','Estado','Km','Conductor','Lugar','Coste','Parte','Registró']}
+                    rows={siniestrosRaw.slice(0,50).map((s:any)=>[
+                      fmtDate(s.fecha),
+                      <span key="v" className="font-black text-indigo-700 text-xs">{s.vehiculo?.indicativo||s.vehiculo?.matricula||'—'}</span>,
+                      LBL_SINIESTRO[s.tipo]||s.tipo,
+                      <Badge key="g" label={({leve:'Leve',moderado:'Moderado',grave:'Grave'} as Record<string,string>)[s.gravedad]||s.gravedad} variant={s.gravedad==='grave'?'red':s.gravedad==='moderado'?'amber':'green'}/>,
+                      <Badge key="e" label={({abierto:'Abierto',en_tramite:'En trámite',reparado:'Reparado',cerrado:'Cerrado'} as Record<string,string>)[s.estado]||s.estado} variant={s.estado==='abierto'?'red':s.estado==='en_tramite'?'amber':s.estado==='reparado'?'blue':'green'}/>,
+                      s.kilometraje?<span key="km" className="font-semibold text-teal-700">{fmtKm(s.kilometraje)}</span>:'—',
+                      <span key="c" className="text-xs">{s.conductor||'—'}</span>,
+                      <span key="l" className="text-xs text-slate-500">{s.lugar||'—'}</span>,
+                      s.costeReparacion?<span key="co" className="font-semibold text-red-600">{fmtEur(s.costeReparacion)}</span>:'—',
+                      <span key="p" className={`text-xs font-medium ${s.tieneParte?'text-emerald-600':'text-slate-400'}`}>{s.tieneParte?'Sí':'No'}</span>,
+                      <span key="i" className="font-black text-blue-700 text-xs">{s.indicativoUsuario||'—'}</span>,
+                    ])}
+                    empty="Sin siniestros en este período"
+                  />
+                </Panel>
               </div>
             )}
 

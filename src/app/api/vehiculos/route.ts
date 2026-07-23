@@ -84,7 +84,15 @@ export async function GET(request: NextRequest) {
       if (!vehiculoId) return NextResponse.json({ error: 'vehiculoId requerido' }, { status: 400 })
       const registros = await prisma.registroFluidoVehiculo.findMany({
         where: { vehiculoId },
-        orderBy: { fecha: 'desc' }
+        include: {
+          usuario: {
+            select: {
+              nombre: true, apellidos: true, numeroVoluntario: true,
+              fichaVoluntario: { select: { indicativo2: true } }
+            }
+          }
+        },
+        orderBy: [{ fecha: 'desc' }, { createdAt: 'desc' }]
       })
       return NextResponse.json({ registros })
     }
@@ -386,10 +394,19 @@ export async function POST(request: NextRequest) {
           unidad: unidad || null,
           kilometraje: kilometraje ? parseInt(kilometraje) : null,
           observaciones: observaciones || null,
+          usuarioId: session.user.id,
+        },
+        include: {
+          usuario: {
+            select: {
+              nombre: true, apellidos: true, numeroVoluntario: true,
+              fichaVoluntario: { select: { indicativo2: true } }
+            }
+          }
         }
       })
       const _auditFlu = getUsuarioAudit(session)
-      await registrarAudit({ accion: 'CREATE', entidad: 'Vehículo', entidadId: registro.vehiculoId, descripcion: `Registro de fluido: ${registro.tipoFluido} — ${registro.accion}${registro.cantidad ? ' ' + registro.cantidad + ' ' + (registro.unidad || '') : ''}`, usuarioId: _auditFlu.usuarioId, usuarioNombre: _auditFlu.usuarioNombre, modulo: 'Vehículos' })
+      await registrarAudit({ accion: 'CREATE', entidad: 'Vehículo', entidadId: registro.vehiculoId, descripcion: `Registro de fluido: ${registro.tipoFluido} — ${registro.accion}${registro.cantidad ? ' ' + registro.cantidad + ' ' + (registro.unidad || '') : ''}${registro.kilometraje ? ' — ' + registro.kilometraje.toLocaleString('es-ES') + ' km' : ''}`, usuarioId: _auditFlu.usuarioId, usuarioNombre: _auditFlu.usuarioNombre, modulo: 'Vehículos' })
       return NextResponse.json({ registro })
     }
 
