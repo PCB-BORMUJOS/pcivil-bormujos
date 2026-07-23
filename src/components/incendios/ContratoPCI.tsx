@@ -12,7 +12,7 @@ import {
   ClipboardList, Receipt, Layers, ShieldAlert, Plus, X, Search, Info,
   FileDown, CheckSquare, Square,
 } from 'lucide-react'
-import { construirInformePCI, referenciaInforme, type ActuacionInforme } from '@/lib/informe-pci'
+import { generarInformePCI, referenciaInforme, type ActuacionInforme } from '@/lib/informe-pci'
 
 // ── Constantes ───────────────────────────────────────────────────────────────
 export const PROVEEDOR_PCI = {
@@ -78,6 +78,8 @@ export default function ContratoPCI() {
   const [verProveedor, setVerProveedor] = useState(false)
   // Selección de actuaciones para el informe de autorización.
   const [seleccion, setSeleccion] = useState<Set<string>>(new Set())
+  const [gruposItems, setGruposItems] = useState<any[]>([])
+  const [importesEdificio, setImportesEdificio] = useState<Record<string, string>>({})
   const [showInforme, setShowInforme] = useState(false)
   const [generando, setGenerando] = useState(false)
   const [datosInforme, setDatosInforme] = useState({
@@ -93,14 +95,16 @@ export default function ContratoPCI() {
 
   const cargar = useCallback(async () => {
     try {
-      const [rk, re, ra, rr, rp] = await Promise.all([
+      const [rk, re, ra, rr, rp, ri] = await Promise.all([
         fetch('/api/incendios/pci?tipo=kpis'),
         fetch('/api/incendios/pci?tipo=edificios'),
         fetch('/api/incendios/pci?tipo=acciones'),
         fetch('/api/incendios/pci?tipo=recurrentes'),
         fetch('/api/incendios/pci?tipo=presupuestos'),
+        fetch('/api/incendios/pci?tipo=items-pendientes'),
       ])
-      const [dk, de, da, dr, dp] = await Promise.all([rk.json(), re.json(), ra.json(), rr.json(), rp.json()])
+      const [dk, de, da, dr, dp, di] = await Promise.all([rk.json(), re.json(), ra.json(), rr.json(), rp.json(), ri.json()])
+      setGruposItems(di.grupos || [])
       setKpis(dk.kpis || null)
       setEdificios(de.edificios || [])
       setAcciones(da.acciones || [])
@@ -147,106 +151,100 @@ export default function ContratoPCI() {
     if (r.ok) cargar()
   }
 
-  // Actuaciones susceptibles de autorizarse: abiertas, agrupadas por centro,
-  // con los defectos recurrentes que las justifican.
-  const gruposRecurrentes = useMemo(() => {
-    const abiertas = acciones.filter(a => ['DETECTADO', 'PRESUPUESTADO'].includes(a.estado))
-    const grupos: Record<string, { edificio: any; acciones: any[]; defectos: any[] }> = {}
-    abiertas.forEach(a => {
-      const key = a.edificio?.id || a.edificioId
-      if (!key) return
-      grupos[key] ||= { edificio: a.edificio, acciones: [], defectos: [] }
-      grupos[key].acciones.push(a)
-    })
-    recurrentes.forEach((r: any) => {
-      const key = r.edificio?.id
-      if (key && grupos[key]) grupos[key].defectos.push(r)
-    })
-    return Object.values(grupos)
-      .filter(g => g.acciones.length)
-      .sort((a, b) => {
-        const ra = a.acciones.some((x: any) => x.recurrente) ? 0 : 1
-        const rb = b.acciones.some((x: any) => x.recurrente) ? 0 : 1
-        if (ra !== rb) return ra - rb
-        return b.acciones.reduce((s: number, x: any) => s + (x.importe || 0), 0) -
-               a.acciones.reduce((s: number, x: any) => s + (x.importe || 0), 0)
-      })
-  }, [acciones, recurrentes])
+  // Selección de items (deficiencias concretas) por centro.
+  const gruposVisibles = useMemo(
+    () => gruposItems.filter((g: any) => g.items.length > 0),
+    [gruposItems])
 
-  const accionesSeleccionadas = useMemo(
-    () => acciones.filter(a => seleccion.has(a.id)),
-    [acciones, seleccion])
+  const itemsPorId = useMemo(() => {
+    const m: Record<string, { item: any; grupo: any }> = {}
+    gruposItems.forEach((g: any) => g.items.forEach((it: any) => { m[it.id] = { item: it, grupo: g } }))
+    return m
+  }, [gruposItems])
+
+  const gruposSeleccionados = useMemo(() => {
+    const res: any[] = []
+    gruposItems.forEach((g: any) => {
+      const marcados = g.items.filter((it: any) => seleccion.has(it.id))
+      if (marcados.length) res.push({ grupo: g, items: marcados, completo: marcados.length === g.items.length })
+    })
+    return res
+  }, [gruposItems, seleccion])
+
+  // Importe por centro: el presupuestado si se autoriza entero, editable si no.
+  const importeDe = (g: any, completo: boolean) => {
+    const manual = importesEdificio[g.edificio.id]
+    if (manual !== undefined && manual !== '') return parseFloat(manual.replace(',', '.')) || 0
+    return completo ? (g.importeReferencia || 0) : 0
+  }
   const importeSeleccionado = useMemo(
-    () => accionesSeleccionadas.reduce((s, a) => s + (a.importe || 0), 0),
-    [accionesSeleccionadas])
-  const centrosSeleccionados = useMemo(
-    () => new Set(accionesSeleccionadas.map(a => a.edificio?.id)).size,
-    [accionesSeleccionadas])
+    () => gruposSeleccionados.reduce((s, x) => s + importeDe(x.grupo, x.completo), 0),
+    [gruposSeleccionados, importesEdificio])
+  const itemsSeleccionados = seleccion.size
+  const centrosSeleccionados = gruposSeleccionados.length
 
   const alternar = (id: string) => setSeleccion(prev => {
     const s = new Set(prev)
     s.has(id) ? s.delete(id) : s.add(id)
     return s
   })
-  const alternarGrupo = (grupo: any) => setSeleccion(prev => {
+  const alternarGrupo = (g: any) => setSeleccion(prev => {
     const s = new Set(prev)
-    const ids = grupo.acciones.map((a: any) => a.id)
+    const ids = g.items.map((it: any) => it.id)
     const todas = ids.every((i: string) => s.has(i))
     ids.forEach((i: string) => todas ? s.delete(i) : s.add(i))
     return s
   })
 
-  // Genera el informe, lo abre para imprimir/guardar y aprueba lo seleccionado.
+  // Genera el PDF y autoriza únicamente los items marcados.
   const crearInforme = async () => {
-    if (!accionesSeleccionadas.length) return
+    if (!gruposSeleccionados.length) return
     setGenerando(true)
     try {
-      const defectosPorEdificio: Record<string, string[]> = {}
-      recurrentes.forEach((r: any) => {
-        const k = r.edificio?.id
-        if (!k) return
-        ;(defectosPorEdificio[k] ||= []).push(`${r.descripcion} (${r.campanas?.join(' → ')})`)
-      })
-
-      const actuaciones: ActuacionInforme[] = accionesSeleccionadas.map(a => ({
-        id: a.id,
-        edificio: a.edificio?.nombre || 'Sin edificio',
-        codigoCliente: a.edificio?.codigoCliente,
-        descripcion: a.descripcion,
-        prioridad: a.prioridad,
-        importe: a.importe,
-        presupuesto: a.presupuesto?.numero || null,
-        recurrente: a.recurrente,
-        vecesDetectada: a.vecesDetectada,
-        defectos: a.recurrente ? (defectosPorEdificio[a.edificio?.id] || []).slice(0, 6) : [],
+      const actuaciones: ActuacionInforme[] = gruposSeleccionados.map(({ grupo, items, completo }) => ({
+        id: grupo.edificio.id,
+        edificioId: grupo.edificio.id,
+        edificio: grupo.edificio.nombre,
+        codigoCliente: grupo.edificio.codigoCliente,
+        descripcion: completo
+          ? (grupo.acciones[0]?.descripcion || `Subsanación de las deficiencias detectadas`)
+          : `Subsanación parcial: ${items.length} de ${grupo.items.length} deficiencias`,
+        prioridad: grupo.acciones[0]?.prioridad || 'media',
+        importe: importeDe(grupo, completo),
+        presupuesto: grupo.acciones[0]?.presupuesto || null,
+        recurrente: items.some((it: any) => it.recurrente),
+        vecesDetectada: Math.max(...items.map((it: any) => it.veces || 1)),
+        items: items.map((it: any) => ({ descripcion: it.descripcion, campanas: it.campanas, estado: it.estado })),
       }))
 
-      const { html, referencia } = construirInformePCI({
+      const { referencia } = await generarInformePCI({
         ...datosInforme,
         empresa: `${PROVEEDOR_PCI.razonSocial} (${PROVEEDOR_PCI.nombreComercial})`,
         actuaciones,
       })
 
-      const win = window.open('', '_blank', 'width=900,height=750')
-      if (!win) {
-        alert('El navegador ha bloqueado la ventana del informe. Permite las ventanas emergentes para este sitio e inténtalo de nuevo.')
-        return
-      }
-      win.document.write(html)
-      win.document.close()
-
-      // Las actuaciones incluidas pasan a APROBADO en el pipeline.
-      const r = await fetch('/api/incendios/pci?tipo=acciones-lote', {
-        method: 'PUT', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ids: accionesSeleccionadas.map(a => a.id), estado: 'APROBADO', referenciaInforme: referencia }),
+      const r = await fetch('/api/incendios/pci?tipo=autorizar-items', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          referencia,
+          grupos: gruposSeleccionados.map(({ grupo, items, completo }) => ({
+            edificioId: grupo.edificio.id,
+            hallazgoIds: items.map((it: any) => it.id),
+            importe: importeDe(grupo, completo),
+            descripcion: completo
+              ? (grupo.acciones[0]?.descripcion || 'Subsanación de las deficiencias detectadas')
+              : `Subsanación parcial: ${items.length} de ${grupo.items.length} deficiencias`,
+          })),
+        }),
       })
       if (r.ok) {
         setSeleccion(new Set())
+        setImportesEdificio({})
         setShowInforme(false)
         await cargar()
       } else {
         const d = await r.json().catch(() => ({}))
-        alert(`El informe se ha generado, pero no se ha podido aprobar el pipeline: ${d.error || 'error desconocido'}`)
+        alert(`El PDF se ha descargado, pero no se ha podido registrar la autorización: ${d.error || 'error desconocido'}`)
       }
     } catch (e) {
       alert('Ha ocurrido un error al crear el informe.')
@@ -642,103 +640,103 @@ export default function ContratoPCI() {
         </div>
       )}
 
-      {/* RECURRENTES — selección de actuaciones e informe de autorización */}
+      {/* RECURRENTES — selección de deficiencias e informe de autorización */}
       {vista === 'recurrentes' && (
-        <div className="space-y-4 pb-24">
+        <div className="space-y-4 pb-28">
           <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
             <AlertTriangle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
             <div className="text-sm text-red-800">
-              <p>Actuaciones pendientes agrupadas por centro. Las marcadas como <strong>recurrentes</strong> reaparecen en dos o más campañas: se presupuestaron pero <strong>no se han ejecutado</strong>.</p>
-              <p className="mt-1">Marca las que se van a acometer, pulsa <strong>Crear informe</strong> y obtendrás el documento para firmar y remitir a la empresa. Al generarlo, lo seleccionado pasa a <strong>Aprobado</strong> en el pipeline.</p>
+              <p>Deficiencias pendientes de la última revisión de cada centro. Las marcadas como <strong>recurrentes</strong> reaparecen en dos o más campañas: se presupuestaron pero <strong>no se han ejecutado</strong>.</p>
+              <p className="mt-1">Marca <strong>una a una</strong> las que se van a subsanar. Lo que no marques <strong>no se ejecuta y queda pendiente</strong> para el siguiente informe.</p>
             </div>
           </div>
 
-          {gruposRecurrentes.length === 0 ? (
+          {gruposVisibles.length === 0 ? (
             <div className="border border-slate-200 rounded-xl text-center py-12 text-slate-400">
               <CheckCircle2 className="w-9 h-9 mx-auto mb-2 opacity-30" />
-              <p className="text-sm">No hay actuaciones pendientes de autorizar.</p>
+              <p className="text-sm">No hay deficiencias pendientes de autorizar.</p>
             </div>
           ) : (
             <div className="space-y-3">
-              {gruposRecurrentes.map(grupo => {
-                const ids = grupo.acciones.map((a: any) => a.id)
+              {gruposVisibles.map((g: any) => {
+                const ids = g.items.map((it: any) => it.id)
                 const todas = ids.every((i: string) => seleccion.has(i))
                 const algunas = ids.some((i: string) => seleccion.has(i))
-                const totalGrupo = grupo.acciones.reduce((t: number, a: any) => t + (a.importe || 0), 0)
-                const seleccionadoGrupo = grupo.acciones.filter((a: any) => seleccion.has(a.id)).reduce((t: number, a: any) => t + (a.importe || 0), 0)
+                const nMarcados = ids.filter((i: string) => seleccion.has(i)).length
+                const completo = nMarcados === ids.length && nMarcados > 0
                 return (
-                  <div key={grupo.edificio?.id} className={`border rounded-xl overflow-hidden transition-colors ${algunas ? 'border-blue-300 bg-blue-50/30' : 'border-slate-200'}`}>
+                  <div key={g.edificio.id} className={`border rounded-xl overflow-hidden transition-colors ${algunas ? 'border-blue-300 bg-blue-50/20' : 'border-slate-200'}`}>
                     {/* Cabecera del centro */}
                     <div className="flex items-center justify-between gap-3 p-4 bg-slate-50 border-b border-slate-200">
-                      <button onClick={() => alternarGrupo(grupo)} disabled={!canEdit} className="flex items-center gap-3 min-w-0 text-left disabled:opacity-60">
+                      <button onClick={() => alternarGrupo(g)} disabled={!canEdit} className="flex items-center gap-3 min-w-0 text-left disabled:opacity-60">
                         {todas ? <CheckSquare className="w-5 h-5 text-blue-600 shrink-0" />
                           : algunas ? <CheckSquare className="w-5 h-5 text-blue-300 shrink-0" />
                           : <Square className="w-5 h-5 text-slate-300 shrink-0" />}
                         <div className="min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <h4 className="font-bold text-slate-800 text-sm">{grupo.edificio?.nombre}</h4>
-                            {grupo.edificio?.codigoCliente && <span className="px-1.5 py-0.5 bg-white text-slate-500 rounded text-[10px] font-mono font-bold border border-slate-200">{grupo.edificio.codigoCliente}</span>}
+                            <h4 className="font-bold text-slate-800 text-sm">{g.edificio.nombre}</h4>
+                            {g.edificio.codigoCliente && <span className="px-1.5 py-0.5 bg-white text-slate-500 rounded text-[10px] font-mono font-bold border border-slate-200">{g.edificio.codigoCliente}</span>}
                           </div>
                           <p className="text-xs text-slate-500 mt-0.5">
-                            {grupo.acciones.length} actuación(es) · {grupo.defectos.length} defecto(s) recurrente(s)
+                            {g.items.length} deficiencia(s) pendientes · última revisión {g.campanaUltima}
+                            {nMarcados > 0 && <span className="text-blue-600 font-semibold"> · {nMarcados} marcada(s)</span>}
                           </p>
                         </div>
                       </button>
                       <div className="text-right shrink-0">
-                        <p className="text-sm font-bold text-slate-800">{fmtEur(totalGrupo)}</p>
-                        {seleccionadoGrupo > 0 && <p className="text-xs font-semibold text-blue-600">{fmtEur(seleccionadoGrupo)} seleccionado</p>}
+                        <p className="text-xs text-slate-400">Presupuestado</p>
+                        <p className="text-sm font-bold text-slate-800">{fmtEur(g.importeReferencia)}</p>
+                        {g.acciones[0]?.presupuesto && <p className="text-[10px] font-mono text-slate-400">Ppto {g.acciones[0].presupuesto}</p>}
                       </div>
                     </div>
 
-                    {/* Actuaciones del centro */}
+                    {/* Deficiencias, una a una */}
                     <div className="divide-y divide-slate-100">
-                      {grupo.acciones.map((a: any) => {
-                        const pr = PRIORIDADES[a.prioridad] || PRIORIDADES.media
-                        const marcada = seleccion.has(a.id)
+                      {g.items.map((it: any) => {
+                        const eh = ESTADO_HALLAZGO[it.estado] || ESTADO_HALLAZGO.DEFECTO
+                        const marcada = seleccion.has(it.id)
                         return (
-                          <label key={a.id} className={`flex items-start gap-3 p-4 cursor-pointer transition-colors ${marcada ? 'bg-blue-50/60' : 'hover:bg-slate-50'} ${!canEdit ? 'cursor-not-allowed opacity-70' : ''}`}>
+                          <label key={it.id} className={`flex items-start gap-3 px-4 py-3 cursor-pointer transition-colors ${marcada ? 'bg-blue-50/60' : 'hover:bg-slate-50'} ${!canEdit ? 'cursor-not-allowed opacity-70' : ''}`}>
                             <input
                               type="checkbox"
                               checked={marcada}
                               disabled={!canEdit}
-                              onChange={() => alternar(a.id)}
+                              onChange={() => alternar(it.id)}
                               className="mt-0.5 w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 shrink-0"
                             />
                             <div className="min-w-0 flex-1">
-                              <div className="flex items-center gap-2 flex-wrap mb-1">
-                                <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${pr.color}`}>{pr.label}</span>
-                                {a.recurrente && <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold border bg-red-100 text-red-800 border-red-300"><Repeat size={11} />Recurrente ×{a.vecesDetectada}</span>}
-                                {a.categoria === 'CCTV' && <span className="px-2 py-0.5 rounded-full text-xs font-medium border bg-cyan-50 text-cyan-700 border-cyan-200">CCTV</span>}
-                                {a.presupuesto && <span className="text-xs font-mono text-slate-400">Ppto {a.presupuesto.numero}</span>}
+                              <div className="flex items-center gap-2 flex-wrap mb-0.5">
+                                <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium border ${eh.color}`}>{eh.label}</span>
+                                <span className="text-[11px] font-semibold text-slate-500">{it.elemento}</span>
+                                {it.recurrente && <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold border bg-red-100 text-red-800 border-red-300"><Repeat size={10} />×{it.veces}</span>}
                               </div>
-                              <p className="text-sm font-semibold text-slate-800">{a.descripcion}</p>
-                              {a.notas && <p className="text-xs text-slate-500 italic mt-0.5">{a.notas}</p>}
+                              <p className="text-sm text-slate-700">{it.descripcion}</p>
+                              {it.campanas?.length > 1 && <p className="text-[11px] text-slate-400 mt-0.5">{it.campanas.join(' → ')}</p>}
                             </div>
-                            <span className="text-sm font-bold text-slate-800 shrink-0 whitespace-nowrap">{fmtEur(a.importe)}</span>
                           </label>
                         )
                       })}
                     </div>
 
-                    {/* Defectos que las justifican */}
-                    {grupo.defectos.length > 0 && (
-                      <details className="border-t border-slate-100 bg-slate-50/50">
-                        <summary className="px-4 py-2.5 text-xs font-semibold text-slate-500 cursor-pointer hover:text-slate-700">
-                          Ver los {grupo.defectos.length} defecto(s) recurrente(s) que lo motivan
-                        </summary>
-                        <div className="px-4 pb-3 space-y-1.5">
-                          {grupo.defectos.map((d: any, i: number) => {
-                            const eh = ESTADO_HALLAZGO[d.estado] || ESTADO_HALLAZGO.DEFECTO
-                            return (
-                              <div key={i} className="flex items-start gap-2 text-xs">
-                                <span className={`shrink-0 px-1.5 py-0.5 rounded text-[10px] font-medium border ${eh.color}`}>{eh.label}</span>
-                                <span className="text-slate-600">{d.descripcion}</span>
-                                <span className="text-slate-400 whitespace-nowrap ml-auto">{d.campanas.join(' → ')}</span>
-                              </div>
-                            )
-                          })}
+                    {/* Importe a autorizar para este centro */}
+                    {algunas && (
+                      <div className="border-t border-slate-200 bg-blue-50/40 px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+                        <p className="text-xs text-slate-600">
+                          {completo
+                            ? <>Se autoriza <strong>el centro completo</strong>: se toma el importe presupuestado.</>
+                            : <>Autorización <strong>parcial</strong> ({nMarcados} de {g.items.length}). Indica el importe que se autoriza; el resto queda pendiente.</>}
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <label className="text-xs font-medium text-slate-600">Importe a autorizar</label>
+                          <input
+                            type="number" step="0.01" min="0"
+                            value={importesEdificio[g.edificio.id] ?? (completo ? String(g.importeReferencia || '') : '')}
+                            onChange={e => setImportesEdificio({ ...importesEdificio, [g.edificio.id]: e.target.value })}
+                            className="w-32 px-3 py-1.5 border border-slate-300 rounded-lg text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                          />
+                          <span className="text-sm text-slate-500">€</span>
                         </div>
-                      </details>
+                      </div>
                     )}
                   </div>
                 )
@@ -747,17 +745,14 @@ export default function ContratoPCI() {
           )}
 
           {/* Barra flotante de selección */}
-          {seleccion.size > 0 && (
+          {itemsSeleccionados > 0 && (
             <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[1100] bg-slate-900 text-white rounded-2xl shadow-2xl px-5 py-3 flex items-center gap-5">
               <div>
-                <p className="text-sm font-bold leading-tight">{seleccion.size} actuación(es) · {centrosSeleccionados} centro(s)</p>
-                <p className="text-xs text-slate-300">Importe total: <strong className="text-white">{fmtEur(importeSeleccionado)}</strong></p>
+                <p className="text-sm font-bold leading-tight">{itemsSeleccionados} deficiencia(s) · {centrosSeleccionados} centro(s)</p>
+                <p className="text-xs text-slate-300">Importe a autorizar: <strong className="text-white">{fmtEur(importeSeleccionado)}</strong></p>
               </div>
-              <button onClick={() => setSeleccion(new Set())} className="text-xs text-slate-300 hover:text-white underline">Limpiar</button>
-              <button
-                onClick={() => setShowInforme(true)}
-                className="flex items-center gap-2 px-4 py-2.5 bg-red-600 hover:bg-red-700 rounded-xl text-sm font-semibold"
-              >
+              <button onClick={() => { setSeleccion(new Set()); setImportesEdificio({}) }} className="text-xs text-slate-300 hover:text-white underline">Limpiar</button>
+              <button onClick={() => setShowInforme(true)} className="flex items-center gap-2 px-4 py-2.5 bg-red-600 hover:bg-red-700 rounded-xl text-sm font-semibold">
                 <FileDown size={16} />Crear informe
               </button>
             </div>
@@ -836,7 +831,7 @@ export default function ContratoPCI() {
                 <div className="p-2 bg-white/20 rounded-xl"><FileDown className="w-5 h-5" /></div>
                 <div>
                   <h3 className="text-lg font-bold leading-tight">Crear informe de mantenimientos correctivos</h3>
-                  <p className="text-xs text-white/80">REF {referenciaInforme()} · {seleccion.size} actuación(es) · {fmtEur(importeSeleccionado)}</p>
+                  <p className="text-xs text-white/80">REF {referenciaInforme()} · {itemsSeleccionados} deficiencia(s) en {centrosSeleccionados} centro(s) · {fmtEur(importeSeleccionado)}</p>
                 </div>
               </div>
               <button onClick={() => !generando && setShowInforme(false)} className="p-1.5 hover:bg-white/20 rounded-lg"><X className="w-5 h-5" /></button>
@@ -885,13 +880,20 @@ export default function ContratoPCI() {
                   <p className="text-sm font-bold text-slate-800">{fmtEur(importeSeleccionado)}</p>
                 </div>
                 <div className="max-h-56 overflow-y-auto divide-y divide-slate-100">
-                  {accionesSeleccionadas.map(a => (
-                    <div key={a.id} className="flex items-start justify-between gap-3 px-4 py-2.5">
-                      <div className="min-w-0">
-                        <p className="text-xs font-bold text-slate-500">{a.edificio?.nombre}</p>
-                        <p className="text-sm text-slate-700">{a.descripcion}</p>
+                  {gruposSeleccionados.map(({ grupo, items, completo }) => (
+                    <div key={grupo.edificio.id} className="px-4 py-2.5">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-sm font-bold text-slate-700">{grupo.edificio.nombre}</p>
+                          <p className="text-xs text-slate-500">{items.length} de {grupo.items.length} deficiencia(s){completo ? ' · centro completo' : ' · autorización parcial'}</p>
+                        </div>
+                        <span className="text-sm font-semibold text-slate-800 shrink-0 whitespace-nowrap">{fmtEur(importeDe(grupo, completo))}</span>
                       </div>
-                      <span className="text-sm font-semibold text-slate-800 shrink-0 whitespace-nowrap">{fmtEur(a.importe)}</span>
+                      <ul className="mt-1 ml-3 space-y-0.5">
+                        {items.map((it: any) => (
+                          <li key={it.id} className="text-xs text-slate-500 truncate">· {it.descripcion}</li>
+                        ))}
+                      </ul>
                     </div>
                   ))}
                 </div>
@@ -900,7 +902,7 @@ export default function ContratoPCI() {
               <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 flex items-start gap-2">
                 <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
                 <p className="text-xs text-blue-800">
-                  Al crear el informe se abrirá el documento en una ventana nueva para imprimirlo o guardarlo como PDF, y las {seleccion.size} actuación(es) pasarán a <strong>Aprobado</strong> en el pipeline. Permite las ventanas emergentes si el navegador las bloquea.
+                  Al crear el informe se descargará el PDF y las {itemsSeleccionados} deficiencia(s) marcadas pasarán a <strong>Aprobado</strong> en el pipeline. Las no marcadas seguirán pendientes.
                 </p>
               </div>
             </div>

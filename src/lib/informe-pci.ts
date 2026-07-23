@@ -1,10 +1,25 @@
 // Informe de mantenimientos correctivos de protección contra incendios.
-// Sigue el modelo corporativo de informe ya empleado en Administración:
-// cabecera con los dos logos, destinatario A/A, copia C/C, referencia
-// invertida, cuerpo, tabla de actuaciones, firma y pie.
+// Mismo modelo corporativo que el informe de combustible: cabecera azul con
+// los dos logotipos, pie azul del servicio, destinatario A/A y copia C/C a la
+// derecha, referencia, asunto, cuerpo justificado, tabla y firma centrada.
+
+import {
+  cargarImagen, drawHeaderCorporativo, drawFooterCorporativo,
+  PAGE_W as W, PAGE_H as H,
+} from '@/lib/pdf-corporativo'
+
+const MARGEN = 14
+const TOPE_INFERIOR = H - 18 - 8 // pie corporativo + holgura
+
+export interface ItemInforme {
+  descripcion: string
+  campanas?: string[]
+  estado?: string
+}
 
 export interface ActuacionInforme {
   id: string
+  edificioId?: string
   edificio: string
   codigoCliente?: string | null
   descripcion: string
@@ -13,8 +28,7 @@ export interface ActuacionInforme {
   presupuesto?: string | null
   recurrente: boolean
   vecesDetectada?: number
-  campanas?: string[]
-  defectos?: string[]
+  items?: ItemInforme[]
 }
 
 export interface DatosInforme {
@@ -30,147 +44,220 @@ export interface DatosInforme {
   actuaciones: ActuacionInforme[]
 }
 
-const esc = (t: any) => String(t ?? '')
-  .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-  .replace(/"/g, '&quot;')
+/** jsPDF con las fuentes estándar no admite acentos en todos los casos. */
+const txt = (s: any) => String(s ?? '')
+  .replace(/[áàä]/g, 'a').replace(/[éèë]/g, 'e').replace(/[íìï]/g, 'i')
+  .replace(/[óòö]/g, 'o').replace(/[úùü]/g, 'u')
+  .replace(/[ÁÀÄ]/g, 'A').replace(/[ÉÈË]/g, 'E').replace(/[ÍÌÏ]/g, 'I')
+  .replace(/[ÓÒÖ]/g, 'O').replace(/[ÚÙÜ]/g, 'U')
+  .replace(/ñ/g, 'n').replace(/Ñ/g, 'N')
+  .replace(/[—–]/g, '-').replace(/[“”]/g, '"').replace(/[’‘]/g, "'")
+  .replace(/€/g, 'EUR')
 
 const eur = (n?: number | null) =>
-  (n === null || n === undefined) ? '—' : n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'
+  (n === null || n === undefined)
+    ? '-'
+    : n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).replace(/ /g, ' ') + ' EUR'
 
-/** Referencia del documento con el mismo criterio que el resto de informes. */
+/** Referencia del documento, con el mismo criterio que el resto de informes. */
 export function referenciaInforme(fecha = new Date()): string {
   const d = fecha.getDate().toString().padStart(2, '0')
   const m = (fecha.getMonth() + 1).toString().padStart(2, '0')
   const a = fecha.getFullYear().toString()
-  return `${a}${m}${d}`.split('').reverse().join('')
+  return `${a}${m}${d}`
 }
 
-export function construirInformePCI(datos: DatosInforme): { html: string; referencia: string; total: number } {
+export async function generarInformePCI(datos: DatosInforme): Promise<{ referencia: string; total: number }> {
   const hoy = new Date()
   const fechaHoy = hoy.toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' })
   const referencia = referenciaInforme(hoy)
   const total = datos.actuaciones.reduce((s, a) => s + (a.importe || 0), 0)
+  const tituloDoc = 'Informe de mantenimientos correctivos PCI'
 
-  // Las actuaciones se agrupan por edificio: cada centro es un apartado.
+  const aytoLogo = await cargarImagen('/images/logo-ayuntamiento.png')
+  const pcLogo = await cargarImagen('/images/logo-pc-blanco.png')
+
+  const { jsPDF } = await import('jspdf')
+  const doc = new (jsPDF as any)({ format: 'a4', unit: 'mm', compress: true })
+
+  drawHeaderCorporativo(doc, { titulo: tituloDoc, aytoLogo, pcLogo })
+  drawFooterCorporativo(doc)
+
+  let y = 37
+  const rightX = W - MARGEN
+  const anchoTexto = W - MARGEN * 2
+
+  // Salto de página conservando cabecera y pie en todas las hojas.
+  const nuevaPagina = () => {
+    doc.addPage()
+    drawHeaderCorporativo(doc, { titulo: tituloDoc, aytoLogo, pcLogo })
+    drawFooterCorporativo(doc)
+    doc.setTextColor(0, 0, 0)
+    y = 35
+  }
+  const asegurar = (alto: number) => { if (y + alto > TOPE_INFERIOR) nuevaPagina() }
+
+  doc.setTextColor(0, 0, 0)
+  doc.setFontSize(11)
+
+  // ── Destinatario y copia, a la derecha ──────────────────────────────────────
+  doc.setFont('helvetica', 'bold')
+  doc.text(txt(`A/A: ${datos.destinatarioNombre}`), rightX, y, { align: 'right' })
+  doc.setFont('helvetica', 'normal')
+  doc.text(txt(datos.destinatarioCargo), rightX, y + 6, { align: 'right' })
+  if (datos.copiaNombre?.trim()) {
+    doc.setFont('helvetica', 'bold')
+    doc.text(txt(`C/C: ${datos.copiaNombre}`), rightX, y + 14, { align: 'right' })
+    doc.setFont('helvetica', 'normal')
+    doc.text(txt(datos.copiaCargo), rightX, y + 20, { align: 'right' })
+  }
+
+  // ── Referencia y asunto ─────────────────────────────────────────────────────
+  y = 76
+  doc.setFont('helvetica', 'bold')
+  doc.text(txt(`REF: ${referencia} Informe de mantenimientos correctivos PCI`), MARGEN, y)
+  const lineasAsunto = doc.splitTextToSize(txt(`ASUNTO: ${datos.asunto}`), anchoTexto)
+  doc.text(lineasAsunto, MARGEN, y + 8)
+  y = y + 8 + lineasAsunto.length * 5.5 + 4
+
+  doc.setDrawColor(200, 200, 200)
+  doc.line(MARGEN, y, W - MARGEN, y)
+  y += 8
+
+  // ── Cuerpo ──────────────────────────────────────────────────────────────────
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(11)
+  const parrafo = (t: string) => {
+    const limpio = txt(t)
+    const lineas = doc.splitTextToSize(limpio, anchoTexto)
+    asegurar(lineas.length * 6 + 4)
+    doc.text(limpio, MARGEN, y, { maxWidth: anchoTexto, align: 'justify' })
+    y += lineas.length * 6 + 4
+  }
+
+  parrafo(`Por medio del presente ${datos.firmanteNombre} en calidad de ${datos.firmanteCargo} del Ayuntamiento de Bormujos informa para que surta los efectos oportunos.`)
+  datos.introduccion.split('\n').map(t => t.trim()).filter(Boolean).forEach(parrafo)
+  parrafo(`De las revisiones reglamentarias de las instalaciones de proteccion contra incendios realizadas por la empresa mantenedora ${datos.empresa} se desprenden las anomalias que se relacionan a continuacion, cuya subsanacion se considera necesaria, junto al importe presupuestado por la empresa para cada una de ellas:`)
+
+  // ── Tabla de actuaciones agrupada por edificio ──────────────────────────────
   const porEdificio: Record<string, ActuacionInforme[]> = {}
   datos.actuaciones.forEach(a => { (porEdificio[a.edificio] ||= []).push(a) })
 
-  const filas = Object.entries(porEdificio).map(([edificio, lista]) => {
+  const COL_IMPORTE = 32
+  const COL_PPTO = 26
+  const anchoDesc = anchoTexto - COL_PPTO - COL_IMPORTE
+  const xPpto = MARGEN + anchoDesc
+  const xImporte = W - MARGEN
+
+  const cabeceraTabla = () => {
+    asegurar(10)
+    doc.setFillColor(40, 54, 102)
+    doc.rect(MARGEN, y, anchoTexto, 8, 'F')
+    doc.setTextColor(255, 255, 255)
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(9)
+    doc.text('ACTUACION', MARGEN + 2, y + 5.5)
+    doc.text('PRESUPUESTO', xPpto + 2, y + 5.5)
+    doc.text('IMPORTE', xImporte - 2, y + 5.5, { align: 'right' })
+    doc.setTextColor(0, 0, 0)
+    y += 8
+  }
+
+  y += 2
+  cabeceraTabla()
+
+  Object.entries(porEdificio).forEach(([edificio, lista]) => {
     const subtotal = lista.reduce((s, a) => s + (a.importe || 0), 0)
-    const cuerpo = lista.map(a => `
-      <tr>
-        <td>${esc(a.descripcion)}${a.recurrente ? `<div class="recu">Defecto recurrente: detectado en ${a.vecesDetectada || 2} revisiones consecutivas sin subsanar</div>` : ''}${a.defectos?.length ? `<ul class="defectos">${a.defectos.map(d => `<li>${esc(d)}</li>`).join('')}</ul>` : ''}</td>
-        <td class="c">${esc((a.prioridad || '').toUpperCase())}</td>
-        <td class="c">${esc(a.presupuesto || '—')}</td>
-        <td class="r">${eur(a.importe)}</td>
-      </tr>`).join('')
-    return `
-      <tr class="edificio"><td colspan="4">${esc(edificio)}${lista[0]?.codigoCliente ? ` <span class="cod">(código ${esc(lista[0].codigoCliente)})</span>` : ''}</td></tr>
-      ${cuerpo}
-      <tr class="subtotal"><td colspan="3">Subtotal ${esc(edificio)}</td><td class="r">${eur(subtotal)}</td></tr>`
-  }).join('')
+    const codigo = lista[0]?.codigoCliente
 
+    // Franja del edificio
+    asegurar(9)
+    doc.setFillColor(232, 238, 245)
+    doc.rect(MARGEN, y, anchoTexto, 7, 'F')
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(9)
+    doc.setTextColor(40, 54, 102)
+    doc.text(txt(`${edificio}${codigo ? `  (codigo ${codigo})` : ''}`).toUpperCase(), MARGEN + 2, y + 4.8)
+    doc.setTextColor(0, 0, 0)
+    y += 7
+
+    lista.forEach(a => {
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(9)
+      const lineasDesc = doc.splitTextToSize(txt(a.descripcion), anchoDesc - 4)
+      const detalle: string[] = []
+      if (a.recurrente) detalle.push(`Defecto recurrente: detectado en ${a.vecesDetectada || 2} revisiones consecutivas sin subsanar.`)
+      ;(a.items || []).forEach(it => detalle.push(`- ${it.descripcion}${it.campanas?.length ? ` (${it.campanas.join(' / ')})` : ''}`))
+      const lineasDetalle = detalle.length ? doc.splitTextToSize(txt(detalle.join('\n')), anchoDesc - 8) : []
+      const alto = Math.max(lineasDesc.length * 4.6 + (lineasDetalle.length ? lineasDetalle.length * 3.8 + 1 : 0) + 3.5, 8)
+
+      asegurar(alto + 2)
+      doc.setDrawColor(224, 224, 224)
+      doc.line(MARGEN, y + alto, W - MARGEN, y + alto)
+
+      doc.text(lineasDesc, MARGEN + 2, y + 4.5)
+      let yDet = y + 4.5 + lineasDesc.length * 4.6
+      if (lineasDetalle.length) {
+        doc.setFontSize(7.5)
+        doc.setTextColor(110, 110, 110)
+        doc.text(lineasDetalle, MARGEN + 6, yDet)
+        doc.setTextColor(0, 0, 0)
+        doc.setFontSize(9)
+      }
+      doc.text(txt(a.presupuesto || '-'), xPpto + 2, y + 4.5)
+      doc.setFont('helvetica', 'bold')
+      doc.text(eur(a.importe), xImporte - 2, y + 4.5, { align: 'right' })
+      y += alto
+    })
+
+    // Subtotal del edificio
+    asegurar(9)
+    doc.setFillColor(245, 245, 245)
+    doc.rect(MARGEN, y, anchoTexto, 7, 'F')
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(8.5)
+    doc.text(txt(`Subtotal ${edificio}`), MARGEN + 2, y + 4.8)
+    doc.text(eur(subtotal), xImporte - 2, y + 4.8, { align: 'right' })
+    y += 7
+  })
+
+  // Total general
+  asegurar(11)
+  doc.setFillColor(40, 54, 102)
+  doc.rect(MARGEN, y, anchoTexto, 9, 'F')
+  doc.setTextColor(255, 255, 255)
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(10)
+  doc.text('TOTAL DE LAS ACTUACIONES AUTORIZADAS (IVA incluido)', MARGEN + 2, y + 6)
+  doc.text(eur(total), xImporte - 2, y + 6, { align: 'right' })
+  doc.setTextColor(0, 0, 0)
+  y += 15
+
+  // ── Cierre ──────────────────────────────────────────────────────────────────
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(11)
   const nCentros = Object.keys(porEdificio).length
-  const nActuaciones = datos.actuaciones.length
+  const nAct = datos.actuaciones.length
+  parrafo(`El importe total asciende a ${eur(total)}, correspondiente a ${nAct} actuacion${nAct === 1 ? '' : 'es'} en ${nCentros} centro${nCentros === 1 ? '' : 's'} municipal${nCentros === 1 ? '' : 'es'}.`)
+  if (datos.actuaciones.some(a => a.recurrente)) {
+    parrafo('Las actuaciones senaladas como recurrentes corresponden a deficiencias detectadas en dos o mas revisiones consecutivas que, pese a haber sido presupuestadas en su momento, no han sido ejecutadas, por lo que la deficiencia persiste en la instalacion.')
+  }
+  parrafo('Se solicita autorizacion para que la empresa mantenedora proceda a la ejecucion de los trabajos relacionados a la mayor brevedad posible, dada su incidencia sobre la seguridad de las personas y de los edificios municipales.')
 
-  const html = `<!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="UTF-8">
-<title>Informe de mantenimientos correctivos PCI</title>
-<style>
-  * { margin:0; padding:0; box-sizing:border-box; }
-  body { font-family: Arial, sans-serif; font-size: 9.5pt; color: #000; }
-  .page { width:210mm; min-height:297mm; padding:15mm 20mm 20mm 20mm; }
-  .header { display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #003366; padding-bottom:10px; margin-bottom:14px; }
-  .header img { height:52px; object-fit:contain; }
-  .header-right { text-align:right; }
-  .header-right img { height:52px; }
-  .header-right .sub { font-size:7pt; color:#555; margin-top:3px; }
-  .dest { margin-bottom:14px; line-height:1.8; text-align:right; }
-  .dest .nombre { font-weight:bold; }
-  .ref { margin-bottom:10px; line-height:1.8; font-weight:bold; font-size:9pt; }
-  hr { border:none; border-top:1px solid #bbb; margin:10px 0; }
-  p { margin-bottom:8px; line-height:1.6; text-align:justify; }
-  table { width:100%; border-collapse:collapse; margin:10px 0 14px; font-size:8.5pt; }
-  thead tr { background:#003366; color:#fff; }
-  thead th { padding:5px 8px; text-align:left; text-transform:uppercase; font-size:8pt; }
-  tbody td { padding:5px 8px; border-bottom:1px solid #e0e0e0; vertical-align:top; }
-  tr.edificio td { background:#e8eef5; font-weight:bold; color:#003366; text-transform:uppercase; font-size:8pt; letter-spacing:.3px; }
-  tr.edificio .cod { font-weight:normal; text-transform:none; color:#666; }
-  tr.subtotal td { background:#f5f5f5; font-weight:bold; font-size:8pt; }
-  tr.total td { background:#003366; color:#fff; font-weight:bold; font-size:9.5pt; padding:7px 8px; }
-  td.c { text-align:center; }
-  td.r { text-align:right; white-space:nowrap; }
-  .recu { color:#b91c1c; font-size:7.5pt; font-style:italic; margin-top:3px; }
-  .defectos { margin:4px 0 0 14px; font-size:7.5pt; color:#555; }
-  .defectos li { margin-bottom:1px; }
-  .firma { margin-top:20px; line-height:1.8; }
-  .firma .nombre { font-weight:bold; font-size:10pt; }
-  .footer { margin-top:20px; border-top:1px solid #ddd; padding-top:5px; text-align:center; font-size:7pt; color:#888; }
-  @media print { body { -webkit-print-color-adjust:exact; print-color-adjust:exact; } tr { page-break-inside:avoid; } }
-</style>
-</head>
-<body>
-<div class="page">
-  <div class="header">
-    <img src="/images/logo-ayuntamiento-bormujos.png" alt="Ayuntamiento de Bormujos" />
-    <div class="header-right">
-      <img src="/images/logo-proteccion-civil-bormujos.png" alt="Protección Civil Bormujos" />
-      <div class="sub">Servicio Local de Protección Civil<br>Excmo. Ayto. De Bormujos (Sevilla)</div>
-    </div>
-  </div>
+  asegurar(45)
+  y += 4
+  doc.text('Sin mas que anadir se firma el presente para que surta los efectos que proceda.', MARGEN, y)
+  y += 12
 
-  <div class="dest">
-    <div><span class="nombre">A/A: ${esc(datos.destinatarioNombre)}</span></div>
-    <div>${esc(datos.destinatarioCargo)}</div>
-    ${datos.copiaNombre ? `<br><div><span class="nombre">C/C: ${esc(datos.copiaNombre)}</span></div><div>${esc(datos.copiaCargo)}</div>` : ''}
-  </div>
+  const cx = W / 2
+  doc.text(txt(`En Bormujos a ${fechaHoy}`), cx, y, { align: 'center' })
+  y += 16
+  doc.setFont('helvetica', 'bold')
+  doc.text(txt(datos.firmanteNombre), cx, y, { align: 'center' })
+  doc.setFont('helvetica', 'normal')
+  doc.text(txt(datos.firmanteCargo), cx, y + 5, { align: 'center' })
+  doc.text('Ayuntamiento de Bormujos', cx, y + 10, { align: 'center' })
 
-  <div class="ref">
-    <div>REF: ${referencia} Informe de mantenimientos correctivos PCI</div>
-    <div>ASUNTO: ${esc(datos.asunto)}</div>
-  </div>
-
-  <hr>
-
-  <p>Por medio del presente ${esc(datos.firmanteNombre)} en calidad de ${esc(datos.firmanteCargo)} del Ayuntamiento de Bormujos informa para que surta los efectos oportunos.</p>
-
-  ${datos.introduccion.split('\n').filter(Boolean).map(t => `<p>${esc(t)}</p>`).join('')}
-
-  <p>De las revisiones reglamentarias de las instalaciones de protección contra incendios realizadas por la empresa mantenedora <strong>${esc(datos.empresa)}</strong> se desprenden las siguientes anomalías, cuya subsanación se considera necesaria. Se relacionan a continuación las actuaciones a acometer, con el importe presupuestado por la empresa para cada una de ellas:</p>
-
-  <table>
-    <thead><tr><th>ACTUACIÓN</th><th style="text-align:center">PRIORIDAD</th><th style="text-align:center">PRESUPUESTO</th><th style="text-align:right">IMPORTE</th></tr></thead>
-    <tbody>
-      ${filas}
-      <tr class="total"><td colspan="3">TOTAL DE LAS ACTUACIONES AUTORIZADAS (IVA incluido)</td><td class="r">${eur(total)}</td></tr>
-    </tbody>
-  </table>
-
-  <p>El importe total asciende a <strong>${eur(total)}</strong>, correspondiente a ${nActuaciones} actuación${nActuaciones === 1 ? '' : 'es'} en ${nCentros} centro${nCentros === 1 ? '' : 's'} municipal${nCentros === 1 ? '' : 'es'}.</p>
-
-  <p>Las actuaciones señaladas como <strong>recurrentes</strong> corresponden a deficiencias detectadas en dos o más revisiones consecutivas que, pese a haber sido presupuestadas en su momento, no han sido ejecutadas, por lo que persiste la deficiencia en la instalación.</p>
-
-  <p>Se solicita autorización para que la empresa mantenedora proceda a la ejecución de los trabajos relacionados a la mayor brevedad posible, dada su incidencia sobre la seguridad de las personas y de los edificios municipales.</p>
-
-  <div class="firma">
-    <p>Sin más que añadir se firma el presente para que surta los efectos que proceda.</p>
-    <p>En Bormujos a ${fechaHoy}</p>
-    <br>
-    <div class="nombre">${esc(datos.firmanteNombre)}</div>
-    <div>${esc(datos.firmanteCargo)}</div>
-    <div>Ayuntamiento de Bormujos</div>
-  </div>
-
-  <div class="footer">
-    Calle Maestro D. Francisco Rodríguez esq. Avda. Universidad de Salamanca &nbsp;|&nbsp;
-    www.proteccioncivilbormujos.es | info.pcivil@bormujos.net
-  </div>
-</div>
-<script>window.onload = () => { window.print() }</script>
-</body>
-</html>`
-
-  return { html, referencia, total }
+  doc.save(`Informe-correctivos-PCI-${referencia}.pdf`)
+  return { referencia, total }
 }

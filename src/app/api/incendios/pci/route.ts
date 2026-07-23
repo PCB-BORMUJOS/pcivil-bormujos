@@ -135,6 +135,63 @@ export async function GET(request: NextRequest) {
       })
     }
 
+    // Items pendientes por edificio: defectos de la última revisión que aún no
+    // están vinculados a una actuación autorizada.
+    if (tipo === 'items-pendientes') {
+      const edificios = await prisma.edificio.findMany({
+        where: { revisionesPci: { some: {} } },
+        include: {
+          revisionesPci: { include: { hallazgos: { include: { accion: { select: { id: true, estado: true } } } } }, orderBy: { fecha: 'desc' } },
+          accionesPci: { include: { presupuesto: { select: { numero: true, total: true } } } },
+        },
+        orderBy: { nombre: 'asc' },
+      })
+
+      const grupos = edificios.map(e => {
+        const ultima = e.revisionesPci[0]
+        if (!ultima) return null
+
+        // Veces que se repite cada defecto a lo largo de todas las campañas.
+        const repeticiones: Record<string, string[]> = {}
+        e.revisionesPci.forEach(r => r.hallazgos.forEach(h => {
+          (repeticiones[h.descripcion || ''] ||= []).push(r.campana)
+        }))
+
+        const items = ultima.hallazgos
+          .filter(h => !h.accion || !['APROBADO', 'EN_EJECUCION', 'EJECUTADO', 'VERIFICADO', 'FACTURADO'].includes(h.accion.estado))
+          .map(h => {
+            const campanas = (repeticiones[h.descripcion || ''] || []).slice().reverse()
+            return {
+              id: h.id,
+              elemento: h.elemento,
+              estado: h.estado,
+              descripcion: h.descripcion,
+              campanas,
+              veces: campanas.length,
+              recurrente: campanas.length >= 2,
+            }
+          })
+
+        const abiertas = e.accionesPci.filter(a => ['DETECTADO', 'PRESUPUESTADO'].includes(a.estado))
+        if (!items.length && !abiertas.length) return null
+
+        return {
+          edificio: { id: e.id, nombre: e.nombre, alias: e.alias, codigoCliente: e.codigoCliente },
+          campanaUltima: ultima.campana,
+          fechaUltima: ultima.fecha,
+          items,
+          acciones: abiertas.map(a => ({
+            id: a.id, descripcion: a.descripcion, prioridad: a.prioridad, categoria: a.categoria,
+            importe: a.importe, recurrente: a.recurrente, vecesDetectada: a.vecesDetectada,
+            presupuesto: a.presupuesto?.numero || null,
+          })),
+          importeReferencia: abiertas.filter(a => a.categoria === 'PCI').reduce((s, a) => s + (a.importe || 0), 0),
+        }
+      }).filter(Boolean)
+
+      return NextResponse.json({ grupos })
+    }
+
     // Defectos recurrentes agrupados por elemento.
     if (tipo === 'recurrentes') {
       const hallazgos = await prisma.hallazgoPCI.findMany({
@@ -235,6 +292,104 @@ export async function POST(request: NextRequest) {
       })
       await registrarAudit({ accion: 'CREATE', entidad: 'AccionCorrectivaPCI', entidadId: accion.id, descripcion: `Acción correctiva PCI: ${descripcion}`, usuarioId, usuarioNombre, modulo: 'Incendios' })
       return NextResponse.json({ accion })
+    }
+
+    // Autorización de los items seleccionados en el informe.
+    if (tipo === 'autorizar-items') {
+      const { grupos, referencia } = body
+      if (!Array.isArray(grupos) || !grupos.length) {
+        return NextResponse.json({ error: 'No se ha seleccionado ninguna actuación' }, { status: 400 })
+      }
+
+      const creadas: string[] = []
+      let importeTotal = 0
+
+      for (const g of grupos) {
+        const { edificioId, hallazgoIds, importe, descripcion } = g || {}
+        if (!edificioId || !Array.isArray(hallazgoIds) || !hallazgoIds.length) continue
+
+        const edificio = await prisma.edificio.findUnique({ where: { id: edificioId } })
+        if (!edificio) continue
+
+        const hallazgos = await prisma.hallazgoPCI.findMany({
+          where: { id: { in: hallazgoIds } },
+          include: { revision: { select: { id: true, campana: true } } },
+        })
+        if (!hallazgos.length) continue
+
+        // ¿Se autoriza todo lo pendiente del edificio o solo una parte?
+        const ultima = await prisma.revisionPCI.findFirst({
+          where: { edificioId }, orderBy: { fecha: 'desc' },
+          include: { hallazgos: { include: { accion: { select: { estado: true } } } } },
+        })
+        const pendientes = (ultima?.hallazgos || []).filter(h =>
+          !h.accion || !['APROBADO', 'EN_EJECUCION', 'EJECUTADO', 'VERIFICADO', 'FACTURADO'].includes(h.accion.estado))
+        const completo = pendientes.length > 0 && pendientes.every(h => hallazgoIds.includes(h.id))
+
+        const abiertas = await prisma.accionCorrectivaPCI.findMany({
+          where: { edificioId, estado: { in: ['DETECTADO', 'PRESUPUESTADO'] }, categoria: 'PCI' },
+        })
+        const importeNum = importe !== undefined && importe !== null && importe !== '' ? parseFloat(importe) : null
+        const detalle = hallazgos.map(h => `${h.elemento}: ${h.descripcion}`).join('\n')
+        const recurrente = hallazgos.length > 0 && abiertas.some(a => a.recurrente)
+
+        let accionId: string
+        if (completo && abiertas.length === 1) {
+          // Se autoriza el edificio entero: se aprueba la actuación existente.
+          const a = abiertas[0]
+          await prisma.accionCorrectivaPCI.update({
+            where: { id: a.id },
+            data: {
+              estado: 'APROBADO',
+              fechaAprobacion: new Date(),
+              importe: importeNum ?? a.importe,
+              detalle,
+              notas: [a.notas, `Autorizada integramente en el informe ${referencia || ''}`.trim()].filter(Boolean).join(' · '),
+            },
+          })
+          accionId = a.id
+        } else {
+          // Autorización parcial: nueva actuación con lo seleccionado. El resto
+          // del edificio permanece pendiente.
+          const nueva = await prisma.accionCorrectivaPCI.create({
+            data: {
+              edificioId,
+              descripcion: descripcion || `Actuación autorizada sobre ${hallazgos.length} deficiencia(s)`,
+              detalle,
+              estado: 'APROBADO',
+              prioridad: abiertas[0]?.prioridad || 'media',
+              categoria: 'PCI',
+              importe: importeNum,
+              recurrente,
+              vecesDetectada: Math.max(...hallazgos.map(() => 1), 1),
+              origenRevisionId: ultima?.id || null,
+              presupuestoId: abiertas[0]?.presupuestoId || null,
+              fechaAprobacion: new Date(),
+              primeraDeteccion: abiertas[0]?.primeraDeteccion || null,
+              ultimaDeteccion: ultima?.fecha || null,
+              notas: `Autorización parcial mediante el informe ${referencia || ''}`.trim(),
+            },
+          })
+          accionId = nueva.id
+        }
+
+        // Los items autorizados quedan vinculados y dejan de estar pendientes.
+        await prisma.hallazgoPCI.updateMany({ where: { id: { in: hallazgoIds } }, data: { accionId } })
+
+        creadas.push(accionId)
+        importeTotal += importeNum || 0
+      }
+
+      await registrarAudit({
+        accion: 'UPDATE',
+        entidad: 'AccionCorrectivaPCI',
+        entidadId: creadas.join(','),
+        descripcion: `Informe ${referencia || ''}: autorizadas ${grupos.length} actuación(es) en ${grupos.length} centro(s) por ${importeTotal.toFixed(2)} €`,
+        usuarioId, usuarioNombre, modulo: 'Incendios',
+        datosNuevos: { referencia, grupos },
+      })
+
+      return NextResponse.json({ autorizadas: creadas.length, importe: importeTotal })
     }
 
     if (tipo === 'factura') {
