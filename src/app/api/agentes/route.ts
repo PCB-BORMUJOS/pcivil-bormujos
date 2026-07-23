@@ -4,6 +4,7 @@ import { registrarAudit } from '@/lib/audit'
 import { PERFILES, PERFIL_POR_SLUG, promptChat, promptRevision } from '@/lib/agentes/perfiles'
 import { construirContexto } from '@/lib/agentes/contexto'
 import { autorizar, crearCliente, jsonRespuesta, textoRespuesta, normalizarPropuesta, MODELO_AGENTE } from '@/lib/agentes/core'
+import { HERRAMIENTAS, ejecutarHerramienta } from '@/lib/agentes/herramientas'
 
 export const maxDuration = 120
 
@@ -114,12 +115,35 @@ export async function POST(request: NextRequest) {
       const contexto = await construirContexto(perfil.slug)
       const quien = `${auth.usuario.nombre} ${auth.usuario.apellidos}${auth.usuario.fichaVoluntario?.indicativo2 ? ' (' + auth.usuario.fichaVoluntario.indicativo2 + ')' : ''}`
 
-      const respuesta = await cliente.messages.create({
+      // Bucle de conversación con herramientas de consulta en solo lectura.
+      const conversacionMsgs: any[] = [...historial, { role: 'user', content: mensaje }]
+      let respuesta = await cliente.messages.create({
         model: MODELO_AGENTE,
-        max_tokens: 2000,
+        max_tokens: 4000,
         system: promptChat(perfil, contexto) + `\n\nHablas con: ${quien}.`,
-        messages: [...historial, { role: 'user', content: mensaje }],
+        tools: HERRAMIENTAS,
+        messages: conversacionMsgs,
       })
+
+      let vueltas = 0
+      while (respuesta.stop_reason === 'tool_use' && vueltas < 6) {
+        vueltas++
+        const usos = respuesta.content.filter((b: any) => b.type === 'tool_use') as any[]
+        const resultados = await Promise.all(usos.map(async (u: any) => ({
+          type: 'tool_result' as const,
+          tool_use_id: u.id,
+          content: await ejecutarHerramienta(u.name, u.input),
+        })))
+        conversacionMsgs.push({ role: 'assistant', content: respuesta.content })
+        conversacionMsgs.push({ role: 'user', content: resultados })
+        respuesta = await cliente.messages.create({
+          model: MODELO_AGENTE,
+          max_tokens: 4000,
+          system: promptChat(perfil, contexto) + `\n\nHablas con: ${quien}.`,
+          tools: HERRAMIENTAS,
+          messages: conversacionMsgs,
+        })
+      }
       const texto = textoRespuesta(respuesta)
 
       await prisma.mensajeAgente.createMany({
@@ -150,12 +174,33 @@ export async function POST(request: NextRequest) {
       const perfil = PERFIL_POR_SLUG[area] || PERFIL_POR_SLUG.general
       const contexto = await construirContexto(perfil.slug)
 
-      const respuesta = await cliente.messages.create({
+      const msgsRevision: any[] = [{ role: 'user', content: `Revisa el área de ${perfil.area} y entrega tus propuestas en el JSON indicado.` }]
+      let respuesta = await cliente.messages.create({
         model: MODELO_AGENTE,
-        max_tokens: 4000,
+        max_tokens: 6000,
         system: promptRevision(perfil, contexto),
-        messages: [{ role: 'user', content: `Revisa el área de ${perfil.area} y entrega tus propuestas en el JSON indicado.` }],
+        tools: HERRAMIENTAS,
+        messages: msgsRevision,
       })
+      let vueltasRev = 0
+      while (respuesta.stop_reason === 'tool_use' && vueltasRev < 6) {
+        vueltasRev++
+        const usos = respuesta.content.filter((b: any) => b.type === 'tool_use') as any[]
+        const resultados = await Promise.all(usos.map(async (u: any) => ({
+          type: 'tool_result' as const,
+          tool_use_id: u.id,
+          content: await ejecutarHerramienta(u.name, u.input),
+        })))
+        msgsRevision.push({ role: 'assistant', content: respuesta.content })
+        msgsRevision.push({ role: 'user', content: resultados })
+        respuesta = await cliente.messages.create({
+          model: MODELO_AGENTE,
+          max_tokens: 6000,
+          system: promptRevision(perfil, contexto),
+          tools: HERRAMIENTAS,
+          messages: msgsRevision,
+        })
+      }
 
       const datos = jsonRespuesta<{ resumen: string; propuestas: any[] }>(respuesta)
       if (!datos) return NextResponse.json({ error: 'El agente no ha devuelto un informe legible' }, { status: 502 })

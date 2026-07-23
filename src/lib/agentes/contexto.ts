@@ -9,6 +9,37 @@ const enDias = (d: number) => new Date(Date.now() + d * 24 * 60 * 60 * 1000)
 const haceDias = (d: number) => new Date(Date.now() - d * 24 * 60 * 60 * 1000)
 const fecha = (d?: Date | null) => d ? new Date(d).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-') : 'sin fecha'
 
+/** Ficha completa de una práctica, con todo su contenido pedagógico. */
+export function detallePractica(p: any, maxCampo = 1500): string {
+  const t = (v: any) => {
+    const s = (v ?? '').toString().trim()
+    if (!s) return null
+    return s.length > maxCampo ? s.slice(0, maxCampo) + '…' : s
+  }
+  const campos: [string, string | null][] = [
+    ['Objetivo', t(p.objetivo)],
+    ['Definición', t(p.definicion)],
+    ['Descripción', t(p.descripcion)],
+    ['Desarrollo', t(p.desarrollo)],
+    ['Conclusiones', t(p.conclusiones)],
+    ['Prerrequisitos', t(p.prerequisitos)],
+    ['Material necesario', t(p.materialNecesario)],
+    ['Lugar de desarrollo', t(p.lugarDesarrollo)],
+    ['Riesgo de la práctica', t(p.riesgoPractica)],
+    ['Riesgo de la intervención', t(p.riesgoIntervencion)],
+    ['Observaciones de riesgo', t(p.riesgoObservaciones)],
+  ]
+  const cabecera = `### ${p.numero} — ${p.titulo}\n` +
+    `familia ${p.familia}${p.subfamilia ? '/' + p.subfamilia : ''} · nivel ${p.nivel || 'sin nivel'} · ` +
+    `${p.duracionEstimada || '?'} min · personal mínimo ${p.personalMinimo ?? '?'} · ` +
+    `grupo ${p.grupo || 'sin grupo'} · ${p.activa ? 'ACTIVA' : 'INACTIVA'}` +
+    `${p.youtubeUrl ? ' · con vídeo' : ''}`
+  const cuerpo = campos
+    .map(([k, v]) => `  ${k}: ${v ?? '*** SIN CUMPLIMENTAR ***'}`)
+    .join('\n')
+  return `${cabecera}\n${cuerpo}`
+}
+
 function bloque(titulo: string, contenido: string | string[]): string {
   const cuerpo = Array.isArray(contenido)
     ? (contenido.length ? contenido.map(l => `  - ${l}`).join('\n') : '  (sin registros)')
@@ -46,13 +77,15 @@ async function ctxVehiculos(): Promise<string> {
 }
 
 async function ctxIncendios(): Promise<string> {
-  const [equipos, hidrantes, edificios, articulos, revisionesPci, accionesPci] = await Promise.all([
+  const [equipos, hidrantes, edificios, articulos, revisionesPci, accionesPci, practicas, registrosPractica] = await Promise.all([
     prisma.equipoECI.findMany({ include: { edificio: { select: { nombre: true } } }, orderBy: { proximaRevision: 'asc' }, take: 80 }),
     prisma.hidrante.findMany({ orderBy: { proximaRevision: 'asc' }, take: 60 }),
     prisma.edificio.count(),
     prisma.articulo.findMany({ where: { activo: true, familia: { categoria: { slug: 'incendios' } } }, include: { familia: { select: { nombre: true } } }, take: 60 }),
     prisma.revisionPCI.findMany({ include: { edificio: { select: { nombre: true, alias: true } }, _count: { select: { hallazgos: true } } }, orderBy: { fecha: 'desc' }, take: 60 }).catch(() => []),
     prisma.accionCorrectivaPCI.findMany({ where: { estado: { notIn: ['EJECUTADO', 'VERIFICADO', 'FACTURADO'] } }, include: { edificio: { select: { nombre: true, alias: true } }, presupuesto: { select: { numero: true } } }, orderBy: { importe: 'desc' }, take: 60 }).catch(() => []),
+    prisma.practica.findMany({ where: { familia: 'incendios' }, orderBy: { numero: 'asc' } }).catch(() => []),
+    prisma.registroPractica.findMany({ orderBy: { createdAt: 'desc' }, take: 80 }).catch(() => []),
   ])
 
   return [
@@ -67,6 +100,12 @@ async function ctxIncendios(): Promise<string> {
       `${(r as any).campana} (${fecha((r as any).fecha)}) · ${(r as any).edificio?.alias || (r as any).edificio?.nombre} · ${(r as any).tipo} · ${(r as any).resultado} · ${(r as any)._count.hallazgos} defecto(s)`)),
     bloque('Contrato PCI — actuaciones correctivas abiertas', (accionesPci as any[]).map(a =>
       `${(a as any).edificio?.alias || (a as any).edificio?.nombre} · ${(a as any).descripcion} · prioridad ${(a as any).prioridad} · estado ${(a as any).estado} · ${(a as any).importe ? (a as any).importe + ' €' : 'sin importe'}${(a as any).recurrente ? ' · RECURRENTE detectado ' + (a as any).vecesDetectada + ' veces sin subsanar' : ''}${(a as any).presupuesto ? ' · ppto ' + (a as any).presupuesto.numero : ''}`)),
+    `\n## Catálogo de prácticas del área de incendios (contenido íntegro, ${(practicas as any[]).length} fichas)\n` +
+      ((practicas as any[]).length
+        ? (practicas as any[]).map(p => detallePractica(p)).join('\n\n')
+        : '  (sin prácticas registradas)'),
+    bloque('Últimos registros de prácticas realizadas (todas las familias)', (registrosPractica as any[]).map(r =>
+      `${fecha((r as any).fecha || (r as any).createdAt)} · práctica ${(r as any).practicaId || '?'} · ${(r as any).observaciones ? String((r as any).observaciones).slice(0, 70) : 'sin observaciones'}`)),
   ].join('\n')
 }
 
@@ -149,14 +188,20 @@ async function ctxFormacion(): Promise<string> {
 
 async function ctxPracticas(): Promise<string> {
   const [practicas, registros, megacodes] = await Promise.all([
-    prisma.practica.findMany({ orderBy: { numero: 'asc' }, take: 120 }),
+    prisma.practica.findMany({ orderBy: { numero: 'asc' }, take: 250 }),
     prisma.registroPractica.findMany({ orderBy: { createdAt: 'desc' }, take: 60 }).catch(() => []),
     prisma.megacode.findMany({ orderBy: { createdAt: 'desc' }, take: 20 }).catch(() => []),
   ])
 
+  const porFamilia: Record<string, any[]> = {}
+  practicas.forEach(p => { (porFamilia[p.familia] ||= []).push(p) })
+
   return [
-    bloque('Catálogo de prácticas', practicas.map(p =>
-      `Nº${p.numero} · ${p.titulo} · familia ${p.familia}${p.subfamilia ? '/' + p.subfamilia : ''} · nivel ${p.nivel || '?'} · ${p.duracionEstimada || '?'} min · personal mínimo ${p.personalMinimo || '?'} · riesgo práctica: ${p.riesgoPractica ? 'documentado' : 'SIN DOCUMENTAR'} · objetivo: ${p.objetivo ? 'definido' : 'SIN DEFINIR'} · ${p.activa ? 'activa' : 'inactiva'}`)),
+    `\nCatálogo de prácticas: ${practicas.length} fichas. Por familia: ` +
+      Object.entries(porFamilia).map(([f, l]) => `${f} (${l.length})`).join(', ') + '.',
+    ...Object.entries(porFamilia).map(([familia, lista]) =>
+      `\n## Prácticas de la familia "${familia}" — contenido íntegro\n` +
+      lista.map(p => detallePractica(p, 900)).join('\n\n')),
     bloque('Últimos registros de práctica realizados', (registros as any[]).map(r =>
       `${fecha((r as any).fecha || (r as any).createdAt)} · práctica ${(r as any).practicaId || '?'} · ${(r as any).observaciones ? String((r as any).observaciones).slice(0, 70) : 'sin observaciones'}`)),
     bloque('Megacodes', (megacodes as any[]).map(m =>
@@ -369,7 +414,7 @@ export async function construirContexto(area: string): Promise<string> {
     const contexto = await recolector()
     const cabecera = `Fecha de consulta: ${fecha(new Date())} (zona horaria Europe/Madrid).`
     // Recorte de seguridad para no disparar el consumo de tokens.
-    const cuerpo = contexto.length > 60000 ? contexto.slice(0, 60000) + '\n\n[...contexto recortado por extensión...]' : contexto
+    const cuerpo = contexto.length > 180000 ? contexto.slice(0, 180000) + '\n\n[...contexto recortado por extensión...]' : contexto
     return `${cabecera}\n${cuerpo}`
   } catch (error) {
     console.error('Error construyendo contexto del agente', area, error)

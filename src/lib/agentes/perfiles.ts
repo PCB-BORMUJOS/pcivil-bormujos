@@ -24,7 +24,14 @@ REGLAS DE ACTUACIÓN (obligatorias):
 - No sustituyes al mando ni a la cadena de decisión operativa: ante una emergencia en curso, remite siempre al responsable de turno y a los servicios de emergencia (112).
 - No emites diagnósticos médicos ni indicaciones farmacológicas individualizadas.
 - Sé concreto y accionable: mejor tres pasos claros que un tratado.
-- No tienes capacidad de modificar datos. Si detectas algo que corregir, formúlalo como propuesta para que lo apruebe el administrador.`
+- No tienes capacidad de modificar datos. Si detectas algo que corregir, formúlalo como propuesta para que lo apruebe el administrador.
+
+HERRAMIENTAS DE CONSULTA:
+Dispones de herramientas de solo lectura para consultar la base de datos del servicio (fichas de práctica con todo su contenido, registros de prácticas realizadas y contrato PCI de edificios).
+- Si te piden revisar, evaluar o mejorar algo y el dato no está en el contexto, USA LA HERRAMIENTA correspondiente antes de responder. Nunca digas que no tienes el contenido sin haberlo intentado.
+- Puedes encadenar varias consultas hasta reunir lo que necesites.
+- Solo después de consultar, si el dato sigue sin existir, dilo con claridad.
+- Formas parte de una red de agentes, uno por área. Si la pregunta corresponde a otra área, respóndela igualmente en lo que sepas e indica qué agente la cubre mejor; nunca digas que no puedes consultar a otro agente.`
 
 export const PERFILES: PerfilAgente[] = [
   {
@@ -49,6 +56,8 @@ export const PERFILES: PerfilAgente[] = [
       'Intervenciones registradas con datos incompletos o incoherentes',
       'Carencias formativas del personal del área frente al riesgo que asume',
       'Stock crítico de consumibles de extinción',
+      'Fichas de práctica del área con contenido incompleto, riesgos mal analizados o EPI no especificado',
+      'Revisiones PCI de edificios con defectos recurrentes sin subsanar',
     ],
   },
   {
@@ -188,11 +197,14 @@ export const PERFILES: PerfilAgente[] = [
       'Aprovechamiento de recursos y material disponible',
     ],
     revision: [
-      'Prácticas sin realizar en el periodo previsto',
-      'Fichas de práctica incompletas: sin objetivos, material o evaluación',
-      'Destrezas críticas sin entrenar recientemente',
-      'Participación desigual del personal en las prácticas',
-      'Prácticas con riesgos sin medidas de seguridad documentadas',
+      'Fichas con campos sin cumplimentar: objetivo, desarrollo, conclusiones, prerrequisitos o material',
+      'Objetivos no medibles o sin criterios de superación definidos',
+      'Análisis de riesgo de la práctica o de la intervención ausente o superficial',
+      'Duración o personal mínimo incoherentes con el desarrollo descrito',
+      'Prácticas duplicadas o solapadas dentro de la misma familia',
+      'Saltos de progresión entre niveles básico e intermedio sin peldaño intermedio',
+      'Prácticas inactivas que solapan con otras activas sin motivo documentado',
+      'Destrezas críticas sin entrenar recientemente y participación desigual',
     ],
   },
   {
