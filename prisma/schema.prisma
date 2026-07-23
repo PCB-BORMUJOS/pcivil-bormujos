@@ -60,6 +60,9 @@ model Usuario {
   mantenimientosVehiculo MantenimientoVehiculo[]
   siniestrosVehiculo     SiniestroVehiculo[]
   fluidosVehiculo        RegistroFluidoVehiculo[]
+  conversacionesAgente   ConversacionAgente[]
+  revisionesAgente       RevisionAgente[]
+  propuestasAgenteResueltas PropuestaAgente[]
 
   manuales              Manual[]
   partesPSI             PartePSI[]
@@ -2208,4 +2211,75 @@ model UbicacionVehiculo {
   @@index([vehiculoId])
   @@index([createdAt])
   @@map("ubicaciones_vehiculos")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AGENTES IA POR ÁREA FUNCIONAL
+// ─────────────────────────────────────────────────────────────────────────────
+
+model ConversacionAgente {
+  id         String   @id @default(cuid())
+  area       String
+  titulo     String
+  usuarioId  String   @map("usuario_id")
+  usuario    Usuario  @relation(fields: [usuarioId], references: [id])
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  mensajes   MensajeAgente[]
+
+  @@index([usuarioId, area])
+  @@map("conversaciones_agente")
+}
+
+model MensajeAgente {
+  id              String             @id @default(cuid())
+  conversacionId  String             @map("conversacion_id")
+  conversacion    ConversacionAgente @relation(fields: [conversacionId], references: [id], onDelete: Cascade)
+  rol             String // user | assistant
+  contenido       String
+  createdAt       DateTime           @default(now()) @map("created_at")
+
+  @@index([conversacionId])
+  @@map("mensajes_agente")
+}
+
+model RevisionAgente {
+  id            String    @id @default(cuid())
+  area          String
+  resumen       String
+  estadoDatos   Json?     @map("estado_datos")
+  usuarioId     String    @map("usuario_id")
+  usuario       Usuario   @relation(fields: [usuarioId], references: [id])
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  propuestas    PropuestaAgente[]
+
+  @@index([area])
+  @@map("revisiones_agente")
+}
+
+model PropuestaAgente {
+  id            String          @id @default(cuid())
+  revisionId    String          @map("revision_id")
+  revision      RevisionAgente  @relation(fields: [revisionId], references: [id], onDelete: Cascade)
+  area          String
+  titulo        String
+  descripcion   String
+  justificacion String?
+  categoria     String          @default("mejora") // dato_incompleto, incoherencia, caducidad, seguridad, procedimiento, mejora
+  prioridad     String          @default("media")  // baja, media, alta, critica
+  modulo        String?
+  referencia    String? // id o identificador del registro afectado
+  estado        String          @default("pendiente") // pendiente, aceptada, aplicada, descartada
+  respuestaAdmin String?        @map("respuesta_admin")
+  resueltaPorId String?         @map("resuelta_por_id")
+  resueltaPor   Usuario?        @relation(fields: [resueltaPorId], references: [id])
+  resueltaEn    DateTime?       @map("resuelta_en")
+  createdAt     DateTime        @default(now()) @map("created_at")
+  updatedAt     DateTime        @updatedAt @map("updated_at")
+
+  @@index([area, estado])
+  @@index([revisionId])
+  @@map("propuestas_agente")
 }

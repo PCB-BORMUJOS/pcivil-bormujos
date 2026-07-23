@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import { useSession, signOut } from 'next-auth/react'
 import { cn } from '@/lib/utils'
 import { TbDrone as GiDeliveryDrone } from 'react-icons/tb'
-import { Radio as RadioIcon } from 'lucide-react'
+import { Radio as RadioIcon, Bot } from 'lucide-react'
 import {
   LayoutDashboard,
   Calendar,
@@ -84,6 +84,7 @@ const navigation: NavItem[] = [
   { name: 'Cuadrantes',        href: '/cuadrantes',     icon: Calendar,    minNivel: 4, visibleVisor: true },
   { name: 'Administración',    href: '/administracion', icon: ShieldCheck, minNivel: 4, visibleVisor: true },
   { name: 'Estadísticas',      href: '/estadisticas',   icon: BarChart2,   minNivel: 4, visibleVisor: true },
+  { name: 'Agentes IA',        href: '/agentes',        icon: Bot,         minNivel: 3, visibleVisor: false },
   { name: 'Gestión Económica', href: '/presupuesto',    icon: Wallet,      minNivel: 4, visibleVisor: true },
   { name: 'Configuración',     href: '/configuracion',  icon: Settings,    minNivel: 4, visibleVisor: false },
 ]
