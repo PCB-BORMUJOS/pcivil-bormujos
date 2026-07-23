@@ -30,8 +30,8 @@ export const MAPA_EDIFICIOS_APP = {
   '12856': '06. Tercera Edad José Pérez Vega',
   '12857': '23. Nave Cruzcampo',
   '13886': '14. Centro de SEPER',
-  // Sin edificio equivalente en la aplicación: se crean nuevos.
-  // '12858': Depósito de Vehículos
+  '12858': '24. Nave Policía Local',
+  // Sin edificio equivalente en la aplicación: se crea nuevo.
   // '12859': Edificio Urbanismo
 }
 
