@@ -138,7 +138,7 @@ export async function GET(request: NextRequest) {
     // Defectos recurrentes agrupados por elemento.
     if (tipo === 'recurrentes') {
       const hallazgos = await prisma.hallazgoPCI.findMany({
-        include: { revision: { select: { campana: true, fecha: true, edificioId: true, edificio: { select: { nombre: true, alias: true, codigoCliente: true } } } } },
+        include: { revision: { select: { campana: true, fecha: true, edificioId: true, edificio: { select: { id: true, nombre: true, alias: true, codigoCliente: true } } } } },
         orderBy: { createdAt: 'asc' },
       })
       const mapa: Record<string, any> = {}
@@ -270,6 +270,48 @@ export async function PUT(request: NextRequest) {
 
   try {
     const body = await request.json()
+
+    // Aprobación en lote desde el informe de actuaciones.
+    if (tipo === 'acciones-lote') {
+      const { ids, estado, referenciaInforme } = body
+      if (!Array.isArray(ids) || !ids.length) return NextResponse.json({ error: 'No se ha seleccionado ninguna actuación' }, { status: 400 })
+      const nuevoEstado = estado || 'APROBADO'
+
+      const anteriores = await prisma.accionCorrectivaPCI.findMany({
+        where: { id: { in: ids } },
+        include: { edificio: { select: { nombre: true } } },
+      })
+      if (!anteriores.length) return NextResponse.json({ error: 'No se han encontrado las actuaciones' }, { status: 404 })
+
+      await prisma.accionCorrectivaPCI.updateMany({
+        where: { id: { in: ids } },
+        data: {
+          estado: nuevoEstado,
+          ...(nuevoEstado === 'APROBADO' ? { fechaAprobacion: new Date() } : {}),
+        },
+      })
+      if (referenciaInforme) {
+        for (const a of anteriores) {
+          await prisma.accionCorrectivaPCI.update({
+            where: { id: a.id },
+            data: { notas: [a.notas, `Incluida en el informe ${referenciaInforme}`].filter(Boolean).join(' · ') },
+          })
+        }
+      }
+
+      const importe = anteriores.reduce((s, a) => s + (a.importe || 0), 0)
+      await registrarAudit({
+        accion: 'UPDATE',
+        entidad: 'AccionCorrectivaPCI',
+        entidadId: ids.join(','),
+        descripcion: `${anteriores.length} actuación(es) PCI pasan a ${nuevoEstado}${referenciaInforme ? ` mediante el informe ${referenciaInforme}` : ''} — ${importe.toFixed(2)} € en ${new Set(anteriores.map(a => a.edificio.nombre)).size} edificio(s)`,
+        usuarioId, usuarioNombre, modulo: 'Incendios',
+        datosAnteriores: anteriores,
+      })
+
+      return NextResponse.json({ actualizadas: anteriores.length, importe })
+    }
+
     const { id } = body
     if (!id) return NextResponse.json({ error: 'ID requerido' }, { status: 400 })
 
