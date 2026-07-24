@@ -1777,6 +1777,12 @@ model ExpedienteCompra {
   fechaRC           DateTime?              @map("fecha_rc")
   documentoRC       String?                @map("documento_rc")
   informeTecnico    String?                @map("informe_tecnico")
+  documentoInforme  String?                @map("documento_informe")
+  propuestaGasto    String?                @map("propuesta_gasto")
+  justificacion     String?
+  numeroRC          String?                @map("numero_rc")
+  plazoEntrega      String?                @map("plazo_entrega")
+  responsable       String?
   documentoAlbaran  String?                @map("documento_albaran")
   fechaAlbaran      DateTime?              @map("fecha_albaran")
   peticionId        String?                @unique @map("peticion_id")
