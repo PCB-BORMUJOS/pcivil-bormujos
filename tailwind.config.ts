@@ -5,6 +5,10 @@ const config: Config = {
     './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
     './src/components/**/*.{js,ts,jsx,tsx,mdx}',
     './src/app/**/*.{js,ts,jsx,tsx,mdx}',
+    // Las clases de color de agentes, iconos y constantes se declaran en src/lib
+    // y se aplican por interpolación: sin esta ruta Tailwind no las genera y los
+    // degradados quedan sin paradas de color (transparentes).
+    './src/lib/**/*.{js,ts,jsx,tsx,mdx}',
   ],
   theme: {
     extend: {

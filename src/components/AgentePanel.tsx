@@ -4,6 +4,7 @@
 // y conversa con el agente correspondiente.
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { usePathname } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { Bot, X, Send, Sparkles, RefreshCw, ChevronDown } from 'lucide-react'
@@ -23,7 +24,12 @@ export default function AgentePanel() {
   const [enviando, setEnviando] = useState(false)
   const [conversacionId, setConversacionId] = useState<string | null>(null)
   const [verCompetencias, setVerCompetencias] = useState(false)
+  const [montado, setMontado] = useState(false)
   const finRef = useRef<HTMLDivElement>(null)
+
+  // El panel se monta en document.body: así no lo afecta el apilamiento ni los
+  // contenedores con transform de cada página (mapas, modales, etc.).
+  useEffect(() => { setMontado(true) }, [])
 
   // Al cambiar de área se arranca una conversación nueva con ese agente.
   useEffect(() => {
@@ -64,9 +70,9 @@ export default function AgentePanel() {
 
   // El chat queda reservado a coordinación y jefatura del servicio.
   const nivel = getNivel(((session?.user as any)?.rol ?? 'voluntario') as string)
-  if (!session || nivel < 4) return null
+  if (!session || nivel < 4 || !montado) return null
 
-  return (
+  return createPortal(
     <>
       {/* Lanzador */}
       {!abierto && (
@@ -175,6 +181,7 @@ export default function AgentePanel() {
           </p>
         </div>
       )}
-    </>
+    </>,
+    document.body
   )
 }
