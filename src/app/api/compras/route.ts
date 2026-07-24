@@ -399,6 +399,7 @@ export async function PUT(request: NextRequest) {
       if (body.importeAdjudicado !== undefined) datos.importeAdjudicado = num(body.importeAdjudicado)
       if (body.partidaId !== undefined) datos.partidaId = body.partidaId || null
       if (body.retencionCredito !== undefined) datos.retencionCredito = !!body.retencionCredito
+      if (body.datos09A !== undefined) datos.datos09A = body.datos09A
       if (body.fechaRC !== undefined) datos.fechaRC = body.fechaRC ? new Date(body.fechaRC) : null
       if (body.fechaAlbaran !== undefined) datos.fechaAlbaran = body.fechaAlbaran ? new Date(body.fechaAlbaran) : null
 

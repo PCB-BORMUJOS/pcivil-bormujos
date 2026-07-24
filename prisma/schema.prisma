@@ -1779,6 +1779,7 @@ model ExpedienteCompra {
   informeTecnico    String?                @map("informe_tecnico")
   documentoInforme  String?                @map("documento_informe")
   propuestaGasto    String?                @map("propuesta_gasto")
+  datos09A          Json?                  @map("datos_09a")
   justificacion     String?
   numeroRC          String?                @map("numero_rc")
   plazoEntrega      String?                @map("plazo_entrega")

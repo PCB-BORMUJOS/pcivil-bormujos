@@ -7,10 +7,12 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { usePermisos } from '@/lib/permisos'
 import { generarPropuestaGasto, TIPOS_COMPRA } from '@/lib/informe-compras'
+import { generar09A, DATOS_09A_VACIOS, type Datos09A } from '@/lib/formulario-09a'
 import {
   ShoppingCart, RefreshCw, FolderOpen, FileText, Euro, CheckCircle2, Clock,
   AlertTriangle, X, Plus, ChevronRight, Package, Truck, Receipt, ShieldAlert,
   FileDown, Upload, Trash2, Building2, Search, Filter, History, Award, Info,
+  GripVertical, FileSpreadsheet,
 } from 'lucide-react'
 
 const COLUMNAS = [
@@ -55,6 +57,10 @@ export default function ComprasPage() {
   const [form, setForm] = useState<any>({})
   const [nuevaOferta, setNuevaOferta] = useState<any>({ proveedorNombre: '', importe: '', iva: '21' })
   const [nuevaFactura, setNuevaFactura] = useState<any>({ numeroFactura: '', importeBase: '', iva: '21' })
+  const [arrastrando, setArrastrando] = useState<string | null>(null)
+  const [columnaDestino, setColumnaDestino] = useState<string | null>(null)
+  const [show09A, setShow09A] = useState(false)
+  const [datos09A, setDatos09A] = useState<Datos09A>(DATOS_09A_VACIOS)
 
   const cargar = useCallback(async () => {
     try {
@@ -118,8 +124,36 @@ export default function ComprasPage() {
     } catch { setAviso('Error al guardar') } finally { setGuardando(false) }
   }
 
-  const moverPeticion = async (id: string, estado: string) => {
-    const comentario = estado === 'rechazada' ? (prompt('Motivo del rechazo:') || '') : undefined
+  // Arrastrar una tarjeta a otra columna avanza o retrocede su estado.
+  const soltarEn = async (columna: string) => {
+    const id = arrastrando
+    setArrastrando(null)
+    setColumnaDestino(null)
+    if (!id) return
+    const peticion = peticiones.find(p => p.id === id)
+    if (!peticion) return
+
+    const actual = peticion.expedienteCompra && peticion.estado === 'pendiente' ? 'expediente' : peticion.estado
+    if (actual === columna) return
+
+    if (columna === 'expediente') {
+      // Volver al archivador: la petición queda pendiente y se abre expediente.
+      if (peticion.estado !== 'pendiente') await moverPeticion(id, 'pendiente', true)
+      if (!peticion.expedienteCompra) {
+        await fetch('/api/compras?tipo=expediente', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ peticionId: id }),
+        })
+      }
+      await cargar()
+      return
+    }
+    const destino = columna === 'solicitada' ? 'pendiente' : columna
+    await moverPeticion(id, destino, true)
+  }
+
+  const moverPeticion = async (id: string, estado: string, silencioso = false) => {
+    const comentario = (!silencioso && estado === 'rechazada') ? (prompt('Motivo del rechazo:') || '') : undefined
     const r = await fetch('/api/compras?tipo=peticion', {
       method: 'PUT', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id, estado, comentario }),
@@ -175,6 +209,54 @@ export default function ComprasPage() {
       if (r.ok) await abrirExpediente(expediente.id)
       else { const d = await r.json().catch(() => ({})); setAviso(d.error || 'No se ha podido subir el documento') }
     } finally { setGuardando(false) }
+  }
+
+  // El impreso oficial se precarga con lo que ya consta en el expediente.
+  const abrir09A = () => {
+    if (!expediente) return
+    const guardado = expediente.datos09A as Partial<Datos09A> | null
+    const oferta = (expediente.presupuestosProv || []).find((o: any) => o.estado === 'adjudicado')
+      || (expediente.presupuestosProv || [])[0]
+    const prov = expediente.proveedor || oferta?.proveedor
+    const base = oferta ? Number(oferta.importe) : (form.importeEstimado ? parseFloat(form.importeEstimado) : 0)
+    const tipoIva = oferta ? Number(oferta.iva) : 21
+    const cuota = +(base * tipoIva / 100).toFixed(2)
+
+    setDatos09A({
+      ...DATOS_09A_VACIOS,
+      ...(guardado || {}),
+      solNombre: guardado?.solNombre || 'Emilio',
+      solApellido1: guardado?.solApellido1 || 'Simón',
+      solApellido2: guardado?.solApellido2 || 'Gómez',
+      provTipoDoc: guardado?.provTipoDoc || (prov?.cif ? 'C.I.F.' : 'D.N.I.'),
+      provNumDoc: guardado?.provNumDoc || prov?.cif || '',
+      provNombre: guardado?.provNombre || prov?.nombre || '',
+      contNombre: guardado?.contNombre || prov?.contacto || '',
+      contTelefono: guardado?.contTelefono || prov?.telefono || '',
+      contEmail: guardado?.contEmail || prov?.email || '',
+      socNombreVia: guardado?.socNombreVia || prov?.direccion || '',
+      notNombreVia: guardado?.notNombreVia || prov?.direccion || '',
+      gasPartida: guardado?.gasPartida || (expediente.partida ? `${expediente.partida.codigo} — ${expediente.partida.denominacion}` : ''),
+      gasDetalle: guardado?.gasDetalle || form.objeto || form.propuestaGasto || expediente.titulo || '',
+      gasBase: guardado?.gasBase || (base ? String(base) : ''),
+      gasIva: guardado?.gasIva || (cuota ? String(cuota) : ''),
+      gasTotal: guardado?.gasTotal || (base ? String(+(base + cuota).toFixed(2)) : ''),
+    })
+    setShow09A(true)
+  }
+
+  const guardar09A = async (descargar: boolean) => {
+    if (!expediente) return
+    setGuardando(true)
+    try {
+      await fetch('/api/compras?tipo=expediente', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: expediente.id, datos09A }),
+      })
+      if (descargar) await generar09A(datos09A, `09A-Propuesta-autorizacion-gastos-${expediente.numero.replace('/', '-')}.pdf`)
+      setAviso(descargar ? 'Impreso 09A generado y datos guardados.' : 'Datos del impreso guardados.')
+      await abrirExpediente(expediente.id)
+    } catch { setAviso('Error al generar el impreso') } finally { setGuardando(false) }
   }
 
   const generarPdf = async () => {
@@ -312,11 +394,20 @@ export default function ComprasPage() {
       )}
 
       {/* PIPELINE */}
+      <p className="text-xs text-slate-400 flex items-center gap-1.5">
+        <GripVertical size={13} />Arrastra una tarjeta de una columna a otra para avanzar o retroceder su estado. Todo movimiento queda registrado en la trazabilidad.
+      </p>
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3">
         {COLUMNAS.map(col => {
           const items = columnas[col.id] || []
           return (
-            <div key={col.id} className={`bg-slate-50 rounded-xl border-t-4 ${col.color} p-3 min-h-[200px]`}>
+            <div
+              key={col.id}
+              onDragOver={e => { e.preventDefault(); setColumnaDestino(col.id) }}
+              onDragLeave={() => setColumnaDestino(c => c === col.id ? null : c)}
+              onDrop={e => { e.preventDefault(); soltarEn(col.id) }}
+              className={`rounded-xl border-t-4 ${col.color} p-3 min-h-[200px] transition-colors ${columnaDestino === col.id && arrastrando ? 'bg-blue-50 ring-2 ring-blue-300' : 'bg-slate-50'}`}
+            >
               <div className="flex items-center justify-between mb-3">
                 <p className="text-xs font-bold text-slate-600 uppercase tracking-wide flex items-center gap-1.5"><col.icon size={14} />{col.label}</p>
                 <span className="px-1.5 py-0.5 bg-white rounded text-[11px] font-bold text-slate-500">{items.length}</span>
@@ -327,9 +418,17 @@ export default function ComprasPage() {
                   const nOfertas = exp?.presupuestosProv?.length || 0
                   const faltanOfertas = exp && nOfertas < ofertasMin(exp.tipoCompra)
                   return (
-                    <div key={p.id} className="bg-white border border-slate-200 rounded-lg p-3 hover:shadow-sm transition-shadow">
+                    <div
+                      key={p.id}
+                      draggable={!p.suelto}
+                      onDragStart={() => setArrastrando(p.id)}
+                      onDragEnd={() => { setArrastrando(null); setColumnaDestino(null) }}
+                      className={`bg-white border border-slate-200 rounded-lg p-3 hover:shadow-sm transition-all ${!p.suelto ? 'cursor-grab active:cursor-grabbing' : ''} ${arrastrando === p.id ? 'opacity-40 scale-95' : ''}`}
+                    >
                       <div className="flex items-start justify-between gap-2 mb-1">
-                        <span className="font-mono text-[10px] font-bold text-slate-400">{p.numero}</span>
+                        <span className="font-mono text-[10px] font-bold text-slate-400 flex items-center gap-1">
+                          {!p.suelto && <GripVertical size={11} className="text-slate-300" />}{p.numero}
+                        </span>
                         {p.prioridad && <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${PRIORIDADES[p.prioridad] || PRIORIDADES.normal}`}>{p.prioridad}</span>}
                       </div>
                       <p className="text-sm font-semibold text-slate-800 leading-snug">{p.nombreArticulo}</p>
@@ -401,7 +500,8 @@ export default function ComprasPage() {
                 </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">
-                <button onClick={generarPdf} className="flex items-center gap-1.5 px-3 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium"><FileDown size={15} />Propuesta PDF</button>
+                <button onClick={abrir09A} className="flex items-center gap-1.5 px-3 py-2 bg-white text-violet-700 hover:bg-violet-50 rounded-lg text-sm font-bold"><FileSpreadsheet size={15} />Impreso 09A</button>
+                <button onClick={generarPdf} className="flex items-center gap-1.5 px-3 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium"><FileDown size={15} />Informe interno</button>
                 <button onClick={() => { setExpedienteId(null); setExpediente(null) }} className="p-1.5 hover:bg-white/20 rounded-lg"><X className="w-5 h-5" /></button>
               </div>
             </div>
@@ -676,6 +776,179 @@ export default function ComprasPage() {
                     {guardando ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}Guardar
                   </button>
                 )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* IMPRESO OFICIAL 09A */}
+      {show09A && expediente && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[1300] p-4" onClick={() => !guardando && setShow09A(false)}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl max-h-[94vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="bg-[#c4d69b] p-5 flex items-start justify-between gap-4 shrink-0 border-b-2 border-[#9ab278]">
+              <div>
+                <p className="text-xs font-bold text-slate-700">ADMINISTRACIÓN ELECTRÓNICA BORMUJOS · impreso 09A</p>
+                <h3 className="text-lg font-bold text-slate-900 leading-tight">PROPUESTA de AUTORIZACIÓN de GASTOS</h3>
+                <p className="text-xs text-slate-600 mt-0.5">Expediente {expediente.numero} · el PDF reproduce el modelo oficial</p>
+              </div>
+              <button onClick={() => setShow09A(false)} className="p-1.5 hover:bg-black/10 rounded-lg"><X className="w-5 h-5 text-slate-700" /></button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-5 space-y-5">
+              {(() => {
+                const campo = (k: keyof Datos09A, label: string, cols = 1, tipo = 'text') => (
+                  <div key={k} className={cols === 3 ? 'md:col-span-3' : cols === 2 ? 'md:col-span-2' : ''}>
+                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">{label}</label>
+                    <input
+                      type={tipo}
+                      value={(datos09A[k] as any) ?? ''}
+                      onChange={e => setDatos09A({ ...datos09A, [k]: e.target.value } as Datos09A)}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#9ab278]/40"
+                    />
+                  </div>
+                )
+                const seccion = (titulo: string, contenido: React.ReactNode) => (
+                  <div className="border border-slate-200 rounded-xl overflow-hidden">
+                    <p className="bg-[#d8e4bc] px-4 py-2 text-xs font-bold text-slate-800 uppercase tracking-wide">{titulo}</p>
+                    <div className="p-4 grid grid-cols-1 md:grid-cols-3 gap-3">{contenido}</div>
+                  </div>
+                )
+                return (
+                  <>
+                    {seccion('Datos del solicitante (empleado/a municipal)', <>
+                      {campo('solNombre', 'Nombre')}
+                      {campo('solApellido1', 'Primer apellido')}
+                      {campo('solApellido2', 'Segundo apellido')}
+                      {campo('solDelegacion', 'Delegación municipal / área / departamento', 3)}
+                    </>)}
+
+                    {seccion('Datos del proveedor', <>
+                      <div className="md:col-span-3 flex items-center gap-6">
+                        {(['fisica', 'juridica'] as const).map(t => (
+                          <label key={t} className="flex items-center gap-2 text-sm cursor-pointer">
+                            <input type="radio" checked={datos09A.provTipoPersona === t} onChange={() => setDatos09A({ ...datos09A, provTipoPersona: t })} className="w-4 h-4 text-[#7d9a5a]" />
+                            <span className="font-medium text-slate-700">Persona {t === 'fisica' ? 'física' : 'jurídica'}</span>
+                          </label>
+                        ))}
+                      </div>
+                      {campo('provTipoDoc', 'Documento de identificación')}
+                      {campo('provNumDoc', 'Número de documento')}
+                      {campo('provNombre', 'Nombre o razón social')}
+                      {campo('provApellido1', 'Primer apellido')}
+                      {campo('provApellido2', 'Segundo apellido')}
+                    </>)}
+
+                    {seccion('Persona de contacto', <>
+                      {campo('contNombre', 'Nombre')}
+                      {campo('contApellido1', 'Primer apellido')}
+                      {campo('contApellido2', 'Segundo apellido')}
+                      {campo('contTelefono', 'Teléfono de contacto')}
+                      {campo('contEmail', 'Correo electrónico', 2)}
+                    </>)}
+
+                    {seccion('Domicilio social', <>
+                      {campo('socCodVia', 'Código vía')}
+                      {campo('socNombreVia', 'Nombre vía', 2)}
+                      {campo('socNumero', 'Número vía')}
+                      {campo('socLetra', 'Letra')}
+                      {campo('socEscalera', 'Escalera')}
+                      {campo('socPiso', 'Piso')}
+                      {campo('socPuerta', 'Puerta')}
+                      {campo('socTelefono', 'Teléfono')}
+                      {campo('socMovil', 'Móvil')}
+                      {campo('socEmail', 'Correo electrónico', 2)}
+                      {campo('socProvincia', 'Provincia')}
+                      {campo('socMunicipio', 'Municipio')}
+                      {campo('socCP', 'Código postal')}
+                    </>)}
+
+                    <div className="flex justify-end">
+                      <button
+                        onClick={() => setDatos09A({
+                          ...datos09A,
+                          notCodVia: datos09A.socCodVia, notNombreVia: datos09A.socNombreVia, notNumero: datos09A.socNumero,
+                          notLetra: datos09A.socLetra, notEscalera: datos09A.socEscalera, notPiso: datos09A.socPiso,
+                          notPuerta: datos09A.socPuerta, notTelefono: datos09A.socTelefono, notMovil: datos09A.socMovil,
+                          notEmail: datos09A.socEmail, notProvincia: datos09A.socProvincia, notMunicipio: datos09A.socMunicipio, notCP: datos09A.socCP,
+                        })}
+                        className="text-xs font-semibold text-violet-600 hover:underline"
+                      >
+                        Copiar el domicilio social al de notificación
+                      </button>
+                    </div>
+
+                    {seccion('Domicilio de notificación', <>
+                      {campo('notCodVia', 'Código vía')}
+                      {campo('notNombreVia', 'Nombre vía', 2)}
+                      {campo('notNumero', 'Número vía')}
+                      {campo('notLetra', 'Letra')}
+                      {campo('notEscalera', 'Escalera')}
+                      {campo('notPiso', 'Piso')}
+                      {campo('notPuerta', 'Puerta')}
+                      {campo('notTelefono', 'Teléfono')}
+                      {campo('notMovil', 'Móvil')}
+                      {campo('notEmail', 'Correo electrónico', 2)}
+                      {campo('notProvincia', 'Provincia')}
+                      {campo('notMunicipio', 'Municipio')}
+                      {campo('notCP', 'Código postal')}
+                    </>)}
+
+                    {seccion('Datos del gasto', <>
+                      {campo('gasDelegacion', 'Delegación', 2)}
+                      {campo('gasAreaGasto', 'Área de gasto')}
+                      {campo('gasPartida', 'Partida presupuestaria', 2)}
+                      {campo('gasObraPrograma', 'Obra o programa')}
+                      <div className="md:col-span-3">
+                        <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">Detalle del gasto (observaciones)</label>
+                        <textarea
+                          value={datos09A.gasDetalle}
+                          onChange={e => setDatos09A({ ...datos09A, gasDetalle: e.target.value })}
+                          rows={4}
+                          className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#9ab278]/40"
+                        />
+                      </div>
+                      {campo('gasBase', 'Base imponible (€)', 1, 'number')}
+                      {campo('gasIva', 'I.V.A. (valor en €)', 1, 'number')}
+                      {campo('gasTotal', 'Importe total (€)', 1, 'number')}
+                      <div className="md:col-span-3 flex justify-end">
+                        <button
+                          onClick={() => {
+                            const b = parseFloat(String(datos09A.gasBase).replace(',', '.')) || 0
+                            const i = parseFloat(String(datos09A.gasIva).replace(',', '.')) || 0
+                            setDatos09A({ ...datos09A, gasTotal: String(+(b + i).toFixed(2)) })
+                          }}
+                          className="text-xs font-semibold text-violet-600 hover:underline"
+                        >
+                          Calcular el importe total (base + IVA)
+                        </button>
+                      </div>
+                    </>)}
+
+                    {seccion('Documentación adjunta requerida y fecha', <>
+                      <label className="md:col-span-3 flex items-center gap-2 text-sm cursor-pointer">
+                        <input type="checkbox" checked={datos09A.adjInforme} onChange={e => setDatos09A({ ...datos09A, adjInforme: e.target.checked })} className="w-4 h-4 rounded border-slate-300 text-[#7d9a5a]" />
+                        <span className="text-slate-700">Informe justificativo emitido por empleado/a competente</span>
+                      </label>
+                      <label className="md:col-span-3 flex items-center gap-2 text-sm cursor-pointer">
+                        <input type="checkbox" checked={datos09A.adjPresupuestos} onChange={e => setDatos09A({ ...datos09A, adjPresupuestos: e.target.checked })} className="w-4 h-4 rounded border-slate-300 text-[#7d9a5a]" />
+                        <span className="text-slate-700">Presupuesto/s</span>
+                      </label>
+                      {campo('fecha', 'Fecha del documento', 1, 'date')}
+                    </>)}
+                  </>
+                )
+              })()}
+            </div>
+
+            <div className="border-t border-slate-200 p-4 flex items-center justify-between gap-2 shrink-0">
+              <p className="text-xs text-slate-500">Los datos quedan guardados en el expediente para futuras generaciones.</p>
+              <div className="flex gap-2">
+                <button onClick={() => setShow09A(false)} disabled={guardando} className="px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-xl disabled:opacity-50">Cerrar</button>
+                <button onClick={() => guardar09A(false)} disabled={guardando} className="px-4 py-2.5 text-sm font-medium text-slate-700 border border-slate-200 hover:bg-slate-50 rounded-xl disabled:opacity-50">Guardar datos</button>
+                <button onClick={() => guardar09A(true)} disabled={guardando} className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-[#7d9a5a] hover:bg-[#6d8a4a] rounded-xl disabled:opacity-50">
+                  {guardando ? <RefreshCw className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />}Generar impreso 09A
+                </button>
               </div>
             </div>
           </div>
