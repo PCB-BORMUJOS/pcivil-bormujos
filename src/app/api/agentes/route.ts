@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { registrarAudit } from '@/lib/audit'
-import { PERFILES, PERFIL_POR_SLUG, promptChat, promptRevision } from '@/lib/agentes/perfiles'
-import { construirContexto } from '@/lib/agentes/contexto'
+import { PERFILES, PERFIL_POR_SLUG, promptChat, promptRevision, promptAuditoria, AGENTE_POR_FAMILIA } from '@/lib/agentes/perfiles'
+import { construirContexto, detallePractica } from '@/lib/agentes/contexto'
 import { autorizar, crearCliente, jsonRespuesta, textoRespuesta, normalizarPropuesta, MODELO_AGENTE } from '@/lib/agentes/core'
 import { HERRAMIENTAS, ejecutarHerramienta } from '@/lib/agentes/herramientas'
 
@@ -51,6 +51,35 @@ export async function GET(request: NextRequest) {
         take: 300,
       })
       return NextResponse.json({ propuestas })
+    }
+
+    if (tipo === 'practicas-auditables') {
+      const familia = searchParams.get('familia')
+      const practicas = await prisma.practica.findMany({
+        where: familia && familia !== 'todas' ? { familia } : {},
+        orderBy: { numero: 'asc' },
+        select: { id: true, numero: true, titulo: true, familia: true, nivel: true, activa: true },
+      })
+      const auditorias = await prisma.auditoriaPractica.findMany({
+        orderBy: { createdAt: 'desc' },
+        select: { id: true, practicaId: true, puntuacion: true, estado: true, createdAt: true },
+      })
+      const ultima: Record<string, any> = {}
+      auditorias.forEach(a => { if (!ultima[a.practicaId]) ultima[a.practicaId] = a })
+      return NextResponse.json({
+        practicas: practicas.map(p => ({ ...p, auditoria: ultima[p.id] || null })),
+        familias: Array.from(new Set(practicas.map(p => p.familia))),
+      })
+    }
+
+    if (tipo === 'auditoria') {
+      const id = searchParams.get('id')
+      if (!id) return NextResponse.json({ error: 'ID requerido' }, { status: 400 })
+      const auditoria = await prisma.auditoriaPractica.findUnique({
+        where: { id },
+        include: { practica: true, usuario: { select: { nombre: true, apellidos: true } } },
+      })
+      return NextResponse.json({ auditoria })
     }
 
     if (tipo === 'revisiones') {
@@ -158,6 +187,67 @@ export async function POST(request: NextRequest) {
     } catch (error: any) {
       console.error('Error en chat de agente:', error)
       return NextResponse.json({ error: 'El asistente no ha podido responder. Inténtalo de nuevo.' }, { status: 500 })
+    }
+  }
+
+  // Auditoría técnica de una ficha de práctica por el agente de su área.
+  if (tipo === 'auditar-practica') {
+    const auth = await autorizar(4)
+    if (!auth.usuario) return NextResponse.json({ error: auth.error }, { status: auth.status })
+
+    const cliente = crearCliente()
+    if (!cliente) return NextResponse.json({ error: 'El asistente no está configurado en este entorno' }, { status: 503 })
+
+    try {
+      const { practicaId } = await request.json()
+      if (!practicaId) return NextResponse.json({ error: 'practicaId requerido' }, { status: 400 })
+
+      const practica = await prisma.practica.findUnique({ where: { id: practicaId } })
+      if (!practica) return NextResponse.json({ error: 'Práctica no encontrada' }, { status: 404 })
+
+      const slug = AGENTE_POR_FAMILIA[practica.familia] || 'practicas'
+      const perfil = PERFIL_POR_SLUG[slug] || PERFIL_POR_SLUG.practicas
+      const ficha = detallePractica(practica, 4000)
+
+      const respuesta = await cliente.messages.create({
+        model: MODELO_AGENTE,
+        max_tokens: 8000,
+        system: promptAuditoria(perfil, ficha),
+        messages: [{ role: 'user', content: `Audita la práctica ${practica.numero} — ${practica.titulo} y entrega el JSON indicado.` }],
+      })
+
+      const datos = jsonRespuesta<any>(respuesta)
+      if (!datos || !datos.propuesta) {
+        return NextResponse.json({ error: 'El agente no ha devuelto una auditoría legible' }, { status: 502 })
+      }
+
+      const auditoria = await prisma.auditoriaPractica.create({
+        data: {
+          practicaId: practica.id,
+          numero: practica.numero,
+          titulo: practica.titulo,
+          familia: practica.familia,
+          agente: perfil.slug,
+          puntuacion: Math.max(0, Math.min(100, parseInt(datos.puntuacion) || 0)),
+          resumen: String(datos.resumen || '').slice(0, 4000),
+          dimensiones: Array.isArray(datos.dimensiones) ? datos.dimensiones : [],
+          carencias: Array.isArray(datos.carencias) ? datos.carencias : [],
+          propuesta: datos.propuesta,
+          usuarioId: auth.usuario.id,
+        },
+      })
+
+      await registrarAudit({
+        accion: 'CREATE', entidad: 'AuditoriaPractica', entidadId: auditoria.id,
+        descripcion: `${perfil.nombre} auditó la práctica ${practica.numero} — ${practica.titulo}: ${auditoria.puntuacion}/100`,
+        usuarioId: auth.usuario.id, usuarioNombre: `${auth.usuario.nombre} ${auth.usuario.apellidos}`,
+        modulo: 'Prácticas',
+      })
+
+      return NextResponse.json({ auditoria })
+    } catch (error) {
+      console.error('Error auditando práctica:', error)
+      return NextResponse.json({ error: 'No ha sido posible auditar la práctica' }, { status: 500 })
     }
   }
 
@@ -283,6 +373,68 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   const auth = await autorizar(4)
   if (!auth.usuario) return NextResponse.json({ error: auth.error }, { status: auth.status })
+
+  const { searchParams } = new URL(request.url)
+
+  // Aplicar o descartar la propuesta de una auditoría de práctica.
+  if (searchParams.get('tipo') === 'auditoria') {
+    try {
+      const { id, accion, campos } = await request.json()
+      if (!id || !['aplicar', 'descartar', 'pendiente'].includes(accion)) {
+        return NextResponse.json({ error: 'Datos no válidos' }, { status: 400 })
+      }
+
+      const auditoria = await prisma.auditoriaPractica.findUnique({ where: { id }, include: { practica: true } })
+      if (!auditoria) return NextResponse.json({ error: 'Auditoría no encontrada' }, { status: 404 })
+
+      if (accion !== 'aplicar') {
+        const actualizada = await prisma.auditoriaPractica.update({
+          where: { id },
+          data: { estado: accion === 'descartar' ? 'descartada' : 'pendiente', aplicadaEn: null },
+        })
+        return NextResponse.json({ auditoria: actualizada })
+      }
+
+      // Solo se escriben los campos que el administrador haya aceptado.
+      const propuesta: any = auditoria.propuesta || {}
+      const TEXTO = ['objetivo', 'definicion', 'descripcion', 'desarrollo', 'conclusiones',
+        'prerequisitos', 'materialNecesario', 'lugarDesarrollo', 'riesgoPractica',
+        'riesgoIntervencion', 'riesgoObservaciones', 'nivel']
+      const NUM = ['duracionEstimada', 'personalMinimo']
+      const aceptados: string[] = Array.isArray(campos) && campos.length
+        ? campos
+        : [...TEXTO, ...NUM]
+
+      const datos: any = {}
+      aceptados.forEach(c => {
+        const v = propuesta[c]
+        if (v === undefined || v === null || v === '') return
+        if (TEXTO.includes(c)) datos[c] = String(v)
+        else if (NUM.includes(c)) { const n = parseInt(v); if (!isNaN(n) && n > 0) datos[c] = n }
+      })
+      if (!Object.keys(datos).length) {
+        return NextResponse.json({ error: 'No hay ningún campo que aplicar' }, { status: 400 })
+      }
+
+      const anterior = auditoria.practica
+      const practica = await prisma.practica.update({ where: { id: auditoria.practicaId }, data: datos })
+      const actualizada = await prisma.auditoriaPractica.update({
+        where: { id }, data: { estado: 'aplicada', aplicadaEn: new Date() },
+      })
+
+      await registrarAudit({
+        accion: 'UPDATE', entidad: 'Practica', entidadId: practica.id,
+        descripcion: `Ficha ${practica.numero} actualizada desde la auditoría del agente (${Object.keys(datos).length} campo(s): ${Object.keys(datos).join(', ')})`,
+        usuarioId: auth.usuario.id, usuarioNombre: `${auth.usuario.nombre} ${auth.usuario.apellidos}`,
+        modulo: 'Prácticas', datosAnteriores: anterior, datosNuevos: practica,
+      })
+
+      return NextResponse.json({ auditoria: actualizada, practica })
+    } catch (error) {
+      console.error('Error aplicando auditoría:', error)
+      return NextResponse.json({ error: 'No ha sido posible aplicar la auditoría' }, { status: 500 })
+    }
+  }
 
   try {
     const { id, estado, respuestaAdmin } = await request.json()

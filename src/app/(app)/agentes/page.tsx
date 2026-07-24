@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { usePermisos } from '@/lib/permisos'
+import AuditoriaPracticas from '@/components/agentes/AuditoriaPracticas'
 import {
   Bot, RefreshCw, Sparkles, CheckCircle2, XCircle, Clock, AlertTriangle,
   ShieldAlert, ClipboardCheck, Play, ChevronDown, ChevronRight, Filter,
@@ -48,6 +49,7 @@ export default function AgentesPage() {
   const [filtroEstado, setFiltroEstado] = useState('pendiente')
   const [expandida, setExpandida] = useState<string | null>(null)
   const [aviso, setAviso] = useState<string | null>(null)
+  const [seccion, setSeccion] = useState<'plantilla' | 'auditoria'>('plantilla')
 
   const cargar = useCallback(async () => {
     try {
@@ -160,6 +162,21 @@ export default function AgentesPage() {
         ))}
       </div>
 
+      {/* SUB-NAVEGACIÓN */}
+      <div className="flex flex-wrap gap-1 border-b border-slate-200">
+        {[
+          { id: 'plantilla', label: 'Plantilla y propuestas', icon: Bot },
+          { id: 'auditoria', label: 'Auditoría de prácticas', icon: ClipboardCheck },
+        ].map(t => (
+          <button key={t.id} onClick={() => setSeccion(t.id as any)} className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${seccion === t.id ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
+            <t.icon className="w-4 h-4" />{t.label}
+          </button>
+        ))}
+      </div>
+
+      {seccion === 'auditoria' && <AuditoriaPracticas />}
+
+      {seccion === 'plantilla' && (<>
       {/* PLANTILLA DE AGENTES */}
       <div>
         <h2 className="text-sm font-bold text-slate-700 uppercase tracking-wide mb-3">Plantilla de agentes</h2>
@@ -287,6 +304,8 @@ export default function AgentesPage() {
           </div>
         )}
       </div>
+
+      </>)}
 
       <p className="text-xs text-slate-400 flex items-center gap-1.5">
         <Sparkles className="w-3.5 h-3.5" />

@@ -79,18 +79,19 @@ export default function AgentePanel() {
         <button
           onClick={() => setAbierto(true)}
           title={`${perfil.nombre} — ${perfil.puesto}`}
-          className={`fixed bottom-6 right-6 z-[1200] flex items-center gap-2 pl-4 pr-5 py-3 rounded-full text-white shadow-lg hover:shadow-xl transition-all bg-gradient-to-r ${perfil.color}`}
+          aria-label={perfil.nombre}
+          className={`fixed bottom-6 right-6 z-[3000] w-14 h-14 flex items-center justify-center rounded-full text-white shadow-xl ring-2 ring-white/90 hover:scale-105 active:scale-95 transition-transform bg-gradient-to-br ${perfil.color}`}
+          style={{ boxShadow: '0 6px 20px rgba(0,0,0,.35)' }}
         >
-          <Bot className="w-5 h-5" />
-          <span className="text-sm font-semibold hidden sm:inline">{perfil.nombre}</span>
+          <Bot className="w-6 h-6" />
         </button>
       )}
 
       {/* Panel */}
       {abierto && (
-        <div className="fixed inset-0 sm:inset-auto sm:bottom-6 sm:right-6 z-[1200] sm:w-[420px] sm:h-[640px] sm:max-h-[85vh] bg-white sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-slate-200">
+        <div className="fixed inset-0 sm:inset-auto sm:bottom-6 sm:right-6 z-[3000] sm:w-[420px] sm:h-[640px] sm:max-h-[85vh] bg-white sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-slate-200">
           {/* Cabecera */}
-          <div className={`bg-gradient-to-r ${perfil.color} text-white p-4 flex items-start justify-between gap-3 shrink-0`}>
+          <div className={`bg-gradient-to-br ${perfil.color} text-white p-4 flex items-start justify-between gap-3 shrink-0`}>
             <div className="flex items-start gap-3 min-w-0">
               <div className="p-2 bg-white/20 rounded-xl shrink-0"><Bot className="w-5 h-5" /></div>
               <div className="min-w-0">
@@ -171,7 +172,7 @@ export default function AgentePanel() {
             <button
               type="submit"
               disabled={enviando || !entrada.trim()}
-              className={`p-2.5 rounded-xl text-white disabled:opacity-40 bg-gradient-to-r ${perfil.color}`}
+              className={`p-2.5 rounded-xl text-white disabled:opacity-40 bg-gradient-to-br ${perfil.color}`}
             >
               <Send className="w-4 h-4" />
             </button>

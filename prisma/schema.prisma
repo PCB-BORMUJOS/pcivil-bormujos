@@ -63,6 +63,7 @@ model Usuario {
   conversacionesAgente   ConversacionAgente[]
   revisionesAgente       RevisionAgente[]
   propuestasAgenteResueltas PropuestaAgente[]
+  auditoriasPractica     AuditoriaPractica[]
 
   manuales              Manual[]
   partesPSI             PartePSI[]
@@ -2067,6 +2068,7 @@ model Practica {
   updatedAt           DateTime @updatedAt
   megacodePracticas   MegacodePractica[]
   registros           RegistroPractica[]
+  auditorias          AuditoriaPractica[]
   @@map("practicas")
 }
 
@@ -2416,4 +2418,33 @@ model FacturaPCI {
 
   @@index([edificioId])
   @@map("facturas_pci")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AUDITORÍA DE PRÁCTICAS POR EL AGENTE ESPECIALIZADO DEL ÁREA
+// ─────────────────────────────────────────────────────────────────────────────
+
+model AuditoriaPractica {
+  id          String   @id @default(cuid())
+  practicaId  String   @map("practica_id")
+  practica    Practica @relation(fields: [practicaId], references: [id], onDelete: Cascade)
+  numero      String
+  titulo      String
+  familia     String
+  agente      String   // slug del agente que la audita
+  puntuacion  Int      @default(0) // 0-100
+  resumen     String
+  dimensiones Json     // [{ nombre, puntuacion, comentario }]
+  carencias   Json     // [{ campo, gravedad, descripcion }]
+  propuesta   Json     // contenido mejorado de la ficha, campo a campo
+  estado      String   @default("pendiente") // pendiente | aplicada | descartada
+  usuarioId   String   @map("usuario_id")
+  usuario     Usuario  @relation(fields: [usuarioId], references: [id])
+  aplicadaEn  DateTime? @map("aplicada_en")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([practicaId])
+  @@index([familia, estado])
+  @@map("auditorias_practica")
 }
