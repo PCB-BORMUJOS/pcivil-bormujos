@@ -82,7 +82,7 @@ const navigation: NavItem[] = [
   },
   // Solo coordinador+ Y visor (bloqueado para voluntario/responsable/jefe_area)
   { name: 'Cuadrantes',        href: '/cuadrantes',     icon: Calendar,    minNivel: 4, visibleVisor: true },
-  { name: 'Administración',    href: '/administracion', icon: ShieldCheck, minNivel: 4, visibleVisor: true },
+  { name: 'Administración',    href: '/administracion', icon: ShieldCheck, minNivel: 4, visibleVisor: false },
   { name: 'Estadísticas',      href: '/estadisticas',   icon: BarChart2,   minNivel: 4, visibleVisor: true },
   { name: 'Agentes IA',        href: '/agentes',        icon: Bot,         minNivel: 4, visibleVisor: false },
   { name: 'Compras',           href: '/compras',        icon: CarritoIcon, minNivel: 4, visibleVisor: false },

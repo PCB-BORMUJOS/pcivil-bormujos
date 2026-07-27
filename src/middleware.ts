@@ -20,10 +20,15 @@ function getNivel(rol: string): number {
 // Accesibles para coordinador+ (>=4) Y para visor (0)
 const RUTAS_SOLO_COORD_O_VISOR: string[] = [
   '/cuadrantes',
-  '/administracion',
   '/estadisticas',
   '/presupuesto',
   '/configuracion',
+]
+
+// Rutas visibles SOLO para admin/coordinador (nivel 4) y superadmin (nivel 5).
+// El visor queda excluido expresamente (no debe ver esta información).
+const RUTAS_SOLO_ADMIN: string[] = [
+  '/administracion',
 ]
 
 // Rutas que requieren nivel mínimo 5 (solo superadmin)
@@ -69,6 +74,12 @@ export async function middleware(request: NextRequest) {
     return NextResponse.json({ error: 'Perfil de solo lectura' }, { status: 403 })
   }
 
+  // El área de Administración (y su API) es exclusiva de admin/coordinador y
+  // superadmin: el visor no debe ver esta información ni siquiera por API.
+  if (pathname.startsWith('/api/admin/') && ((token as any)?.rol === 'visor')) {
+    return NextResponse.json({ error: 'Sin permisos para esta información' }, { status: 403 })
+  }
+
   const esRutaProtegida = RUTAS_PROTEGIDAS.some(r => pathname.startsWith(r))
 
   // Sin token → redirigir a login
@@ -90,6 +101,13 @@ export async function middleware(request: NextRequest) {
     // Rutas solo superadmin
     if (RUTAS_SUPERADMIN.some(r => pathname.startsWith(r)) && nivel < 5) {
       return NextResponse.redirect(new URL('/dashboard', request.url))
+    }
+
+    // Rutas solo admin/coordinador y superadmin (visor incluido en el veto)
+    if (RUTAS_SOLO_ADMIN.some(r => pathname.startsWith(r))) {
+      if (rol === 'visor' || nivel < 4) {
+        return NextResponse.redirect(new URL('/dashboard', request.url))
+      }
     }
 
     // Rutas bloqueadas para niveles intermedios (voluntario/responsable/jefe_area)
