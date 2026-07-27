@@ -43,6 +43,8 @@ interface NavItem {
   minNivel?: number
   /** El visor puede ver este ítem aunque minNivel > 0. Default: true */
   visibleVisor?: boolean
+  /** Si se indica, solo estos roles ven el ítem (ignora minNivel/visibleVisor). */
+  soloRoles?: string[]
   submenu?: Array<{ name: string; href: string }>
 }
 
@@ -82,7 +84,7 @@ const navigation: NavItem[] = [
   },
   // Solo coordinador+ Y visor (bloqueado para voluntario/responsable/jefe_area)
   { name: 'Cuadrantes',        href: '/cuadrantes',     icon: Calendar,    minNivel: 4, visibleVisor: true },
-  { name: 'Administración',    href: '/administracion', icon: ShieldCheck, minNivel: 4, visibleVisor: false },
+  { name: 'Administración',    href: '/administracion', icon: ShieldCheck, soloRoles: ['admin', 'superadmin'] },
   { name: 'Estadísticas',      href: '/estadisticas',   icon: BarChart2,   minNivel: 4, visibleVisor: true },
   { name: 'Agentes IA',        href: '/agentes',        icon: Bot,         minNivel: 4, visibleVisor: false },
   { name: 'Compras',           href: '/compras',        icon: CarritoIcon, minNivel: 4, visibleVisor: false },
@@ -143,6 +145,7 @@ export default function Sidebar() {
   const isVisor = userRol === 'visor'
 
   const filteredNavigation = navigation.filter(item => {
+    if (item.soloRoles) return item.soloRoles.includes(userRol)
     if (isVisor) return item.visibleVisor !== false
     return nivelUsuario >= (item.minNivel ?? 1)
   })

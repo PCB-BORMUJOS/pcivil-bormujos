@@ -25,8 +25,8 @@ const RUTAS_SOLO_COORD_O_VISOR: string[] = [
   '/configuracion',
 ]
 
-// Rutas visibles SOLO para admin/coordinador (nivel 4) y superadmin (nivel 5).
-// El visor queda excluido expresamente (no debe ver esta información).
+// Rutas visibles SOLO para los roles 'admin' y 'superadmin'. Cualquier otro rol
+// queda fuera, incluido el coordinador (mismo nivel que admin) y el visor.
 const RUTAS_SOLO_ADMIN: string[] = [
   '/administracion',
 ]
@@ -74,12 +74,6 @@ export async function middleware(request: NextRequest) {
     return NextResponse.json({ error: 'Perfil de solo lectura' }, { status: 403 })
   }
 
-  // El área de Administración (y su API) es exclusiva de admin/coordinador y
-  // superadmin: el visor no debe ver esta información ni siquiera por API.
-  if (pathname.startsWith('/api/admin/') && ((token as any)?.rol === 'visor')) {
-    return NextResponse.json({ error: 'Sin permisos para esta información' }, { status: 403 })
-  }
-
   const esRutaProtegida = RUTAS_PROTEGIDAS.some(r => pathname.startsWith(r))
 
   // Sin token → redirigir a login
@@ -103,9 +97,10 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL('/dashboard', request.url))
     }
 
-    // Rutas solo admin/coordinador y superadmin (visor incluido en el veto)
+    // Rutas exclusivas de los roles 'admin' y 'superadmin'. Cualquier otro rol
+    // (incluido coordinador, aunque comparta nivel con admin) queda fuera.
     if (RUTAS_SOLO_ADMIN.some(r => pathname.startsWith(r))) {
-      if (rol === 'visor' || nivel < 4) {
+      if (rol !== 'admin' && rol !== 'superadmin') {
         return NextResponse.redirect(new URL('/dashboard', request.url))
       }
     }
