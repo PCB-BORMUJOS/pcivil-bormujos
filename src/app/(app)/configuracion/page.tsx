@@ -104,7 +104,14 @@ export default function ConfiguracionPage() {
   const [baremoSaved, setBaremoSaved] = useState(false);
   // Baremo exclusivo J-44 (Jefe de Servicio) — solo superadmin
   // Importe fijo por día de servicio, independiente del número de turnos
-  const [baremoJ44, setBaremoJ44] = useState({ importePorDia: 0, concepto: 'Dieta Jefe de Servicio (importe/día)' });
+  const [baremoJ44, setBaremoJ44] = useState<{ concepto: string; tramos: { minHours: number; amount: number; label: string }[] }>({
+    concepto: 'Dieta Jefe de Servicio (J-44) por franja horaria',
+    tramos: [
+      { minHours: 4, amount: 36.50, label: 'Más de 4 horas' },
+      { minHours: 8, amount: 59.60, label: 'Más de 8 horas' },
+      { minHours: 12, amount: 79.50, label: 'Más de 12 horas' },
+    ],
+  });
   const [savingJ44, setSavingJ44] = useState(false);
   const [savedJ44, setSavedJ44] = useState(false);
 
@@ -232,7 +239,10 @@ export default function ConfiguracionPage() {
       fetch('/api/configuracion?clave=baremo_j44')
         .then(r => r.json())
         .then(data => {
-          if (data.config?.valor) setBaremoJ44(data.config.valor as any);
+          if (data.config?.valor) {
+            const v: any = data.config.valor;
+            if (Array.isArray(v.tramos)) setBaremoJ44(v);
+          }
         })
         .catch(() => {});
     }
@@ -572,17 +582,25 @@ export default function ConfiguracionPage() {
                     />
                   </div>
                   <div className="p-3 bg-white rounded-lg border border-amber-200">
-                    <label className="text-xs text-amber-700 font-bold block mb-2">Importe por día de servicio €</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      className="w-full border border-amber-200 rounded p-2 text-sm focus:outline-none focus:border-amber-400"
-                      value={baremoJ44.importePorDia}
-                      onChange={e => setBaremoJ44(prev => ({ ...prev, importePorDia: parseFloat(e.target.value) || 0 }))}
-                      placeholder="0.00"
-                    />
-                    <p className="text-xs text-amber-500 mt-1.5">
-                      Importe fijo diario independiente del nº de turnos. Total = días de servicio × {baremoJ44.importePorDia.toFixed(2)} €/día
+                    <label className="text-xs text-amber-700 font-bold block mb-2">Importe por franja horaria €</label>
+                    <div className="space-y-2">
+                      {baremoJ44.tramos.map((t, i) => (
+                        <div key={i} className="flex items-center gap-2">
+                          <span className="text-xs text-amber-700 w-28 shrink-0">{t.label || `Más de ${t.minHours} h`}</span>
+                          <input
+                            type="number"
+                            step="0.01"
+                            className="flex-1 border border-amber-200 rounded p-2 text-sm focus:outline-none focus:border-amber-400"
+                            value={t.amount}
+                            onChange={e => setBaremoJ44(prev => ({ ...prev, tramos: prev.tramos.map((x, j) => j === i ? { ...x, amount: parseFloat(e.target.value) || 0 } : x) }))}
+                            placeholder="0.00"
+                          />
+                          <span className="text-xs text-amber-500">€</span>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-xs text-amber-500 mt-2">
+                      Se aplica el tramo correspondiente a las horas totales del día de servicio. Exclusivo del Jefe de Servicio.
                     </p>
                   </div>
                   <button

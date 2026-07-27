@@ -228,8 +228,20 @@ export async function GET(request: NextRequest) {
     // Meses transcurridos del periodo (para % de cumplimiento justo a mitad de año).
     const mesesTranscurridos = year < hoy.getFullYear() ? 12 : (year > hoy.getFullYear() ? 0 : hoy.getMonth() + 1)
 
+    // ── Confidencialidad del Jefe de Servicio (J-44) ──────────────────────────
+    // Sus turnos y datos económicos solo son visibles para él (superadmin).
+    const idJefeServicio = todosVoluntarios.find(v =>
+      (v.fichaVoluntario as any)?.indicativo2 === 'J-44'
+    )?.id || null
+    const verJefeServicio = rol === 'superadmin'
+    const dietasVisibles = verJefeServicio
+      ? (dietas as any[])
+      : (dietas as any[]).filter(d => d.usuarioId !== idJefeServicio)
+
     // ── Stats por voluntario ──────────────────────────────────────────────────
-    const statsVoluntarios = todosVoluntarios.map(v => {
+    const statsVoluntarios = todosVoluntarios
+      .filter(v => verJefeServicio || v.id !== idJefeServicio)
+      .map(v => {
       const gv = guardiasReal.filter(g => g.usuarioId === v.id)
       const dv = (dietas as any[]).filter(d => d.usuarioId === v.id)
       const horas = gv.reduce((a: number, g: any) => a + horasGuardia(g), 0)
@@ -348,7 +360,7 @@ export async function GET(request: NextRequest) {
 
     // ── Dietas por mes ────────────────────────────────────────────────────────
     const dietasPorMes = Array.from({ length: 12 }, (_, i) => {
-      const dm = (dietas as any[]).filter(d => {
+      const dm = dietasVisibles.filter(d => {
         const [y, m] = (d.mesAnio || "").split("-").map(Number)
         return m === i + 1 && y === year
       })
@@ -586,8 +598,8 @@ export async function GET(request: NextRequest) {
         totalHoras:          (guardias as any[]).reduce((a: number, g: any) => a + (HORAS[g.turno] || 0), 0),
         totalEventos:        eventos.length,
         totalParticipaciones:(eventos as any[]).reduce((a: number, e: any) => a + (e.participantes?.length || 0), 0),
-        totalDietas:         (dietas as any[]).reduce((a: number, d: any) => a + Number(d.totalDieta || 0), 0),
-        totalKm:             (dietas as any[]).reduce((a: number, d: any) => a + Number(d.kilometros || 0), 0),
+        totalDietas:         dietasVisibles.reduce((a: number, d: any) => a + Number(d.totalDieta || 0), 0),
+        totalKm:             dietasVisibles.reduce((a: number, d: any) => a + Number(d.kilometros || 0), 0),
         totalFormaciones:    formaciones.length,
         totalPSI:            partesPSI.length,
         totalPeticiones:     peticionesLog.length,
@@ -613,7 +625,7 @@ export async function GET(request: NextRequest) {
       droneEstados, vuelosPorMes, statsPilotos,
       cajaPorMes, partidas,
       peticionesLog, movimientosCaja, partesPSI,
-      diasServicio: dietas, todosVoluntarios,
+      diasServicio: dietasVisibles, todosVoluntarios,
       guardiasRaw: guardias, eventosRaw: eventos,
       formacionesRaw: formaciones,
       vuelosRaw: vuelos, drones,

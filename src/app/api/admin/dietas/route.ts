@@ -40,19 +40,25 @@ export async function GET(request: NextRequest) {
     }
 
     // Obtener dietas del mes
-    const dietas = await prisma.dieta.findMany({
+    const dietasRaw = await prisma.dieta.findMany({
       where: { mesAnio: mes },
       include: {
         usuario: {
           select: {
             numeroVoluntario: true,
             nombre: true,
-            apellidos: true
+            apellidos: true,
+            fichaVoluntario: { select: { indicativo2: true } }
           }
         }
       },
       orderBy: { fecha: 'asc' }
     })
+
+    // Los datos del Jefe de Servicio (J-44) solo son visibles para el propio
+    // interesado con perfil de superadmin.
+    const esJefeServicio = (d: any) => d.usuario?.fichaVoluntario?.indicativo2 === 'J-44'
+    const dietas = rol === 'superadmin' ? dietasRaw : dietasRaw.filter(d => !esJefeServicio(d))
 
     // Calcular resumen por voluntario
     const resumenMap = new Map<string, any>()
@@ -76,21 +82,6 @@ export async function GET(request: NextRequest) {
       r.subtotalKm += Number(d.subtotalKm)
       r.totalDietas += Number(d.totalDieta)
     })
-
-    // Baremo exclusivo J-44 (Jefe de Servicio): importe fijo por día de
-    // servicio que sustituye al cálculo normal de dietas (sin Km).
-    const cfgJ44 = await prisma.configuracion.findUnique({ where: { clave: 'baremo_j44' } })
-    const valorJ44 = (cfgJ44?.valor ?? {}) as { importePorDia?: number; importeMensual?: number }
-    const importePorDiaJ44 = Number(valorJ44.importePorDia ?? valorJ44.importeMensual ?? 0)
-    if (importePorDiaJ44 > 0) {
-      Array.from(resumenMap.values())
-        .filter(r => r.indicativo === 'J-44')
-        .forEach(r => {
-          r.subtotalDietas = importePorDiaJ44 * r.dias
-          r.subtotalKm = 0
-          r.totalDietas = r.subtotalDietas
-        })
-    }
 
     const resumen = Array.from(resumenMap.values()).sort((a, b) =>
       (a.indicativo || '').localeCompare(b.indicativo || '')
