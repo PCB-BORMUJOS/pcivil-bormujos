@@ -130,6 +130,12 @@ export async function POST(request: NextRequest) {
       where: { usuarioId, fecha: { gte: inicioDia, lte: finDia }, turno }
     })
 
+    // Sellar las horas forzadas en la propia guardia: así el tramo (+8h/+12h)
+    // viaja con ella y no se pierde si el cuadrante se guarda o se reasigna.
+    if (guardia && Number(guardia.horasTurno ?? 0) !== horas) {
+      await prisma.guardia.update({ where: { id: guardia.id }, data: { horasTurno: horas } })
+    }
+
     // Desglose en notas para trazabilidad
     const desglose = [
       ...dietasOtrosTurnos.map(d => `${d.turno}:${d.horasTrabajadas}h`),

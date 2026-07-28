@@ -240,6 +240,17 @@ export async function POST(request: NextRequest) {
         });
       }
 
+      // No degradar una dieta que ya tenga un tramo FORZADO mayor (+8h/+12h
+      // aplicado con el boton del slot antes de guardar). Si existe una dieta de
+      // este turno con mas horas que las que ahora calcularia por defecto, se
+      // conserva tal cual para no perder el tramo extraordinario.
+      const dietaPrevia = await prisma.dieta.findFirst({
+        where: { usuarioId, fecha: { gte: inicioDia, lte: finDia }, turno }
+      });
+      if (dietaPrevia && Number(dietaPrevia.horasTrabajadas) > horasTrabajadas) {
+        return NextResponse.json({ success: true, guardia, dietaPreservada: true });
+      }
+
       // Eliminar dieta previa de este mismo turno si existía (reasignación)
       await prisma.dieta.deleteMany({ where: { usuarioId, fecha: { gte: inicioDia, lte: finDia }, turno } });
 
