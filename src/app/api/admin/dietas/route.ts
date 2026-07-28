@@ -55,39 +55,50 @@ export async function GET(request: NextRequest) {
       orderBy: { fecha: 'asc' }
     })
 
-    // Los datos del Jefe de Servicio (J-44) solo son visibles para el propio
-    // interesado con perfil de superadmin.
+    // El Jefe de Servicio (J-44) se separa POR COMPLETO del resto de indicativos:
+    // liquidación e informe independientes, visibles solo para superadmin.
     const esJefeServicio = (d: any) => d.usuario?.fichaVoluntario?.indicativo2 === 'J-44'
-    const dietas = rol === 'superadmin' ? dietasRaw : dietasRaw.filter(d => !esJefeServicio(d))
+    const dietasResto = dietasRaw.filter(d => !esJefeServicio(d))
+    const dietasJ44 = rol === 'superadmin' ? dietasRaw.filter(esJefeServicio) : []
 
-    // Calcular resumen por voluntario
-    const resumenMap = new Map<string, any>()
-    
-    dietas.forEach(d => {
-      const key = d.usuarioId
-      if (!resumenMap.has(key)) {
-        resumenMap.set(key, {
-          indicativo: d.usuario.numeroVoluntario,
-          nombre: d.usuario.nombre,
-          apellidos: d.usuario.apellidos,
-          dias: 0,
-          subtotalDietas: 0,
-          subtotalKm: 0,
-          totalDietas: 0
-        })
-      }
-      const r = resumenMap.get(key)
-      r.dias += 1
-      r.subtotalDietas += Number(d.subtotalDietas)
-      r.subtotalKm += Number(d.subtotalKm)
-      r.totalDietas += Number(d.totalDieta)
+    const construirResumen = (lista: any[]) => {
+      const map = new Map<string, any>()
+      lista.forEach(d => {
+        const key = d.usuarioId
+        if (!map.has(key)) {
+          map.set(key, {
+            indicativo: d.usuario.numeroVoluntario,
+            nombre: d.usuario.nombre,
+            apellidos: d.usuario.apellidos,
+            dias: 0, subtotalDietas: 0, subtotalKm: 0, totalDietas: 0,
+          })
+        }
+        const r = map.get(key)
+        r.dias += 1
+        r.subtotalDietas += Number(d.subtotalDietas)
+        r.subtotalKm += Number(d.subtotalKm)
+        r.totalDietas += Number(d.totalDieta)
+      })
+      return Array.from(map.values()).sort((a, b) => (a.indicativo || '').localeCompare(b.indicativo || ''))
+    }
+
+    // Detalle día a día del Jefe de Servicio para su informe propio.
+    const detalleJ44 = dietasJ44
+      .map(d => ({
+        fecha: d.fecha, turno: d.turno,
+        horas: Number(d.horasTrabajadas),
+        importeDia: Number(d.subtotalDietas),
+        subtotalKm: Number(d.subtotalKm),
+        total: Number(d.totalDieta),
+      }))
+      .sort((a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime())
+
+    return NextResponse.json({
+      dietas: dietasResto,
+      resumen: construirResumen(dietasResto),
+      resumenJ44: construirResumen(dietasJ44),
+      detalleJ44,
     })
-
-    const resumen = Array.from(resumenMap.values()).sort((a, b) =>
-      (a.indicativo || '').localeCompare(b.indicativo || '')
-    )
-
-    return NextResponse.json({ dietas, resumen })
   } catch (error) {
     console.error('Error al obtener dietas:', error)
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })

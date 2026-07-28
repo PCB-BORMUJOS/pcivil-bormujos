@@ -51,6 +51,8 @@ export default function ConfiguracionPage() {
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().substring(0, 7));
   const [loading, setLoading] = useState(false);
   const [reportData, setReportData] = useState<any[]>([]);
+  const [reportJ44, setReportJ44] = useState<any | null>(null);
+  const [detalleJ44, setDetalleJ44] = useState<any[]>([]);
 
   // Estados para usuarios
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
@@ -131,7 +133,10 @@ export default function ConfiguracionPage() {
         total: Number(r.totalDietas || 0),
       }));
       setReportData(filas);
-    } catch { setReportData([]); } finally { setLoading(false); }
+      const j44 = (data.resumenJ44 || [])[0] || null;
+      setReportJ44(j44 ? { ...j44, subtotalDietas: Number(j44.subtotalDietas || 0), subtotalKm: Number(j44.subtotalKm || 0), total: Number(j44.totalDietas || 0) } : null);
+      setDetalleJ44(data.detalleJ44 || []);
+    } catch { setReportData([]); setReportJ44(null); setDetalleJ44([]); } finally { setLoading(false); }
   };
 
   const exportarPDF = () => {
@@ -184,6 +189,64 @@ export default function ConfiguracionPage() {
         <div><div class="amount">${totalImporte.toFixed(2)} €</div>
         <div class="meta">${reportData.length} efectivo(s) · ${totalDias} dieta(s) registrada(s)</div></div>
         <div style="font-size:11px;color:#94a3b8">Protección Civil Bormujos</div>
+      </div>
+      <script>window.onload=function(){window.print();}<\/script>
+      </body></html>`;
+    const win = window.open('', '_blank');
+    if (win) { win.document.write(html); win.document.close(); }
+  };
+
+  // Informe independiente del Jefe de Servicio (J-44), separado del resto.
+  const exportarPDFJ44 = () => {
+    if (!reportJ44) return;
+    const nombreMes = new Date(selectedMonth + '-01T12:00:00').toLocaleDateString('es-ES', { month: 'long', year: 'numeric', timeZone: 'Europe/Madrid' });
+    const fmtF = (f: any) => new Date(f).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Europe/Madrid' }).replace(/\//g, '-');
+    const filas = detalleJ44.map((d: any) => `
+      <tr>
+        <td>${fmtF(d.fecha)}</td>
+        <td style="text-transform:capitalize">${d.turno}</td>
+        <td style="text-align:center">${d.horas} h</td>
+        <td style="text-align:right">${Number(d.importeDia).toFixed(2)} €</td>
+        <td style="text-align:right">${Number(d.subtotalKm).toFixed(2)} €</td>
+        <td style="text-align:right;font-weight:bold">${Number(d.total).toFixed(2)} €</td>
+      </tr>`).join('');
+    const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
+      <title>Liquidacion Jefe de Servicio J-44 ${selectedMonth}</title>
+      <style>
+        body{font-family:Arial,sans-serif;font-size:12px;margin:20px;color:#111}
+        h1{font-size:16px;margin-bottom:2px}
+        h2{font-size:13px;color:#b45309;margin:2px 0 4px}
+        p.sub{font-size:11px;color:#555;margin-bottom:16px}
+        table{width:100%;border-collapse:collapse}
+        th{background:#b45309;color:#fff;padding:8px 10px;text-align:left;font-size:11px;text-transform:uppercase}
+        td{padding:7px 10px;border-bottom:1px solid #e2e8f0}
+        tr:nth-child(even) td{background:#fff7ed}
+        tfoot td{border-top:2px solid #b45309;font-weight:bold;background:#fff7ed}
+        .total-box{margin-top:20px;background:#b45309;color:#fff;padding:14px 18px;border-radius:8px;display:flex;justify-content:space-between;align-items:center}
+        .total-box .amount{font-size:22px;font-weight:bold}
+        @media print{body{margin:0}}
+      </style></head><body>
+      <h1>Proteccion Civil Bormujos</h1>
+      <h2>Liquidacion del Jefe de Servicio (indicativo J-44)</h2>
+      <p class="sub">${reportJ44.nombre || ''} ${reportJ44.apellidos || ''} · Periodo: ${nombreMes} · Generado el ${new Date().toLocaleDateString('es-ES', { timeZone: 'Europe/Madrid' })}</p>
+      <table>
+        <thead><tr>
+          <th>Fecha</th><th>Turno</th><th style="text-align:center">Horas</th>
+          <th style="text-align:right">Dieta</th><th style="text-align:right">Km</th><th style="text-align:right">Total</th>
+        </tr></thead>
+        <tbody>${filas}</tbody>
+        <tfoot><tr>
+          <td colspan="2">TOTALES</td>
+          <td style="text-align:center">${reportJ44.dias}</td>
+          <td style="text-align:right">${reportJ44.subtotalDietas.toFixed(2)} €</td>
+          <td style="text-align:right">${reportJ44.subtotalKm.toFixed(2)} €</td>
+          <td style="text-align:right">${reportJ44.total.toFixed(2)} €</td>
+        </tr></tfoot>
+      </table>
+      <div class="total-box">
+        <div><div class="amount">${reportJ44.total.toFixed(2)} €</div>
+        <div style="font-size:11px;color:#fed7aa;margin-top:4px">${reportJ44.dias} dia(s) de servicio · liquidacion independiente del resto de indicativos</div></div>
+        <div style="font-size:11px;color:#fed7aa">Jefe de Servicio J-44</div>
       </div>
       <script>window.onload=function(){window.print();}<\/script>
       </body></html>`;
@@ -677,12 +740,61 @@ export default function ConfiguracionPage() {
                 <div>
                   <p className="text-xs text-slate-400 uppercase">Total dietas {selectedMonth}</p>
                   <p className="text-3xl font-bold">{reportData.reduce((acc, r) => acc + r.total, 0).toFixed(2)} €</p>
-                  <p className="text-xs text-slate-400 mt-1">{reportData.length} efectivo(s) · {reportData.reduce((acc, r) => acc + r.dias, 0)} días de servicio</p>
+                  <p className="text-xs text-slate-400 mt-1">{reportData.length} efectivo(s) · {reportData.reduce((acc, r) => acc + r.dias, 0)} días de servicio · el Jefe de Servicio (J-44) se liquida aparte</p>
                 </div>
-                <button className="bg-white text-slate-900 px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-slate-100 transition-colors"><Download size={18} /> Exportar PDF</button>
+                <button onClick={exportarPDF} className="bg-white text-slate-900 px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-slate-100 transition-colors"><Download size={18} /> Exportar PDF</button>
               </div>
             )}
           </div>
+
+          {/* ── Liquidación independiente del Jefe de Servicio (J-44) ── */}
+          {esSuperadmin && reportJ44 && (
+            <div className="lg:col-span-3 bg-white rounded-xl border-2 border-amber-300 shadow-sm overflow-hidden">
+              <div className="p-4 border-b border-amber-200 bg-amber-50 flex justify-between items-center flex-wrap gap-3">
+                <div>
+                  <h3 className="font-bold text-amber-800 flex items-center gap-2"><Lock size={15} /> Liquidación del Jefe de Servicio (J-44)</h3>
+                  <p className="text-xs text-amber-600 mt-0.5">Separada por completo del resto de indicativos · informe independiente · solo superadmin</p>
+                </div>
+                <button onClick={exportarPDFJ44} className="bg-amber-600 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-amber-700">
+                  <Download size={16} /> Informe J-44
+                </button>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left min-w-[500px]">
+                  <thead className="bg-amber-50/60 border-b border-amber-100">
+                    <tr>
+                      <th className="p-3 text-xs font-bold text-amber-400 uppercase">Fecha</th>
+                      <th className="p-3 text-xs font-bold text-amber-400 uppercase">Turno</th>
+                      <th className="p-3 text-xs font-bold text-amber-400 uppercase text-center">Horas</th>
+                      <th className="p-3 text-xs font-bold text-amber-400 uppercase text-right">Dieta</th>
+                      <th className="p-3 text-xs font-bold text-amber-400 uppercase text-right">Km</th>
+                      <th className="p-3 text-xs font-bold text-amber-400 uppercase text-right">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-amber-50">
+                    {detalleJ44.map((d, i) => (
+                      <tr key={i} className="hover:bg-amber-50/40">
+                        <td className="p-3 text-slate-700 whitespace-nowrap">{new Date(d.fecha).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Europe/Madrid' }).replace(/\//g, '-')}</td>
+                        <td className="p-3 text-slate-700 capitalize">{d.turno}</td>
+                        <td className="p-3 text-center text-slate-600">{d.horas} h</td>
+                        <td className="p-3 text-right text-slate-600">{Number(d.importeDia).toFixed(2)} €</td>
+                        <td className="p-3 text-right text-slate-600">{Number(d.subtotalKm).toFixed(2)} €</td>
+                        <td className="p-3 text-right font-bold text-amber-700">{Number(d.total).toFixed(2)} €</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="p-5 bg-amber-600 text-white flex justify-between items-center">
+                <div>
+                  <p className="text-xs text-amber-100 uppercase">Total J-44 · {selectedMonth}</p>
+                  <p className="text-2xl font-bold">{reportJ44.total.toFixed(2)} €</p>
+                  <p className="text-xs text-amber-100 mt-0.5">{reportJ44.dias} día(s) de servicio</p>
+                </div>
+                <button onClick={exportarPDFJ44} className="bg-white text-amber-700 px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-amber-50"><Download size={16} /> Informe J-44</button>
+              </div>
+            </div>
+          )}
         </div>
         </div>
       )}
