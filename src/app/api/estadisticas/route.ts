@@ -239,8 +239,11 @@ export async function GET(request: NextRequest) {
       : (dietas as any[]).filter(d => d.usuarioId !== idJefeServicio)
 
     // ── Stats por voluntario ──────────────────────────────────────────────────
+    // El Jefe de Servicio (J-44) NUNCA aparece en la lista de voluntarios (ni en
+    // el detalle por voluntario ni en el top 10): no es voluntario y tiene su
+    // propio panel independiente, visible solo para superadmin.
     const statsVoluntarios = todosVoluntarios
-      .filter(v => verJefeServicio || v.id !== idJefeServicio)
+      .filter(v => v.id !== idJefeServicio)
       .map(v => {
       const gv = guardiasReal.filter(g => g.usuarioId === v.id)
       const dv = (dietas as any[]).filter(d => d.usuarioId === v.id)
