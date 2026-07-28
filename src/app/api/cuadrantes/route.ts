@@ -4,6 +4,7 @@ import { registrarAudit, getUsuarioAudit } from '@/lib/audit'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { safeJsonParse } from '@/lib/utils'
+import { INDICATIVO_JEFE_SERVICIO, tramosJ44Desde } from '@/lib/dietas-j44'
 
 export async function GET(request: NextRequest) {
   try {
@@ -168,14 +169,18 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ success: true, guardia })
       }
 
-      const [configBaremo, configKm] = await Promise.all([
+      const [configBaremo, configKm, configJ44] = await Promise.all([
         prisma.configuracion.findUnique({ where: { clave: 'baremo_dietas' } }),
-        prisma.configuracion.findUnique({ where: { clave: 'precio_km' } })
+        prisma.configuracion.findUnique({ where: { clave: 'precio_km' } }),
+        prisma.configuracion.findUnique({ where: { clave: 'baremo_j44' } })
       ]);
+      // El Jefe de Servicio (J-44) tiene su propio baremo por franja horaria.
+      const esJefeServicio = fichaCheck?.indicativo2 === INDICATIVO_JEFE_SERVICIO;
       const rawBaremo = configBaremo?.valor;
-      const baremo: any[] = rawBaremo
+      const baremoGeneral: any[] = rawBaremo
         ? safeJsonParse(rawBaremo, [{ minHours: 4, amount: 29.45 }, { minHours: 8, amount: 49.15 }, { minHours: 12, amount: 72.37 }])
         : [{ minHours: 4, amount: 29.45 }, { minHours: 8, amount: 49.15 }, { minHours: 12, amount: 72.37 }];
+      const baremo: any[] = esJefeServicio ? tramosJ44Desde(configJ44?.valor) : baremoGeneral;
       const rawKm = configKm?.valor;
       const precioKm: number = rawKm
         ? (safeJsonParse<{ precio?: number }>(rawKm, {})?.precio ?? 0.19)
