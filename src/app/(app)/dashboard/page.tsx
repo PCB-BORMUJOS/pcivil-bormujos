@@ -503,7 +503,9 @@ function CalendarView({ eventos, guardias, resumenDisponibilidad, onEventClick, 
                   const dow = ds.getUTCDay();
                   ds.setUTCDate(ds.getUTCDate() + (dow === 0 ? -6 : 1 - dow));
                   const semanaKey = ds.toISOString().slice(0, 10);
-                  const mostrarGuardias = publicadoPorSemana[semanaKey] ?? false;
+                  // Los admins/coordinadores ven siempre los indicativos asignados,
+                  // esté publicada o no la semana (regla: los admins ven todo).
+                  const mostrarGuardias = esAdmin || (publicadoPorSemana[semanaKey] ?? false);
 
                   return (
                     <>
