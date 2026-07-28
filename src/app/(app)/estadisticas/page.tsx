@@ -517,66 +517,68 @@ export default function EstadisticasPage() {
 
                 {/* ── Tabla exclusiva J-44 (solo superadmin) ───────────── */}
                 {esSuperadmin && statsJ44 && (
-                  <Panel title={`Perfil J-44 — ${statsJ44.nombre} · Solo visible para Superadmin`}>
+                  <Panel title={`Jefe de Servicio J-44 — ${statsJ44.nombre} · Solo visible para Superadmin`}>
                     <div className="mb-4 flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg">
                       <Shield size={14} className="text-amber-600 flex-shrink-0" />
-                      <span className="text-xs text-amber-700 font-medium">Información confidencial — Acceso restringido a superadmin</span>
+                      <span className="text-xs text-amber-700 font-medium">Información confidencial · datos reales del cuadrante (horas e importe de cada dieta)</span>
                     </div>
-                    {/* Resumen general J-44 */}
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+
+                    {/* Resumen general J-44 (datos reales) */}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-5">
                       {[
-                        { label: 'Guardias totales', value: statsJ44.totalGuardias, color: 'indigo' },
-                        { label: 'Turno mañana',     value: statsJ44.guardiasMañana, color: 'sky' },
-                        { label: 'Turno tarde',      value: statsJ44.guardiasTarde,  color: 'orange' },
-                        { label: 'Turno noche',      value: statsJ44.guardiasNoche,  color: 'violet' },
-                        { label: 'Horas de servicio',value: `${statsJ44.horas} h`,   color: 'teal' },
-                        { label: 'Días con dieta',   value: statsJ44.diasServicio,   color: 'green' },
-                        { label: 'Importe dietas',   value: `${statsJ44.importeDietas.toFixed(2)} €`, color: 'emerald' },
-                        { label: 'Km desplazamiento',value: `${statsJ44.km.toFixed(0)} km`, color: 'blue' },
+                        { label: 'Turnos totales',        value: statsJ44.totalTurnos, color: 'indigo' },
+                        { label: 'Ordinarios (+4h)',      value: statsJ44.ordinarios,  color: 'sky' },
+                        { label: 'Extra +8h',             value: statsJ44.extra8,      color: 'amber' },
+                        { label: 'Extra +12h',            value: statsJ44.extra12,     color: 'red' },
+                        { label: 'Horas reales',          value: `${statsJ44.horas} h`, color: 'teal' },
+                        { label: 'Importe total',         value: `${statsJ44.importeDietas.toFixed(2)} €`, color: 'emerald' },
                       ].map(k => (
                         <div key={k.label} className={`bg-${k.color}-50 border border-${k.color}-100 rounded-xl p-3 text-center`}>
-                          <p className={`text-${k.color}-600 text-xs font-semibold mb-1`}>{k.label}</p>
-                          <p className={`text-${k.color}-800 text-xl font-black`}>{k.value}</p>
+                          <p className={`text-${k.color}-600 text-[11px] font-semibold mb-1 leading-tight`}>{k.label}</p>
+                          <p className={`text-${k.color}-800 text-lg font-black`}>{k.value}</p>
                         </div>
                       ))}
                     </div>
-                    {/* Detalle mensual J-44 */}
+
+                    {/* Detalle mensual J-44 — importe a la derecha */}
                     <div className="overflow-x-auto">
-                      <table className="w-full text-sm min-w-[600px]">
+                      <table className="w-full text-sm min-w-[640px]">
                         <thead>
                           <tr className="bg-slate-50 border-b border-slate-200">
                             <th className="text-left py-2 px-3 text-xs font-bold text-slate-500 uppercase">Mes</th>
-                            <th className="text-center py-2 px-3 text-xs font-bold text-slate-500 uppercase">Total guardias</th>
-                            <th className="text-center py-2 px-3 text-xs font-bold text-slate-500 uppercase">Mañana</th>
-                            <th className="text-center py-2 px-3 text-xs font-bold text-slate-500 uppercase">Tarde</th>
-                            <th className="text-center py-2 px-3 text-xs font-bold text-slate-500 uppercase">Noche</th>
+                            <th className="text-center py-2 px-3 text-xs font-bold text-slate-500 uppercase">Ordinarios<br/><span className="font-normal normal-case text-[10px] text-slate-400">+4h · 36,50 €</span></th>
+                            <th className="text-center py-2 px-3 text-xs font-bold text-slate-500 uppercase">Extra +8h<br/><span className="font-normal normal-case text-[10px] text-slate-400">59,60 €</span></th>
+                            <th className="text-center py-2 px-3 text-xs font-bold text-slate-500 uppercase">Extra +12h<br/><span className="font-normal normal-case text-[10px] text-slate-400">79,50 €</span></th>
+                            <th className="text-center py-2 px-3 text-xs font-bold text-slate-500 uppercase">Turnos</th>
                             <th className="text-center py-2 px-3 text-xs font-bold text-slate-500 uppercase">Horas</th>
+                            <th className="text-right py-2 px-3 text-xs font-bold text-slate-500 uppercase">Importe</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {statsJ44.meses.map((m: any) => (
+                          {statsJ44.meses.filter((m: any) => m.turnos > 0).map((m: any) => (
                             <tr key={m.mes} className="border-b border-slate-100 hover:bg-slate-50">
                               <td className="py-2 px-3 font-semibold text-slate-700">{m.mes}</td>
-                              <td className="py-2 px-3 text-center">
-                                {m.total > 0
-                                  ? <span className={`inline-block px-2 py-0.5 rounded font-bold text-xs ${m.total >= 2 ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>{m.total}</span>
-                                  : <span className="text-slate-300">—</span>}
-                              </td>
-                              <td className="py-2 px-3 text-center text-slate-600">{m.manana || '—'}</td>
-                              <td className="py-2 px-3 text-center text-slate-600">{m.tarde || '—'}</td>
-                              <td className="py-2 px-3 text-center text-slate-600">{m.noche || '—'}</td>
-                              <td className="py-2 px-3 text-center text-slate-500">{m.total > 0 ? `${m.manana*6 + m.tarde*5 + m.noche*9} h` : '—'}</td>
+                              <td className="py-2 px-3 text-center text-sky-700">{m.ordinarios || '—'}</td>
+                              <td className="py-2 px-3 text-center text-amber-700 font-semibold">{m.extra8 || '—'}</td>
+                              <td className="py-2 px-3 text-center text-red-700 font-semibold">{m.extra12 || '—'}</td>
+                              <td className="py-2 px-3 text-center text-slate-600">{m.turnos}</td>
+                              <td className="py-2 px-3 text-center text-teal-700">{m.horas} h</td>
+                              <td className="py-2 px-3 text-right font-bold text-emerald-700">{m.importe.toFixed(2)} €</td>
                             </tr>
                           ))}
+                          {statsJ44.meses.every((m: any) => m.turnos === 0) && (
+                            <tr><td colSpan={7} className="py-6 text-center text-slate-400 text-sm">Sin turnos registrados en {year}</td></tr>
+                          )}
                         </tbody>
                         <tfoot>
                           <tr className="bg-slate-50 border-t-2 border-slate-200 font-bold">
-                            <td className="py-2 px-3 text-xs text-slate-500 uppercase">Total año</td>
-                            <td className="py-2 px-3 text-center text-slate-800">{statsJ44.totalGuardias}</td>
-                            <td className="py-2 px-3 text-center text-sky-700">{statsJ44.guardiasMañana}</td>
-                            <td className="py-2 px-3 text-center text-orange-700">{statsJ44.guardiasTarde}</td>
-                            <td className="py-2 px-3 text-center text-violet-700">{statsJ44.guardiasNoche}</td>
+                            <td className="py-2 px-3 text-xs text-slate-500 uppercase">Total {year}</td>
+                            <td className="py-2 px-3 text-center text-sky-700">{statsJ44.ordinarios}</td>
+                            <td className="py-2 px-3 text-center text-amber-700">{statsJ44.extra8}</td>
+                            <td className="py-2 px-3 text-center text-red-700">{statsJ44.extra12}</td>
+                            <td className="py-2 px-3 text-center text-slate-800">{statsJ44.totalTurnos}</td>
                             <td className="py-2 px-3 text-center text-teal-700">{statsJ44.horas} h</td>
+                            <td className="py-2 px-3 text-right text-emerald-700 text-base">{statsJ44.importeDietas.toFixed(2)} €</td>
                           </tr>
                         </tfoot>
                       </table>

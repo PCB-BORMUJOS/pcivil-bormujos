@@ -313,18 +313,37 @@ export async function GET(request: NextRequest) {
         (v.fichaVoluntario as any)?.indicativo2 === 'J-44'
       )
       if (usuarioJ44) {
-        const gJ44 = (guardias as any[]).filter(g => g.usuarioId === usuarioJ44.id)
+        // Fuente de verdad: las DIETAS de J-44 (llevan las horas reales y el
+        // importe por franja). Cada dieta es un turno independiente.
         const dJ44 = (dietas as any[]).filter(d => d.usuarioId === usuarioJ44.id)
+
+        // Categoría de cada turno según las horas de la dieta (reflejan si se
+        // marcó +8h/+12h en el cuadrante): ordinario (>4h), extra >8h, extra >12h.
+        const categoria = (horas: number) => horas >= 12 ? 'extra12' : horas >= 8 ? 'extra8' : 'ordinario'
+        const H = (d: any) => Number(d.horasTrabajadas || 0)
+        const EUR = (d: any) => Number(d.totalDieta || 0)
+
         const mesesJ44 = Array.from({ length: 12 }, (_, i) => {
-          const gm = gJ44.filter(g => new Date(g.fecha).getMonth() === i)
+          const dm = dJ44.filter(d => {
+            const [y, m] = (d.mesAnio || '').split('-').map(Number)
+            return m === i + 1 && y === year
+          })
+          const ordinarios = dm.filter(d => categoria(H(d)) === 'ordinario')
+          const extra8 = dm.filter(d => categoria(H(d)) === 'extra8')
+          const extra12 = dm.filter(d => categoria(H(d)) === 'extra12')
           return {
             mes: MESES_ES[i],
-            total: gm.length,
-            manana: gm.filter(g => g.turno === 'mañana').length,
-            tarde:  gm.filter(g => g.turno === 'tarde').length,
-            noche:  gm.filter(g => g.turno === 'noche').length,
+            turnos: dm.length,
+            ordinarios: ordinarios.length,
+            extra8: extra8.length,
+            extra12: extra12.length,
+            manana: dm.filter(d => d.turno === 'mañana' || d.turno === 'manana').length,
+            tarde:  dm.filter(d => d.turno === 'tarde').length,
+            horas: +dm.reduce((a, d) => a + H(d), 0).toFixed(1),
+            importe: +dm.reduce((a, d) => a + EUR(d), 0).toFixed(2),
           }
         })
+
         statsJ44 = {
           id: usuarioJ44.id,
           numeroVoluntario: usuarioJ44.numeroVoluntario,
@@ -332,14 +351,15 @@ export async function GET(request: NextRequest) {
           area: (usuarioJ44.fichaVoluntario as any)?.areaAsignada || 'Sin área',
           categoria: (usuarioJ44.fichaVoluntario as any)?.categoria || 'VOLUNTARIO',
           activo: usuarioJ44.activo,
-          totalGuardias: gJ44.length,
-          guardiasMañana: gJ44.filter(g => g.turno === 'mañana').length,
-          guardiasTarde:  gJ44.filter(g => g.turno === 'tarde').length,
-          guardiasNoche:  gJ44.filter(g => g.turno === 'noche').length,
-          horas: gJ44.reduce((a: number, g: any) => a + (HORAS[g.turno] || 0), 0),
-          importeDietas: dJ44.reduce((a: number, d: any) => a + Number(d.totalDieta || 0), 0),
-          km: dJ44.reduce((a: number, d: any) => a + Number(d.kilometros || 0), 0),
-          diasServicio: dJ44.length,
+          totalTurnos: dJ44.length,
+          ordinarios: dJ44.filter(d => categoria(H(d)) === 'ordinario').length,
+          extra8: dJ44.filter(d => categoria(H(d)) === 'extra8').length,
+          extra12: dJ44.filter(d => categoria(H(d)) === 'extra12').length,
+          guardiasMañana: dJ44.filter(d => d.turno === 'mañana' || d.turno === 'manana').length,
+          guardiasTarde:  dJ44.filter(d => d.turno === 'tarde').length,
+          horas: +dJ44.reduce((a, d) => a + H(d), 0).toFixed(1),
+          importeDietas: +dJ44.reduce((a, d) => a + EUR(d), 0).toFixed(2),
+          diasServicio: new Set(dJ44.map(d => d.mesAnio + '_' + new Date(d.fecha).getDate())).size,
           meses: mesesJ44,
         }
       }
