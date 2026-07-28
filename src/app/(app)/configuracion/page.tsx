@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { Settings, Shield, CreditCard, History, Users, TrendingUp, Download, Edit, Loader2, Plus, X, Eye, EyeOff, Trash2, Save, ArrowUp, ArrowDown, ArrowUpDown, Lock } from 'lucide-react';
 import TrazabilidadPanel from '@/components/configuracion/TrazabilidadPanel';
+import { generarInformeDietasPDF } from '@/lib/informe-dietas';
 
 interface Usuario {
   id: string;
@@ -139,119 +140,76 @@ export default function ConfiguracionPage() {
     } catch { setReportData([]); setReportJ44(null); setDetalleJ44([]); } finally { setLoading(false); }
   };
 
-  const exportarPDF = () => {
+  const nombreMes = (m: string) => new Date(m + '-01T12:00:00').toLocaleDateString('es-ES', { month: 'long', year: 'numeric', timeZone: 'Europe/Madrid' });
+
+  const exportarPDF = async () => {
+    if (reportData.length === 0) return;
     const totalImporte = reportData.reduce((acc, r) => acc + r.total, 0);
     const totalDietas = reportData.reduce((acc, r) => acc + r.subtotalDietas, 0);
     const totalKm = reportData.reduce((acc, r) => acc + r.subtotalKm, 0);
     const totalDias = reportData.reduce((acc, r) => acc + r.dias, 0);
-    const filas = reportData.map(r => `
-      <tr>
-        <td>${r.indicativo}</td>
-        <td>${r.nombre}</td>
-        <td style="text-align:center">${r.dias}</td>
-        <td style="text-align:right">${r.subtotalDietas.toFixed(2)} €</td>
-        <td style="text-align:right">${r.subtotalKm.toFixed(2)} €</td>
-        <td style="text-align:right;font-weight:bold">${r.total.toFixed(2)} €</td>
-      </tr>`).join('');
-    const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
-      <title>Informe Dietas ${selectedMonth}</title>
-      <style>
-        body{font-family:Arial,sans-serif;font-size:12px;margin:20px;color:#111}
-        h1{font-size:16px;margin-bottom:4px}
-        p.sub{font-size:11px;color:#555;margin-bottom:16px}
-        table{width:100%;border-collapse:collapse}
-        th{background:#1e293b;color:#fff;padding:8px 10px;text-align:left;font-size:11px;text-transform:uppercase}
-        td{padding:7px 10px;border-bottom:1px solid #e2e8f0}
-        tr:nth-child(even) td{background:#f8fafc}
-        tfoot td{border-top:2px solid #1e293b;font-weight:bold;background:#f1f5f9}
-        .total-box{margin-top:20px;background:#1e293b;color:#fff;padding:14px 18px;border-radius:8px;display:flex;justify-content:space-between;align-items:center}
-        .total-box .amount{font-size:22px;font-weight:bold}
-        .total-box .meta{font-size:11px;color:#94a3b8;margin-top:4px}
-        @media print{body{margin:0}}
-      </style></head><body>
-      <h1>Protección Civil Bormujos — Informe de Dietas</h1>
-      <p class="sub">Período: ${selectedMonth} · Generado el ${new Date().toLocaleDateString('es-ES', { timeZone: 'Europe/Madrid' })}</p>
-      <table>
-        <thead><tr>
-          <th>Indicativo</th><th>Nombre</th><th style="text-align:center">Días</th>
-          <th style="text-align:right">Dietas</th><th style="text-align:right">Km</th><th style="text-align:right">Total</th>
-        </tr></thead>
-        <tbody>${filas}</tbody>
-        <tfoot><tr>
-          <td colspan="2">TOTALES</td>
-          <td style="text-align:center">${totalDias}</td>
-          <td style="text-align:right">${totalDietas.toFixed(2)} €</td>
-          <td style="text-align:right">${totalKm.toFixed(2)} €</td>
-          <td style="text-align:right">${totalImporte.toFixed(2)} €</td>
-        </tr></tfoot>
-      </table>
-      <div class="total-box">
-        <div><div class="amount">${totalImporte.toFixed(2)} €</div>
-        <div class="meta">${reportData.length} efectivo(s) · ${totalDias} dieta(s) registrada(s)</div></div>
-        <div style="font-size:11px;color:#94a3b8">Protección Civil Bormujos</div>
-      </div>
-      <script>window.onload=function(){window.print();}<\/script>
-      </body></html>`;
-    const win = window.open('', '_blank');
-    if (win) { win.document.write(html); win.document.close(); }
+    await generarInformeDietasPDF({
+      titulo: 'Informe de liquidacion de dietas',
+      periodoTexto: nombreMes(selectedMonth),
+      intro: [
+        'Se relaciona a continuacion la liquidacion de dietas del personal voluntario del Servicio de Proteccion Civil de Bormujos correspondiente al periodo indicado, con el numero de dias de servicio, el importe de dietas, el kilometraje y el total por efectivo.',
+      ],
+      columnas: [
+        { label: 'Indicativo', align: 'left', width: 24 },
+        { label: 'Nombre', align: 'left', width: 66 },
+        { label: 'Dias', align: 'center', width: 18 },
+        { label: 'Dietas', align: 'right', width: 28 },
+        { label: 'Km', align: 'right', width: 22 },
+        { label: 'Total', align: 'right', width: 24 },
+      ],
+      filas: reportData.map(r => [
+        r.indicativo, r.nombre, String(r.dias),
+        `${r.subtotalDietas.toFixed(2)} EUR`, `${r.subtotalKm.toFixed(2)} EUR`, `${r.total.toFixed(2)} EUR`,
+      ]),
+      totales: ['TOTALES', '', String(totalDias), `${totalDietas.toFixed(2)} EUR`, `${totalKm.toFixed(2)} EUR`, `${totalImporte.toFixed(2)} EUR`],
+      resumenImporte: `${totalImporte.toFixed(2)} EUR`,
+      resumenMeta: `${reportData.length} efectivo(s) · ${totalDias} dieta(s) registrada(s)`,
+      firmanteNombre: 'Emilio Simon Gomez',
+      firmanteCargo: 'Jefe de Proteccion Civil y Emergencias',
+      nombreArchivo: `Informe-dietas-${selectedMonth}.pdf`,
+    });
   };
 
   // Informe independiente del Jefe de Servicio (J-44), separado del resto.
-  const exportarPDFJ44 = () => {
+  const exportarPDFJ44 = async () => {
     if (!reportJ44) return;
-    const nombreMes = new Date(selectedMonth + '-01T12:00:00').toLocaleDateString('es-ES', { month: 'long', year: 'numeric', timeZone: 'Europe/Madrid' });
     const fmtF = (f: any) => new Date(f).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Europe/Madrid' }).replace(/\//g, '-');
-    const filas = detalleJ44.map((d: any) => `
-      <tr>
-        <td>${fmtF(d.fecha)}</td>
-        <td style="text-transform:capitalize">${d.turno}</td>
-        <td style="text-align:center">${d.horas} h</td>
-        <td style="text-align:right">${Number(d.importeDia).toFixed(2)} €</td>
-        <td style="text-align:right">${Number(d.subtotalKm).toFixed(2)} €</td>
-        <td style="text-align:right;font-weight:bold">${Number(d.total).toFixed(2)} €</td>
-      </tr>`).join('');
-    const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
-      <title>Liquidacion Jefe de Servicio J-44 ${selectedMonth}</title>
-      <style>
-        body{font-family:Arial,sans-serif;font-size:12px;margin:20px;color:#111}
-        h1{font-size:16px;margin-bottom:2px}
-        h2{font-size:13px;color:#b45309;margin:2px 0 4px}
-        p.sub{font-size:11px;color:#555;margin-bottom:16px}
-        table{width:100%;border-collapse:collapse}
-        th{background:#b45309;color:#fff;padding:8px 10px;text-align:left;font-size:11px;text-transform:uppercase}
-        td{padding:7px 10px;border-bottom:1px solid #e2e8f0}
-        tr:nth-child(even) td{background:#fff7ed}
-        tfoot td{border-top:2px solid #b45309;font-weight:bold;background:#fff7ed}
-        .total-box{margin-top:20px;background:#b45309;color:#fff;padding:14px 18px;border-radius:8px;display:flex;justify-content:space-between;align-items:center}
-        .total-box .amount{font-size:22px;font-weight:bold}
-        @media print{body{margin:0}}
-      </style></head><body>
-      <h1>Proteccion Civil Bormujos</h1>
-      <h2>Liquidacion del Jefe de Servicio (indicativo J-44)</h2>
-      <p class="sub">${reportJ44.nombre || ''} ${reportJ44.apellidos || ''} · Periodo: ${nombreMes} · Generado el ${new Date().toLocaleDateString('es-ES', { timeZone: 'Europe/Madrid' })}</p>
-      <table>
-        <thead><tr>
-          <th>Fecha</th><th>Turno</th><th style="text-align:center">Horas</th>
-          <th style="text-align:right">Dieta</th><th style="text-align:right">Km</th><th style="text-align:right">Total</th>
-        </tr></thead>
-        <tbody>${filas}</tbody>
-        <tfoot><tr>
-          <td colspan="2">TOTALES</td>
-          <td style="text-align:center">${reportJ44.dias}</td>
-          <td style="text-align:right">${reportJ44.subtotalDietas.toFixed(2)} €</td>
-          <td style="text-align:right">${reportJ44.subtotalKm.toFixed(2)} €</td>
-          <td style="text-align:right">${reportJ44.total.toFixed(2)} €</td>
-        </tr></tfoot>
-      </table>
-      <div class="total-box">
-        <div><div class="amount">${reportJ44.total.toFixed(2)} €</div>
-        <div style="font-size:11px;color:#fed7aa;margin-top:4px">${reportJ44.dias} dia(s) de servicio · liquidacion independiente del resto de indicativos</div></div>
-        <div style="font-size:11px;color:#fed7aa">Jefe de Servicio J-44</div>
-      </div>
-      <script>window.onload=function(){window.print();}<\/script>
-      </body></html>`;
-    const win = window.open('', '_blank');
-    if (win) { win.document.write(html); win.document.close(); }
+    await generarInformeDietasPDF({
+      titulo: 'Liquidacion del Jefe de Servicio (J-44)',
+      periodoTexto: nombreMes(selectedMonth),
+      acento: [180, 83, 9],
+      intro: [
+        `${reportJ44.nombre || ''} ${reportJ44.apellidos || ''} - indicativo J-44.`.trim(),
+        'Liquidacion de dietas del Jefe de Servicio, independiente del resto de indicativos, con el detalle dia a dia de los turnos realizados y su importe por franja horaria.',
+      ],
+      columnas: [
+        { label: 'Fecha', align: 'left', width: 34 },
+        { label: 'Turno', align: 'left', width: 34 },
+        { label: 'Horas', align: 'center', width: 26 },
+        { label: 'Dieta', align: 'right', width: 30 },
+        { label: 'Km', align: 'right', width: 26 },
+        { label: 'Total', align: 'right', width: 32 },
+      ],
+      filas: detalleJ44.map((d: any) => [
+        fmtF(d.fecha),
+        String(d.turno).charAt(0).toUpperCase() + String(d.turno).slice(1),
+        `${d.horas} h`,
+        `${Number(d.importeDia).toFixed(2)} EUR`,
+        `${Number(d.subtotalKm).toFixed(2)} EUR`,
+        `${Number(d.total).toFixed(2)} EUR`,
+      ]),
+      totales: ['TOTALES', '', `${reportJ44.dias} dias`, `${reportJ44.subtotalDietas.toFixed(2)} EUR`, `${reportJ44.subtotalKm.toFixed(2)} EUR`, `${reportJ44.total.toFixed(2)} EUR`],
+      resumenImporte: `${reportJ44.total.toFixed(2)} EUR`,
+      resumenMeta: `${reportJ44.dias} dia(s) de servicio · liquidacion independiente del resto de indicativos`,
+      firmanteNombre: 'Emilio Simon Gomez',
+      firmanteCargo: 'Jefe de Proteccion Civil y Emergencias',
+      nombreArchivo: `Liquidacion-J44-${selectedMonth}.pdf`,
+    });
   };
 
   // Cargar usuarios, roles y servicios
