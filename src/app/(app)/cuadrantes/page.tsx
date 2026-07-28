@@ -204,6 +204,29 @@ export default function CuadrantesPage() {
       const data = await res.json()
       const guardias: GuardiaExistente[] = data.guardias || []
       setGuardiasGuardadas(guardias)
+      // Reconstruir el estado visual de las jornadas extraordinarias (+8h/+12h)
+      // a partir de las horas selladas en cada guardia, para que se vean marcadas
+      // tras recargar tanto en el chip (por persona) como en la cabecera (slot).
+      const hp: Record<string, number> = {}
+      const porSlot: Record<string, Set<number>> = {}
+      guardias.forEach((g: any) => {
+        const h = Number(g.horasTurno ?? 0)
+        const f = new Date(g.fecha)
+        const ds = `${f.getFullYear()}-${String(f.getMonth() + 1).padStart(2, '0')}-${String(f.getDate()).padStart(2, '0')}`
+        const sk = slotKey(ds, g.turno)
+        if (h === 8 || h === 12) {
+          hp[`${g.usuarioId}_${ds}_${g.turno}`] = h
+        }
+        ;(porSlot[sk] ||= new Set()).add(h)
+      })
+      // La cabecera del slot solo se marca si TODAS las guardias del slot tienen
+      // el mismo tramo extraordinario (8 o 12).
+      const hs: Record<string, number> = {}
+      Object.entries(porSlot).forEach(([sk, set]) => {
+        if (set.size === 1) { const unico = Array.from(set)[0]; if (unico === 8 || unico === 12) hs[sk] = unico }
+      })
+      setHorasPersona(hp)
+      setHorasSlot(hs)
       const weekDays = getWeekDays(semanaStart)
       const dispMap: Record<string, UsuarioDisponible[]> = {}
       ;(data.disponibilidades || []).forEach((disp: any) => {
@@ -752,20 +775,30 @@ export default function CuadrantesPage() {
                         <button
                           key={h}
                           disabled={!!guardandoHoras[sk] || asignadosOp.length === 0}
-                          title={`Forzar baremo de ${h}h para todo el turno (jornada excepcional)`}
+                          title={horasSlot[sk] === h ? `Quitar la jornada de ${h}h a todo el turno` : `Aplicar jornada de ${h}h a todo el turno`}
                           onClick={async () => {
                             if (asignadosOp.length === 0) { alert('Asigna personas al turno primero'); return }
+                            // Alternar para TODO el turno: si ya está activo este
+                            // tramo, se desactiva y vuelve a jornada ordinaria.
+                            const activar = horasSlot[sk] !== h
+                            const hr = getHorarioSlot(sk, turno.key)
+                            const horasOrdinarias = calcularHorasEntreTiempos(hr.inicio, hr.fin)
+                            const horasEnviar = activar ? h : horasOrdinarias
                             setGuardandoHoras(p => ({ ...p, [sk]: true }))
-                            let ok = 0
                             for (const uid of asignadosOp) {
-                              const res = await fetch('/api/cuadrantes/dieta-slot', {
+                              await fetch('/api/cuadrantes/dieta-slot', {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ usuarioId: uid, fecha: dateStr, turno: turno.key, horas: h })
+                                body: JSON.stringify({ usuarioId: uid, fecha: dateStr, turno: turno.key, horas: horasEnviar })
                               })
-                              if (res.ok) ok++
                             }
-                            setHorasSlot(p => ({ ...p, [sk]: h }))
+                            // Sincronizar el estado por persona de los afectados
+                            setHorasPersona(p => {
+                              const n = { ...p }
+                              asignadosOp.forEach(uid => { const pk = `${uid}_${dateStr}_${turno.key}`; if (activar) n[pk] = h; else delete n[pk] })
+                              return n
+                            })
+                            setHorasSlot(p => { const n = { ...p }; if (activar) n[sk] = h; else delete n[sk]; return n })
                             setGuardandoHoras(p => ({ ...p, [sk]: false }))
                           }}
                           className={'text-[8px] font-bold px-1.5 py-0.5 rounded transition-colors ' + (
@@ -945,14 +978,19 @@ export default function CuadrantesPage() {
                                       <button
                                         key={h}
                                         disabled={!!guardandoPersona[pk]}
-                                        title={`Baremo ${h}h para ${u.numeroVoluntario} (jornada excepcional)`}
+                                        title={activo ? `Quitar jornada de ${h}h a ${u.numeroVoluntario} (volver a ordinaria)` : `Marcar jornada de ${h}h para ${u.numeroVoluntario}`}
                                         onClick={async () => {
+                                          // Alternar: si ya está activo este tramo, se desactiva
+                                          // (vuelve a jornada ordinaria); si no, se activa.
+                                          const activar = !activo
+                                          const hr = getHorarioSlot(sk, turno.key)
+                                          const horasOrdinarias = calcularHorasEntreTiempos(hr.inicio, hr.fin)
                                           setGuardandoPersona(p => ({ ...p, [pk]: true }))
-                                          setHorasPersona(p => ({ ...p, [pk]: h }))
+                                          setHorasPersona(p => { const n = { ...p }; if (activar) n[pk] = h; else delete n[pk]; return n })
                                           await fetch('/api/cuadrantes/dieta-slot', {
                                             method: 'POST',
                                             headers: { 'Content-Type': 'application/json' },
-                                            body: JSON.stringify({ usuarioId: u.id, fecha: dateStr, turno: turno.key, horas: h })
+                                            body: JSON.stringify({ usuarioId: u.id, fecha: dateStr, turno: turno.key, horas: activar ? h : horasOrdinarias })
                                           })
                                           setGuardandoPersona(p => ({ ...p, [pk]: false }))
                                         }}
