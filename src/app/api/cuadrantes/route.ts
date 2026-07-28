@@ -111,10 +111,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Fecha, turno y usuarioId son requeridos' }, { status: 400 })
     }
     const existente = await prisma.guardia.findFirst({
-      where: { usuarioId, fecha: new Date(fecha + 'T12:00:00.000Z'), turno }
+      where: { usuarioId, fecha: new Date(fecha + 'T12:00:00.000Z'), turno },
+      include: { usuario: { select: { id: true, nombre: true, apellidos: true, numeroVoluntario: true } } }
     })
     if (existente) {
-      return NextResponse.json({ error: 'Ya existe una guardia para este usuario en esta fecha y turno' }, { status: 400 })
+      // Idempotente: la guardia ya existe (reguardado o guardado concurrente).
+      // Se devuelve OK sin regenerar la dieta, para no sobrescribir un tramo
+      // forzado con el botón +8h/+12h del slot.
+      return NextResponse.json({ success: true, guardia: existente, yaExistia: true })
     }
     const usuarioAsignado = await prisma.usuario.findUnique({ where: { id: usuarioId } })
     const guardia = await prisma.guardia.create({
