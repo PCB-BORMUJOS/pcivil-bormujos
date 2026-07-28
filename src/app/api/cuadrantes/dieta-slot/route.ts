@@ -66,9 +66,11 @@ export async function POST(request: NextRequest) {
     // Total acumulado del día = horas anteriores + horas de este turno
     const horasTotalesDia = horasOtrosTurnos + horas
 
-    // Baremo se calcula sobre el TOTAL del día
+    // El voluntariado acumula por día; el Jefe de Servicio (J-44) computa cada
+    // turno de forma independiente (mañana y tarde = dos dietas de "más de 4h").
+    const horasParaTramo = esJefeServicio ? horas : horasTotalesDia
     const tramo = [...baremo].reverse().find(
-      t => horasTotalesDia >= (t.horasMin ?? t.minHours ?? 0)
+      t => horasParaTramo >= (t.horasMin ?? t.minHours ?? 0)
     )
     const importeDia = tramo?.importe ?? tramo?.amount ?? 0
 
@@ -81,9 +83,10 @@ export async function POST(request: NextRequest) {
     const subtotalKm    = Math.round(kilometros * precioKm * 100) / 100
     const totalDieta    = Math.round((importeDia + subtotalKm) * 100) / 100
 
-    // Si hay otros turnos, recalcular su importeDia a 0 (el importe correcto está en este turno)
-    // porque el baremo se recalcula con el nuevo total
-    if (dietasOtrosTurnos.length > 0) {
+    // Si hay otros turnos, recalcular su importeDia a 0 (el importe correcto está
+    // en este turno) porque el baremo se recalcula con el nuevo total. NO aplica
+    // a J-44: cada uno de sus turnos conserva su propia dieta independiente.
+    if (!esJefeServicio && dietasOtrosTurnos.length > 0) {
       // Actualizar las dietas de otros turnos: importeDia = 0, totalDieta = solo km si aplica
       // Primero eliminamos el importe del turno que ya tenía km
       const dietaConKm = await prisma.dieta.findFirst({
