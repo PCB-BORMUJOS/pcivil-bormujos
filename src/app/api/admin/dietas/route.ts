@@ -85,17 +85,29 @@ export async function GET(request: NextRequest) {
     // Detalle día a día del Jefe de Servicio para su informe propio.
     // Orden: por fecha y, dentro del día, mañana antes que tarde.
     const ordenTurno = (t: string) => (t === 'mañana' || t === 'manana') ? 0 : t === 'tarde' ? 1 : 2
+    // Fin de semana: la dieta se guarda a mediodía UTC, así que getUTCDay da el
+    // día correcto (0 = domingo, 6 = sábado).
+    const esFinDeSemana = (f: Date) => { const dow = new Date(f).getUTCDay(); return dow === 0 || dow === 6 }
     const detalleJ44 = dietasJ44
-      .map(d => ({
-        id: d.id,
-        fecha: d.fecha, turno: d.turno,
-        horas: Number(d.horasTrabajadas),
-        importeDia: Number(d.subtotalDietas),
-        subtotalKm: Number(d.subtotalKm),
-        total: Number(d.totalDieta),
-        extra: Number(d.horasTrabajadas) >= 8,
-        motivo: (d as any).motivoExtra || null,
-      }))
+      .map(d => {
+        const horas = Number(d.horasTrabajadas)
+        const finde = esFinDeSemana(d.fecha)
+        // Es extraordinario si supera las 8h (jornada extra) o si es fin de
+        // semana (aunque sea de +4h): en J-44 el sábado y el domingo cuentan
+        // como servicio extraordinario y llevan su propio motivo.
+        const extra = horas >= 8 || finde
+        return {
+          id: d.id,
+          fecha: d.fecha, turno: d.turno,
+          horas,
+          importeDia: Number(d.subtotalDietas),
+          subtotalKm: Number(d.subtotalKm),
+          total: Number(d.totalDieta),
+          extra,
+          finDeSemana: finde,
+          motivo: (d as any).motivoExtra || null,
+        }
+      })
       .sort((a, b) => {
         const t = new Date(a.fecha).getTime() - new Date(b.fecha).getTime()
         return t !== 0 ? t : ordenTurno(a.turno) - ordenTurno(b.turno)

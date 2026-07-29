@@ -739,7 +739,7 @@ export default function ConfiguracionPage() {
                       <tr key={d.id || i} className={`hover:bg-amber-50/40 ${d.extra ? 'bg-amber-50/30' : ''}`}>
                         <td className="p-3 text-slate-700 whitespace-nowrap">{new Date(d.fecha).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Europe/Madrid' }).replace(/\//g, '-')}</td>
                         <td className="p-3 text-slate-700 capitalize">{d.turno}</td>
-                        <td className="p-3 text-center text-slate-600">{d.horas} h{d.extra && <span className="ml-1 text-[10px] font-bold text-amber-600 bg-amber-100 px-1 rounded">EXTRA</span>}</td>
+                        <td className="p-3 text-center text-slate-600">{d.horas} h{d.extra && <span className="ml-1 text-[10px] font-bold text-amber-600 bg-amber-100 px-1 rounded">{d.finDeSemana && d.horas < 8 ? 'FINDE' : 'EXTRA'}</span>}</td>
                         <td className="p-3">
                           {d.extra ? (
                             <input

@@ -305,7 +305,7 @@ export async function generarLiquidacionJ44PDF(o: LiquidacionJ44Opts) {
 
   // ── Sección 1: turnos ordinarios ────────────────────────────────────────────
   dibujarTabla(
-    'Turnos ordinarios (mas de 4 horas)',
+    'Turnos ordinarios entre semana (mas de 4 horas)',
     [
       { label: 'Fecha', align: 'left', width: 34 },
       { label: 'Turno', align: 'left', width: 44 },
@@ -325,7 +325,7 @@ export async function generarLiquidacionJ44PDF(o: LiquidacionJ44Opts) {
 
   // ── Sección 2: servicios extraordinarios ────────────────────────────────────
   dibujarTabla(
-    'Servicios extraordinarios (mas de 8h / mas de 12h)',
+    'Servicios extraordinarios (fin de semana y jornadas de mas de 8h / 12h)',
     [
       { label: 'Fecha', align: 'left', width: 26 },
       { label: 'Motivo', align: 'left', width: 66 },
