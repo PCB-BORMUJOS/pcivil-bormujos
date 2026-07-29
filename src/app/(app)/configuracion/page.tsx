@@ -54,6 +54,7 @@ export default function ConfiguracionPage() {
   const [reportData, setReportData] = useState<any[]>([]);
   const [reportJ44, setReportJ44] = useState<any | null>(null);
   const [detalleJ44, setDetalleJ44] = useState<any[]>([]);
+  const [firmanteJ44, setFirmanteJ44] = useState<'emilio' | 'diego'>('emilio');
 
   // Estados para usuarios
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
@@ -211,9 +212,10 @@ export default function ConfiguracionPage() {
       totalOrdinarios: suma(ordinarios),
       totalExtras: suma(extras),
       totalGeneral: Number(reportJ44.total),
-      firmanteNombre: 'Emilio Simon Gomez',
-      firmanteCargo: 'Jefe de Proteccion Civil y Emergencias',
-      nombreArchivo: `Liquidacion-J44-${selectedMonth}.pdf`,
+      firmanteNombre: firmanteJ44 === 'diego' ? 'Diego Gavino Rodriguez' : 'Emilio Simon Gomez',
+      firmanteCargo: firmanteJ44 === 'diego' ? 'Subinspector Jefe de Policia Local de Bormujos' : 'Jefe de Proteccion Civil y Emergencias',
+      ocultarImporte: firmanteJ44 === 'diego',
+      nombreArchivo: `Liquidacion-J44-${selectedMonth}${firmanteJ44 === 'diego' ? '-PL' : ''}.pdf`,
     });
   };
 
@@ -718,9 +720,20 @@ export default function ConfiguracionPage() {
                   <h3 className="font-bold text-amber-800 flex items-center gap-2"><Lock size={15} /> Liquidación del Jefe de Servicio (J-44)</h3>
                   <p className="text-xs text-amber-600 mt-0.5">Separada por completo del resto de indicativos · informe independiente · solo superadmin</p>
                 </div>
-                <button onClick={exportarPDFJ44} className="bg-amber-600 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-amber-700">
-                  <Download size={16} /> Informe J-44
-                </button>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <label className="text-xs font-semibold text-amber-700">Firma:</label>
+                  <select
+                    value={firmanteJ44}
+                    onChange={e => setFirmanteJ44(e.target.value as 'emilio' | 'diego')}
+                    className="border border-amber-300 rounded-lg px-2 py-2 text-xs bg-white focus:outline-none focus:border-amber-500"
+                  >
+                    <option value="emilio">Emilio Simón Gómez — Jefe de Protección Civil (J-44)</option>
+                    <option value="diego">Diego Gaviño Rodríguez — Subinspector Jefe de Policía Local</option>
+                  </select>
+                  <button onClick={exportarPDFJ44} className="bg-amber-600 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-amber-700">
+                    <Download size={16} /> Informe J-44
+                  </button>
+                </div>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-left min-w-[500px]">

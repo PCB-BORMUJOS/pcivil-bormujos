@@ -194,6 +194,7 @@ export interface LiquidacionJ44Opts {
   firmanteNombre: string
   firmanteCargo: string
   nombreArchivo: string
+  ocultarImporte?: boolean       // si firma un tercero (p.ej. Policía Local), no se muestra el importe total
 }
 
 const AZUL_CORP: [number, number, number] = [40, 54, 102] // #283666
@@ -344,19 +345,24 @@ export async function generarLiquidacionJ44PDF(o: LiquidacionJ44Opts) {
   )
 
   // ── Total general ───────────────────────────────────────────────────────────
-  asegurar(20)
-  doc.setFillColor(...AZUL_CORP)
-  doc.rect(MARGEN, y, ANCHO, 18, 'F')
-  doc.setTextColor(255, 255, 255)
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(18)
-  doc.text(eur(o.totalGeneral), MARGEN + 4, y + 9)
-  doc.setFont('helvetica', 'normal')
-  doc.setFontSize(8.5)
-  doc.text(txt(`Total de la liquidacion · ${o.ordinarios.length} ordinario(s) + ${o.extras.length} extraordinario(s)`), MARGEN + 4, y + 14)
-  doc.text('Jefe de Servicio J-44', W - MARGEN - 4, y + 14, { align: 'right' })
-  doc.setTextColor(0, 0, 0)
-  y += 26
+  // Si firma un tercero (p. ej. la Policía Local) no se muestra el importe.
+  if (!o.ocultarImporte) {
+    asegurar(20)
+    doc.setFillColor(...AZUL_CORP)
+    doc.rect(MARGEN, y, ANCHO, 18, 'F')
+    doc.setTextColor(255, 255, 255)
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(18)
+    doc.text(eur(o.totalGeneral), MARGEN + 4, y + 9)
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(8.5)
+    doc.text(txt(`Total de la liquidacion · ${o.ordinarios.length} ordinario(s) + ${o.extras.length} extraordinario(s)`), MARGEN + 4, y + 14)
+    doc.text('Jefe de Servicio J-44', W - MARGEN - 4, y + 14, { align: 'right' })
+    doc.setTextColor(0, 0, 0)
+    y += 26
+  } else {
+    y += 6
+  }
 
   // ── Firma ───────────────────────────────────────────────────────────────────
   asegurar(30)
