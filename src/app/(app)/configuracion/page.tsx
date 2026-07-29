@@ -729,19 +729,37 @@ export default function ConfiguracionPage() {
                       <th className="p-3 text-xs font-bold text-amber-400 uppercase">Fecha</th>
                       <th className="p-3 text-xs font-bold text-amber-400 uppercase">Turno</th>
                       <th className="p-3 text-xs font-bold text-amber-400 uppercase text-center">Horas</th>
+                      <th className="p-3 text-xs font-bold text-amber-400 uppercase">Motivo (servicio extra)</th>
                       <th className="p-3 text-xs font-bold text-amber-400 uppercase text-right">Dieta</th>
-                      <th className="p-3 text-xs font-bold text-amber-400 uppercase text-right">Km</th>
                       <th className="p-3 text-xs font-bold text-amber-400 uppercase text-right">Total</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-amber-50">
                     {detalleJ44.map((d, i) => (
-                      <tr key={i} className="hover:bg-amber-50/40">
+                      <tr key={d.id || i} className={`hover:bg-amber-50/40 ${d.extra ? 'bg-amber-50/30' : ''}`}>
                         <td className="p-3 text-slate-700 whitespace-nowrap">{new Date(d.fecha).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Europe/Madrid' }).replace(/\//g, '-')}</td>
                         <td className="p-3 text-slate-700 capitalize">{d.turno}</td>
-                        <td className="p-3 text-center text-slate-600">{d.horas} h</td>
+                        <td className="p-3 text-center text-slate-600">{d.horas} h{d.extra && <span className="ml-1 text-[10px] font-bold text-amber-600 bg-amber-100 px-1 rounded">EXTRA</span>}</td>
+                        <td className="p-3">
+                          {d.extra ? (
+                            <input
+                              type="text"
+                              defaultValue={d.motivo || ''}
+                              placeholder="Describe el motivo del servicio extra"
+                              onBlur={async (e) => {
+                                const motivo = e.target.value;
+                                if (motivo === (d.motivo || '')) return;
+                                const res = await fetch('/api/admin/dietas', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: d.id, motivo }) });
+                                if (res.ok) { setDetalleJ44(prev => prev.map(x => x.id === d.id ? { ...x, motivo: motivo.trim() || null } : x)); }
+                                else alert('No se pudo guardar el motivo');
+                              }}
+                              className="w-full min-w-[180px] px-2 py-1 border border-amber-200 rounded text-xs focus:outline-none focus:border-amber-400"
+                            />
+                          ) : (
+                            <span className="text-xs text-slate-300">—</span>
+                          )}
+                        </td>
                         <td className="p-3 text-right text-slate-600">{Number(d.importeDia).toFixed(2)} €</td>
-                        <td className="p-3 text-right text-slate-600">{Number(d.subtotalKm).toFixed(2)} €</td>
                         <td className="p-3 text-right font-bold text-amber-700">{Number(d.total).toFixed(2)} €</td>
                       </tr>
                     ))}

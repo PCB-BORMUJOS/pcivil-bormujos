@@ -87,6 +87,7 @@ export async function GET(request: NextRequest) {
     const ordenTurno = (t: string) => (t === 'mañana' || t === 'manana') ? 0 : t === 'tarde' ? 1 : 2
     const detalleJ44 = dietasJ44
       .map(d => ({
+        id: d.id,
         fecha: d.fecha, turno: d.turno,
         horas: Number(d.horasTrabajadas),
         importeDia: Number(d.subtotalDietas),
@@ -108,6 +109,28 @@ export async function GET(request: NextRequest) {
     })
   } catch (error) {
     console.error('Error al obtener dietas:', error)
+    return NextResponse.json({ error: 'Error interno' }, { status: 500 })
+  }
+}
+
+export async function PUT(request: NextRequest) {
+  const session = await getServerSession(authOptions)
+  if (!session) return new Response(JSON.stringify({ error: 'No autorizado' }), { status: 401 })
+  const rol = (session.user as any)?.rol?.toLowerCase() || ''
+  // El motivo de las dietas de J-44 solo lo edita superadmin.
+  if (rol !== 'superadmin') {
+    return new Response(JSON.stringify({ error: 'Sin permisos suficientes' }), { status: 403 })
+  }
+  try {
+    const { id, motivo } = await request.json()
+    if (!id) return NextResponse.json({ error: 'ID requerido' }, { status: 400 })
+    const dieta = await prisma.dieta.update({
+      where: { id },
+      data: { motivoExtra: (typeof motivo === 'string' && motivo.trim()) ? motivo.trim() : null },
+    })
+    return NextResponse.json({ success: true, motivo: dieta.motivoExtra })
+  } catch (error) {
+    console.error('Error al guardar el motivo:', error)
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
   }
 }
