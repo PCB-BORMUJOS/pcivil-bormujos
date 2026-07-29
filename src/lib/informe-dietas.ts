@@ -178,3 +178,198 @@ export async function generarInformeDietasPDF(o: InformeDietasOpts) {
 
   doc.save(o.nombreArchivo)
 }
+
+// ── Liquidación específica del Jefe de Servicio (J-44) ────────────────────────
+export interface FilaOrdinariaJ44 { fecha: string; turno: string; horas: number; importe: number; total: number }
+export interface FilaExtraJ44 { fecha: string; motivo: string; horas: number; importe: number; total: number }
+export interface LiquidacionJ44Opts {
+  periodoTexto: string
+  rangoTexto: string            // "01-06-2026 al 30-06-2026"
+  nombre: string
+  ordinarios: FilaOrdinariaJ44[]
+  extras: FilaExtraJ44[]
+  totalOrdinarios: number
+  totalExtras: number
+  totalGeneral: number
+  firmanteNombre: string
+  firmanteCargo: string
+  nombreArchivo: string
+}
+
+const AZUL_CORP: [number, number, number] = [40, 54, 102] // #283666
+
+export async function generarLiquidacionJ44PDF(o: LiquidacionJ44Opts) {
+  const hoy = new Date()
+  const fechaHoy = hoy.toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' })
+  const tituloDoc = 'Liquidacion Jefe de Servicio'
+
+  const aytoLogo = await cargarImagen('/images/logo-ayuntamiento.png')
+  const pcLogo = await cargarImagen('/images/logo-pc-blanco.png')
+
+  const { jsPDF } = await import('jspdf')
+  const doc = new (jsPDF as any)({ format: 'a4', unit: 'mm', compress: true })
+  drawHeaderCorporativo(doc, { titulo: tituloDoc, aytoLogo, pcLogo })
+  drawFooterCorporativo(doc)
+
+  let y = 37
+  const nuevaPagina = () => {
+    doc.addPage()
+    drawHeaderCorporativo(doc, { titulo: tituloDoc, aytoLogo, pcLogo })
+    drawFooterCorporativo(doc)
+    doc.setTextColor(0, 0, 0)
+    y = 35
+  }
+  const asegurar = (alto: number) => { if (y + alto > TOPE) nuevaPagina() }
+  const eur = (n: number) => n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' EUR'
+
+  // ── Título descriptivo ──────────────────────────────────────────────────────
+  doc.setTextColor(0, 0, 0)
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(12.5)
+  const tituloTexto = 'Liquidacion de las dietas correspondientes al Jefe del Servicio de Proteccion Civil del Ayuntamiento de Bormujos'
+  const tituloLineas = doc.splitTextToSize(txt(tituloTexto), ANCHO)
+  doc.text(tituloLineas, MARGEN, y)
+  y += tituloLineas.length * 6 + 2
+
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(10)
+  doc.setTextColor(85, 85, 85)
+  doc.text(txt(`${o.nombre} - indicativo J-44`), MARGEN, y)
+  y += 5
+  doc.text(txt(`Periodo: ${o.periodoTexto}  (del ${o.rangoTexto})   ·   Generado el ${hoy.toLocaleDateString('es-ES')}`), MARGEN, y)
+  y += 6
+  doc.setTextColor(0, 0, 0)
+  doc.setDrawColor(200, 200, 200)
+  doc.line(MARGEN, y, W - MARGEN, y)
+  y += 8
+
+  // ── Utilidad de tabla ───────────────────────────────────────────────────────
+  interface Col { label: string; align?: 'left' | 'center' | 'right'; width: number }
+  const dibujarTabla = (rotulo: string, cols: Col[], filas: string[][], totales: string[]) => {
+    const xIni = (i: number) => MARGEN + cols.slice(0, i).reduce((s, c) => s + c.width, 0)
+    const px = (i: number) => {
+      const c = cols[i]; const x0 = xIni(i)
+      return c.align === 'right' ? x0 + c.width - 2 : c.align === 'center' ? x0 + c.width / 2 : x0 + 2
+    }
+    const al = (i: number) => cols[i].align ?? 'left'
+
+    asegurar(14)
+    // Rótulo de sección
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(10)
+    doc.setTextColor(...AZUL_CORP)
+    doc.text(txt(rotulo), MARGEN, y)
+    y += 3
+
+    const cabecera = () => {
+      asegurar(9)
+      doc.setFillColor(...AZUL_CORP)
+      doc.rect(MARGEN, y, ANCHO, 8, 'F')
+      doc.setTextColor(255, 255, 255)
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(8.5)
+      cols.forEach((c, i) => doc.text(txt(c.label).toUpperCase(), px(i), y + 5.3, { align: al(i) }))
+      doc.setTextColor(0, 0, 0)
+      y += 8
+    }
+    cabecera()
+
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(9)
+    if (filas.length === 0) {
+      doc.setFillColor(248, 248, 248); doc.rect(MARGEN, y, ANCHO, 7, 'F')
+      doc.setTextColor(120, 120, 120)
+      doc.text('Sin registros', MARGEN + ANCHO / 2, y + 4.8, { align: 'center' })
+      doc.setTextColor(0, 0, 0)
+      y += 7
+    }
+    filas.forEach((fila, idx) => {
+      if (y + 7 > TOPE) { nuevaPagina(); cabecera(); doc.setFont('helvetica', 'normal'); doc.setFontSize(9) }
+      if (idx % 2 === 1) { doc.setFillColor(244, 246, 250); doc.rect(MARGEN, y, ANCHO, 7, 'F') }
+      fila.forEach((val, i) => {
+        const linea = doc.splitTextToSize(txt(val), cols[i].width - 3)[0] || ''
+        doc.text(linea, px(i), y + 4.8, { align: al(i) })
+      })
+      y += 7
+    })
+
+    // Subtotal
+    asegurar(8)
+    doc.setFillColor(224, 230, 240)
+    doc.rect(MARGEN, y, ANCHO, 8, 'F')
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(9)
+    totales.forEach((val, i) => { if (val) doc.text(txt(val), px(i), y + 5.3, { align: al(i) }) })
+    y += 8 + 6
+  }
+
+  // ── Sección 1: turnos ordinarios ────────────────────────────────────────────
+  dibujarTabla(
+    'Turnos ordinarios (mas de 4 horas)',
+    [
+      { label: 'Fecha', align: 'left', width: 34 },
+      { label: 'Turno', align: 'left', width: 44 },
+      { label: 'Horas', align: 'center', width: 28 },
+      { label: 'Importe dieta', align: 'right', width: 38 },
+      { label: 'Total', align: 'right', width: 38 },
+    ],
+    o.ordinarios.map(d => [
+      d.fecha,
+      d.turno.charAt(0).toUpperCase() + d.turno.slice(1),
+      `${d.horas} h`,
+      eur(d.importe),
+      eur(d.total),
+    ]),
+    ['Subtotal ordinarios', '', String(o.ordinarios.length) + ' turnos', '', eur(o.totalOrdinarios)],
+  )
+
+  // ── Sección 2: servicios extraordinarios ────────────────────────────────────
+  dibujarTabla(
+    'Servicios extraordinarios (mas de 8h / mas de 12h)',
+    [
+      { label: 'Fecha', align: 'left', width: 26 },
+      { label: 'Motivo', align: 'left', width: 66 },
+      { label: 'Horas', align: 'center', width: 22 },
+      { label: 'Importe dieta', align: 'right', width: 34 },
+      { label: 'Total', align: 'right', width: 34 },
+    ],
+    o.extras.map(d => [
+      d.fecha,
+      d.motivo || '-',
+      `${d.horas} h`,
+      eur(d.importe),
+      eur(d.total),
+    ]),
+    ['Subtotal extraordinarios', '', String(o.extras.length) + ' serv.', '', eur(o.totalExtras)],
+  )
+
+  // ── Total general ───────────────────────────────────────────────────────────
+  asegurar(20)
+  doc.setFillColor(...AZUL_CORP)
+  doc.rect(MARGEN, y, ANCHO, 18, 'F')
+  doc.setTextColor(255, 255, 255)
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(18)
+  doc.text(eur(o.totalGeneral), MARGEN + 4, y + 9)
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(8.5)
+  doc.text(txt(`Total de la liquidacion · ${o.ordinarios.length} ordinario(s) + ${o.extras.length} extraordinario(s)`), MARGEN + 4, y + 14)
+  doc.text('Jefe de Servicio J-44', W - MARGEN - 4, y + 14, { align: 'right' })
+  doc.setTextColor(0, 0, 0)
+  y += 26
+
+  // ── Firma ───────────────────────────────────────────────────────────────────
+  asegurar(30)
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(10.5)
+  const cx = W / 2
+  doc.text(txt(`En Bormujos a ${fechaHoy}`), cx, y, { align: 'center' })
+  y += 16
+  doc.setFont('helvetica', 'bold')
+  doc.text(txt(o.firmanteNombre), cx, y, { align: 'center' })
+  doc.setFont('helvetica', 'normal')
+  doc.text(txt(o.firmanteCargo), cx, y + 5, { align: 'center' })
+  doc.text('Ayuntamiento de Bormujos', cx, y + 10, { align: 'center' })
+
+  doc.save(o.nombreArchivo)
+}

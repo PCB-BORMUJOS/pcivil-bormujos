@@ -985,12 +985,18 @@ export default function CuadrantesPage() {
                                           const activar = !activo
                                           const hr = getHorarioSlot(sk, turno.key)
                                           const horasOrdinarias = calcularHorasEntreTiempos(hr.inicio, hr.fin)
+                                          // Al activar un turno extra se pide el motivo del servicio.
+                                          let motivo: string | null = null
+                                          if (activar) {
+                                            motivo = window.prompt(`Motivo del servicio extra de ${h}h para ${u.numeroVoluntario} (${dateStr}, ${turno.key}):`, '')
+                                            if (motivo === null) return // cancelado
+                                          }
                                           setGuardandoPersona(p => ({ ...p, [pk]: true }))
                                           setHorasPersona(p => { const n = { ...p }; if (activar) n[pk] = h; else delete n[pk]; return n })
                                           await fetch('/api/cuadrantes/dieta-slot', {
                                             method: 'POST',
                                             headers: { 'Content-Type': 'application/json' },
-                                            body: JSON.stringify({ usuarioId: u.id, fecha: dateStr, turno: turno.key, horas: activar ? h : horasOrdinarias })
+                                            body: JSON.stringify({ usuarioId: u.id, fecha: dateStr, turno: turno.key, horas: activar ? h : horasOrdinarias, motivo })
                                           })
                                           setGuardandoPersona(p => ({ ...p, [pk]: false }))
                                         }}

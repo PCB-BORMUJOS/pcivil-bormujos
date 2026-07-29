@@ -453,6 +453,7 @@ model Dieta {
   mesAnio         String   @map("mes_anio")
   estado          String   @default("pendiente")
   notas           String?
+  motivoExtra     String?  @map("motivo_extra")
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
   usuario         Usuario  @relation(fields: [usuarioId], references: [id])

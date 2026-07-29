@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
     const session = await getServerSession(authOptions)
     if (!session?.user?.email) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
-    const { usuarioId, fecha, turno, horas } = await request.json()
+    const { usuarioId, fecha, turno, horas, motivo } = await request.json()
     if (!usuarioId || !fecha || !turno || !horas) {
       return NextResponse.json({ error: 'Faltan campos' }, { status: 400 })
     }
@@ -158,6 +158,7 @@ export async function POST(request: NextRequest) {
         mesAnio,
         estado: 'pendiente',
         notas: `${horasTotalesDia}h día (${desglose}) - baremo ${importeDia}€`,
+        motivoExtra: (horas >= 8 && typeof motivo === 'string' && motivo.trim()) ? motivo.trim() : null,
       }
     })
 

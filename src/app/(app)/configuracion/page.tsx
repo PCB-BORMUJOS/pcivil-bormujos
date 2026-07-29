@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { Settings, Shield, CreditCard, History, Users, TrendingUp, Download, Edit, Loader2, Plus, X, Eye, EyeOff, Trash2, Save, ArrowUp, ArrowDown, ArrowUpDown, Lock } from 'lucide-react';
 import TrazabilidadPanel from '@/components/configuracion/TrazabilidadPanel';
-import { generarInformeDietasPDF } from '@/lib/informe-dietas';
+import { generarInformeDietasPDF, generarLiquidacionJ44PDF } from '@/lib/informe-dietas';
 
 interface Usuario {
   id: string;
@@ -179,33 +179,38 @@ export default function ConfiguracionPage() {
   const exportarPDFJ44 = async () => {
     if (!reportJ44) return;
     const fmtF = (f: any) => new Date(f).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Europe/Madrid' }).replace(/\//g, '-');
-    await generarInformeDietasPDF({
-      titulo: 'Liquidacion del Jefe de Servicio (J-44)',
+    // Rango del mes: 01/MM/AA al último día.
+    const [y, m] = selectedMonth.split('-').map(Number);
+    const ultimoDia = new Date(y, m, 0).getDate();
+    const dosDig = (n: number) => String(n).padStart(2, '0');
+    const aa = String(y).slice(2);
+    const rangoTexto = `${dosDig(1)}-${dosDig(m)}-${aa} al ${dosDig(ultimoDia)}-${dosDig(m)}-${aa}`;
+
+    const ordinarios = detalleJ44.filter((d: any) => !d.extra);
+    const extras = detalleJ44.filter((d: any) => d.extra);
+    const suma = (arr: any[]) => arr.reduce((a, d) => a + Number(d.total), 0);
+
+    await generarLiquidacionJ44PDF({
       periodoTexto: nombreMes(selectedMonth),
-      acento: [180, 83, 9],
-      intro: [
-        `${reportJ44.nombre || ''} ${reportJ44.apellidos || ''} - indicativo J-44.`.trim(),
-        'Liquidacion de dietas del Jefe de Servicio, independiente del resto de indicativos, con el detalle dia a dia de los turnos realizados y su importe por franja horaria.',
-      ],
-      columnas: [
-        { label: 'Fecha', align: 'left', width: 34 },
-        { label: 'Turno', align: 'left', width: 34 },
-        { label: 'Horas', align: 'center', width: 26 },
-        { label: 'Dieta', align: 'right', width: 30 },
-        { label: 'Km', align: 'right', width: 26 },
-        { label: 'Total', align: 'right', width: 32 },
-      ],
-      filas: detalleJ44.map((d: any) => [
-        fmtF(d.fecha),
-        String(d.turno).charAt(0).toUpperCase() + String(d.turno).slice(1),
-        `${d.horas} h`,
-        `${Number(d.importeDia).toFixed(2)} EUR`,
-        `${Number(d.subtotalKm).toFixed(2)} EUR`,
-        `${Number(d.total).toFixed(2)} EUR`,
-      ]),
-      totales: ['TOTALES', '', `${reportJ44.dias} dias`, `${reportJ44.subtotalDietas.toFixed(2)} EUR`, `${reportJ44.subtotalKm.toFixed(2)} EUR`, `${reportJ44.total.toFixed(2)} EUR`],
-      resumenImporte: `${reportJ44.total.toFixed(2)} EUR`,
-      resumenMeta: `${reportJ44.dias} dia(s) de servicio · liquidacion independiente del resto de indicativos`,
+      rangoTexto,
+      nombre: `${reportJ44.nombre || ''} ${reportJ44.apellidos || ''}`.trim(),
+      ordinarios: ordinarios.map((d: any) => ({
+        fecha: fmtF(d.fecha),
+        turno: String(d.turno),
+        horas: Number(d.horas),
+        importe: Number(d.importeDia),
+        total: Number(d.total),
+      })),
+      extras: extras.map((d: any) => ({
+        fecha: fmtF(d.fecha),
+        motivo: d.motivo || '',
+        horas: Number(d.horas),
+        importe: Number(d.importeDia),
+        total: Number(d.total),
+      })),
+      totalOrdinarios: suma(ordinarios),
+      totalExtras: suma(extras),
+      totalGeneral: Number(reportJ44.total),
       firmanteNombre: 'Emilio Simon Gomez',
       firmanteCargo: 'Jefe de Proteccion Civil y Emergencias',
       nombreArchivo: `Liquidacion-J44-${selectedMonth}.pdf`,
