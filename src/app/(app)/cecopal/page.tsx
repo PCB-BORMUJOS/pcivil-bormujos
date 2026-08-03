@@ -219,7 +219,31 @@ export default function CecopalPage() {
   }
 
   const getHoraActual = () => new Date().toLocaleTimeString('es-ES', { timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit' })
+  const WALKIES_LIST = ['WJ01', 'WJ02', ...Array.from({ length: 25 }, (_, i) => `W${String(i + 1).padStart(2, '0')}`)]
   const responsableTurno = turno.find(g => g.rol === 'Responsable' || g.rol === 'Apoyo/Cecopal' || g.rol === 'Cecopal')
+
+  // Asigna un walkie a un indicativo al inicio del turno (queda registrado en la
+  // guardia y se vuelca automáticamente al parte al generarlo).
+  const asignarWalkie = async (guardiaId: string, walkie: string) => {
+    setTurno(prev => prev.map(g => g.id === guardiaId ? { ...g, walkie } : g))
+    try {
+      await fetch('/api/cecopal', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'asignar-walkie', guardiaId, walkie }) })
+    } catch (e) { console.error('Error asignando walkie:', e) }
+  }
+
+  // Desarrollo del servicio: texto que se va registrando durante la incidencia y
+  // que se vuelca al cuerpo del parte (no se pierde nada de información).
+  const guardarDesarrollo = (valor: string) => {
+    if (!incidenciaActiva) return
+    fetch('/api/cecopal', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'actualizar', id: incidenciaActiva.id, desarrollo: valor }) }).catch(() => {})
+  }
+  const anadirHoraDesarrollo = () => {
+    if (!incidenciaActiva) return
+    const prev = incidenciaActiva.desarrollo || ''
+    const nuevo = (prev ? prev.replace(/\s*$/, '') + '\n' : '') + `[${getHoraActual()}] `
+    patchIncidencia(incidenciaActiva.id, { desarrollo: nuevo })
+    guardarDesarrollo(nuevo)
+  }
   const totalAlertas = (alertas.botiquines?.length || 0) + (alertas.deas?.length || 0) + (alertas.vehiculos?.length || 0)
   const tipoActivo = TIPOS_INCIDENCIA.find(t => t.value === incidenciaActiva?.tipoIncidencia)
   const TipoIcon = tipoActivo?.icon || AlertTriangle
@@ -333,20 +357,23 @@ export default function CecopalPage() {
         return g?.usuario?.numeroVoluntario || g?.usuario?.nombre || ''
       }
       const indicativoVeh = (vid: string) => vehiculos.find((v: any) => v.id === vid)?.indicativo || ''
+      const walkieDe = (uid: string) => turno.find((x: any) => x.usuarioId === uid)?.walkie || ''
       const idsPersonal: string[] = incidenciaActiva.voluntariosIds || []
       const idsVehiculos: string[] = incidenciaActiva.vehiculosIds || []
-      const persIndicativos = idsPersonal.map(indicativoDe).filter(Boolean)
+      // Personal con su walkie asignado al inicio del turno.
+      const personal = idsPersonal.map((uid: string) => ({ indicativo: indicativoDe(uid), walkie: walkieDe(uid) })).filter(p => p.indicativo)
+      const persIndicativos = personal.map(p => p.indicativo)
       const vehIndicativos = idsVehiculos.map(indicativoVeh).filter(Boolean)
 
       // Tabla izquierda (tabla1): vehículos en las 4 primeras filas y el personal
       // en la columna EQUIPO (filas 0-5). Se rellena la izquierda primero.
       const tabla1 = Array.from({ length: 8 }, (_, i) => ({
         vehiculo: i < 4 ? (vehIndicativos[i] || '') : '',
-        equipo: persIndicativos[i] || '',
-        walkie: '',
+        equipo: personal[i]?.indicativo || '',
+        walkie: personal[i]?.walkie || '',
       }))
       // Tabla derecha (tabla2): personal sobrante a partir de la fila 6.
-      const tabla2 = Array.from({ length: 8 }, (_, i) => ({ equipo: persIndicativos[i + 6] || '', walkie: '' }))
+      const tabla2 = Array.from({ length: 8 }, (_, i) => ({ equipo: personal[i + 6]?.indicativo || '', walkie: personal[i + 6]?.walkie || '' }))
 
       // equipoWalkies para la BD y el PDF (coherente con las tablas).
       const equipoWalkies = [
@@ -391,6 +418,14 @@ export default function CecopalPage() {
         disponible: incidenciaActiva.horaDisponible || '00:00',
       }
 
+      // Cuerpo del parte (introducción / desarrollo / conclusión). El desarrollo
+      // que se ha ido registrando durante la incidencia se vuelca aquí para que
+      // no se pierda; luego puede ampliarse/mejorarse desde el formulario.
+      const desarrolloTexto = (incidenciaActiva.desarrollo || '').trim()
+      const desarrolloDetallado = desarrolloTexto
+        ? `INTRODUCCIÓN:\n\nDESARROLLO:\n${desarrolloTexto}\n\nCONCLUSIÓN:\n`
+        : ''
+
       // informacionExtra = estado COMPLETO del formulario del parte (el formulario
       // lo carga tal cual: tablas, tipologías, tiempos, heridos, etc.).
       const informacionExtra = {
@@ -401,6 +436,7 @@ export default function CecopalPage() {
         heridos: '', heridosNum: '', fallecidos: '', fallecidosNum: '',
         matriculasImplicados: ['', '', '', '', ''],
         observaciones: observacionesFinal,
+        desarrolloDetallado,
         indicativosInforman: indicativosPersonal.join(', '),
         indicativoCumplimenta: indicativoResp, responsableTurno: indicativoResp,
         descripcionAccidente: '',
@@ -423,6 +459,7 @@ export default function CecopalPage() {
         indicativoCumplimenta: indicativoResp,
         responsableTurno: indicativoResp,
         observaciones: observacionesFinal,
+        desarrolloDetallado,
         tipologias: tipologiasArr,
         tipologiasOtrosTexto: {},
         fotosUrls: [],
@@ -522,9 +559,20 @@ export default function CecopalPage() {
               <div className="px-3 py-2.5 border-b border-slate-700 flex items-center gap-2"><Users size={13} className="text-blue-400" /><h3 className="text-white text-xs font-semibold uppercase tracking-wider">Personal en Turno</h3></div>
               <div className="divide-y divide-slate-700/50">
                 {turno.length === 0 ? <div className="px-3 py-4 text-center text-slate-500 text-xs">Sin guardias</div> : turno.map(g => (
-                  <div key={g.id} className="px-3 py-2.5 flex items-center justify-between">
-                    <div><p className="text-white text-xs font-medium">{g.usuario.nombre} {g.usuario.apellidos}</p><div className="flex items-center gap-1.5 mt-0.5">{g.usuario.numeroVoluntario && <span className="text-xs text-blue-400 font-mono">{g.usuario.numeroVoluntario}</span>}{g.rol && <span className="text-xs text-slate-500">{g.rol}</span>}</div></div>
-                    {g.usuario.telefono && <a href={`tel:${g.usuario.telefono}`} className="text-slate-500 hover:text-emerald-400 transition-colors"><Phone size={12} /></a>}
+                  <div key={g.id} className="px-3 py-2.5 flex items-center justify-between gap-2">
+                    <div className="min-w-0"><p className="text-white text-xs font-medium truncate">{g.usuario.nombre} {g.usuario.apellidos}</p><div className="flex items-center gap-1.5 mt-0.5">{g.usuario.numeroVoluntario && <span className="text-xs text-blue-400 font-mono">{g.usuario.numeroVoluntario}</span>}{g.rol && <span className="text-xs text-slate-500">{g.rol}</span>}</div></div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <select
+                        value={g.walkie || ''}
+                        onChange={e => asignarWalkie(g.id, e.target.value)}
+                        title="Walkie asignado"
+                        className="bg-slate-700 border border-slate-600 text-white text-xs font-mono rounded px-1.5 py-1 focus:outline-none focus:border-blue-500"
+                      >
+                        <option value="">Walkie…</option>
+                        {WALKIES_LIST.map(w => <option key={w} value={w}>{w}</option>)}
+                      </select>
+                      {g.usuario.telefono && <a href={`tel:${g.usuario.telefono}`} className="text-slate-500 hover:text-emerald-400 transition-colors"><Phone size={12} /></a>}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -698,6 +746,13 @@ export default function CecopalPage() {
                     {incidenciaActiva.horaLlegada && <div className="flex gap-3"><div className="w-1 rounded-full bg-amber-500 flex-shrink-0" /><div><p className="text-white text-xs font-medium">Llegada a escena</p><p className="text-slate-500 text-xs">{incidenciaActiva.horaLlegada}</p></div></div>}
                     {incidenciaActiva.horaTerminado && <div className="flex gap-3"><div className="w-1 rounded-full bg-emerald-500 flex-shrink-0" /><div><p className="text-white text-xs font-medium">Fin de intervención</p><p className="text-slate-500 text-xs">{incidenciaActiva.horaTerminado}</p></div></div>}
                     {incidenciaActiva.horaDisponible && <div className="flex gap-3"><div className="w-1 rounded-full bg-purple-500 flex-shrink-0" /><div><p className="text-white text-xs font-medium">Unidad disponible</p><p className="text-slate-500 text-xs">{incidenciaActiva.horaDisponible}</p></div></div>}
+                  </div>
+                  <div className="p-3 border-t border-slate-700 space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-semibold text-purple-300 uppercase tracking-wider flex items-center gap-1.5"><FileText size={11} /> Desarrollo del servicio</label>
+                      <button onClick={anadirHoraDesarrollo} className="flex items-center gap-1 text-xs text-purple-300 hover:text-purple-200 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 rounded px-1.5 py-0.5 transition-colors"><Clock size={10} /> Hora</button>
+                    </div>
+                    <textarea placeholder="Se irá volcando al cuerpo del parte (introducción-desarrollo-conclusión)…" rows={4} value={incidenciaActiva.desarrollo || ''} onChange={e => patchIncidencia(incidenciaActiva.id, { desarrollo: e.target.value })} onBlur={e => guardarDesarrollo(e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded-lg p-2.5 text-white text-xs placeholder-slate-500 focus:outline-none focus:border-purple-500 resize-none" />
                   </div>
                   <div className="p-3 border-t border-slate-700"><textarea placeholder="Añadir observación..." rows={2} value={incidenciaActiva.observaciones || ''} onChange={e => patchIncidencia(incidenciaActiva.id, { observaciones: e.target.value })} onBlur={e => { fetch('/api/cecopal', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'actualizar', id: incidenciaActiva.id, observaciones: e.target.value }) }).catch(() => {}) }} className="w-full bg-slate-700 border border-slate-600 rounded-lg p-2.5 text-white text-xs placeholder-slate-500 focus:outline-none focus:border-blue-500 resize-none" /></div>
                 </div>

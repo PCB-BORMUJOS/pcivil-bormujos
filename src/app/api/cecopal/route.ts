@@ -221,6 +221,7 @@ export async function PUT(request: NextRequest) {
       const data: any = {}
       const campos = [
         'tipoIncidencia', 'origenAviso', 'direccion', 'descripcion', 'observaciones',
+        'desarrollo',
         'vehiculosIds', 'voluntariosIds', 'horaLlamada', 'horaSalida', 'horaLlegada',
         'horaTerminado', 'horaDisponible',
       ]
@@ -229,6 +230,14 @@ export async function PUT(request: NextRequest) {
       const _auditAct = getUsuarioAudit(session)
       await registrarAudit({ accion: 'UPDATE', entidad: 'IncidenciaCecopal', entidadId: incidencia.id, descripcion: `Incidencia actualizada: ${incidencia.numero}`, usuarioId: _auditAct.usuarioId, usuarioNombre: _auditAct.usuarioNombre, modulo: 'CECOPAL' })
       return NextResponse.json({ incidencia })
+    }
+    // Asignar/actualizar el walkie de un indicativo al inicio del turno.
+    if (tipo === 'asignar-walkie') {
+      const guardia = await prisma.guardia.update({
+        where: { id: body.guardiaId },
+        data: { walkie: (typeof body.walkie === 'string' && body.walkie.trim()) ? body.walkie.trim() : null },
+      })
+      return NextResponse.json({ guardia })
     }
     // Marcar una novedad como leída (deja registro de quién y cuándo).
     if (tipo === 'novedad-leer') {

@@ -342,6 +342,7 @@ model Guardia {
   horaInicio       String?  @map("hora_inicio")
   horaFin          String?  @map("hora_fin")
   descripcionExtra String?  @map("descripcion_extra")
+  walkie           String?  // Walkie asignado al indicativo al inicio del turno
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
   servicio   Servicio @relation(fields: [servicioId], references: [id])
@@ -1232,6 +1233,7 @@ model IncidenciaCecopal {
   vehiculosIds   Json     @default("[]") @map("vehiculos_ids")
   voluntariosIds Json     @default("[]") @map("voluntarios_ids")
   observaciones  String?  @db.Text
+  desarrollo     String?  @db.Text
   titulo         String?
   leida          Boolean  @default(false)
   leidaPor       String?  @map("leida_por")
