@@ -21,6 +21,19 @@ async function generarNumero(): Promise<string> {
   return `CEC-${year}-${String(count + 1).padStart(4, '0')}`
 }
 
+// Rango UTC [inicio, fin) del día natural de Madrid que contiene "ahora".
+// Necesario porque createdAt es un instante: usar medianoche UTC dejaba fuera
+// lo registrado en las primeras horas del día en Madrid (UTC+1/+2).
+function rangoDiaMadrid(): { inicio: Date; fin: Date } {
+  const ahora = new Date()
+  const hoyStr = ahora.toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' }) // YYYY-MM-DD en Madrid
+  const offMs =
+    new Date(ahora.toLocaleString('en-US', { timeZone: 'Europe/Madrid' })).getTime() -
+    new Date(ahora.toLocaleString('en-US', { timeZone: 'UTC' })).getTime()
+  const inicio = new Date(new Date(hoyStr + 'T00:00:00Z').getTime() - offMs)
+  return { inicio, fin: new Date(inicio.getTime() + 86400000) }
+}
+
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session?.user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
@@ -28,12 +41,17 @@ export async function GET(request: NextRequest) {
   const tipo = searchParams.get('tipo')
   try {
     if (tipo === 'novedades-hoy') {
-      const hoy = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' })
+      // Si se pasa "desde" (inicio del servicio), se recogen las novedades desde
+      // ese instante hasta ahora: así un servicio que empieza a las 20:00 y se
+      // prolonga hasta la madrugada incluye TODAS sus novedades aunque cruce la
+      // medianoche. Sin "desde", se usa el día natural de Madrid.
+      const desde = searchParams.get('desde')
+      const rango = rangoDiaMadrid()
+      const createdAtWhere = desde
+        ? { gte: new Date(desde) }
+        : { gte: rango.inicio, lt: rango.fin }
       const novedades = await prisma.incidenciaCecopal.findMany({
-        where: {
-          estado: 'novedad',
-          createdAt: { gte: new Date(hoy), lt: new Date(new Date(hoy).getTime() + 86400000) }
-        },
+        where: { estado: 'novedad', createdAt: createdAtWhere },
         orderBy: { createdAt: 'asc' },
         select: { id: true, descripcion: true, horaLlamada: true, createdAt: true }
       })
@@ -189,19 +207,16 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ incidencia })
     }
     if (tipo === 'actualizar') {
-      const incidencia = await prisma.incidenciaCecopal.update({
-        where: { id },
-        data: {
-          descripcion: body.descripcion,
-          observaciones: body.observaciones,
-          vehiculosIds: body.vehiculosIds,
-          voluntariosIds: body.voluntariosIds,
-          horaSalida: body.horaSalida,
-          horaLlegada: body.horaLlegada,
-          horaTerminado: body.horaTerminado,
-          horaDisponible: body.horaDisponible,
-        }
-      })
+      // Solo se actualizan los campos presentes en el cuerpo (undefined = no
+      // tocar), para no borrar datos al guardar una edición parcial.
+      const data: any = {}
+      const campos = [
+        'tipoIncidencia', 'origenAviso', 'direccion', 'descripcion', 'observaciones',
+        'vehiculosIds', 'voluntariosIds', 'horaLlamada', 'horaSalida', 'horaLlegada',
+        'horaTerminado', 'horaDisponible',
+      ]
+      campos.forEach(c => { if (body[c] !== undefined) data[c] = body[c] })
+      const incidencia = await prisma.incidenciaCecopal.update({ where: { id }, data })
       const _auditAct = getUsuarioAudit(session)
       await registrarAudit({ accion: 'UPDATE', entidad: 'IncidenciaCecopal', entidadId: incidencia.id, descripcion: `Incidencia actualizada: ${incidencia.numero}`, usuarioId: _auditAct.usuarioId, usuarioNombre: _auditAct.usuarioNombre, modulo: 'CECOPAL' })
       return NextResponse.json({ incidencia })

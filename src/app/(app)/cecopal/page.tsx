@@ -70,6 +70,9 @@ export default function CecopalPage() {
   const [vehiculos, setVehiculos] = useState<any[]>([])
   const [alertas, setAlertas] = useState<any>({ botiquines: [], deas: [], vehiculos: [] })
   const [incidenciaActiva, setIncidenciaActiva] = useState<any>(null)
+  const [editandoInc, setEditandoInc] = useState(false)
+  const [editInc, setEditInc] = useState<any>({})
+  const [guardandoEdicion, setGuardandoEdicion] = useState(false)
   const [loading, setLoading] = useState(true)
   const [modo, setModo] = useState<'turno' | 'nueva' | 'activa'>('turno')
   const [guardando, setGuardando] = useState(false)
@@ -223,6 +226,30 @@ export default function CecopalPage() {
     } catch (e) { alert('Error de red: ' + String(e)) } finally { setGuardando(false) }
   }
 
+  const abrirEdicionInc = () => {
+    if (!incidenciaActiva) return
+    setEditInc({
+      tipoIncidencia: incidenciaActiva.tipoIncidencia,
+      origenAviso: incidenciaActiva.origenAviso,
+      direccion: incidenciaActiva.direccion || '',
+      descripcion: incidenciaActiva.descripcion || '',
+      vehiculosIds: incidenciaActiva.vehiculosIds || [],
+      voluntariosIds: incidenciaActiva.voluntariosIds || [],
+    })
+    setEditandoInc(true)
+  }
+
+  const guardarCambiosInc = async () => {
+    if (!incidenciaActiva) return
+    setGuardandoEdicion(true)
+    try {
+      const res = await fetch('/api/cecopal', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'actualizar', id: incidenciaActiva.id, ...editInc }) })
+      const data = await res.json()
+      if (data.incidencia) { setIncidenciaActiva((prev: any) => ({ ...prev, ...data.incidencia })); setEditandoInc(false) }
+      else alert('Error: ' + (data.error || 'no se pudo guardar'))
+    } catch (e) { alert('Error de red al guardar los cambios') } finally { setGuardandoEdicion(false) }
+  }
+
   const resolverIncidencia = async () => {
     if (!incidenciaActiva) return
     setGuardando(true)
@@ -237,7 +264,17 @@ export default function CecopalPage() {
     setGenerandoParte(true)
     try {
       const hoy = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' })
-      const obsNovedades = novedadesHoy.length > 0 ? 'NOVEDADES DEL TURNO:\n' + novedadesHoy.map((n: any) => `- ${n.horaLlamada || ''} ${n.descripcion}`).join('\n') : ''
+      // Novedades del SERVICIO: desde su inicio (createdAt) hasta ahora, de modo
+      // que un servicio que cruza la medianoche incluye todas sus novedades.
+      let novedadesServicio: any[] = novedadesHoy
+      try {
+        if (incidenciaActiva.createdAt) {
+          const rNov = await fetch(`/api/cecopal?tipo=novedades-hoy&desde=${encodeURIComponent(incidenciaActiva.createdAt)}`)
+          const dNov = await rNov.json()
+          if (Array.isArray(dNov.novedades)) novedadesServicio = dNov.novedades
+        }
+      } catch { /* se usa el fallback ya cargado */ }
+      const obsNovedades = novedadesServicio.length > 0 ? 'NOVEDADES DEL TURNO:\n' + novedadesServicio.map((n: any) => `- ${n.horaLlamada || ''} ${n.descripcion}`).join('\n') : ''
       const observacionesFinal = [incidenciaActiva.observaciones, obsNovedades].filter(Boolean).join('\n\n')
 
       // Personal interviniente: se inyecta en equipoWalkies (indicativos del
@@ -447,12 +484,65 @@ export default function CecopalPage() {
               <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-3">
                   <div className="bg-slate-800 rounded-xl border border-red-500/30 overflow-hidden">
-                    <div className={`p-4 border-b border-slate-700 flex items-center gap-3 ${tipoActivo?.color || 'bg-slate-700'}`}><TipoIcon size={18} className="text-white" /><div><p className="text-white font-bold text-sm">{tipoActivo?.label || incidenciaActiva.tipoIncidencia}</p><p className="text-white/60 text-xs">{incidenciaActiva.numero}</p></div></div>
-                    <div className="p-4 space-y-3">
-                      <div><p className="text-slate-400 text-xs uppercase tracking-wider font-medium mb-1">Localización</p><p className="text-white text-sm flex items-start gap-1.5"><MapPin size={12} className="text-slate-400 mt-0.5 flex-shrink-0" />{incidenciaActiva.direccion}</p></div>
-                      {incidenciaActiva.descripcion && <div><p className="text-slate-400 text-xs uppercase tracking-wider font-medium mb-1">Descripción</p><p className="text-slate-300 text-sm">{incidenciaActiva.descripcion}</p></div>}
-                      <div><p className="text-slate-400 text-xs uppercase tracking-wider font-medium mb-1">Origen</p><p className="text-white text-sm">{incidenciaActiva.origenAviso}</p></div>
+                    <div className={`p-4 border-b border-slate-700 flex items-center gap-3 ${tipoActivo?.color || 'bg-slate-700'}`}>
+                      <TipoIcon size={18} className="text-white" />
+                      <div className="flex-1"><p className="text-white font-bold text-sm">{tipoActivo?.label || incidenciaActiva.tipoIncidencia}</p><p className="text-white/60 text-xs">{incidenciaActiva.numero}</p></div>
+                      {!editandoInc && <button onClick={abrirEdicionInc} title="Editar datos de la incidencia" className="p-1.5 rounded-lg bg-white/15 hover:bg-white/25 text-white"><Edit size={14} /></button>}
                     </div>
+                    {!editandoInc ? (
+                      <div className="p-4 space-y-3">
+                        <div><p className="text-slate-400 text-xs uppercase tracking-wider font-medium mb-1">Localización</p><p className="text-white text-sm flex items-start gap-1.5"><MapPin size={12} className="text-slate-400 mt-0.5 flex-shrink-0" />{incidenciaActiva.direccion}</p></div>
+                        {incidenciaActiva.descripcion && <div><p className="text-slate-400 text-xs uppercase tracking-wider font-medium mb-1">Descripción</p><p className="text-slate-300 text-sm">{incidenciaActiva.descripcion}</p></div>}
+                        <div><p className="text-slate-400 text-xs uppercase tracking-wider font-medium mb-1">Origen</p><p className="text-white text-sm">{ORIGENES_AVISO.find(o => o.value === incidenciaActiva.origenAviso)?.label || incidenciaActiva.origenAviso}</p></div>
+                      </div>
+                    ) : (
+                      <div className="p-4 space-y-3">
+                        <div>
+                          <p className="text-slate-400 text-xs uppercase tracking-wider font-medium mb-1.5">Tipo</p>
+                          <div className="grid grid-cols-4 gap-1.5">
+                            {TIPOS_INCIDENCIA.map(t => { const Ic = t.icon; return (
+                              <button key={t.value} onClick={() => setEditInc((p: any) => ({ ...p, tipoIncidencia: t.value }))} title={t.label} className={`flex flex-col items-center gap-1 p-2 rounded-lg border text-[10px] ${editInc.tipoIncidencia === t.value ? t.color + ' text-white border-white/40' : 'bg-slate-700/50 border-slate-600 text-slate-300 hover:border-slate-500'}`}><Ic size={14} />{t.label}</button>
+                            )})}
+                          </div>
+                        </div>
+                        <div>
+                          <p className="text-slate-400 text-xs uppercase tracking-wider font-medium mb-1.5">Origen del aviso</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {ORIGENES_AVISO.map(o => (
+                              <button key={o.value} onClick={() => setEditInc((p: any) => ({ ...p, origenAviso: o.value }))} className={`px-2.5 py-1 rounded-lg border text-xs ${editInc.origenAviso === o.value ? 'bg-blue-600 border-blue-400 text-white' : 'bg-slate-700/50 border-slate-600 text-slate-300 hover:border-slate-500'}`}>{o.label}</button>
+                            ))}
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-slate-400 text-xs uppercase tracking-wider font-medium mb-1">Localización</label>
+                          <input value={editInc.direccion} onChange={e => setEditInc((p: any) => ({ ...p, direccion: e.target.value }))} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500" />
+                        </div>
+                        <div>
+                          <label className="block text-slate-400 text-xs uppercase tracking-wider font-medium mb-1">Descripción</label>
+                          <textarea value={editInc.descripcion} onChange={e => setEditInc((p: any) => ({ ...p, descripcion: e.target.value }))} rows={2} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500 resize-none" />
+                        </div>
+                        <div>
+                          <p className="text-slate-400 text-xs uppercase tracking-wider font-medium mb-1.5">Vehículos</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {vehiculos.map((v: any) => { const on = (editInc.vehiculosIds || []).includes(v.id); return (
+                              <button key={v.id} onClick={() => setEditInc((p: any) => ({ ...p, vehiculosIds: on ? p.vehiculosIds.filter((x: string) => x !== v.id) : [...(p.vehiculosIds || []), v.id] }))} className={`px-2.5 py-1 rounded-lg border text-xs font-mono ${on ? 'bg-emerald-900/50 border-emerald-500 text-emerald-200' : 'bg-slate-700/50 border-slate-600 text-slate-300 hover:border-slate-500'}`}>{v.indicativo}</button>
+                            )})}
+                          </div>
+                        </div>
+                        <div>
+                          <p className="text-slate-400 text-xs uppercase tracking-wider font-medium mb-1.5">Personal</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {turno.map((g: any) => { const on = (editInc.voluntariosIds || []).includes(g.usuarioId); return (
+                              <button key={g.id} onClick={() => setEditInc((p: any) => ({ ...p, voluntariosIds: on ? p.voluntariosIds.filter((x: string) => x !== g.usuarioId) : [...(p.voluntariosIds || []), g.usuarioId] }))} className={`px-2.5 py-1 rounded-lg border text-xs font-mono ${on ? 'bg-blue-900/50 border-blue-500 text-blue-200' : 'bg-slate-700/50 border-slate-600 text-slate-300 hover:border-slate-500'}`}>{g.usuario.numeroVoluntario || g.usuario.nombre}</button>
+                            )})}
+                          </div>
+                        </div>
+                        <div className="flex gap-2 pt-1">
+                          <button onClick={() => setEditandoInc(false)} className="flex-1 px-3 py-2 rounded-lg bg-slate-700 text-slate-300 text-xs font-medium hover:bg-slate-600">Cancelar</button>
+                          <button onClick={guardarCambiosInc} disabled={guardandoEdicion} className="flex-1 px-3 py-2 rounded-lg bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700 disabled:opacity-50">{guardandoEdicion ? 'Guardando…' : 'Guardar cambios'}</button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                   <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
                     <div className="px-4 py-3 border-b border-slate-700"><p className="text-white text-xs font-semibold uppercase tracking-wider">Recursos Activados</p></div>
@@ -481,7 +571,7 @@ export default function CecopalPage() {
                     {incidenciaActiva.horaTerminado && <div className="flex gap-3"><div className="w-1 rounded-full bg-emerald-500 flex-shrink-0" /><div><p className="text-white text-xs font-medium">Fin de intervención</p><p className="text-slate-500 text-xs">{incidenciaActiva.horaTerminado}</p></div></div>}
                     {incidenciaActiva.horaDisponible && <div className="flex gap-3"><div className="w-1 rounded-full bg-purple-500 flex-shrink-0" /><div><p className="text-white text-xs font-medium">Unidad disponible</p><p className="text-slate-500 text-xs">{incidenciaActiva.horaDisponible}</p></div></div>}
                   </div>
-                  <div className="p-3 border-t border-slate-700"><textarea placeholder="Añadir observación..." rows={2} value={incidenciaActiva.observaciones || ''} onChange={e => setIncidenciaActiva((prev: any) => ({ ...prev, observaciones: e.target.value }))} className="w-full bg-slate-700 border border-slate-600 rounded-lg p-2.5 text-white text-xs placeholder-slate-500 focus:outline-none focus:border-blue-500 resize-none" /></div>
+                  <div className="p-3 border-t border-slate-700"><textarea placeholder="Añadir observación..." rows={2} value={incidenciaActiva.observaciones || ''} onChange={e => setIncidenciaActiva((prev: any) => ({ ...prev, observaciones: e.target.value }))} onBlur={e => { fetch('/api/cecopal', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'actualizar', id: incidenciaActiva.id, observaciones: e.target.value }) }).catch(() => {}) }} className="w-full bg-slate-700 border border-slate-600 rounded-lg p-2.5 text-white text-xs placeholder-slate-500 focus:outline-none focus:border-blue-500 resize-none" /></div>
                 </div>
               </div>
             )}
