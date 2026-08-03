@@ -37,11 +37,11 @@ const ORIGENES_AVISO = [
 ]
 
 const ISOCRONAS = [
-  { campo: 'horaLlamada', label: 'T0 Llamada / Activación', color: 'bg-slate-600' },
-  { campo: 'horaSalida', label: 'T1 Salida del Parque', color: 'bg-blue-600' },
-  { campo: 'horaLlegada', label: 'T2 Llegada a Escena', color: 'bg-amber-600' },
-  { campo: 'horaTerminado', label: 'T3 Fin Intervención', color: 'bg-emerald-600' },
-  { campo: 'horaDisponible', label: 'T4 Unidad Disponible', color: 'bg-purple-600' },
+  { campo: 'horaLlamada', label: 'T0 Llamada', color: 'bg-slate-600' },
+  { campo: 'horaSalida', label: 'T1 Salida', color: 'bg-blue-600' },
+  { campo: 'horaLlegada', label: 'T2 Llegada', color: 'bg-amber-600' },
+  { campo: 'horaTerminado', label: 'T3 Finalizado', color: 'bg-emerald-600' },
+  { campo: 'horaDisponible', label: 'T4 Disponible', color: 'bg-purple-600' },
 ]
 
 function RelojDigital() {
