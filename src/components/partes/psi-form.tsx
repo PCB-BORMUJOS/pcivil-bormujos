@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 // Refresh HMR: 2026-02-12T14:26:00
 // Usaremos CSS modules desde la ubicación original importando relativa o absoluta (mejor absoluta si configurado)
 // Si movemos este componente, necesitamos mover/referenciar el css.
@@ -97,9 +97,15 @@ export function PsiForm() {
         conclusion: ''
     })
 
-    // Parse existing text on load
+    // Parse existing text on load. Se hace UNA sola vez, la primera vez que llega
+    // un desarrolloDetallado no vacío (carga del parte). Antes dependía de
+    // !hasChanges, pero el efecto de reensamblado marca hasChanges=true en el
+    // montaje y bloqueaba este parseo, perdiéndose el desarrollo cargado (p. ej.
+    // el volcado desde CECOPAL). Con el ref se desacopla de esa carrera.
+    const parseInicialHecho = useRef(false)
     useEffect(() => {
-        if (form.desarrolloDetallado && !hasChanges) {
+        if (form.desarrolloDetallado && !parseInicialHecho.current) {
+            parseInicialHecho.current = true
             // Simple parsing strategy: look for headers
             const text = form.desarrolloDetallado
             const introMatch = text.match(/INTRODUCCIÓN:\s*([\s\S]*?)(?=\n\nDESARROLLO:|$)/)
@@ -118,7 +124,7 @@ export function PsiForm() {
                 setTextComponents(prev => ({ ...prev, desarrollo: text }))
             }
         }
-    }, [form.desarrolloDetallado, hasChanges])
+    }, [form.desarrolloDetallado])
 
     // Update form when text components change
     useEffect(() => {
