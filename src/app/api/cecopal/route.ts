@@ -93,6 +93,14 @@ export async function GET(request: NextRequest) {
       })
       return NextResponse.json({ incidencia })
     }
+    if (tipo === 'incidencias-activas') {
+      // Todas las incidencias activas (permite gestionar varias en paralelo).
+      const incidencias = await prisma.incidenciaCecopal.findMany({
+        where: { estado: 'activa' },
+        orderBy: { createdAt: 'asc' }
+      })
+      return NextResponse.json({ incidencias })
+    }
     if (tipo === 'historial') {
       const incidencias = await prisma.incidenciaCecopal.findMany({
         where: { estado: { not: 'activa' } },

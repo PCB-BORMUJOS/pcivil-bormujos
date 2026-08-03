@@ -69,7 +69,12 @@ export default function CecopalPage() {
   const [turno, setTurno] = useState<any[]>([])
   const [vehiculos, setVehiculos] = useState<any[]>([])
   const [alertas, setAlertas] = useState<any>({ botiquines: [], deas: [], vehiculos: [] })
-  const [incidenciaActiva, setIncidenciaActiva] = useState<any>(null)
+  // Varias incidencias activas en paralelo: lista + la seleccionada en pantalla.
+  const [incidenciasActivas, setIncidenciasActivas] = useState<any[]>([])
+  const [incidenciaSelId, setIncidenciaSelId] = useState<string | null>(null)
+  const incidenciaActiva = incidenciasActivas.find(i => i.id === incidenciaSelId) || null
+  const patchIncidencia = (id: string, patch: any) =>
+    setIncidenciasActivas(prev => prev.map(i => i.id === id ? { ...i, ...patch } : i))
   const [editandoInc, setEditandoInc] = useState(false)
   const [editInc, setEditInc] = useState<any>({})
   const [guardandoEdicion, setGuardandoEdicion] = useState(false)
@@ -123,13 +128,19 @@ export default function CecopalPage() {
         fetch('/api/cecopal?tipo=turno-hoy').then(r => r.json()),
         fetch('/api/cecopal?tipo=vehiculos-disponibles').then(r => r.json()),
         fetch('/api/cecopal?tipo=alertas').then(r => r.json()),
-        fetch('/api/cecopal?tipo=incidencia-activa').then(r => r.json()),
+        fetch('/api/cecopal?tipo=incidencias-activas').then(r => r.json()),
         fetch('/api/cecopal?tipo=novedades-hoy').then(r => r.json()),
       ])
       setTurno(rTurno.guardias || [])
       setVehiculos(rVeh.vehiculos || [])
       setAlertas(rAlerta)
-      if (rInc.incidencia) { setIncidenciaActiva(rInc.incidencia); setModo('activa') }
+      const activas = rInc.incidencias || []
+      setIncidenciasActivas(activas)
+      if (activas.length) {
+        // Conservar la seleccionada si sigue activa; si no, la primera.
+        setIncidenciaSelId(prev => activas.some((i: any) => i.id === prev) ? prev : activas[0].id)
+        setModo(m => m === 'nueva' ? m : 'activa')
+      }
       setNovedadesHoy(rNov.novedades || [])
     } catch (e) { console.error('Error cargando datos CECOPAL:', e) }
     finally { setLoading(false) }
@@ -211,7 +222,7 @@ export default function CecopalPage() {
   const activarIsocrona = async (campo: string) => {
     if (!incidenciaActiva || incidenciaActiva[campo]) return
     const valor = getHoraActual()
-    setIncidenciaActiva((prev: any) => ({ ...prev, [campo]: valor }))
+    patchIncidencia(incidenciaActiva.id, { [campo]: valor })
     await fetch('/api/cecopal', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'isocrona', id: incidenciaActiva.id, campo, valor }) })
   }
 
@@ -221,7 +232,14 @@ export default function CecopalPage() {
     try {
       const res = await fetch('/api/cecopal', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'incidencia', tipoIncidencia: tipoSeleccionado, origenAviso: origenSeleccionado, direccion, descripcion, horaLlamada: getHoraActual(), vehiculosIds: vehiculosSeleccionados, voluntariosIds: voluntariosSeleccionados }) })
       const data = await res.json()
-      if (data.incidencia) { setIncidenciaActiva(data.incidencia); setModo('activa') }
+      if (data.incidencia) {
+        setIncidenciasActivas(prev => [...prev, data.incidencia])
+        setIncidenciaSelId(data.incidencia.id)
+        setModo('activa')
+        // Limpiar el formulario para una posible siguiente incidencia.
+        setTipoSeleccionado(''); setOrigenSeleccionado(''); setDireccion(''); setDescripcion('')
+        setVehiculosSeleccionados([]); setVoluntariosSeleccionados([])
+      }
       else { alert('Error: ' + (data.error || JSON.stringify(data))) }
     } catch (e) { alert('Error de red: ' + String(e)) } finally { setGuardando(false) }
   }
@@ -245,7 +263,7 @@ export default function CecopalPage() {
     try {
       const res = await fetch('/api/cecopal', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'actualizar', id: incidenciaActiva.id, ...editInc }) })
       const data = await res.json()
-      if (data.incidencia) { setIncidenciaActiva((prev: any) => ({ ...prev, ...data.incidencia })); setEditandoInc(false) }
+      if (data.incidencia) { patchIncidencia(incidenciaActiva.id, data.incidencia); setEditandoInc(false) }
       else alert('Error: ' + (data.error || 'no se pudo guardar'))
     } catch (e) { alert('Error de red al guardar los cambios') } finally { setGuardandoEdicion(false) }
   }
@@ -255,7 +273,12 @@ export default function CecopalPage() {
     setGuardando(true)
     try {
       await fetch('/api/cecopal', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'resolver', id: incidenciaActiva.id, horaDisponible: incidenciaActiva.horaDisponible || getHoraActual(), observaciones: incidenciaActiva.observaciones }) })
-      setIncidenciaActiva(null); setModo('turno'); await cargarDatos()
+      const resto = incidenciasActivas.filter(i => i.id !== incidenciaActiva.id)
+      setIncidenciasActivas(resto)
+      setIncidenciaSelId(resto.length ? resto[0].id : null)
+      setModo(resto.length ? 'activa' : 'turno')
+      setEditandoInc(false)
+      await cargarDatos()
     } catch (e) { console.error('Error resolviendo incidencia:', e) } finally { setGuardando(false) }
   }
 
@@ -403,8 +426,8 @@ export default function CecopalPage() {
 
           <div className="ml-auto flex items-center gap-3">
             <button onClick={cargarDatos} className="p-1.5 text-slate-500 hover:text-slate-300 transition-colors"><RefreshCw size={14} /></button>
-            {modo !== 'activa' && <button onClick={() => setModo(modo === 'nueva' ? 'turno' : 'nueva')} className={`flex items-center gap-2 px-4 py-1.5 rounded-lg font-semibold text-sm transition-all ${modo === 'nueva' ? 'bg-slate-700 text-slate-300 border border-slate-600' : 'bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-900/40'}`}><Siren size={15} />{modo === 'nueva' ? 'Cancelar' : 'Nueva Incidencia'}</button>}
-            {modo === 'activa' && <div className="flex items-center gap-2 px-3 py-1.5 bg-red-900/40 border border-red-500/40 rounded-lg"><span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" /><span className="text-red-300 text-sm font-semibold">INCIDENCIA ACTIVA — {incidenciaActiva?.numero}</span></div>}
+            <button onClick={() => setModo(modo === 'nueva' ? (incidenciasActivas.length ? 'activa' : 'turno') : 'nueva')} className={`flex items-center gap-2 px-4 py-1.5 rounded-lg font-semibold text-sm transition-all ${modo === 'nueva' ? 'bg-slate-700 text-slate-300 border border-slate-600' : 'bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-900/40'}`}><Siren size={15} />{modo === 'nueva' ? 'Cancelar' : 'Nueva Incidencia'}</button>
+            {incidenciasActivas.length > 0 && modo !== 'nueva' && <div className="flex items-center gap-2 px-3 py-1.5 bg-red-900/40 border border-red-500/40 rounded-lg"><span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" /><span className="text-red-300 text-sm font-semibold">{incidenciasActivas.length === 1 ? `INCIDENCIA ACTIVA — ${incidenciaActiva?.numero}` : `${incidenciasActivas.length} INCIDENCIAS ACTIVAS`}</span></div>}
           </div>
         </div>
       </div>
@@ -481,6 +504,25 @@ export default function CecopalPage() {
               </div>
             )}
             {modo === 'activa' && incidenciaActiva && (
+              <div className="space-y-4">
+                {/* Selector de incidencias activas (cuando hay más de una) */}
+                {incidenciasActivas.length > 1 && (
+                  <div className="flex items-center gap-2 flex-wrap bg-slate-800/60 border border-slate-700 rounded-xl p-2">
+                    <span className="text-slate-400 text-xs uppercase tracking-wider font-medium px-1">Activas:</span>
+                    {incidenciasActivas.map(inc => {
+                      const ti = TIPOS_INCIDENCIA.find(t => t.value === inc.tipoIncidencia)
+                      const Ic = ti?.icon || AlertTriangle
+                      const sel = inc.id === incidenciaSelId
+                      return (
+                        <button key={inc.id} onClick={() => { setIncidenciaSelId(inc.id); setEditandoInc(false) }} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${sel ? (ti?.color || 'bg-blue-600') + ' text-white border-white/30' : 'bg-slate-700/60 text-slate-300 border-slate-600 hover:border-slate-500'}`}>
+                          <Ic size={13} />
+                          <span className="font-mono">{inc.numero?.split('-').pop()}</span>
+                          <span className="truncate max-w-[120px]">{ti?.label || inc.tipoIncidencia}{inc.direccion ? ' · ' + inc.direccion : ''}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
               <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-3">
                   <div className="bg-slate-800 rounded-xl border border-red-500/30 overflow-hidden">
@@ -571,8 +613,9 @@ export default function CecopalPage() {
                     {incidenciaActiva.horaTerminado && <div className="flex gap-3"><div className="w-1 rounded-full bg-emerald-500 flex-shrink-0" /><div><p className="text-white text-xs font-medium">Fin de intervención</p><p className="text-slate-500 text-xs">{incidenciaActiva.horaTerminado}</p></div></div>}
                     {incidenciaActiva.horaDisponible && <div className="flex gap-3"><div className="w-1 rounded-full bg-purple-500 flex-shrink-0" /><div><p className="text-white text-xs font-medium">Unidad disponible</p><p className="text-slate-500 text-xs">{incidenciaActiva.horaDisponible}</p></div></div>}
                   </div>
-                  <div className="p-3 border-t border-slate-700"><textarea placeholder="Añadir observación..." rows={2} value={incidenciaActiva.observaciones || ''} onChange={e => setIncidenciaActiva((prev: any) => ({ ...prev, observaciones: e.target.value }))} onBlur={e => { fetch('/api/cecopal', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'actualizar', id: incidenciaActiva.id, observaciones: e.target.value }) }).catch(() => {}) }} className="w-full bg-slate-700 border border-slate-600 rounded-lg p-2.5 text-white text-xs placeholder-slate-500 focus:outline-none focus:border-blue-500 resize-none" /></div>
+                  <div className="p-3 border-t border-slate-700"><textarea placeholder="Añadir observación..." rows={2} value={incidenciaActiva.observaciones || ''} onChange={e => patchIncidencia(incidenciaActiva.id, { observaciones: e.target.value })} onBlur={e => { fetch('/api/cecopal', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'actualizar', id: incidenciaActiva.id, observaciones: e.target.value }) }).catch(() => {}) }} className="w-full bg-slate-700 border border-slate-600 rounded-lg p-2.5 text-white text-xs placeholder-slate-500 focus:outline-none focus:border-blue-500 resize-none" /></div>
                 </div>
+              </div>
               </div>
             )}
           </div>
