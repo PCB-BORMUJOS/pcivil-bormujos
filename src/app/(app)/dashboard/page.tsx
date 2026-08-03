@@ -682,6 +682,8 @@ export default function DashboardPage() {
   const [guardias, setGuardias] = useState<any[]>([]);
   const [resumenDisponibilidad, setResumenDisponibilidad] = useState<Record<string, any>>({});
   const [formaciones, setFormaciones] = useState<any[]>([]);
+  const [novedadesTurno, setNovedadesTurno] = useState<any[]>([]);
+  const [novedadDetalle, setNovedadDetalle] = useState<any>(null);
 
   // Estados para disponibilidad contextual
   const [turnoSeleccionado, setTurnoSeleccionado] = useState<{ fecha: string; turno: string; diaSemanaNombre: string } | null>(null);
@@ -707,6 +709,13 @@ export default function DashboardPage() {
     fetch('/api/formacion?tipo=convocatorias&estado=inscripciones_abiertas')
       .then(res => res.json())
       .then(data => setFormaciones(data.convocatorias || []))
+      .catch(() => { });
+  };
+
+  const cargarNovedades = () => {
+    fetch('/api/cecopal?tipo=novedades-hoy')
+      .then(res => res.json())
+      .then(data => setNovedadesTurno(data.novedades || []))
       .catch(() => { });
   };
 
@@ -776,6 +785,7 @@ export default function DashboardPage() {
       .finally(() => {
         setLoadingVol(false);
         cargarFormaciones(); // Cargar formaciones abiertas
+        cargarNovedades(); // Novedades del turno (consulta directa)
       });
   }, []);
 
@@ -1180,12 +1190,50 @@ export default function DashboardPage() {
 
       {/* Bottom Row */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        <div className="bg-gradient-to-br from-indigo-500 to-purple-600 text-white p-6 rounded-xl shadow-lg">
-          <h4 className="font-bold flex items-center gap-2 mb-3 text-lg"><span className="text-2xl">✨</span> IA Operativa - Gemini</h4>
-          <p className="text-sm text-indigo-100 leading-relaxed">
-            <strong>Resumen:</strong> Dispositivo preventivo activo. {guardias.length} turnos programados esta semana. {eventos.length} eventos planificados.
-          </p>
+        {/* Novedades del turno (sustituye a la antigua tarjeta de IA) */}
+        <div className="bg-gradient-to-br from-slate-700 to-slate-800 text-white p-6 rounded-xl shadow-lg">
+          <h4 className="font-bold flex items-center gap-2 mb-3 text-lg">
+            <span className="text-2xl">📝</span> Novedades del turno
+          </h4>
+          {novedadesTurno.length === 0 ? (
+            <p className="text-sm text-slate-300">No hay novedades registradas hoy.</p>
+          ) : (
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              {novedadesTurno.map((n: any) => (
+                <button
+                  key={n.id}
+                  onClick={() => setNovedadDetalle(n)}
+                  className="w-full text-left p-2.5 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-medium text-sm truncate flex items-center gap-1.5">
+                      {!n.leida && <span className="inline-block w-2 h-2 rounded-full bg-amber-400 shrink-0" />}
+                      {n.titulo || (n.descripcion || '').slice(0, 40) || 'Novedad'}
+                    </span>
+                    <span className="text-xs text-slate-300 shrink-0">
+                      {n.createdAt ? new Date(n.createdAt).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Madrid' }) : ''}
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
+
+        {novedadDetalle && (
+          <div className="fixed inset-0 bg-black/60 z-[1000] flex items-center justify-center p-4" onClick={() => setNovedadDetalle(null)}>
+            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6" onClick={e => e.stopPropagation()}>
+              <div className="flex items-start justify-between gap-3 mb-3">
+                <h3 className="text-lg font-bold text-slate-800">{novedadDetalle.titulo || 'Novedad del turno'}</h3>
+                <button onClick={() => setNovedadDetalle(null)} className="text-slate-400 hover:text-slate-600 text-xl leading-none">×</button>
+              </div>
+              <p className="text-xs text-slate-400 mb-3">
+                {novedadDetalle.createdAt ? new Date(novedadDetalle.createdAt).toLocaleString('es-ES', { timeZone: 'Europe/Madrid' }) : ''}
+              </p>
+              <p className="text-sm text-slate-700 whitespace-pre-wrap">{novedadDetalle.descripcion || '—'}</p>
+            </div>
+          </div>
+        )}
 
         {/* Próximas Formaciones */}
         <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">

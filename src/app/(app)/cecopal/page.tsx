@@ -323,63 +323,110 @@ export default function CecopalPage() {
     setGenerandoParte(true)
     try {
       const hoy = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' })
-      // Novedades del SERVICIO: desde su inicio (createdAt) hasta ahora, de modo
-      // que un servicio que cruza la medianoche incluye todas sus novedades.
-      let novedadesServicio: any[] = novedadesHoy
-      try {
-        if (incidenciaActiva.createdAt) {
-          const rNov = await fetch(`/api/cecopal?tipo=novedades-hoy&desde=${encodeURIComponent(incidenciaActiva.createdAt)}`)
-          const dNov = await rNov.json()
-          if (Array.isArray(dNov.novedades)) novedadesServicio = dNov.novedades
-        }
-      } catch { /* se usa el fallback ya cargado */ }
-      const obsNovedades = novedadesServicio.length > 0 ? 'NOVEDADES DEL TURNO:\n' + novedadesServicio.map((n: any) => `- ${n.horaLlamada || ''} ${n.descripcion}`).join('\n') : ''
-      const observacionesFinal = [incidenciaActiva.observaciones, obsNovedades].filter(Boolean).join('\n\n')
+      // Las novedades del turno son anotaciones informativas y NO forman parte
+      // del parte de servicio: quedan solo en su registro consultable.
+      const observacionesFinal = incidenciaActiva.observaciones || ''
 
-      // Personal interviniente: se inyecta en equipoWalkies (indicativos del
-      // personal asignado a la incidencia), que es donde el parte PSI lo refleja.
+      // Indicativos de personal y vehículos de la incidencia.
       const indicativoDe = (uid: string) => {
         const g = turno.find((x: any) => x.usuarioId === uid)
         return g?.usuario?.numeroVoluntario || g?.usuario?.nombre || ''
       }
+      const indicativoVeh = (vid: string) => vehiculos.find((v: any) => v.id === vid)?.indicativo || ''
       const idsPersonal: string[] = incidenciaActiva.voluntariosIds || []
-      const equipoWalkies = idsPersonal.map((uid: string) => ({ equipo: indicativoDe(uid), walkie: '' })).filter(e => e.equipo)
-      const indicativosPersonal = equipoWalkies.map(e => e.equipo)
+      const idsVehiculos: string[] = incidenciaActiva.vehiculosIds || []
+      const persIndicativos = idsPersonal.map(indicativoDe).filter(Boolean)
+      const vehIndicativos = idsVehiculos.map(indicativoVeh).filter(Boolean)
+
+      // Tabla izquierda (tabla1): vehículos en las 4 primeras filas y el personal
+      // en la columna EQUIPO (filas 0-5). Se rellena la izquierda primero.
+      const tabla1 = Array.from({ length: 8 }, (_, i) => ({
+        vehiculo: i < 4 ? (vehIndicativos[i] || '') : '',
+        equipo: persIndicativos[i] || '',
+        walkie: '',
+      }))
+      // Tabla derecha (tabla2): personal sobrante a partir de la fila 6.
+      const tabla2 = Array.from({ length: 8 }, (_, i) => ({ equipo: persIndicativos[i + 6] || '', walkie: '' }))
+
+      // equipoWalkies para la BD y el PDF (coherente con las tablas).
+      const equipoWalkies = [
+        ...tabla1.filter(r => r.vehiculo || r.equipo).map(r => (r.vehiculo ? { vehiculo: r.vehiculo, equipo: r.equipo, walkie: r.walkie } : { equipo: r.equipo, walkie: r.walkie })),
+        ...tabla2.filter(r => r.equipo).map(r => ({ equipo: r.equipo, walkie: r.walkie })),
+      ]
+      const indicativosPersonal = persIndicativos
+
       // Responsable del turno (para cumplimenta / responsable de turno del parte).
       const resp = turno.find((g: any) => (g.rol === 'Responsable' || g.rol === 'Apoyo/Cecopal' || g.rol === 'Cecopal') && idsPersonal.includes(g.usuarioId))
         || turno.find((g: any) => idsPersonal.includes(g.usuarioId))
       const indicativoResp = resp?.usuario?.numeroVoluntario || resp?.usuario?.nombre || ''
-      // Motivo: tipo de incidencia + descripción, para que ambos queden reflejados.
+
+      // Motivo: tipo + descripción, para que ambos queden reflejados.
       const tipoLabel = TIPOS_INCIDENCIA.find(t => t.value === incidenciaActiva.tipoIncidencia)?.label || incidenciaActiva.tipoIncidencia || ''
       const motivoFinal = [tipoLabel, incidenciaActiva.descripcion].filter(Boolean).join(' — ') || tipoLabel
+
+      // Tipología del parte marcada segun el tipo de incidencia de CECOPAL.
+      const MAP_TIP: Record<string, [string, string]> = {
+        accidente: ['intervencion', 'otros'], incendio: ['intervencion', 'incendios'],
+        sanitaria: ['intervencion', 'svb'], inundacion: ['intervencion', 'inundaciones'],
+        rescate: ['intervencion', 'otros'], apoyo: ['intervencion', 'otros'],
+        prevencion: ['prevencion', 'preventivo'], otros: ['intervencion', 'otros'],
+      }
+      const prevencion: any = { mantenimiento: false, practicas: false, suministros: false, preventivo: false, otros: false }
+      const intervencion: any = { svb: false, incendios: false, inundaciones: false, otros_riesgos_meteo: false, activacion_pem_bor: false, otros: false }
+      const otrosTip: any = { reunion_coordinacion: false, reunion_areas: false, limpieza: false, formacion: false, otros: false }
+      const mp = MAP_TIP[incidenciaActiva.tipoIncidencia]
+      if (mp) { const [g, k] = mp; if (g === 'prevencion') prevencion[k] = true; else if (g === 'intervencion') intervencion[k] = true; else otrosTip[k] = true }
+      const tipologiasArr = [
+        ...Object.entries(prevencion).filter(([, v]) => v).map(([k]) => `prevencion.${k}`),
+        ...Object.entries(intervencion).filter(([, v]) => v).map(([k]) => `intervencion.${k}`),
+        ...Object.entries(otrosTip).filter(([, v]) => v).map(([k]) => `otros.${k}`),
+      ]
+      const circulacion = tipologiasArr.some(t => t.startsWith('intervencion')) ? 'intervencion'
+        : tipologiasArr.some(t => t.startsWith('prevencion')) ? 'prevencion'
+        : tipologiasArr.some(t => t.startsWith('otros')) ? 'otros' : ''
+
+      const tiempos = {
+        llamada: incidenciaActiva.horaLlamada || '00:00', salida: incidenciaActiva.horaSalida || '00:00',
+        llegada: incidenciaActiva.horaLlegada || '00:00', terminado: incidenciaActiva.horaTerminado || '00:00',
+        disponible: incidenciaActiva.horaDisponible || '00:00',
+      }
+
+      // informacionExtra = estado COMPLETO del formulario del parte (el formulario
+      // lo carga tal cual: tablas, tipologías, tiempos, heridos, etc.).
+      const informacionExtra = {
+        fecha: hoy, hora: '', lugar: incidenciaActiva.direccion || '', motivo: motivoFinal,
+        alertante: incidenciaActiva.origenAviso || '', circulacion,
+        tiempos, tabla1, tabla2, prevencion, intervencion, otros: otrosTip,
+        otrosDescripcion: '', posiblesCausas: '',
+        heridos: '', heridosNum: '', fallecidos: '', fallecidosNum: '',
+        matriculasImplicados: ['', '', '', '', ''],
+        observaciones: observacionesFinal,
+        indicativosInforman: indicativosPersonal.join(', '),
+        indicativoCumplimenta: indicativoResp, responsableTurno: indicativoResp,
+        descripcionAccidente: '',
+      }
 
       const payload = {
         fecha: hoy,
         lugar: incidenciaActiva.direccion || '',
         motivo: motivoFinal,
         alertante: incidenciaActiva.origenAviso || '',
+        circulacion,
         horaLlamada: incidenciaActiva.horaLlamada || '',
         horaSalida: incidenciaActiva.horaSalida || '',
         horaLlegada: incidenciaActiva.horaLlegada || '',
         horaTerminado: incidenciaActiva.horaTerminado || '',
         horaDisponible: incidenciaActiva.horaDisponible || '',
-        vehiculosIds: incidenciaActiva.vehiculosIds || [],
+        vehiculosIds: idsVehiculos,
         equipoWalkies,
         indicativosInforman: indicativosPersonal.join(', '),
         indicativoCumplimenta: indicativoResp,
         responsableTurno: indicativoResp,
         observaciones: observacionesFinal,
-        tipologias: [],
+        tipologias: tipologiasArr,
         tipologiasOtrosTexto: {},
         fotosUrls: [],
-        informacionExtra: JSON.stringify({
-          lugar: incidenciaActiva.direccion || '',
-          motivo: motivoFinal,
-          tipoIncidencia: incidenciaActiva.tipoIncidencia || '',
-          origenAviso: incidenciaActiva.origenAviso || '',
-          personal: indicativosPersonal,
-          tiempos: { llamada: incidenciaActiva.horaLlamada || '00:00', salida: incidenciaActiva.horaSalida || '00:00', llegada: incidenciaActiva.horaLlegada || '00:00', terminado: incidenciaActiva.horaTerminado || '00:00', disponible: incidenciaActiva.horaDisponible || '00:00' },
-        }),
+        informacionExtra: JSON.stringify(informacionExtra),
       }
       const res = await fetch('/api/partes/psi', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
       const data = await res.json()
