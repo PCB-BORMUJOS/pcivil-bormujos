@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
       const novedades = await prisma.incidenciaCecopal.findMany({
         where: { estado: 'novedad', createdAt: createdAtWhere },
         orderBy: { createdAt: 'asc' },
-        select: { id: true, descripcion: true, horaLlamada: true, createdAt: true }
+        select: { id: true, titulo: true, descripcion: true, horaLlamada: true, createdAt: true, leida: true, leidaPor: true, leidaEn: true }
       })
       return NextResponse.json({ novedades })
     }
@@ -171,6 +171,7 @@ export async function POST(request: NextRequest) {
           tipoIncidencia: 'novedad',
           origenAviso: 'interno',
           direccion: '-',
+          titulo: (body.titulo && body.titulo.trim()) ? body.titulo.trim() : (body.texto || '').slice(0, 60),
           descripcion: body.texto,
           horaLlamada: getHoraActual(),
           operadorId: (session.user as any).id
@@ -229,9 +230,50 @@ export async function PUT(request: NextRequest) {
       await registrarAudit({ accion: 'UPDATE', entidad: 'IncidenciaCecopal', entidadId: incidencia.id, descripcion: `Incidencia actualizada: ${incidencia.numero}`, usuarioId: _auditAct.usuarioId, usuarioNombre: _auditAct.usuarioNombre, modulo: 'CECOPAL' })
       return NextResponse.json({ incidencia })
     }
+    // Marcar una novedad como leída (deja registro de quién y cuándo).
+    if (tipo === 'novedad-leer') {
+      const { usuarioId, usuarioNombre } = getUsuarioAudit(session)
+      const novedad = await prisma.incidenciaCecopal.update({
+        where: { id },
+        data: { leida: true, leidaPor: usuarioNombre, leidaEn: new Date() },
+      })
+      await registrarAudit({ accion: 'READ', entidad: 'NovedadTurno', entidadId: id, descripcion: `Novedad leída: ${novedad.titulo || novedad.numero}`, usuarioId, usuarioNombre, modulo: 'CECOPAL' })
+      return NextResponse.json({ novedad })
+    }
+    // Editar el título / texto de una novedad (deja registro).
+    if (tipo === 'novedad-editar') {
+      const { usuarioId, usuarioNombre } = getUsuarioAudit(session)
+      const data: any = {}
+      if (body.titulo !== undefined) data.titulo = (body.titulo || '').trim() || null
+      if (body.descripcion !== undefined) data.descripcion = body.descripcion
+      const novedad = await prisma.incidenciaCecopal.update({ where: { id }, data })
+      await registrarAudit({ accion: 'UPDATE', entidad: 'NovedadTurno', entidadId: id, descripcion: `Novedad editada: ${novedad.titulo || novedad.numero}`, usuarioId, usuarioNombre, modulo: 'CECOPAL' })
+      return NextResponse.json({ novedad })
+    }
     return NextResponse.json({ error: 'Tipo no válido' }, { status: 400 })
   } catch (error) {
     console.error('Error PUT /api/cecopal:', error)
+    return NextResponse.json({ error: 'Error interno' }, { status: 500 })
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  try {
+    const { searchParams } = new URL(request.url)
+    const id = searchParams.get('id')
+    if (!id) return NextResponse.json({ error: 'ID requerido' }, { status: 400 })
+    const novedad = await prisma.incidenciaCecopal.findUnique({ where: { id } })
+    if (!novedad || novedad.estado !== 'novedad') {
+      return NextResponse.json({ error: 'Solo se pueden eliminar novedades' }, { status: 400 })
+    }
+    await prisma.incidenciaCecopal.delete({ where: { id } })
+    const { usuarioId, usuarioNombre } = getUsuarioAudit(session)
+    await registrarAudit({ accion: 'DELETE', entidad: 'NovedadTurno', entidadId: id, descripcion: `Novedad eliminada: ${novedad.titulo || novedad.numero}`, usuarioId, usuarioNombre, modulo: 'CECOPAL', datosAnteriores: { titulo: novedad.titulo, descripcion: novedad.descripcion } })
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('Error DELETE /api/cecopal:', error)
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
   }
 }

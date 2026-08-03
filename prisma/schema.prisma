@@ -1232,6 +1232,10 @@ model IncidenciaCecopal {
   vehiculosIds   Json     @default("[]") @map("vehiculos_ids")
   voluntariosIds Json     @default("[]") @map("voluntarios_ids")
   observaciones  String?  @db.Text
+  titulo         String?
+  leida          Boolean  @default(false)
+  leidaPor       String?  @map("leida_por")
+  leidaEn        DateTime? @map("leida_en")
   parteId        String?  @map("parte_id")
   operadorId     String   @map("operador_id")
   operador       Usuario  @relation(fields: [operadorId], references: [id])

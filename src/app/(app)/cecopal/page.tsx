@@ -83,6 +83,11 @@ export default function CecopalPage() {
   const [guardando, setGuardando] = useState(false)
   const [generandoParte, setGenerandoParte] = useState(false)
   const [novedadTexto, setNovedadTexto] = useState('')
+  const [novedadTitulo, setNovedadTitulo] = useState('')
+  const [novedadSel, setNovedadSel] = useState<any>(null)
+  const [novedadEditando, setNovedadEditando] = useState(false)
+  const [novedadEdit, setNovedadEdit] = useState({ titulo: '', descripcion: '' })
+  const [guardandoNov, setGuardandoNov] = useState(false)
   const [alertasOpen, setAlertasOpen] = useState(false)
   const [tipoSeleccionado, setTipoSeleccionado] = useState('')
   const [origenSeleccionado, setOrigenSeleccionado] = useState('')
@@ -266,6 +271,37 @@ export default function CecopalPage() {
       if (data.incidencia) { patchIncidencia(incidenciaActiva.id, data.incidencia); setEditandoInc(false) }
       else alert('Error: ' + (data.error || 'no se pudo guardar'))
     } catch (e) { alert('Error de red al guardar los cambios') } finally { setGuardandoEdicion(false) }
+  }
+
+  const registrarNovedad = async () => {
+    if (!novedadTexto.trim()) return
+    setGuardandoNov(true)
+    try {
+      await fetch('/api/cecopal', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'novedad-turno', titulo: novedadTitulo, texto: novedadTexto }) })
+      setNovedadTitulo(''); setNovedadTexto(''); await cargarDatos()
+    } catch (e) { alert('Error al registrar la novedad') } finally { setGuardandoNov(false) }
+  }
+
+  const marcarNovedadLeida = async (n: any) => {
+    const res = await fetch('/api/cecopal', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'novedad-leer', id: n.id }) })
+    const d = await res.json()
+    if (d.novedad) { setNovedadSel(d.novedad); cargarDatos() }
+  }
+
+  const guardarNovedadEdit = async () => {
+    if (!novedadSel) return
+    setGuardandoNov(true)
+    try {
+      const res = await fetch('/api/cecopal', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'novedad-editar', id: novedadSel.id, titulo: novedadEdit.titulo, descripcion: novedadEdit.descripcion }) })
+      const d = await res.json()
+      if (d.novedad) { setNovedadSel(d.novedad); setNovedadEditando(false); cargarDatos() }
+    } catch (e) { alert('Error al guardar') } finally { setGuardandoNov(false) }
+  }
+
+  const eliminarNovedad = async (n: any) => {
+    if (!confirm('¿Eliminar esta novedad? Quedará registro en la auditoría.')) return
+    const res = await fetch(`/api/cecopal?id=${n.id}`, { method: 'DELETE' })
+    if (res.ok) { setNovedadSel(null); cargarDatos() } else alert('No se pudo eliminar')
   }
 
   const resolverIncidencia = async () => {
@@ -464,18 +500,21 @@ export default function CecopalPage() {
                 {novedadesHoy.length === 0
                   ? <div className="p-4 text-center text-slate-500 text-xs">Sin novedades registradas</div>
                   : novedadesHoy.map((n: any) => (
-                    <div key={n.id} className="px-3 py-2">
+                    <button key={n.id} onClick={() => { setNovedadSel(n); setNovedadEditando(false) }} className="w-full text-left px-3 py-2 hover:bg-slate-700/40 transition-colors">
                       <div className="flex items-center gap-2 mb-0.5">
+                        {!n.leida && <span className="w-1.5 h-1.5 rounded-full bg-amber-400 flex-shrink-0" title="Sin leer" />}
                         <span className="text-blue-400 font-mono text-xs">{n.horaLlamada || '--:--'}</span>
+                        <span className={`text-xs font-semibold truncate ${n.leida ? 'text-slate-400' : 'text-white'}`}>{n.titulo || (n.descripcion || '').slice(0, 40)}</span>
+                        {n.leida && <CheckCircle size={11} className="text-emerald-400 flex-shrink-0 ml-auto" />}
                       </div>
-                      <p className="text-slate-300 text-xs leading-relaxed">{n.descripcion}</p>
-                    </div>
+                    </button>
                   ))
                 }
               </div>
-              <div className="p-3 border-t border-slate-700 flex-shrink-0">
-                <textarea value={novedadTexto} onChange={e => setNovedadTexto(e.target.value)} placeholder="Registrar novedad..." rows={2} className="w-full bg-slate-700 border border-slate-600 rounded-lg p-2.5 text-white text-xs placeholder-slate-500 focus:outline-none focus:border-blue-500 resize-none" />
-                <button onClick={async () => { if (!novedadTexto.trim()) return; await fetch('/api/cecopal', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'novedad-turno', texto: novedadTexto }) }); setNovedadTexto(''); cargarDatos() }} disabled={!novedadTexto.trim()} className="mt-2 w-full flex items-center justify-center gap-1.5 px-3 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white rounded-lg text-xs font-medium transition-colors"><Send size={11} /> Registrar</button>
+              <div className="p-3 border-t border-slate-700 flex-shrink-0 space-y-2">
+                <input value={novedadTitulo} onChange={e => setNovedadTitulo(e.target.value)} placeholder="Título de la novedad" className="w-full bg-slate-700 border border-slate-600 rounded-lg px-2.5 py-2 text-white text-xs placeholder-slate-500 focus:outline-none focus:border-blue-500" />
+                <textarea value={novedadTexto} onChange={e => setNovedadTexto(e.target.value)} placeholder="Detalle de la novedad..." rows={2} className="w-full bg-slate-700 border border-slate-600 rounded-lg p-2.5 text-white text-xs placeholder-slate-500 focus:outline-none focus:border-blue-500 resize-none" />
+                <button onClick={registrarNovedad} disabled={!novedadTexto.trim() || guardandoNov} className="w-full flex items-center justify-center gap-1.5 px-3 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white rounded-lg text-xs font-medium transition-colors"><Send size={11} /> {guardandoNov ? 'Registrando…' : 'Registrar'}</button>
               </div>
             </div>
           </div>
@@ -991,6 +1030,71 @@ export default function CecopalPage() {
                     ))}
                   </div>
                 </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* POPUP: DETALLE DE NOVEDAD (leer / editar / eliminar) */}
+      {novedadSel && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[2100] p-4" onClick={() => { setNovedadSel(null); setNovedadEditando(false) }}>
+          <div className="bg-slate-800 border border-slate-600 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="px-5 py-4 border-b border-slate-700 flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-blue-400 font-mono text-sm">{novedadSel.horaLlamada || '--:--'}</span>
+                  <span className="text-slate-500 text-xs">{novedadSel.createdAt ? new Date(novedadSel.createdAt).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Europe/Madrid' }).replace(/\//g, '-') : ''}</span>
+                  {novedadSel.leida
+                    ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-900/40 text-emerald-300 border border-emerald-700/40"><CheckCircle size={10} />Leída</span>
+                    : <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-900/40 text-amber-300 border border-amber-700/40">Sin leer</span>}
+                </div>
+                {!novedadEditando && <h3 className="text-white font-bold text-base mt-1 truncate">{novedadSel.titulo || 'Novedad'}</h3>}
+              </div>
+              <button onClick={() => { setNovedadSel(null); setNovedadEditando(false) }} className="p-1.5 rounded-lg hover:bg-slate-700 text-slate-400"><X size={16} /></button>
+            </div>
+
+            <div className="p-5">
+              {!novedadEditando ? (
+                <>
+                  <p className="text-slate-200 text-sm whitespace-pre-wrap leading-relaxed">{novedadSel.descripcion || '(sin detalle)'}</p>
+                  {novedadSel.leida && (novedadSel.leidaPor || novedadSel.leidaEn) && (
+                    <p className="text-slate-500 text-xs mt-4 pt-3 border-t border-slate-700">
+                      Leída por <span className="text-slate-300 font-medium">{novedadSel.leidaPor || '—'}</span>
+                      {novedadSel.leidaEn ? ' el ' + new Date(novedadSel.leidaEn).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Madrid' }) : ''}
+                    </p>
+                  )}
+                </>
+              ) : (
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-slate-400 text-xs uppercase tracking-wider font-medium mb-1">Título</label>
+                    <input value={novedadEdit.titulo} onChange={e => setNovedadEdit(p => ({ ...p, titulo: e.target.value }))} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500" />
+                  </div>
+                  <div>
+                    <label className="block text-slate-400 text-xs uppercase tracking-wider font-medium mb-1">Detalle</label>
+                    <textarea value={novedadEdit.descripcion} onChange={e => setNovedadEdit(p => ({ ...p, descripcion: e.target.value }))} rows={4} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500 resize-none" />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="px-5 py-4 border-t border-slate-700 flex items-center justify-between gap-2">
+              {!novedadEditando ? (
+                <>
+                  {!novedadSel.leida
+                    ? <button onClick={() => marcarNovedadLeida(novedadSel)} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold"><CheckCircle size={15} />Marcar como leída</button>
+                    : <span className="text-xs text-slate-500">Novedad ya leída · puedes editarla o eliminarla</span>}
+                  <div className="flex gap-2">
+                    <button onClick={() => { setNovedadEdit({ titulo: novedadSel.titulo || '', descripcion: novedadSel.descripcion || '' }); setNovedadEditando(true) }} className="flex items-center gap-1.5 px-3 py-2 text-slate-300 hover:bg-slate-700 rounded-lg text-sm font-medium"><Edit size={14} />Editar</button>
+                    {novedadSel.leida && <button onClick={() => eliminarNovedad(novedadSel)} className="flex items-center gap-1.5 px-3 py-2 text-red-400 hover:bg-red-900/30 rounded-lg text-sm font-medium"><X size={14} />Eliminar</button>}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <button onClick={() => setNovedadEditando(false)} className="px-4 py-2 text-slate-400 hover:text-white text-sm font-medium">Cancelar</button>
+                  <button onClick={guardarNovedadEdit} disabled={guardandoNov} className="flex items-center gap-2 px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg text-sm font-semibold">{guardandoNov ? 'Guardando…' : 'Guardar cambios'}</button>
+                </>
               )}
             </div>
           </div>
