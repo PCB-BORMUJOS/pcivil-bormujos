@@ -239,7 +239,52 @@ export default function CecopalPage() {
       const hoy = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' })
       const obsNovedades = novedadesHoy.length > 0 ? 'NOVEDADES DEL TURNO:\n' + novedadesHoy.map((n: any) => `- ${n.horaLlamada || ''} ${n.descripcion}`).join('\n') : ''
       const observacionesFinal = [incidenciaActiva.observaciones, obsNovedades].filter(Boolean).join('\n\n')
-      const payload = { fecha: hoy, lugar: incidenciaActiva.direccion || '', motivo: incidenciaActiva.descripcion || incidenciaActiva.tipoIncidencia || '', horaLlamada: incidenciaActiva.horaLlamada || '', horaSalida: incidenciaActiva.horaSalida || '', horaLlegada: incidenciaActiva.horaLlegada || '', horaTerminado: incidenciaActiva.horaTerminado || '', horaDisponible: incidenciaActiva.horaDisponible || '', vehiculosIds: incidenciaActiva.vehiculosIds || [], observaciones: observacionesFinal, tipologias: [], equipoWalkies: [], tipologiasOtrosTexto: {}, fotosUrls: [], informacionExtra: JSON.stringify({ lugar: incidenciaActiva.direccion || '', motivo: incidenciaActiva.descripcion || incidenciaActiva.tipoIncidencia || '', tiempos: { llamada: incidenciaActiva.horaLlamada || '00:00', salida: incidenciaActiva.horaSalida || '00:00', llegada: incidenciaActiva.horaLlegada || '00:00', terminado: incidenciaActiva.horaTerminado || '00:00', disponible: incidenciaActiva.horaDisponible || '00:00' } }) }
+
+      // Personal interviniente: se inyecta en equipoWalkies (indicativos del
+      // personal asignado a la incidencia), que es donde el parte PSI lo refleja.
+      const indicativoDe = (uid: string) => {
+        const g = turno.find((x: any) => x.usuarioId === uid)
+        return g?.usuario?.numeroVoluntario || g?.usuario?.nombre || ''
+      }
+      const idsPersonal: string[] = incidenciaActiva.voluntariosIds || []
+      const equipoWalkies = idsPersonal.map((uid: string) => ({ equipo: indicativoDe(uid), walkie: '' })).filter(e => e.equipo)
+      const indicativosPersonal = equipoWalkies.map(e => e.equipo)
+      // Responsable del turno (para cumplimenta / responsable de turno del parte).
+      const resp = turno.find((g: any) => (g.rol === 'Responsable' || g.rol === 'Apoyo/Cecopal' || g.rol === 'Cecopal') && idsPersonal.includes(g.usuarioId))
+        || turno.find((g: any) => idsPersonal.includes(g.usuarioId))
+      const indicativoResp = resp?.usuario?.numeroVoluntario || resp?.usuario?.nombre || ''
+      // Motivo: tipo de incidencia + descripción, para que ambos queden reflejados.
+      const tipoLabel = TIPOS_INCIDENCIA.find(t => t.value === incidenciaActiva.tipoIncidencia)?.label || incidenciaActiva.tipoIncidencia || ''
+      const motivoFinal = [tipoLabel, incidenciaActiva.descripcion].filter(Boolean).join(' — ') || tipoLabel
+
+      const payload = {
+        fecha: hoy,
+        lugar: incidenciaActiva.direccion || '',
+        motivo: motivoFinal,
+        alertante: incidenciaActiva.origenAviso || '',
+        horaLlamada: incidenciaActiva.horaLlamada || '',
+        horaSalida: incidenciaActiva.horaSalida || '',
+        horaLlegada: incidenciaActiva.horaLlegada || '',
+        horaTerminado: incidenciaActiva.horaTerminado || '',
+        horaDisponible: incidenciaActiva.horaDisponible || '',
+        vehiculosIds: incidenciaActiva.vehiculosIds || [],
+        equipoWalkies,
+        indicativosInforman: indicativosPersonal.join(', '),
+        indicativoCumplimenta: indicativoResp,
+        responsableTurno: indicativoResp,
+        observaciones: observacionesFinal,
+        tipologias: [],
+        tipologiasOtrosTexto: {},
+        fotosUrls: [],
+        informacionExtra: JSON.stringify({
+          lugar: incidenciaActiva.direccion || '',
+          motivo: motivoFinal,
+          tipoIncidencia: incidenciaActiva.tipoIncidencia || '',
+          origenAviso: incidenciaActiva.origenAviso || '',
+          personal: indicativosPersonal,
+          tiempos: { llamada: incidenciaActiva.horaLlamada || '00:00', salida: incidenciaActiva.horaSalida || '00:00', llegada: incidenciaActiva.horaLlegada || '00:00', terminado: incidenciaActiva.horaTerminado || '00:00', disponible: incidenciaActiva.horaDisponible || '00:00' },
+        }),
+      }
       const res = await fetch('/api/partes/psi', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
       const data = await res.json()
       if (!res.ok) { alert('Error: ' + (data.error || JSON.stringify(data.errores || data))); return }
