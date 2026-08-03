@@ -423,6 +423,25 @@ function CalendarView({ eventos, guardias, resumenDisponibilidad, onEventClick, 
     return esAdmin || evento.privado;
   };
 
+  // Hasta que el cliente fije la fecha de hoy (hoyStr se calcula en useEffect),
+  // se muestra un marcador ESTABLE, idéntico en el servidor y en el primer
+  // render del cliente. Evita el mismatch de hidratación que provocaba el
+  // fallback new Date() (el servidor en UTC y el cliente en Madrid calculaban
+  // meses/días distintos y React abortaba la hidratación).
+  if (!hoyStr) {
+    return (
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col">
+        <div className="p-4 border-b border-slate-100 flex justify-between items-center">
+          <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+            <span className="bg-orange-100 p-1.5 rounded-lg text-orange-600"><CalendarIcon size={18} /></span>
+            Calendario Operativo
+          </h2>
+        </div>
+        <div className="flex-1 flex items-center justify-center py-24 text-slate-400 text-sm">Cargando calendario…</div>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col">
       <div className="p-4 border-b border-slate-100 flex justify-between items-center">
