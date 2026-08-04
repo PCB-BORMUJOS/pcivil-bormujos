@@ -17,18 +17,19 @@ function getHoraTurno(): string {
 
 // Numera a partir del MÁXIMO sufijo existente (no del conteo): con count+1,
 // cualquier hueco (registros borrados, o novedades que también consumen números
-// CEC-) provoca colisiones de la restricción única sobre `numero`.
+// COPA-) provoca colisiones de la restricción única sobre `numero`.
+// COPA = denominación de CECOPAL en comunicaciones.
 async function generarNumero(): Promise<string> {
   const year = new Date().getFullYear()
   const ultima = await prisma.incidenciaCecopal.findFirst({
-    where: { numero: { startsWith: `CEC-${year}-` } },
+    where: { numero: { startsWith: `COPA-${year}-` } },
     orderBy: { numero: 'desc' },
     select: { numero: true },
   })
   let next = 1
   const m = ultima?.numero?.match(/(\d+)$/)
   if (m) next = parseInt(m[1], 10) + 1
-  return `CEC-${year}-${String(next).padStart(4, '0')}`
+  return `COPA-${year}-${String(next).padStart(4, '0')}`
 }
 
 // Crea con reintento ante colisión de `numero` (P2002), por si dos registros se
