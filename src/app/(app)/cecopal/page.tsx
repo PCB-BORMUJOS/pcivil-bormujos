@@ -269,7 +269,7 @@ export default function CecopalPage() {
         setTipoSeleccionado(''); setOrigenSeleccionado(''); setDireccion(''); setDescripcion('')
         setVehiculosSeleccionados([]); setVoluntariosSeleccionados([])
       }
-      else { alert('Error: ' + (data.error || JSON.stringify(data))) }
+      else { alert('Error al crear la incidencia:\n' + (data.detalle || data.error || JSON.stringify(data)) + (data.metodo ? '\n[' + data.metodo + ']' : '')) }
     } catch (e) { alert('Error de red: ' + String(e)) } finally { setGuardando(false) }
   }
 
