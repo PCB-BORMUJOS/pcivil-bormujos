@@ -237,7 +237,7 @@ export async function PUT(request: NextRequest) {
       const data: any = {}
       const campos = [
         'tipoIncidencia', 'origenAviso', 'direccion', 'descripcion', 'observaciones',
-        'desarrollo',
+        'desarrollo', 'parteId',
         'vehiculosIds', 'voluntariosIds', 'horaLlamada', 'horaSalida', 'horaLlegada',
         'horaTerminado', 'horaDisponible',
       ]

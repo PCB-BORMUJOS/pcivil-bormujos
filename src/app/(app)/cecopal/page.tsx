@@ -429,7 +429,7 @@ export default function CecopalPage() {
       // informacionExtra = estado COMPLETO del formulario del parte (el formulario
       // lo carga tal cual: tablas, tipologías, tiempos, heridos, etc.).
       const informacionExtra = {
-        fecha: hoy, hora: '', lugar: incidenciaActiva.direccion || '', motivo: motivoFinal,
+        fecha: hoy, hora: getHoraActual(), lugar: incidenciaActiva.direccion || '', motivo: motivoFinal,
         alertante: incidenciaActiva.origenAviso || '', circulacion,
         tiempos, tabla1, tabla2, prevencion, intervencion, otros: otrosTip,
         otrosDescripcion: '', posiblesCausas: '',
@@ -465,10 +465,21 @@ export default function CecopalPage() {
         fotosUrls: [],
         informacionExtra: JSON.stringify(informacionExtra),
       }
-      const res = await fetch('/api/partes/psi', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+      // Si la incidencia ya tiene un parte vinculado, se ACTUALIZA ese mismo parte
+      // (PUT) en vez de crear un borrador nuevo cada vez que se genera.
+      const yaVinculado = incidenciaActiva.parteId
+      const url = yaVinculado ? `/api/partes/psi/${incidenciaActiva.parteId}` : '/api/partes/psi'
+      const method = yaVinculado ? 'PUT' : 'POST'
+      const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
       const data = await res.json()
       if (!res.ok) { alert('Error: ' + (data.error || JSON.stringify(data.errores || data))); return }
-      if (data.parte?.id) { window.location.href = `/partes/psi?id=${data.parte.id}` }
+      const parteId = data.parte?.id || data.id || incidenciaActiva.parteId
+      if (parteId && !yaVinculado) {
+        // Guardar el vínculo en la incidencia para futuras regeneraciones.
+        patchIncidencia(incidenciaActiva.id, { parteId })
+        fetch('/api/cecopal', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'actualizar', id: incidenciaActiva.id, parteId }) }).catch(() => {})
+      }
+      if (parteId) { window.location.href = `/partes/psi?id=${parteId}` }
     } catch (e) { console.error('Error generando parte PSI:', e) } finally { setGenerandoParte(false) }
   }
 
