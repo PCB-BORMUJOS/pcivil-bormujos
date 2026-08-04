@@ -1,33 +1,40 @@
 import { prisma } from '@/lib/db'
-import { format } from 'date-fns'
 
 /**
- * Genera el número de parte automático con formato YYYYMMDD-XXX
- * Ejemplo: 20260201-001, 20260201-002, 20260301-001 (reinicia cada mes)
- * Reinicia a 001 el día 1 de cada mes
+ * Genera el número de parte con formato YYYYMMDD{NNN}-{P}
+ * Ejemplo: 20260804004-3
+ *   - YYYYMMDD: fecha (Europe/Madrid)
+ *   - NNN: nº ordinal del DÍA DE SERVICIO en el mes (solo días con turno);
+ *          si un día del mes no hubo turno, no consume número.
+ *   - P: nº de parte dentro del día (1, 2, 3...).
  */
 export async function generarNumeroParte(): Promise<string> {
-    const hoy = new Date()
-    const prefix = format(hoy, 'yyyyMMdd')
-    const mesPrefix = format(hoy, 'yyyyMM') // Prefix para buscar partes del mes
+    // Fecha de hoy en Madrid (YYYY-MM-DD).
+    const hoyStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' })
+    const [yyyy, mm, dd] = hoyStr.split('-')
+    const yyyymmdd = `${yyyy}${mm}${dd}`
 
-    const ultimoParte = await prisma.partePSI.findFirst({
-        where: {
-            numeroParte: { startsWith: mesPrefix }, // Buscar en el mes actual
-            archivado: false
-        },
-        orderBy: { numeroParte: 'desc' },
-        select: { numeroParte: true }
+    // NNN: nº de días distintos con turno (guardias) en el mes, hasta hoy inclusive.
+    const inicioMes = new Date(Date.UTC(Number(yyyy), Number(mm) - 1, 1, 0, 0, 0))
+    const finHoy = new Date(Date.UTC(Number(yyyy), Number(mm) - 1, Number(dd), 23, 59, 59))
+    const guardias = await prisma.guardia.findMany({
+        where: { fecha: { gte: inicioMes, lte: finHoy } },
+        select: { fecha: true },
     })
+    const diasServicio = new Set<string>()
+    for (const g of guardias) diasServicio.add(g.fecha.toISOString().split('T')[0])
+    // Hoy cuenta como día de servicio (se está creando un parte) aunque aún no
+    // se hubiera registrado la guardia.
+    diasServicio.add(hoyStr)
+    const nnn = String(diasServicio.size).padStart(3, '0')
 
-    if (!ultimoParte) {
-        return `${prefix}-001`
-    }
+    // P: nº de parte del día (partes ya creados hoy + 1).
+    const partesHoy = await prisma.partePSI.count({
+        where: { numeroParte: { startsWith: yyyymmdd }, archivado: false },
+    })
+    const p = partesHoy + 1
 
-    const ultimoNumero = parseInt(ultimoParte.numeroParte.split('-')[1])
-    const siguienteNumero = ultimoNumero + 1
-
-    return `${prefix}-${String(siguienteNumero).padStart(3, '0')}`
+    return `${yyyymmdd}${nnn}-${p}`
 }
 
 /**

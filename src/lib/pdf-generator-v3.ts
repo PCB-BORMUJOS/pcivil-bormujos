@@ -203,7 +203,7 @@ function drawPage1(doc: jsPDF, data: PsiFormState) {
     // Labels resized to 8pt to prevent overlapping
     textInBox(doc, 'FECHA', MARGIN, y, labelW, fieldH, { bold: true, size: 8 })
     drawRect(doc, MARGIN + labelW, y, 30, fieldH, undefined, BORDER)
-    textInBox(doc, data.fecha || '', MARGIN + labelW, y, 30, fieldH, { size: 9, align: 'center' })
+    textInBox(doc, data.fecha || '', MARGIN + labelW, y, 30, fieldH, { size: 10, align: 'center' })
 
     const informeX = MARGIN + labelW + 32
     const informeLabelW = 20
@@ -217,25 +217,25 @@ function drawPage1(doc: jsPDF, data: PsiFormState) {
     // Row 2: HORA
     textInBox(doc, 'HORA', MARGIN, y, labelW, fieldH, { bold: true, size: 8 })
     drawRect(doc, MARGIN + labelW, y, 30, fieldH, undefined, BORDER)
-    textInBox(doc, data.hora || '', MARGIN + labelW, y, 30, fieldH, { size: 9, align: 'center' })
+    textInBox(doc, data.hora || '', MARGIN + labelW, y, 30, fieldH, { size: 10, align: 'center' })
     y += fieldH + 1
 
     // Row 3: LUGAR
     textInBox(doc, 'LUGAR', MARGIN, y, labelW, fieldH, { bold: true, size: 8 })
     drawRect(doc, MARGIN + labelW, y, leftW - labelW, fieldH, undefined, BORDER)
-    textInBox(doc, data.lugar || '', MARGIN + labelW, y, leftW - labelW, fieldH, { size: 9 })
+    textInBox(doc, data.lugar || '', MARGIN + labelW, y, leftW - labelW, fieldH, { size: 10 })
     y += fieldH + 1
 
     // Row 4: MOTIVO
     textInBox(doc, 'MOTIVO', MARGIN, y, labelW, fieldH, { bold: true, size: 8 })
     drawRect(doc, MARGIN + labelW, y, leftW - labelW, fieldH, undefined, BORDER)
-    textInBox(doc, data.motivo || '', MARGIN + labelW, y, leftW - labelW, fieldH, { size: 9 })
+    textInBox(doc, data.motivo || '', MARGIN + labelW, y, leftW - labelW, fieldH, { size: 10 })
     y += fieldH + 1
 
     // Row 5: ALERTANTE
     textInBox(doc, 'ALERTANTE', MARGIN, y, labelW, fieldH, { bold: true, size: 8 })
     drawRect(doc, MARGIN + labelW, y, leftW - labelW, fieldH, undefined, BORDER)
-    textInBox(doc, data.alertante || '', MARGIN + labelW, y, leftW - labelW, fieldH, { size: 9 })
+    textInBox(doc, data.alertante || '', MARGIN + labelW, y, leftW - labelW, fieldH, { size: 10 })
     y += fieldH + 2
 
     // ── RIGHT COLUMN: Resource tables ──
@@ -274,20 +274,20 @@ function drawPage1(doc: jsPDF, data: PsiFormState) {
         // Vehículos (only 4 rows)
         if (i < 4) {
             drawRect(doc, t1X, rY, t1W, rowH, undefined, BORDER)
-            textInBox(doc, data.tabla1[i]?.vehiculo || '', t1X, rY, t1W, rowH, { size: 8, align: 'center' })
+            textInBox(doc, data.tabla1[i]?.vehiculo || '', t1X, rY, t1W, rowH, { size: 10, align: 'center' })
         }
 
         // Tabla 1 equipo/walkies
         drawRect(doc, t2X, rY, t2W / 2, rowH, undefined, BORDER)
-        textInBox(doc, data.tabla1[i]?.equipo || '', t2X, rY, t2W / 2, rowH, { size: 8, align: 'center' })
+        textInBox(doc, data.tabla1[i]?.equipo || '', t2X, rY, t2W / 2, rowH, { size: 10, align: 'center' })
         drawRect(doc, t2X + t2W / 2, rY, t2W / 2, rowH, undefined, BORDER)
-        textInBox(doc, data.tabla1[i]?.walkie || '', t2X + t2W / 2, rY, t2W / 2, rowH, { size: 8, align: 'center' })
+        textInBox(doc, data.tabla1[i]?.walkie || '', t2X + t2W / 2, rY, t2W / 2, rowH, { size: 10, align: 'center' })
 
         // Tabla 2 equipo/walkies
         drawRect(doc, t3X, rY, t3W / 2, rowH, undefined, BORDER)
-        textInBox(doc, data.tabla2[i]?.equipo || '', t3X, rY, t3W / 2, rowH, { size: 8, align: 'center' })
+        textInBox(doc, data.tabla2[i]?.equipo || '', t3X, rY, t3W / 2, rowH, { size: 10, align: 'center' })
         drawRect(doc, t3X + t3W / 2, rY, t3W / 2, rowH, undefined, BORDER)
-        textInBox(doc, data.tabla2[i]?.walkie || '', t3X + t3W / 2, rY, t3W / 2, rowH, { size: 8, align: 'center' })
+        textInBox(doc, data.tabla2[i]?.walkie || '', t3X + t3W / 2, rY, t3W / 2, rowH, { size: 10, align: 'center' })
     }
 
     // ── PAUTAS DE TIEMPO ──
@@ -395,7 +395,7 @@ function drawPage1(doc: jsPDF, data: PsiFormState) {
     y += 1
     const descH = 14
     drawRect(doc, MARGIN, y, CONTENT_W, descH, undefined, BORDER)
-    drawWrappedClipped(doc, data.otrosDescripcion || '', MARGIN + 2, y, CONTENT_W - 4, descH, 9)
+    drawWrappedClipped(doc, data.otrosDescripcion || '', MARGIN + 2, y, CONTENT_W - 4, descH, 10)
     y += descH + 1
 
     // ── POSIBLES CAUSAS ──
@@ -403,7 +403,7 @@ function drawPage1(doc: jsPDF, data: PsiFormState) {
     y += 1
     const causasH = 14
     drawRect(doc, MARGIN, y, CONTENT_W, causasH, undefined, BORDER)
-    drawWrappedClipped(doc, data.posiblesCausas || '', MARGIN + 2, y, CONTENT_W - 4, causasH, 9)
+    drawWrappedClipped(doc, data.posiblesCausas || '', MARGIN + 2, y, CONTENT_W - 4, causasH, 10)
     y += causasH + 1
 
     // ── HERIDOS / FALLECIDOS ──
@@ -425,7 +425,7 @@ function drawPage1(doc: jsPDF, data: PsiFormState) {
     drawCheckbox(doc, MARGIN + 27, y + 0.8, data.heridos === 'no')
     textInBox(doc, 'Nº', MARGIN + 34, y, 6, casualtyH, { size: 8, bold: true })
     drawRect(doc, MARGIN + 40, y + 0.5, 16, casualtyH - 1, undefined, BORDER)
-    textInBox(doc, data.heridosNum || '', MARGIN + 40, y, 16, casualtyH, { size: 9 })
+    textInBox(doc, data.heridosNum || '', MARGIN + 40, y, 16, casualtyH, { size: 10 })
 
     // Fallecidos row
     drawRect(doc, MARGIN + halfW, y, halfW, casualtyH, undefined, BORDER)
@@ -435,7 +435,7 @@ function drawPage1(doc: jsPDF, data: PsiFormState) {
     drawCheckbox(doc, MARGIN + halfW + 27, y + 0.8, data.fallecidos === 'no')
     textInBox(doc, 'Nº', MARGIN + halfW + 34, y, 6, casualtyH, { size: 8, bold: true })
     drawRect(doc, MARGIN + halfW + 40, y + 0.5, 16, casualtyH - 1, undefined, BORDER)
-    textInBox(doc, data.fallecidosNum || '', MARGIN + halfW + 40, y, 16, casualtyH, { size: 9 })
+    textInBox(doc, data.fallecidosNum || '', MARGIN + halfW + 40, y, 16, casualtyH, { size: 10 })
     y += casualtyH + 1
 
     // ── EN ACCIDENTES DE TRÁFICO ──
@@ -470,7 +470,7 @@ function drawPage1(doc: jsPDF, data: PsiFormState) {
     y += 1
     const obsH = 28
     drawRect(doc, MARGIN, y, CONTENT_W, obsH, undefined, BORDER)
-    drawWrappedClipped(doc, data.observaciones || '', MARGIN + 2, y, CONTENT_W - 4, obsH, 9)
+    drawWrappedClipped(doc, data.observaciones || '', MARGIN + 2, y, CONTENT_W - 4, obsH, 10)
     y += obsH + 1
 
     // ── FIRMAS (3 columnas) ──

@@ -52,8 +52,15 @@ export async function POST(request: NextRequest) {
 
     } catch (error) {
         console.error('Error en /api/partes/psi/drive-upload:', error)
+        const msg = (error as any)?.message || String(error)
+        const faltaConfig = /GOOGLE_DRIVE_FOLDER_ID|GOOGLE_SERVICE_ACCOUNT_KEY|ENOENT|google\.json/i.test(msg)
         return NextResponse.json(
-            { error: 'Error subiendo archivo a Drive' },
+            {
+                error: faltaConfig
+                    ? 'Google Drive no está configurado en el servidor (faltan credenciales/carpeta).'
+                    : 'Error subiendo archivo a Drive',
+                detalle: msg,
+            },
             { status: 500 }
         )
     }

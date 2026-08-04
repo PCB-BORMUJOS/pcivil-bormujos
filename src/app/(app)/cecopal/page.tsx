@@ -382,10 +382,16 @@ export default function CecopalPage() {
       ]
       const indicativosPersonal = persIndicativos
 
-      // Responsable del turno (para cumplimenta / responsable de turno del parte).
-      const resp = turno.find((g: any) => (g.rol === 'Responsable' || g.rol === 'Apoyo/Cecopal' || g.rol === 'Cecopal') && idsPersonal.includes(g.usuarioId))
-        || turno.find((g: any) => idsPersonal.includes(g.usuarioId))
-      const indicativoResp = resp?.usuario?.numeroVoluntario || resp?.usuario?.nombre || ''
+      // Firmantes del parte, tomados del TURNO asignado (no de la incidencia):
+      //  - "Indicativo que informa/cumplimenta" = el indicativo de CECOPAL del turno.
+      //  - "Responsable de turno" = el responsable designado en el turno.
+      //  - "VB Jefe de Servicio" = J-44 por defecto (lo pone el propio parte).
+      // Si alguno no está en el turno, se deja EN BLANCO.
+      const indicativoDeGuardia = (g: any) => g?.usuario?.numeroVoluntario || g?.usuario?.nombre || ''
+      const cecopalG = turno.find((g: any) => g.rol === 'Cecopal' || g.rol === 'Apoyo/Cecopal')
+      const responsableG = turno.find((g: any) => g.rol === 'Responsable')
+      const indicativoCecopal = indicativoDeGuardia(cecopalG)
+      const indicativoResponsable = indicativoDeGuardia(responsableG)
 
       // Motivo: tipo + descripción, para que ambos queden reflejados.
       const tipoLabel = TIPOS_INCIDENCIA.find(t => t.value === incidenciaActiva.tipoIncidencia)?.label || incidenciaActiva.tipoIncidencia || ''
@@ -450,8 +456,8 @@ export default function CecopalPage() {
         matriculasImplicados: ['', '', '', '', ''],
         observaciones: observacionesFinal,
         desarrolloDetallado,
-        indicativosInforman: indicativosPersonal.join(', '),
-        indicativoCumplimenta: indicativoResp, responsableTurno: indicativoResp,
+        indicativosInforman: indicativoCecopal,
+        indicativoCumplimenta: indicativoCecopal, responsableTurno: indicativoResponsable,
         descripcionAccidente: '',
       }
 
@@ -468,9 +474,9 @@ export default function CecopalPage() {
         horaDisponible: incidenciaActiva.horaDisponible || '',
         vehiculosIds: idsVehiculos,
         equipoWalkies,
-        indicativosInforman: indicativosPersonal.join(', '),
-        indicativoCumplimenta: indicativoResp,
-        responsableTurno: indicativoResp,
+        indicativosInforman: indicativoCecopal,
+        indicativoCumplimenta: indicativoCecopal,
+        responsableTurno: indicativoResponsable,
         observaciones: observacionesFinal,
         desarrolloDetallado,
         tipologias: tipologiasArr,
