@@ -306,7 +306,14 @@
 }
 
 .timeInput::-webkit-datetime-edit {
+  width: 100%;
   text-align: center;
+  display: flex;
+  justify-content: center;
+}
+
+.timeInput::-webkit-datetime-edit-fields-wrapper {
+  width: 100%;
   display: flex;
   justify-content: center;
 }

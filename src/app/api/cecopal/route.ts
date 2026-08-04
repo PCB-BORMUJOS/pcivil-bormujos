@@ -156,7 +156,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Tipo no válido' }, { status: 400 })
   } catch (error) {
     console.error('Error GET /api/cecopal:', error)
-    return NextResponse.json({ error: 'Error interno', detalle: (error as any)?.message || String(error), metodo: 'GET' }, { status: 500 })
+    return NextResponse.json({ error: 'Error interno' }, { status: 500 })
   }
 }
 
@@ -200,7 +200,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Tipo no válido' }, { status: 400 })
   } catch (error) {
     console.error('Error POST /api/cecopal:', error)
-    return NextResponse.json({ error: 'Error interno', detalle: (error as any)?.message || String(error), metodo: 'POST' }, { status: 500 })
+    return NextResponse.json({ error: 'Error interno' }, { status: 500 })
   }
 }
 
@@ -278,7 +278,7 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ error: 'Tipo no válido' }, { status: 400 })
   } catch (error) {
     console.error('Error PUT /api/cecopal:', error)
-    return NextResponse.json({ error: 'Error interno', detalle: (error as any)?.message || String(error), metodo: 'PUT' }, { status: 500 })
+    return NextResponse.json({ error: 'Error interno' }, { status: 500 })
   }
 }
 
@@ -299,6 +299,6 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('Error DELETE /api/cecopal:', error)
-    return NextResponse.json({ error: 'Error interno', detalle: (error as any)?.message || String(error), metodo: 'DELETE' }, { status: 500 })
+    return NextResponse.json({ error: 'Error interno' }, { status: 500 })
   }
 }

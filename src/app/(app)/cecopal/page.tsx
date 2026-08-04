@@ -269,7 +269,7 @@ export default function CecopalPage() {
         setTipoSeleccionado(''); setOrigenSeleccionado(''); setDireccion(''); setDescripcion('')
         setVehiculosSeleccionados([]); setVoluntariosSeleccionados([])
       }
-      else { alert('Error al crear la incidencia:\n' + (data.detalle || data.error || JSON.stringify(data)) + (data.metodo ? '\n[' + data.metodo + ']' : '')) }
+      else { alert('Error: ' + (data.error || JSON.stringify(data))) }
     } catch (e) { alert('Error de red: ' + String(e)) } finally { setGuardando(false) }
   }
 
@@ -391,12 +391,15 @@ export default function CecopalPage() {
       const tipoLabel = TIPOS_INCIDENCIA.find(t => t.value === incidenciaActiva.tipoIncidencia)?.label || incidenciaActiva.tipoIncidencia || ''
       const motivoFinal = [tipoLabel, incidenciaActiva.descripcion].filter(Boolean).join(' — ') || tipoLabel
 
-      // Tipología del parte marcada segun el tipo de incidencia de CECOPAL.
+      // Tipología del parte marcada segun el tipo de incidencia de CECOPAL. Solo
+      // se marca cuando hay una correspondencia CLARA; los tipos sin tipología
+      // específica (accidente, rescate, apoyo, otros) no marcan nada y se dejan
+      // para selección manual (evita marcar "otros" por defecto).
       const MAP_TIP: Record<string, [string, string]> = {
-        accidente: ['intervencion', 'otros'], incendio: ['intervencion', 'incendios'],
-        sanitaria: ['intervencion', 'svb'], inundacion: ['intervencion', 'inundaciones'],
-        rescate: ['intervencion', 'otros'], apoyo: ['intervencion', 'otros'],
-        prevencion: ['prevencion', 'preventivo'], otros: ['intervencion', 'otros'],
+        incendio: ['intervencion', 'incendios'],
+        sanitaria: ['intervencion', 'svb'],
+        inundacion: ['intervencion', 'inundaciones'],
+        prevencion: ['prevencion', 'preventivo'],
       }
       const prevencion: any = { mantenimiento: false, practicas: false, suministros: false, preventivo: false, otros: false }
       const intervencion: any = { svb: false, incendios: false, inundaciones: false, otros_riesgos_meteo: false, activacion_pem_bor: false, otros: false }
