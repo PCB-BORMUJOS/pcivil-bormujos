@@ -108,15 +108,26 @@ export function PsiForm() {
             parseInicialHecho.current = true
             // Simple parsing strategy: look for headers
             const text = form.desarrolloDetallado
-            const introMatch = text.match(/INTRODUCCIÓN:\s*([\s\S]*?)(?=\n\nDESARROLLO:|$)/)
-            const bodyMatch = text.match(/DESARROLLO:\s*([\s\S]*?)(?=\n\nCONCLUSIÓN:|$)/)
-            const concMatch = text.match(/CONCLUSIÓN:\s*([\s\S]*?)$/)
+            // Extracción por índices (robusta): cada sección es lo que hay entre su
+            // etiqueta y la siguiente presente. Evita el bug del \s* codicioso.
+            const extraer = (label: string, siguientes: string[]) => {
+                const start = text.indexOf(label)
+                if (start === -1) return ''
+                const from = start + label.length
+                let end = text.length
+                for (const sig of siguientes) {
+                    const idx = text.indexOf(sig, from)
+                    if (idx !== -1 && idx < end) end = idx
+                }
+                return text.slice(from, end).trim()
+            }
+            const tieneMarcadores = text.includes('INTRODUCCIÓN:') || text.includes('DESARROLLO:') || text.includes('CONCLUSIÓN:')
 
-            if (introMatch || bodyMatch || concMatch) {
+            if (tieneMarcadores) {
                 setTextComponents({
-                    introduccion: introMatch ? introMatch[1].trim() : '',
-                    desarrollo: bodyMatch ? bodyMatch[1].trim() : '',
-                    conclusion: concMatch ? concMatch[1].trim() : ''
+                    introduccion: extraer('INTRODUCCIÓN:', ['DESARROLLO:', 'CONCLUSIÓN:']),
+                    desarrollo: extraer('DESARROLLO:', ['CONCLUSIÓN:']),
+                    conclusion: extraer('CONCLUSIÓN:', [])
                 })
             } else {
                 // Formatting legacy text: put everything in body if no headers found

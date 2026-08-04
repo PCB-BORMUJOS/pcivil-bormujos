@@ -521,12 +521,23 @@ function drawPage2(doc: jsPDF, data: PsiFormState) {
     let conclusion = ''
 
     if (rawText.includes('INTRODUCCIÓN:') || rawText.includes('DESARROLLO:') || rawText.includes('CONCLUSIÓN:')) {
-        const introMatch = rawText.match(/INTRODUCCIÓN:\s*([\s\S]*?)(?=\n\nDESARROLLO:|$)/)
-        const bodyMatch  = rawText.match(/DESARROLLO:\s*([\s\S]*?)(?=\n\nCONCLUSIÓN:|$)/)
-        const concMatch  = rawText.match(/CONCLUSIÓN:\s*([\s\S]*?)$/)
-        introduccion = introMatch?.[1]?.trim() ?? ''
-        desarrollo   = bodyMatch?.[1]?.trim()  ?? ''
-        conclusion   = concMatch?.[1]?.trim()  ?? ''
+        // Extracción por índices (robusta): el cuerpo de cada sección es lo que hay
+        // entre su etiqueta y la siguiente etiqueta presente. Se evita el problema
+        // del regex con \s* que se comía los saltos y capturaba secciones enteras.
+        const extraer = (label: string, siguientes: string[]) => {
+            const start = rawText.indexOf(label)
+            if (start === -1) return ''
+            const from = start + label.length
+            let end = rawText.length
+            for (const sig of siguientes) {
+                const idx = rawText.indexOf(sig, from)
+                if (idx !== -1 && idx < end) end = idx
+            }
+            return rawText.slice(from, end).trim()
+        }
+        introduccion = extraer('INTRODUCCIÓN:', ['DESARROLLO:', 'CONCLUSIÓN:'])
+        desarrollo   = extraer('DESARROLLO:', ['CONCLUSIÓN:'])
+        conclusion   = extraer('CONCLUSIÓN:', [])
     } else {
         // Texto legacy sin cabeceras: todo va a desarrollo
         desarrollo = rawText
