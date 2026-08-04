@@ -21,7 +21,7 @@ export type PsiFormState = {
 
     // Tipología
     prevencion: Record<'mantenimiento' | 'practicas' | 'suministros' | 'preventivo' | 'otros', boolean>
-    intervencion: Record<'svb' | 'incendios' | 'inundaciones' | 'otros_riesgos_meteo' | 'activacion_pem_bor' | 'otros', boolean>
+    intervencion: Record<'svb' | 'accidente' | 'incendios' | 'inundaciones' | 'otros_riesgos_meteo' | 'activacion_pem_bor' | 'otros', boolean>
     otros: Record<'reunion_coordinacion' | 'reunion_areas' | 'limpieza' | 'formacion' | 'otros', boolean>
 
     otrosDescripcion: string
@@ -76,7 +76,7 @@ export const INITIAL_PSI_STATE: PsiFormState = {
 
     // Tipología
     prevencion: { mantenimiento: false, practicas: false, suministros: false, preventivo: false, otros: false },
-    intervencion: { svb: false, incendios: false, inundaciones: false, otros_riesgos_meteo: false, activacion_pem_bor: false, otros: false },
+    intervencion: { svb: false, accidente: false, incendios: false, inundaciones: false, otros_riesgos_meteo: false, activacion_pem_bor: false, otros: false },
     otros: { reunion_coordinacion: false, reunion_areas: false, limpieza: false, formacion: false, otros: false },
 
     otrosDescripcion: '',

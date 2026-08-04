@@ -324,6 +324,7 @@ function drawPage1(doc: jsPDF, data: PsiFormState) {
     ]
     const intervencionItems = [
         { label: 'SOPORTE VITAL', key: 'svb' },
+        { label: 'ACCIDENTE', key: 'accidente' },
         { label: 'INCENDIOS', key: 'incendios' },
         { label: 'INUNDACIONES', key: 'inundaciones' },
         { label: 'OTROS RIESGOS METEO', key: 'otros_riesgos_meteo' },

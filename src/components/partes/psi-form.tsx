@@ -626,11 +626,12 @@ ${textComponents.conclusion}`.trim()
                                     <div className={styles.typologyTitle}>INTERVENCIÓN</div>
                                     <div className={styles.typologyList}>
                                         <TypItem n="1" label="SOPORTE VITAL" checked={form.intervencion.svb} onToggle={() => setIntervencion('svb')} />
-                                        <TypItem n="2" label="INCENDIOS" checked={form.intervencion.incendios} onToggle={() => setIntervencion('incendios')} />
-                                        <TypItem n="3" label="INUNDACIONES" checked={form.intervencion.inundaciones} onToggle={() => setIntervencion('inundaciones')} />
-                                        <TypItem n="4" label="OTROS RIESGOS METEO" checked={form.intervencion.otros_riesgos_meteo} onToggle={() => setIntervencion('otros_riesgos_meteo')} />
-                                        <TypItem n="5" label="ACTIVACIÓN PEM- BOR" checked={form.intervencion.activacion_pem_bor} onToggle={() => setIntervencion('activacion_pem_bor')} />
-                                        <TypItem n="6" label="OTROS" checked={form.intervencion.otros} onToggle={() => setIntervencion('otros')} />
+                                        <TypItem n="2" label="ACCIDENTE" checked={form.intervencion.accidente} onToggle={() => setIntervencion('accidente')} />
+                                        <TypItem n="3" label="INCENDIOS" checked={form.intervencion.incendios} onToggle={() => setIntervencion('incendios')} />
+                                        <TypItem n="4" label="INUNDACIONES" checked={form.intervencion.inundaciones} onToggle={() => setIntervencion('inundaciones')} />
+                                        <TypItem n="5" label="OTROS RIESGOS METEO" checked={form.intervencion.otros_riesgos_meteo} onToggle={() => setIntervencion('otros_riesgos_meteo')} />
+                                        <TypItem n="6" label="ACTIVACIÓN PEM- BOR" checked={form.intervencion.activacion_pem_bor} onToggle={() => setIntervencion('activacion_pem_bor')} />
+                                        <TypItem n="7" label="OTROS" checked={form.intervencion.otros} onToggle={() => setIntervencion('otros')} />
                                     </div>
                                 </div>
 

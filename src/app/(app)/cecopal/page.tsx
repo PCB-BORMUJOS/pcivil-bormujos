@@ -396,16 +396,26 @@ export default function CecopalPage() {
       // específica (accidente, rescate, apoyo, otros) no marcan nada y se dejan
       // para selección manual (evita marcar "otros" por defecto).
       const MAP_TIP: Record<string, [string, string]> = {
+        accidente: ['intervencion', 'accidente'],
         incendio: ['intervencion', 'incendios'],
         sanitaria: ['intervencion', 'svb'],
         inundacion: ['intervencion', 'inundaciones'],
         prevencion: ['prevencion', 'preventivo'],
       }
       const prevencion: any = { mantenimiento: false, practicas: false, suministros: false, preventivo: false, otros: false }
-      const intervencion: any = { svb: false, incendios: false, inundaciones: false, otros_riesgos_meteo: false, activacion_pem_bor: false, otros: false }
+      const intervencion: any = { svb: false, accidente: false, incendios: false, inundaciones: false, otros_riesgos_meteo: false, activacion_pem_bor: false, otros: false }
       const otrosTip: any = { reunion_coordinacion: false, reunion_areas: false, limpieza: false, formacion: false, otros: false }
       const mp = MAP_TIP[incidenciaActiva.tipoIncidencia]
-      if (mp) { const [g, k] = mp; if (g === 'prevencion') prevencion[k] = true; else if (g === 'intervencion') intervencion[k] = true; else otrosTip[k] = true }
+      // Tipos sin tipología reconocida (rescate, apoyo, otros): se marca "otros" de
+      // intervención y la descripción del incidente va al campo "otros descripción".
+      let otrosDescripcionFinal = ''
+      if (mp) {
+        const [g, k] = mp
+        if (g === 'prevencion') prevencion[k] = true; else if (g === 'intervencion') intervencion[k] = true; else otrosTip[k] = true
+      } else {
+        intervencion.otros = true
+        otrosDescripcionFinal = [tipoLabel, incidenciaActiva.descripcion].filter(Boolean).join(' — ')
+      }
       const tipologiasArr = [
         ...Object.entries(prevencion).filter(([, v]) => v).map(([k]) => `prevencion.${k}`),
         ...Object.entries(intervencion).filter(([, v]) => v).map(([k]) => `intervencion.${k}`),
@@ -435,7 +445,7 @@ export default function CecopalPage() {
         fecha: hoy, hora: getHoraActual(), lugar: incidenciaActiva.direccion || '', motivo: motivoFinal,
         alertante: incidenciaActiva.origenAviso || '', circulacion,
         tiempos, tabla1, tabla2, prevencion, intervencion, otros: otrosTip,
-        otrosDescripcion: '', posiblesCausas: '',
+        otrosDescripcion: otrosDescripcionFinal, posiblesCausas: '',
         heridos: '', heridosNum: '', fallecidos: '', fallecidosNum: '',
         matriculasImplicados: ['', '', '', '', ''],
         observaciones: observacionesFinal,
@@ -464,7 +474,7 @@ export default function CecopalPage() {
         observaciones: observacionesFinal,
         desarrolloDetallado,
         tipologias: tipologiasArr,
-        tipologiasOtrosTexto: {},
+        tipologiasOtrosTexto: otrosDescripcionFinal ? { descripcion: otrosDescripcionFinal } : {},
         fotosUrls: [],
         informacionExtra: JSON.stringify(informacionExtra),
       }

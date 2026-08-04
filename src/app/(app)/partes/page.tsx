@@ -63,6 +63,7 @@ function parteAFormState(parte: any): PsiFormState {
     },
     intervencion: {
       svb: tipologiasDB.some(t => t === 'intervencion.svb' || t === 'svb' || t === 'soporte_vital'),
+      accidente: tipologiasDB.some(t => t === 'intervencion.accidente' || t === 'accidente'),
       incendios: tipologiasDB.some(t => t === 'intervencion.incendios' || t === 'incendios'),
       inundaciones: tipologiasDB.some(t => t === 'intervencion.inundaciones' || t === 'inundaciones'),
       otros_riesgos_meteo: tipologiasDB.some(t => t === 'intervencion.otros_riesgos_meteo' || t === 'otros_riesgos_meteo' || t === 'riesgos_meteo'),

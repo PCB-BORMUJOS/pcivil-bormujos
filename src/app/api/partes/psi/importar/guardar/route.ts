@@ -100,7 +100,7 @@ function construirDatos(
     tabla1,
     tabla2,
     prevencion:   tip.prevencion   || { mantenimiento: false, practicas: false, suministros: false, preventivo: false, otros: false },
-    intervencion: tip.intervencion || { svb: false, incendios: false, inundaciones: false, otros_riesgos_meteo: false, activacion_pem_bor: false, otros: false },
+    intervencion: tip.intervencion || { svb: false, accidente: false, incendios: false, inundaciones: false, otros_riesgos_meteo: false, activacion_pem_bor: false, otros: false },
     otros:        tip.otros        || { reunion_coordinacion: false, reunion_areas: false, limpieza: false, formacion: false, otros: false },
     otrosDescripcion: datos.otrosDescripcion || '',
     posiblesCausas:   datos.posiblesCausas || '',

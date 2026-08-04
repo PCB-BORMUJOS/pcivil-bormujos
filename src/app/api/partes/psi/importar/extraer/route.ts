@@ -33,7 +33,7 @@ Devuelve ÚNICAMENTE un objeto JSON válido (sin texto adicional, sin bloques de
       "preventivo": false, "otros": false
     },
     "intervencion": {
-      "svb": false, "incendios": false, "inundaciones": false,
+      "svb": false, "accidente": false, "incendios": false, "inundaciones": false,
       "otros_riesgos_meteo": false, "activacion_pem_bor": false, "otros": false
     },
     "otros": {

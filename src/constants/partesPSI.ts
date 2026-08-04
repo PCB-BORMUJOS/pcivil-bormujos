@@ -8,11 +8,12 @@ export const TIPOLOGIAS_PSI = {
     ],
     grupo2: [
         { id: 'svb', label: 'Soporte Vital', numero: '1' },
-        { id: 'incendios', label: 'Incendios', numero: '2' },
-        { id: 'inundaciones', label: 'Inundaciones', numero: '3' },
-        { id: 'otros_riesgos_meteo', label: 'Otros Riesgos Meteo', numero: '4' },
-        { id: 'activacion_pem_bor', label: 'Activación PEM-BOR', numero: '5' },
-        { id: 'otros', label: 'Otros', numero: '6', tieneTexto: true }
+        { id: 'accidente', label: 'Accidente', numero: '2' },
+        { id: 'incendios', label: 'Incendios', numero: '3' },
+        { id: 'inundaciones', label: 'Inundaciones', numero: '4' },
+        { id: 'otros_riesgos_meteo', label: 'Otros Riesgos Meteo', numero: '5' },
+        { id: 'activacion_pem_bor', label: 'Activación PEM-BOR', numero: '6' },
+        { id: 'otros', label: 'Otros', numero: '7', tieneTexto: true }
     ],
     grupo3: [
         { id: 'reunion_coordinacion', label: 'Reunión Coordinación', numero: '1' },
