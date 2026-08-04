@@ -47,6 +47,25 @@ function textInBox(doc: jsPDF, text: string, x: number, y: number, w: number, h:
     doc.text(text || '', textX, textY, { align })
 }
 
+// ─── Helper: texto multilínea que se AJUSTA al ancho y se RECORTA al alto de la
+// caja (evita que un texto largo se desborde por debajo y se solape con la
+// sección siguiente, como pasaba en OBSERVACIONES sobre las firmas). ───
+function drawWrappedClipped(doc: jsPDF, text: string, x: number, y: number, w: number, h: number, size = 9) {
+    if (!text) return
+    doc.setTextColor(...TEXT_DARK)
+    doc.setFontSize(size)
+    doc.setFont('helvetica', 'normal')
+    const lineH = size * 0.42 + 1
+    const maxLines = Math.max(1, Math.floor((h - 1.5) / lineH))
+    const lines = doc.splitTextToSize(text, w) as string[]
+    const shown = lines.slice(0, maxLines)
+    // Si se recorta, marcar la última línea visible con puntos suspensivos.
+    if (lines.length > maxLines && shown.length) {
+        shown[shown.length - 1] = shown[shown.length - 1].replace(/\s*\S*$/, '') + ' …'
+    }
+    shown.forEach((ln, i) => doc.text(ln, x, y + 3 + i * lineH))
+}
+
 // ─── Helper: dark blue section bar ───
 function sectionBar(doc: jsPDF, text: string, y: number): number {
     const h = 6
@@ -183,12 +202,12 @@ function drawPage1(doc: jsPDF, data: PsiFormState) {
     // Row 1: FECHA + Nº INFORME
     // Labels resized to 8pt to prevent overlapping
     textInBox(doc, 'FECHA', MARGIN, y, labelW, fieldH, { bold: true, size: 8 })
-    drawRect(doc, MARGIN + labelW, y, 28, fieldH, undefined, BORDER)
-    textInBox(doc, data.fecha || '', MARGIN + labelW, y, 28, fieldH, { size: 9 })
+    drawRect(doc, MARGIN + labelW, y, 30, fieldH, undefined, BORDER)
+    textInBox(doc, data.fecha || '', MARGIN + labelW, y, 30, fieldH, { size: 9, align: 'center' })
 
-    const informeX = MARGIN + labelW + 30
+    const informeX = MARGIN + labelW + 32
     const informeLabelW = 20
-    const informeValueW = leftW - labelW - 30 - informeLabelW
+    const informeValueW = leftW - labelW - 32 - informeLabelW
     textInBox(doc, 'Nº INFORME', informeX, y, informeLabelW, fieldH, { bold: true, size: 8 })
     drawRect(doc, informeX + informeLabelW, y, informeValueW, fieldH, undefined, BORDER)
     // Informe value centered and larger (12pt)
@@ -198,25 +217,25 @@ function drawPage1(doc: jsPDF, data: PsiFormState) {
     // Row 2: HORA
     textInBox(doc, 'HORA', MARGIN, y, labelW, fieldH, { bold: true, size: 8 })
     drawRect(doc, MARGIN + labelW, y, 30, fieldH, undefined, BORDER)
-    textInBox(doc, data.hora || '', MARGIN + labelW, y, 30, fieldH, { size: 10 })
+    textInBox(doc, data.hora || '', MARGIN + labelW, y, 30, fieldH, { size: 9, align: 'center' })
     y += fieldH + 1
 
     // Row 3: LUGAR
     textInBox(doc, 'LUGAR', MARGIN, y, labelW, fieldH, { bold: true, size: 8 })
     drawRect(doc, MARGIN + labelW, y, leftW - labelW, fieldH, undefined, BORDER)
-    textInBox(doc, data.lugar || '', MARGIN + labelW, y, leftW - labelW, fieldH, { size: 10 })
+    textInBox(doc, data.lugar || '', MARGIN + labelW, y, leftW - labelW, fieldH, { size: 9 })
     y += fieldH + 1
 
     // Row 4: MOTIVO
     textInBox(doc, 'MOTIVO', MARGIN, y, labelW, fieldH, { bold: true, size: 8 })
     drawRect(doc, MARGIN + labelW, y, leftW - labelW, fieldH, undefined, BORDER)
-    textInBox(doc, data.motivo || '', MARGIN + labelW, y, leftW - labelW, fieldH, { size: 10 })
+    textInBox(doc, data.motivo || '', MARGIN + labelW, y, leftW - labelW, fieldH, { size: 9 })
     y += fieldH + 1
 
     // Row 5: ALERTANTE
     textInBox(doc, 'ALERTANTE', MARGIN, y, labelW, fieldH, { bold: true, size: 8 })
     drawRect(doc, MARGIN + labelW, y, leftW - labelW, fieldH, undefined, BORDER)
-    textInBox(doc, data.alertante || '', MARGIN + labelW, y, leftW - labelW, fieldH, { size: 10 })
+    textInBox(doc, data.alertante || '', MARGIN + labelW, y, leftW - labelW, fieldH, { size: 9 })
     y += fieldH + 2
 
     // ── RIGHT COLUMN: Resource tables ──
@@ -310,7 +329,7 @@ function drawPage1(doc: jsPDF, data: PsiFormState) {
     const tipHeaders = ['PREVENCIÓN', 'INTERVENCIÓN', 'OTROS']
     for (let c = 0; c < 3; c++) {
         drawRect(doc, MARGIN + c * tipColW, y, tipColW, tipHeaderH, BLUE)
-        textInBox(doc, tipHeaders[c], MARGIN + c * tipColW, y, tipColW, tipHeaderH, { color: WHITE, bold: true, size: 6, align: 'center' })
+        textInBox(doc, tipHeaders[c], MARGIN + c * tipColW, y, tipColW, tipHeaderH, { color: WHITE, bold: true, size: 8, align: 'center' })
     }
     y += tipHeaderH
 
@@ -351,21 +370,21 @@ function drawPage1(doc: jsPDF, data: PsiFormState) {
     const cbX = tipColW - 6 // checkbox position relative to column
     for (let i = 0; i < prevencionItems.length; i++) {
         const ry = y + 1 + i * tipRowH
-        textInBox(doc, `${i + 1}  ${prevencionItems[i].label}`, MARGIN + 2, ry, tipColW - 10, tipRowH, { size: 6.5 })
+        textInBox(doc, `${i + 1}  ${prevencionItems[i].label}`, MARGIN + 2, ry, tipColW - 10, tipRowH, { size: 7.5 })
         drawCheckbox(doc, MARGIN + cbX, ry + 0.2, data.prevencion[prevencionItems[i].key as keyof typeof data.prevencion])
     }
 
     // Intervención items
     for (let i = 0; i < intervencionItems.length; i++) {
         const ry = y + 1 + i * tipRowH
-        textInBox(doc, `${i + 1}  ${intervencionItems[i].label}`, MARGIN + tipColW + 2, ry, tipColW - 10, tipRowH, { size: 6.5 })
+        textInBox(doc, `${i + 1}  ${intervencionItems[i].label}`, MARGIN + tipColW + 2, ry, tipColW - 10, tipRowH, { size: 7.5 })
         drawCheckbox(doc, MARGIN + tipColW + cbX, ry + 0.2, data.intervencion[intervencionItems[i].key as keyof typeof data.intervencion])
     }
 
     // Otros items
     for (let i = 0; i < otrosItems.length; i++) {
         const ry = y + 1 + i * tipRowH
-        textInBox(doc, `${i + 1}  ${otrosItems[i].label}`, MARGIN + tipColW * 2 + 2, ry, tipColW - 10, tipRowH, { size: 6.5 })
+        textInBox(doc, `${i + 1}  ${otrosItems[i].label}`, MARGIN + tipColW * 2 + 2, ry, tipColW - 10, tipRowH, { size: 7.5 })
         drawCheckbox(doc, MARGIN + tipColW * 2 + cbX, ry + 0.2, data.otros[otrosItems[i].key as keyof typeof data.otros])
     }
 
@@ -376,10 +395,7 @@ function drawPage1(doc: jsPDF, data: PsiFormState) {
     y += 1
     const descH = 14
     drawRect(doc, MARGIN, y, CONTENT_W, descH, undefined, BORDER)
-    doc.setTextColor(...TEXT_DARK)
-    doc.setFontSize(9)
-    doc.setFont('helvetica', 'normal')
-    doc.text(data.otrosDescripcion || '', MARGIN + 2, y + 5, { maxWidth: CONTENT_W - 4 })
+    drawWrappedClipped(doc, data.otrosDescripcion || '', MARGIN + 2, y, CONTENT_W - 4, descH, 9)
     y += descH + 1
 
     // ── POSIBLES CAUSAS ──
@@ -387,10 +403,7 @@ function drawPage1(doc: jsPDF, data: PsiFormState) {
     y += 1
     const causasH = 14
     drawRect(doc, MARGIN, y, CONTENT_W, causasH, undefined, BORDER)
-    doc.setTextColor(...TEXT_DARK)
-    doc.setFontSize(9)
-    doc.setFont('helvetica', 'normal')
-    doc.text(data.posiblesCausas || '', MARGIN + 2, y + 5, { maxWidth: CONTENT_W - 4 })
+    drawWrappedClipped(doc, data.posiblesCausas || '', MARGIN + 2, y, CONTENT_W - 4, causasH, 9)
     y += causasH + 1
 
     // ── HERIDOS / FALLECIDOS ──
@@ -429,24 +442,27 @@ function drawPage1(doc: jsPDF, data: PsiFormState) {
     y = sectionBar(doc, 'EN ACCIDENTES DE TRÁFICO', y)
     y += 1
 
-    // MATRÍCULA VEHÍCULOS IMPLICADOS
-    const trafficRowH = 6
-    textInBox(doc, 'MATRÍCULA VEHÍCULOS IMPLICADOS', MARGIN, y, 52, trafficRowH, { bold: true, size: 6 })
-    const matW = (CONTENT_W - 54) / 3
-    for (let i = 0; i < 3; i++) {
-        drawRect(doc, MARGIN + 54 + i * matW, y, matW - 2, trafficRowH, undefined, BORDER)
-        textInBox(doc, data.matriculasImplicados[i] || '', MARGIN + 54 + i * matW, y, matW - 2, trafficRowH, { size: 6 })
+    // MATRÍCULA VEHÍCULOS IMPLICADOS — 4 celdas; la última alineada con el cuadro
+    // de GUARDIA CIVIL de la fila inferior (empieza en MARGIN + 144).
+    const trafficRowH = 6.5
+    textInBox(doc, 'MATRÍCULA VEHÍCULOS IMPLICADOS', MARGIN, y, 52, trafficRowH, { bold: true, size: 6.5 })
+    const matStartX = MARGIN + 54
+    const matEndX = MARGIN + CONTENT_W
+    const matW = (matEndX - matStartX) / 4
+    for (let i = 0; i < 4; i++) {
+        drawRect(doc, matStartX + i * matW, y, matW - 2, trafficRowH, undefined, BORDER)
+        textInBox(doc, data.matriculasImplicados[i] || '', matStartX + i * matW, y, matW - 2, trafficRowH, { size: 8, align: 'center' })
     }
     y += trafficRowH + 1
 
     // AUTORIDAD / POLICÍA LOCAL / GUARDIA CIVIL
-    textInBox(doc, 'AUTORIDAD QUE INTERVIENEN', MARGIN, y, 48, trafficRowH, { bold: true, size: 5.5 })
-    textInBox(doc, 'POLICÍA LOCAL DE', MARGIN + 50, y, 30, trafficRowH, { bold: true, size: 5.5 })
+    textInBox(doc, 'AUTORIDAD QUE INTERVIENEN', MARGIN, y, 48, trafficRowH, { bold: true, size: 6.5 })
+    textInBox(doc, 'POLICÍA LOCAL DE', MARGIN + 50, y, 30, trafficRowH, { bold: true, size: 6.5 })
     drawRect(doc, MARGIN + 80, y, 30, trafficRowH, undefined, BORDER)
-    textInBox(doc, data.policiaLocalDe || '', MARGIN + 80, y, 30, trafficRowH, { size: 6 })
-    textInBox(doc, 'GUARDIA CIVIL DE', MARGIN + 114, y, 30, trafficRowH, { bold: true, size: 5.5 })
+    textInBox(doc, data.policiaLocalDe || '', MARGIN + 80, y, 30, trafficRowH, { size: 8, align: 'center' })
+    textInBox(doc, 'GUARDIA CIVIL DE', MARGIN + 114, y, 30, trafficRowH, { bold: true, size: 6.5 })
     drawRect(doc, MARGIN + 144, y, CONTENT_W - 144 + MARGIN, trafficRowH, undefined, BORDER)
-    textInBox(doc, data.guardiaCivilDe || '', MARGIN + 144, y, CONTENT_W - 144 + MARGIN, trafficRowH, { size: 6 })
+    textInBox(doc, data.guardiaCivilDe || '', MARGIN + 144, y, CONTENT_W - 144 + MARGIN, trafficRowH, { size: 8, align: 'center' })
     y += trafficRowH + 1
 
     // ── OBSERVACIONES ──
@@ -454,10 +470,7 @@ function drawPage1(doc: jsPDF, data: PsiFormState) {
     y += 1
     const obsH = 28
     drawRect(doc, MARGIN, y, CONTENT_W, obsH, undefined, BORDER)
-    doc.setTextColor(...TEXT_DARK)
-    doc.setFontSize(9)
-    doc.setFont('helvetica', 'normal')
-    doc.text(data.observaciones || '', MARGIN + 2, y + 5, { maxWidth: CONTENT_W - 4 })
+    drawWrappedClipped(doc, data.observaciones || '', MARGIN + 2, y, CONTENT_W - 4, obsH, 9)
     y += obsH + 1
 
     // ── FIRMAS (3 columnas) ──

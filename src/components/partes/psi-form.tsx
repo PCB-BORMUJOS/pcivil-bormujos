@@ -687,7 +687,7 @@ ${textComponents.conclusion}`.trim()
                                 <div className={styles.trafficRow}>
                                     <div className={styles.trafficLabel}>MATRÍCULA VEHÍCULOS IMPLICADOS</div>
                                     <div className={styles.trafficInputs}>
-                                        {form.matriculasImplicados.map((m, i) => (
+                                        {form.matriculasImplicados.slice(0, 4).map((m, i) => (
                                             <input key={`mat-${i}`} className={styles.inputMatricula} value={m} onChange={(e) => setMatricula(i, e.target.value)} />
                                         ))}
                                     </div>
