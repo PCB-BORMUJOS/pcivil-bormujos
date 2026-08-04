@@ -97,47 +97,49 @@ export function PsiForm() {
         conclusion: ''
     })
 
-    // Parse existing text on load. Se hace UNA sola vez, la primera vez que llega
-    // un desarrolloDetallado no vacío (carga del parte). Antes dependía de
-    // !hasChanges, pero el efecto de reensamblado marca hasChanges=true en el
-    // montaje y bloqueaba este parseo, perdiéndose el desarrollo cargado (p. ej.
-    // el volcado desde CECOPAL). Con el ref se desacopla de esa carrera.
-    const parseInicialHecho = useRef(false)
-    useEffect(() => {
-        if (form.desarrolloDetallado && !parseInicialHecho.current) {
-            parseInicialHecho.current = true
-            // Simple parsing strategy: look for headers
-            const text = form.desarrolloDetallado
-            // Extracción por índices (robusta): cada sección es lo que hay entre su
-            // etiqueta y la siguiente presente. Evita el bug del \s* codicioso.
-            const extraer = (label: string, siguientes: string[]) => {
-                const start = text.indexOf(label)
-                if (start === -1) return ''
-                const from = start + label.length
-                let end = text.length
-                for (const sig of siguientes) {
-                    const idx = text.indexOf(sig, from)
-                    if (idx !== -1 && idx < end) end = idx
-                }
-                return text.slice(from, end).trim()
-            }
-            const tieneMarcadores = text.includes('INTRODUCCIÓN:') || text.includes('DESARROLLO:') || text.includes('CONCLUSIÓN:')
+    // Sincronización desarrolloDetallado <-> pestañas (introducción/desarrollo/
+    // conclusión). Se distingue un cambio EXTERNO (carga del parte, p. ej. el
+    // volcado desde CECOPAL) de nuestra propia salida de reensamblado mediante
+    // `lastSynced`: así el parseo se ejecuta cuando llega contenido real y no se
+    // "gasta" con la plantilla vacía que el reensamblado escribe en el montaje.
+    const lastSynced = useRef<string>('')
 
-            if (tieneMarcadores) {
-                setTextComponents({
-                    introduccion: extraer('INTRODUCCIÓN:', ['DESARROLLO:', 'CONCLUSIÓN:']),
-                    desarrollo: extraer('DESARROLLO:', ['CONCLUSIÓN:']),
-                    conclusion: extraer('CONCLUSIÓN:', [])
-                })
-            } else {
-                // Formatting legacy text: put everything in body if no headers found
-                // Or maybe put in intro? Let's put in desarrollo as default.
-                setTextComponents(prev => ({ ...prev, desarrollo: text }))
+    // Parseo: cuando desarrolloDetallado cambia por una fuente externa (distinto
+    // de lo que nosotros escribimos), se re-derivan las pestañas.
+    useEffect(() => {
+        const text = form.desarrolloDetallado || ''
+        if (text === lastSynced.current) return // es nuestra propia salida: no re-parsear
+        lastSynced.current = text
+        if (!text) { setTextComponents({ introduccion: '', desarrollo: '', conclusion: '' }); return }
+        // Extracción por índices (robusta): cada sección es lo que hay entre su
+        // etiqueta y la siguiente presente. Evita el bug del \s* codicioso.
+        const extraer = (label: string, siguientes: string[]) => {
+            const start = text.indexOf(label)
+            if (start === -1) return ''
+            const from = start + label.length
+            let end = text.length
+            for (const sig of siguientes) {
+                const idx = text.indexOf(sig, from)
+                if (idx !== -1 && idx < end) end = idx
             }
+            return text.slice(from, end).trim()
+        }
+        const tieneMarcadores = text.includes('INTRODUCCIÓN:') || text.includes('DESARROLLO:') || text.includes('CONCLUSIÓN:')
+        if (tieneMarcadores) {
+            setTextComponents({
+                introduccion: extraer('INTRODUCCIÓN:', ['DESARROLLO:', 'CONCLUSIÓN:']),
+                desarrollo: extraer('DESARROLLO:', ['CONCLUSIÓN:']),
+                conclusion: extraer('CONCLUSIÓN:', [])
+            })
+        } else {
+            // Texto legacy sin cabeceras: todo va a desarrollo.
+            setTextComponents({ introduccion: '', desarrollo: text, conclusion: '' })
         }
     }, [form.desarrolloDetallado])
 
-    // Update form when text components change
+    // Reensamblado: cuando el usuario edita las pestañas, se reconstruye el texto.
+    // Se marca `lastSynced` con nuestra salida para que el parseo de arriba no la
+    // vuelva a interpretar como un cambio externo.
     useEffect(() => {
         const fullText = `INTRODUCCIÓN:
 ${textComponents.introduccion}
@@ -148,11 +150,8 @@ ${textComponents.desarrollo}
 CONCLUSIÓN:
 ${textComponents.conclusion}`.trim()
 
-        if (fullText !== form.desarrolloDetallado) {
-            // Avoid infinite loop if no actual change
-            // We need to setField but careful not to re-trigger the parser above if we simply set it.
-            // The parser checks !hasChanges or we can add a ref to ignore internal updates.
-            // Actually, setField triggers hasChanges=true in hook.
+        if (fullText !== (form.desarrolloDetallado || '')) {
+            lastSynced.current = fullText
             setField('desarrolloDetallado', fullText)
         }
     }, [textComponents])
