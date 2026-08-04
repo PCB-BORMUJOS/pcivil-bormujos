@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, Suspense } from 'react'
+import { useSession } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Plus, Download, Trash2, Eye, FileText, Loader2, Upload } from 'lucide-react'
@@ -100,6 +101,8 @@ function parteAFormState(parte: any): PsiFormState {
 
 function PartesPageInner() {
   const router = useRouter()
+  const { data: session } = useSession()
+  const esSuperadmin = ((session?.user as any)?.rol || '').toLowerCase() === 'superadmin'
   const [partes, setPartes] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [descargando, setDescargando] = useState<string | null>(null)
@@ -110,6 +113,48 @@ function PartesPageInner() {
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [showImportar, setShowImportar] = useState(false)
+  const [seleccionados, setSeleccionados] = useState<Set<string>>(new Set())
+  const [eliminandoLote, setEliminandoLote] = useState(false)
+
+  const toggleSeleccion = (id: string) => {
+    setSeleccionados(prev => {
+      const s = new Set(prev)
+      s.has(id) ? s.delete(id) : s.add(id)
+      return s
+    })
+  }
+  // Seleccionar/deseleccionar todos los BORRADORES de la página.
+  const borradoresPagina = partes.filter(p => p.estado === 'borrador')
+  const todosBorradoresSel = borradoresPagina.length > 0 && borradoresPagina.every(p => seleccionados.has(p.id))
+  const toggleTodos = () => {
+    setSeleccionados(prev => {
+      if (todosBorradoresSel) {
+        const s = new Set(prev)
+        borradoresPagina.forEach(p => s.delete(p.id))
+        return s
+      }
+      const s = new Set(prev)
+      borradoresPagina.forEach(p => s.add(p.id))
+      return s
+    })
+  }
+
+  const handleEliminarLote = async () => {
+    const ids = Array.from(seleccionados)
+    if (ids.length === 0) return
+    if (!confirm(`¿Eliminar ${ids.length} parte(s) seleccionado(s)? Esta acción no se puede deshacer.`)) return
+    setEliminandoLote(true)
+    try {
+      const resultados = await Promise.allSettled(
+        ids.map(id => fetch(`/api/partes/psi/${id}`, { method: 'DELETE' }))
+      )
+      const fallos = resultados.filter(r => r.status === 'rejected' || (r.status === 'fulfilled' && !r.value.ok)).length
+      if (fallos > 0) alert(`No se pudieron eliminar ${fallos} parte(s).`)
+      setSeleccionados(new Set())
+      await cargarPartes()
+    } catch { /* silenciado */ }
+    finally { setEliminandoLote(false) }
+  }
 
   useEffect(() => { cargarPartes() }, [page, filtroFecha, filtroEstado])
 
@@ -221,10 +266,34 @@ function PartesPageInner() {
         </div>
       </div>
 
+      {/* Barra de acciones en lote (solo superadmin) */}
+      {esSuperadmin && seleccionados.size > 0 && (
+        <div className="mb-3 flex items-center justify-between gap-3 bg-red-50 border border-red-200 rounded-lg px-4 py-2.5">
+          <span className="text-sm text-red-700 font-medium">{seleccionados.size} seleccionado(s)</span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setSeleccionados(new Set())}
+              className="px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded-lg font-medium"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleEliminarLote}
+              disabled={eliminandoLote}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white rounded-lg font-semibold"
+            >
+              {eliminandoLote ? <Loader2 size={15} className="animate-spin" /> : <Trash2 size={15} />}
+              Eliminar seleccionados
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* TABLA */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-x-auto">
         <table className="w-full min-w-[700px] table-fixed">
           <colgroup>
+            {esSuperadmin && <col className="w-9" />}
             <col className="w-[130px]" />
             <col className="w-[110px]" />
             <col className="w-auto" />
@@ -234,18 +303,29 @@ function PartesPageInner() {
           </colgroup>
           <thead className="bg-slate-50 border-b border-gray-200">
             <tr>
-              <th className="text-left px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wide">Nº Parte</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wide">Fecha / Hora</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wide">Lugar</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wide">Creado por</th>
-              <th className="text-center px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wide">Estado</th>
-              <th className="text-center px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wide">Acciones</th>
+              {esSuperadmin && (
+                <th className="text-center px-2 py-3 w-9">
+                  <input
+                    type="checkbox"
+                    checked={todosBorradoresSel}
+                    onChange={toggleTodos}
+                    title="Seleccionar todos los borradores"
+                    className="accent-red-500 cursor-pointer"
+                  />
+                </th>
+              )}
+              <th className="text-left px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wide whitespace-nowrap">Nº Parte</th>
+              <th className="text-left px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wide whitespace-nowrap">Fecha / Hora</th>
+              <th className="text-left px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wide whitespace-nowrap">Lugar</th>
+              <th className="text-left px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wide whitespace-nowrap">Creado por</th>
+              <th className="text-center px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wide whitespace-nowrap">Estado</th>
+              <th className="text-center px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wide whitespace-nowrap">Acciones</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
             {loading ? (
               <tr>
-                <td colSpan={6} className="text-center py-16">
+                <td colSpan={esSuperadmin ? 7 : 6} className="text-center py-16">
                   <Loader2 className="animate-spin mx-auto text-orange-500 mb-2" size={24} />
                   <span className="text-sm text-gray-400">Cargando partes...</span>
                 </td>
@@ -260,8 +340,20 @@ function PartesPageInner() {
               partes.map((parte: any) => {
                 const estadoInfo = ESTADOS_PARTE[parte.estado as keyof typeof ESTADOS_PARTE]
                 const fecha = new Date(parte.fecha)
+                // La hora de creación real del parte/borrador (no la fecha de servicio).
+                const creado = parte.createdAt ? new Date(parte.createdAt) : null
                 return (
                   <tr key={parte.id} className="hover:bg-orange-50/30 transition-colors">
+                    {esSuperadmin && (
+                      <td className="px-2 py-3 text-center">
+                        <input
+                          type="checkbox"
+                          checked={seleccionados.has(parte.id)}
+                          onChange={() => toggleSeleccion(parte.id)}
+                          className="accent-red-500 cursor-pointer"
+                        />
+                      </td>
+                    )}
                     <td className="px-4 py-3">
                       <span className="font-mono text-xs font-semibold text-gray-700 whitespace-nowrap">
                         {parte.numeroParte}
@@ -269,7 +361,7 @@ function PartesPageInner() {
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <span className="text-sm text-gray-700">{format(fecha, 'dd/MM/yy', { locale: es })}</span>
-                      <span className="text-xs text-gray-400 ml-1">{format(fecha, 'HH:mm')}</span>
+                      <span className="text-xs text-gray-400 ml-1">{creado ? format(creado, 'HH:mm') : ''}</span>
                     </td>
                     <td className="px-4 py-3">
                       <span className="text-sm text-gray-800 font-medium block truncate" title={parte.lugar}>
