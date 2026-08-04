@@ -15,10 +15,34 @@ function getHoraTurno(): string {
   return 'noche'
 }
 
+// Numera a partir del MÁXIMO sufijo existente (no del conteo): con count+1,
+// cualquier hueco (registros borrados, o novedades que también consumen números
+// CEC-) provoca colisiones de la restricción única sobre `numero`.
 async function generarNumero(): Promise<string> {
   const year = new Date().getFullYear()
-  const count = await prisma.incidenciaCecopal.count({ where: { numero: { startsWith: `CEC-${year}` } } })
-  return `CEC-${year}-${String(count + 1).padStart(4, '0')}`
+  const ultima = await prisma.incidenciaCecopal.findFirst({
+    where: { numero: { startsWith: `CEC-${year}-` } },
+    orderBy: { numero: 'desc' },
+    select: { numero: true },
+  })
+  let next = 1
+  const m = ultima?.numero?.match(/(\d+)$/)
+  if (m) next = parseInt(m[1], 10) + 1
+  return `CEC-${year}-${String(next).padStart(4, '0')}`
+}
+
+// Crea con reintento ante colisión de `numero` (P2002), por si dos registros se
+// generan casi a la vez y calculan el mismo siguiente número.
+async function crearConNumero(data: any) {
+  for (let intento = 0; intento < 5; intento++) {
+    try {
+      return await prisma.incidenciaCecopal.create({ data: { ...data, numero: await generarNumero() } })
+    } catch (e: any) {
+      if (e?.code === 'P2002' && intento < 4) continue
+      throw e
+    }
+  }
+  throw new Error('No se pudo generar un número único para la incidencia')
 }
 
 // Rango UTC [inicio, fin) del día natural de Madrid que contiene "ahora".
@@ -143,39 +167,31 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { tipo } = body
     if (tipo === 'incidencia') {
-      const numero = await generarNumero()
-      const incidencia = await prisma.incidenciaCecopal.create({
-        data: {
-          numero,
-          estado: 'activa',
-          tipoIncidencia: body.tipoIncidencia,
-          origenAviso: body.origenAviso,
-          direccion: body.direccion,
-          descripcion: body.descripcion || null,
-          horaLlamada: body.horaLlamada || getHoraActual(),
-          vehiculosIds: body.vehiculosIds || [],
-          voluntariosIds: body.voluntariosIds || [],
-          operadorId: (session.user as any).id
-        }
+      const incidencia = await crearConNumero({
+        estado: 'activa',
+        tipoIncidencia: body.tipoIncidencia,
+        origenAviso: body.origenAviso,
+        direccion: body.direccion,
+        descripcion: body.descripcion || null,
+        horaLlamada: body.horaLlamada || getHoraActual(),
+        vehiculosIds: body.vehiculosIds || [],
+        voluntariosIds: body.voluntariosIds || [],
+        operadorId: (session.user as any).id,
       })
       const _auditCec = getUsuarioAudit(session)
       await registrarAudit({ accion: 'CREATE', entidad: 'IncidenciaCecopal', entidadId: incidencia.id, descripcion: `Incidencia activada: ${incidencia.numero} — ${incidencia.tipoIncidencia} en ${incidencia.direccion}`, usuarioId: _auditCec.usuarioId, usuarioNombre: _auditCec.usuarioNombre, modulo: 'CECOPAL' })
       return NextResponse.json({ incidencia })
     }
     if (tipo === 'novedad-turno') {
-      const numero = await generarNumero()
-      const novedad = await prisma.incidenciaCecopal.create({
-        data: {
-          numero,
-          estado: 'novedad',
-          tipoIncidencia: 'novedad',
-          origenAviso: 'interno',
-          direccion: '-',
-          titulo: (body.titulo && body.titulo.trim()) ? body.titulo.trim() : (body.texto || '').slice(0, 60),
-          descripcion: body.texto,
-          horaLlamada: getHoraActual(),
-          operadorId: (session.user as any).id
-        }
+      const novedad = await crearConNumero({
+        estado: 'novedad',
+        tipoIncidencia: 'novedad',
+        origenAviso: 'interno',
+        direccion: '-',
+        titulo: (body.titulo && body.titulo.trim()) ? body.titulo.trim() : (body.texto || '').slice(0, 60),
+        descripcion: body.texto,
+        horaLlamada: getHoraActual(),
+        operadorId: (session.user as any).id,
       })
       const _auditNov = getUsuarioAudit(session)
       await registrarAudit({ accion: 'CREATE', entidad: 'NovedadTurno', entidadId: novedad.id, descripcion: `Novedad de turno registrada: ${novedad.numero}`, usuarioId: _auditNov.usuarioId, usuarioNombre: _auditNov.usuarioNombre, modulo: 'CECOPAL' })
