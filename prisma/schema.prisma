@@ -1232,6 +1232,8 @@ model IncidenciaCecopal {
   horaDisponible String?  @map("hora_disponible")
   vehiculosIds   Json     @default("[]") @map("vehiculos_ids")
   voluntariosIds Json     @default("[]") @map("voluntarios_ids")
+  latitud        Float?
+  longitud       Float?
   observaciones  String?  @db.Text
   desarrollo     String?  @db.Text
   titulo         String?

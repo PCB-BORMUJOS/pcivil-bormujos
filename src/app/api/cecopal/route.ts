@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { registrarAudit, getUsuarioAudit } from '@/lib/audit'
+import { geocodificarDireccion } from '@/lib/geocode'
 
 function getHoraActual(): string {
   return new Date().toLocaleTimeString('es-ES', { timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit' })
@@ -168,6 +169,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { tipo } = body
     if (tipo === 'incidencia') {
+      // Geocodificar la dirección para poder lanzar navegación en los iPads.
+      const coords = await geocodificarDireccion(body.direccion)
       const incidencia = await crearConNumero({
         estado: 'activa',
         tipoIncidencia: body.tipoIncidencia,
@@ -177,6 +180,8 @@ export async function POST(request: NextRequest) {
         horaLlamada: body.horaLlamada || getHoraActual(),
         vehiculosIds: body.vehiculosIds || [],
         voluntariosIds: body.voluntariosIds || [],
+        latitud: coords?.lat ?? null,
+        longitud: coords?.lng ?? null,
         operadorId: (session.user as any).id,
       })
       const _auditCec = getUsuarioAudit(session)
@@ -243,6 +248,12 @@ export async function PUT(request: NextRequest) {
         'horaTerminado', 'horaDisponible',
       ]
       campos.forEach(c => { if (body[c] !== undefined) data[c] = body[c] })
+      // Si cambia la dirección, se recalculan las coordenadas para la navegación.
+      if (body.direccion !== undefined) {
+        const coords = await geocodificarDireccion(body.direccion)
+        data.latitud = coords?.lat ?? null
+        data.longitud = coords?.lng ?? null
+      }
       const incidencia = await prisma.incidenciaCecopal.update({ where: { id }, data })
       const _auditAct = getUsuarioAudit(session)
       await registrarAudit({ accion: 'UPDATE', entidad: 'IncidenciaCecopal', entidadId: incidencia.id, descripcion: `Incidencia actualizada: ${incidencia.numero}`, usuarioId: _auditAct.usuarioId, usuarioNombre: _auditAct.usuarioNombre, modulo: 'CECOPAL' })

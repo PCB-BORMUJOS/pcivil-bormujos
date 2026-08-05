@@ -4,6 +4,30 @@ import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'next/navigation'
 
 const INTERVAL_MS = 5000
+const INC_INTERVAL_MS = 8000 // sondeo de incidencia asignada al vehículo
+const TRACK_TOKEN = process.env.NEXT_PUBLIC_TRACKING_TOKEN
+
+type Incidencia = {
+  id: string
+  numero: string
+  tipoIncidencia: string
+  direccion: string
+  descripcion: string | null
+  latitud: number | null
+  longitud: number | null
+  horaLlamada: string | null
+  horaSalida: string | null
+  horaLlegada: string | null
+  horaTerminado: string | null
+  horaDisponible: string | null
+}
+
+const ISOCRONAS: Array<{ campo: keyof Incidencia; label: string }> = [
+  { campo: 'horaSalida', label: 'SALIDA' },
+  { campo: 'horaLlegada', label: 'LLEGADA' },
+  { campo: 'horaTerminado', label: 'FINALIZADO' },
+  { campo: 'horaDisponible', label: 'DISPONIBLE' },
+]
 
 export default function TrackingPage() {
   const params = useParams()
@@ -15,6 +39,51 @@ export default function TrackingPage() {
   const watchRef = useRef<number | null>(null)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const lastPosRef = useRef<GeolocationPosition | null>(null)
+
+  const [incidencia, setIncidencia] = useState<Incidencia | null>(null)
+  const [marcando, setMarcando] = useState<string | null>(null)
+  const incIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  const cargarIncidencia = async () => {
+    try {
+      const res = await fetch(`/api/tracking/incidencia?vehiculoId=${encodeURIComponent(vehiculoId)}&token=${encodeURIComponent(TRACK_TOKEN || '')}`)
+      if (!res.ok) return
+      const data = await res.json()
+      setIncidencia(data.incidencia || null)
+    } catch { /* red: se reintenta en el siguiente sondeo */ }
+  }
+
+  const marcarIsocrona = async (campo: string) => {
+    if (!incidencia) return
+    setMarcando(campo)
+    try {
+      const res = await fetch('/api/tracking/incidencia', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ vehiculoId, token: TRACK_TOKEN, incidenciaId: incidencia.id, campo }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        if (data.valor) setIncidencia(prev => (prev ? { ...prev, [campo]: data.valor } : prev))
+      }
+    } catch { /* se refleja en el siguiente sondeo */ }
+    finally { setMarcando(null) }
+  }
+
+  // URL de navegación (Apple Maps): coordenadas si las hay, si no la dirección.
+  const urlNavegacion = (inc: Incidencia) => {
+    const destino = inc.latitud != null && inc.longitud != null
+      ? `${inc.latitud},${inc.longitud}`
+      : encodeURIComponent(inc.direccion || '')
+    return `https://maps.apple.com/?daddr=${destino}&dirflg=d`
+  }
+
+  // Sondeo de incidencia asignada al vehículo (independiente del GPS).
+  useEffect(() => {
+    cargarIncidencia()
+    incIntervalRef.current = setInterval(cargarIncidencia, INC_INTERVAL_MS)
+    return () => { if (incIntervalRef.current) clearInterval(incIntervalRef.current) }
+  }, [vehiculoId])
 
   const enviarUbicacion = async (pos: GeolocationPosition) => {
     const { latitude, longitude, speed, accuracy } = pos.coords
@@ -73,9 +142,65 @@ export default function TrackingPage() {
     }}>
       <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>🚍</div>
       <h1 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.25rem' }}>Rastreo GPS</h1>
-      <p style={{ color: '#94a3b8', marginBottom: '2rem', fontSize: '0.9rem' }}>
+      <p style={{ color: '#94a3b8', marginBottom: '1.25rem', fontSize: '0.9rem' }}>
         Vehículo: <strong style={{ color: '#60a5fa' }}>{vehiculoId}</strong>
       </p>
+
+      {incidencia && (
+        <div style={{
+          width: '100%', maxWidth: '360px', marginBottom: '1.5rem',
+          background: '#7f1d1d', border: '2px solid #ef4444', borderRadius: '16px',
+          padding: '1rem', boxShadow: '0 0 24px rgba(239,68,68,0.35)',
+        }}>
+          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#fecaca', letterSpacing: '0.05em' }}>
+            ● INCIDENCIA ACTIVA · {incidencia.numero}
+          </div>
+          <div style={{ fontSize: '1.35rem', fontWeight: 800, textTransform: 'uppercase', margin: '0.25rem 0' }}>
+            {incidencia.tipoIncidencia}
+          </div>
+          <div style={{ fontSize: '1rem', color: '#fee2e2', marginBottom: '0.75rem', lineHeight: 1.3 }}>
+            📍 {incidencia.direccion}
+          </div>
+
+          <a
+            href={urlNavegacion(incidencia)}
+            style={{
+              display: 'block', textAlign: 'center', textDecoration: 'none',
+              background: '#2563eb', color: 'white', fontWeight: 800, fontSize: '1.25rem',
+              padding: '1rem', borderRadius: '12px', marginBottom: '0.75rem',
+            }}
+          >
+            🧭 NAVEGAR
+          </a>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            {ISOCRONAS.map(({ campo, label }) => {
+              const valor = incidencia[campo] as string | null
+              const marcada = !!valor
+              return (
+                <button
+                  key={campo}
+                  onClick={() => !marcada && marcarIsocrona(campo)}
+                  disabled={marcada || marcando === campo}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '0.9rem 1.1rem', borderRadius: '12px', border: 'none',
+                    cursor: marcada ? 'default' : 'pointer',
+                    background: marcada ? '#166534' : '#334155',
+                    color: 'white', fontSize: '1.15rem', fontWeight: 800,
+                    opacity: marcando === campo ? 0.6 : 1,
+                  }}
+                >
+                  <span>{label}</span>
+                  <span style={{ fontVariantNumeric: 'tabular-nums' }}>
+                    {marcada ? `✓ ${valor}` : (marcando === campo ? '…' : '›')}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
       <div style={{
         padding: '0.5rem 1.5rem', borderRadius: '9999px', marginBottom: '2rem',
         background: estado === 'activo' ? '#16a34a' : estado === 'error' ? '#dc2626' : '#374151',
