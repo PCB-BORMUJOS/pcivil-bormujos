@@ -69,33 +69,53 @@ export async function generarInformeDietasPDF(o: InformeDietasOpts) {
   // Se antepone a la liquidación. Se renderiza SIN el normalizador txt() para
   // conservar las tildes (jsPDF las representa correctamente).
   if (o.mesAnio) {
-    const LH = 5.4
-    const escribir = (texto: string, opts: { size: number; bold?: boolean; indent?: number; align?: 'left' | 'center'; dot?: boolean; gap?: number }) => {
-      const { size, bold = false, indent = 0, align = 'left', dot = false, gap = 2.8 } = opts
-      doc.setFont('helvetica', bold ? 'bold' : 'normal')
-      doc.setFontSize(size)
-      doc.setTextColor(0, 0, 0)
+    const BODY = 11 // tamaño uniforme para todo el cuerpo de la memoria
+
+    // Justifica una línea repartiendo el espacio sobrante entre palabras.
+    const lineaJustificada = (ln: string, x: number, w: number) => {
+      const palabras = ln.trim().split(/\s+/)
+      if (palabras.length < 2) { doc.text(ln, x, y); return }
+      const anchoPalabras = palabras.reduce((s, p) => s + doc.getTextWidth(p), 0)
+      const hueco = (w - anchoPalabras) / (palabras.length - 1)
+      let cx = x
+      palabras.forEach(p => { doc.text(p, cx, y); cx += doc.getTextWidth(p) + hueco })
+    }
+
+    const escribir = (texto: string, opts: { size: number; bold?: boolean; indent?: number; align?: 'left' | 'center'; dot?: boolean; gap?: number; justify?: boolean }) => {
+      const { size, bold = false, indent = 0, align = 'left', dot = false, gap = 3, justify = false } = opts
+      const LH = size * 0.52 + 0.6
+      const setF = () => { doc.setFont('helvetica', bold ? 'bold' : 'normal'); doc.setFontSize(size); doc.setTextColor(0, 0, 0) }
+      setF()
       const x = MARGEN + indent
-      const lineas: string[] = doc.splitTextToSize(texto, ANCHO - indent)
+      const w = ANCHO - indent
+      const lineas: string[] = doc.splitTextToSize(texto, w)
       lineas.forEach((ln, i) => {
-        asegurar(LH)
-        if (dot && i === 0) { doc.setFillColor(...AZUL); doc.circle(MARGEN + 1.4, y - 1.3, 0.7, 'F') }
+        if (y + LH > TOPE) nuevaPagina()
+        setF() // restaurar la fuente tras un posible cambio de página
+        if (dot && i === 0) { doc.setFillColor(...AZUL); doc.circle(MARGEN + 1.4, y - 1.3, 0.7, 'F'); setF() }
+        const ultima = i === lineas.length - 1
         if (align === 'center') doc.text(ln, W / 2, y, { align: 'center' })
+        else if (justify && !ultima) lineaJustificada(ln, x, w)
         else doc.text(ln, x, y)
         y += LH
       })
       y += gap
     }
-    bloquesMemoriaDietas(o.mesAnio).forEach(b => {
-      if (b.tipo === 'titulo') { y += 3; escribir(b.texto, { size: 13, bold: true, align: 'center', gap: 2 }) }
-      else if (b.tipo === 'periodo') {
-        escribir(b.texto, { size: 11, bold: true, align: 'center', gap: 3 })
-        doc.setDrawColor(200, 200, 200); asegurar(3); doc.line(MARGEN, y, W - MARGEN, y); y += 4
-      }
-      else if (b.tipo === 'seccion') { asegurar(12); y += 3; escribir(b.texto, { size: 11.5, bold: true, gap: 2.5 }) }
-      else if (b.tipo === 'sub') { asegurar(9); y += 1; escribir(b.texto, { size: 10.5, bold: true, gap: 1.8 }) }
-      else if (b.tipo === 'bullet') { escribir(b.texto, { size: 10.5, indent: 5, dot: true, gap: 2.6 }) }
-      else { escribir(b.texto, { size: 10.5, gap: 3 }) }
+
+    const bloques = bloquesMemoriaDietas(o.mesAnio)
+
+    // ── PORTADA (página 1): título y periodo, centrados y en grande ──
+    y = 90
+    escribir(bloques[0].texto, { size: 20, bold: true, align: 'center', gap: 10 })
+    escribir(bloques[1].texto, { size: 14, bold: true, align: 'center', gap: 0 })
+    nuevaPagina()
+
+    // ── CUERPO (desde INTRODUCCIÓN): justificado y con tipografía uniforme ──
+    bloques.slice(2).forEach(b => {
+      if (b.tipo === 'seccion') { if (y > 40) y += 3; escribir(b.texto, { size: BODY, bold: true, gap: 2.5 }) }
+      else if (b.tipo === 'sub') { y += 1; escribir(b.texto, { size: BODY, bold: true, gap: 1.8 }) }
+      else if (b.tipo === 'bullet') { escribir(b.texto, { size: BODY, indent: 5, dot: true, gap: 2.8, justify: true }) }
+      else escribir(b.texto, { size: BODY, gap: 3.2, justify: true })
     })
     nuevaPagina() // la liquidación empieza en página nueva
   }
@@ -160,8 +180,11 @@ export async function generarInformeDietasPDF(o: InformeDietasOpts) {
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(9)
   o.filas.forEach((fila, idx) => {
-    asegurar(7)
-    if (y + 7 > TOPE) { cabeceraTabla() }
+    // Al cambiar de página se repite la cabecera de la tabla.
+    if (y + 7 > TOPE) { nuevaPagina(); cabeceraTabla() }
+    // Restaurar SIEMPRE la fuente de fila (la cabecera/cambio de página la altera),
+    // para que la 2ª página no salga con un tamaño distinto.
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(0, 0, 0)
     if (idx % 2 === 1) { doc.setFillColor(245, 245, 245); doc.rect(MARGEN, y, ANCHO, 7, 'F') }
     fila.forEach((val, i) => {
       const lineas = doc.splitTextToSize(txt(val), o.columnas[i].width - 3)
