@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'next/navigation'
 
 const INTERVAL_MS = 5000
-const INC_INTERVAL_MS = 8000 // sondeo de incidencia asignada al vehículo
+const INC_INTERVAL_MS = 3000 // sondeo de incidencia asignada al vehículo (casi instantáneo)
 const TRACK_TOKEN = process.env.NEXT_PUBLIC_TRACKING_TOKEN
 
 type Incidencia = {
@@ -42,14 +42,61 @@ export default function TrackingPage() {
 
   const [incidencia, setIncidencia] = useState<Incidencia | null>(null)
   const [marcando, setMarcando] = useState<string | null>(null)
+  const [alerta, setAlerta] = useState(false)
   const incIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const prevIncIdRef = useRef<string | null>(null)
+  const audioCtxRef = useRef<AudioContext | null>(null)
+
+  // El audio en iOS necesita desbloquearse con un gesto del usuario (el botón
+  // INICIAR RASTREO). A partir de ahí los avisos suenan sin interacción.
+  const desbloquearAudio = () => {
+    try {
+      if (!audioCtxRef.current) {
+        const AC = (window.AudioContext || (window as any).webkitAudioContext)
+        if (AC) audioCtxRef.current = new AC()
+      }
+      if (audioCtxRef.current?.state === 'suspended') audioCtxRef.current.resume()
+    } catch { /* audio no disponible */ }
+  }
+
+  // Aviso al llegar una incidencia nueva: 3 pitidos ascendentes + vibración.
+  const reproducirAlerta = () => {
+    desbloquearAudio()
+    const ctx = audioCtxRef.current
+    if (ctx) {
+      const pitido = (t0: number, freq: number, dur: number) => {
+        const osc = ctx.createOscillator()
+        const gain = ctx.createGain()
+        osc.type = 'square'
+        osc.frequency.value = freq
+        gain.gain.setValueAtTime(0.0001, t0)
+        gain.gain.exponentialRampToValueAtTime(0.4, t0 + 0.02)
+        gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur)
+        osc.connect(gain); gain.connect(ctx.destination)
+        osc.start(t0); osc.stop(t0 + dur)
+      }
+      const now = ctx.currentTime
+      pitido(now, 880, 0.18); pitido(now + 0.28, 1046, 0.18); pitido(now + 0.56, 1318, 0.3)
+    }
+    try { (navigator as any).vibrate?.([300, 150, 300, 150, 500]) } catch { /* iOS ignora vibrate */ }
+    setAlerta(true)
+    setTimeout(() => setAlerta(false), 6000)
+  }
 
   const cargarIncidencia = async () => {
     try {
       const res = await fetch(`/api/tracking/incidencia?vehiculoId=${encodeURIComponent(vehiculoId)}&token=${encodeURIComponent(TRACK_TOKEN || '')}`)
       if (!res.ok) return
       const data = await res.json()
-      setIncidencia(data.incidencia || null)
+      const nueva: Incidencia | null = data.incidencia || null
+      // Detectar incidencia NUEVA (id distinto al anterior) para lanzar el aviso.
+      if (nueva?.id && nueva.id !== prevIncIdRef.current) {
+        prevIncIdRef.current = nueva.id
+        reproducirAlerta()
+      } else if (!nueva) {
+        prevIncIdRef.current = null
+      }
+      setIncidencia(nueva)
     } catch { /* red: se reintenta en el siguiente sondeo */ }
   }
 
@@ -110,6 +157,7 @@ export default function TrackingPage() {
   }
 
   const iniciar = () => {
+    desbloquearAudio() // gesto del usuario: habilita los avisos sonoros en iOS
     if (!navigator.geolocation) {
       setErrorMsg('Este dispositivo no soporta GPS')
       setEstado('error')
@@ -146,11 +194,19 @@ export default function TrackingPage() {
         Vehículo: <strong style={{ color: '#60a5fa' }}>{vehiculoId}</strong>
       </p>
 
+      <style>{`
+        @keyframes alertaPulse {
+          0%, 100% { box-shadow: 0 0 24px rgba(239,68,68,0.35); border-color: #ef4444; }
+          50% { box-shadow: 0 0 40px rgba(239,68,68,0.95); border-color: #fca5a5; }
+        }
+      `}</style>
+
       {incidencia && (
         <div style={{
           width: '100%', maxWidth: '360px', marginBottom: '1.5rem',
           background: '#7f1d1d', border: '2px solid #ef4444', borderRadius: '16px',
           padding: '1rem', boxShadow: '0 0 24px rgba(239,68,68,0.35)',
+          animation: alerta ? 'alertaPulse 0.6s ease-in-out infinite' : undefined,
         }}>
           <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#fecaca', letterSpacing: '0.05em' }}>
             ● INCIDENCIA ACTIVA · {incidencia.numero}
