@@ -2,11 +2,11 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'next/navigation'
-import { BEEP_AVISO } from '@/lib/tracking-beep'
 
 const INTERVAL_MS = 5000
-const INC_INTERVAL_MS = 3000 // sondeo de incidencia (casi instantáneo)
+const INC_INTERVAL_MS = 3000
 const TRACK_TOKEN = process.env.NEXT_PUBLIC_TRACKING_TOKEN
+const ALARMA_SRC = '/alarma-incidencia.wav'
 
 type Incidencia = {
   id: string
@@ -24,22 +24,37 @@ type Incidencia = {
 }
 
 const ISOCRONAS: Array<{ campo: keyof Incidencia; label: string; t: string }> = [
-  { campo: 'horaSalida', label: 'SALIDA', t: 'T1' },
-  { campo: 'horaLlegada', label: 'LLEGADA', t: 'T2' },
-  { campo: 'horaTerminado', label: 'FINALIZADO', t: 'T3' },
-  { campo: 'horaDisponible', label: 'DISPONIBLE', t: 'T4' },
+  { campo: 'horaSalida', label: 'Salida', t: 'T1' },
+  { campo: 'horaLlegada', label: 'Llegada', t: 'T2' },
+  { campo: 'horaTerminado', label: 'Finalizado', t: 'T3' },
+  { campo: 'horaDisponible', label: 'Disponible', t: 'T4' },
 ]
 
-const TIPO_META: Record<string, { label: string; icon: string; color: string }> = {
-  incendio: { label: 'Incendio', icon: '🔥', color: '#ea580c' },
-  sanitaria: { label: 'Sanitaria · SVB', icon: '🚑', color: '#dc2626' },
-  accidente: { label: 'Accidente', icon: '⚠️', color: '#d97706' },
-  inundacion: { label: 'Inundación', icon: '🌊', color: '#2563eb' },
-  rescate: { label: 'Rescate', icon: '🧗', color: '#7c3aed' },
-  apoyo: { label: 'Apoyo', icon: '🤝', color: '#0891b2' },
-  prevencion: { label: 'Preventivo', icon: '🛡️', color: '#059669' },
-  otros: { label: 'Otros', icon: '📌', color: '#475569' },
+// Color de acento por tipología (tonos sobrios, sin iconos).
+const TIPO_COLOR: Record<string, { label: string; color: string }> = {
+  incendio: { label: 'Incendio', color: '#E8663A' },
+  sanitaria: { label: 'Sanitaria · SVB', color: '#E5484D' },
+  accidente: { label: 'Accidente de tráfico', color: '#E0A93B' },
+  inundacion: { label: 'Inundación', color: '#3E7BFA' },
+  rescate: { label: 'Rescate', color: '#8B6DEB' },
+  apoyo: { label: 'Apoyo', color: '#2AA7B8' },
+  prevencion: { label: 'Preventivo', color: '#2FA96A' },
+  otros: { label: 'Otros', color: '#7C8AA5' },
 }
+
+// ─── Iconos SVG monocromos (sin emojis) ───
+const IconNav = ({ s = 20, c = 'currentColor' }: { s?: number; c?: string }) => (
+  <svg width={s} height={s} viewBox="0 0 24 24" fill="none"><path d="M3 11L21 3L13 21L11 13L3 11Z" fill={c} /></svg>
+)
+const IconPin = ({ s = 16, c = 'currentColor' }: { s?: number; c?: string }) => (
+  <svg width={s} height={s} viewBox="0 0 24 24" fill="none"><path d="M12 22C12 22 19 15.6 19 10C19 6.13 15.87 3 12 3C8.13 3 5 6.13 5 10C5 15.6 12 22 12 22Z" stroke={c} strokeWidth="1.8" /><circle cx="12" cy="10" r="2.4" stroke={c} strokeWidth="1.8" /></svg>
+)
+const IconCheck = ({ s = 16, c = 'currentColor' }: { s?: number; c?: string }) => (
+  <svg width={s} height={s} viewBox="0 0 24 24" fill="none"><path d="M5 12.5L10 17.5L19 7" stroke={c} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" /></svg>
+)
+const IconSignal = ({ s = 26, c = 'currentColor' }: { s?: number; c?: string }) => (
+  <svg width={s} height={s} viewBox="0 0 24 24" fill="none"><path d="M5 12.55a11 11 0 0 1 14 0M8.5 15.5a6 6 0 0 1 7 0" stroke={c} strokeWidth="1.8" strokeLinecap="round" /><circle cx="12" cy="19" r="1.6" fill={c} /></svg>
+)
 
 export default function TrackingPage() {
   const params = useParams()
@@ -61,7 +76,7 @@ export default function TrackingPage() {
   const prevIncIdRef = useRef<string | null>(null)
   const audioElRef = useRef<HTMLAudioElement | null>(null)
 
-  // ─── GPS (sin cambios funcionales) ───
+  // ─── GPS ───
   const enviarUbicacion = async (pos: GeolocationPosition) => {
     const { latitude, longitude, speed, accuracy } = pos.coords
     try {
@@ -69,55 +84,44 @@ export default function TrackingPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          vehiculoId,
-          latitud: latitude,
-          longitud: longitude,
+          vehiculoId, latitud: latitude, longitud: longitude,
           velocidad: speed !== null ? Math.round(speed * 3.6 * 10) / 10 : null,
-          precision: accuracy,
-          token: TRACK_TOKEN,
+          precision: accuracy, token: TRACK_TOKEN,
         }),
       })
       if (res.ok) {
         setEnviados(n => n + 1)
         setLastPos({ lat: latitude, lng: longitude, vel: speed ? Math.round(speed * 3.6) : null })
       }
-    } catch (e) {
-      console.error('Error enviando ubicacion:', e)
-    }
+    } catch (e) { console.error('Error enviando ubicacion:', e) }
   }
 
-  // ─── Audio: ALARMA EN BUCLE hasta que alguien toca el iPad ───
-  // iOS exige un gesto previo para poder reproducir audio: se "arma" al pulsar
-  // INICIAR (o el botón de activar sonido) al empezar el turno. A partir de ahí,
-  // cuando llega una incidencia nueva la alarma suena en bucle hasta que se toca
-  // la pantalla (o se inicia navegación / se marca una isócrona).
+  // ─── Audio: alarma en bucle hasta que se toca el iPad ───
+  // iOS exige un gesto para desbloquear el audio: se "arma" con INICIAR o con el
+  // primer toque en la pantalla (se reproduce un instante y se pausa).
   const armarAudio = () => {
     const el = audioElRef.current
-    if (!el) return
+    if (!el || audioListo) { if (el) el.pause(), (el.currentTime = 0); return }
     try {
-      el.muted = true
+      el.loop = true
       const p = el.play()
       if (p && typeof p.then === 'function') {
-        p.then(() => { el.pause(); el.currentTime = 0; el.muted = false; setAudioListo(true) })
-         .catch(() => { el.muted = false })
-      } else {
-        el.pause(); el.currentTime = 0; el.muted = false; setAudioListo(true)
-      }
+        p.then(() => { el.pause(); el.currentTime = 0; setAudioListo(true) }).catch(() => {})
+      } else { el.pause(); el.currentTime = 0; setAudioListo(true) }
     } catch { /* audio no disponible */ }
   }
 
   const iniciarAlarma = () => {
     setAlerta(true)
-    try { (navigator as any).vibrate?.([500, 250, 500, 250, 500]) } catch { /* iOS ignora vibrate */ }
+    try { (navigator as any).vibrate?.([600, 300, 600, 300, 600]) } catch { /* iOS ignora vibrate */ }
     const el = audioElRef.current
     if (el) {
-      try { el.currentTime = 0; el.loop = true; el.muted = false; el.play().then(() => setSonando(true)).catch(() => {}) } catch { /* */ }
+      try { el.currentTime = 0; el.loop = true; el.play().then(() => setSonando(true)).catch(() => {}) } catch { /* */ }
     }
   }
 
   const detenerAlarma = () => {
-    setAlerta(false)
-    setSonando(false)
+    setAlerta(false); setSonando(false)
     const el = audioElRef.current
     if (el) { try { el.pause(); el.currentTime = 0 } catch { /* */ } }
   }
@@ -142,11 +146,11 @@ export default function TrackingPage() {
 
   const marcarIsocrona = async (campo: string) => {
     if (!incidencia) return
+    detenerAlarma()
     setMarcando(campo)
     try {
       const res = await fetch('/api/tracking/incidencia', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ vehiculoId, token: TRACK_TOKEN, incidenciaId: incidencia.id, campo }),
       })
       if (res.ok) {
@@ -158,8 +162,6 @@ export default function TrackingPage() {
   }
 
   const urlNavegacion = (inc: Incidencia) => {
-    // Enlace universal de Google Maps: abre la app de Google Maps si está
-    // instalada en el iPad; si no, la versión web.
     const destino = inc.latitud != null && inc.longitud != null
       ? `${inc.latitud},${inc.longitud}`
       : encodeURIComponent(inc.direccion || '')
@@ -168,19 +170,13 @@ export default function TrackingPage() {
 
   const iniciar = () => {
     armarAudio()
-    if (!navigator.geolocation) {
-      setErrorMsg('Este dispositivo no soporta GPS')
-      setEstado('error')
-      return
-    }
+    if (!navigator.geolocation) { setErrorMsg('Este dispositivo no soporta GPS'); setEstado('error'); return }
     watchRef.current = navigator.geolocation.watchPosition(
       (pos) => { lastPosRef.current = pos },
       (err) => { setErrorMsg(`Error GPS: ${err.message}`); setEstado('error') },
       { enableHighAccuracy: true, maximumAge: 3000, timeout: 10000 }
     )
-    intervalRef.current = setInterval(() => {
-      if (lastPosRef.current) enviarUbicacion(lastPosRef.current)
-    }, INTERVAL_MS)
+    intervalRef.current = setInterval(() => { if (lastPosRef.current) enviarUbicacion(lastPosRef.current) }, INTERVAL_MS)
     setEstado('activo')
   }
 
@@ -198,218 +194,169 @@ export default function TrackingPage() {
     return () => { if (incIntervalRef.current) clearInterval(incIntervalRef.current) }
   }, [vehiculoId])
 
-  // Cualquier toque en la pantalla detiene la alarma sonora (la dotación ya se ha
-  // percatado). También arma el audio en el primer toque, por si no se pulsó INICIAR.
+  // Cualquier toque arma el audio (si no lo estaba) y detiene la alarma.
   useEffect(() => {
-    const alTocar = () => {
-      if (!audioListo) armarAudio()
-      detenerAlarma()
-    }
+    const alTocar = () => { if (!audioListo) armarAudio(); detenerAlarma() }
     window.addEventListener('pointerdown', alTocar)
     return () => window.removeEventListener('pointerdown', alTocar)
   }, [audioListo])
 
-  const meta = incidencia
-    ? (TIPO_META[incidencia.tipoIncidencia] || { label: incidencia.tipoIncidencia, icon: '📌', color: '#475569' })
+  const tipo = incidencia
+    ? (TIPO_COLOR[incidencia.tipoIncidencia] || { label: incidencia.tipoIncidencia, color: '#7C8AA5' })
     : null
+
+  const C = {
+    bg: 'radial-gradient(130% 100% at 50% 0%, #16213b 0%, #0a0e19 62%)',
+    panel: '#111a2c', panelBorder: 'rgba(255,255,255,0.07)',
+    text: '#E8EDF4', muted: '#8A97AD', faint: '#5a6b86',
+    blue: '#2F6BFF', green: '#2FA96A', red: '#E5484D',
+  }
 
   return (
     <div style={{
-      minHeight: '100dvh', background: 'radial-gradient(120% 120% at 50% 0%, #14213a 0%, #0a0f1e 60%)',
-      color: '#e5e7eb', fontFamily: 'system-ui, -apple-system, sans-serif',
-      display: 'flex', flexDirection: 'column', padding: '14px', gap: '14px',
+      minHeight: '100dvh', background: C.bg, color: C.text,
+      fontFamily: 'system-ui, -apple-system, "Segoe UI", sans-serif',
+      display: 'flex', flexDirection: 'column', padding: 14, gap: 12,
     }}>
-      <audio ref={audioElRef} src={BEEP_AVISO} loop preload="auto" playsInline />
-
+      <audio ref={audioElRef} src={ALARMA_SRC} loop preload="auto" />
       <style>{`
-        @keyframes alertaPulse {
-          0%,100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.0); }
-          50% { box-shadow: 0 0 0 6px rgba(239,68,68,0.25); }
-        }
-        @keyframes dotPulse { 0%,100%{opacity:1} 50%{opacity:0.35} }
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        button { font-family: inherit; }
+        @keyframes edgePulse { 0%,100%{ box-shadow:0 0 0 0 rgba(229,72,77,0) } 50%{ box-shadow:0 0 0 5px rgba(229,72,77,0.35) } }
+        @keyframes dot { 0%,100%{opacity:1} 50%{opacity:.35} }
+        * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+        button { font-family:inherit; }
       `}</style>
 
       {/* Cabecera */}
-      <div style={{
+      <header style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
-        borderRadius: '14px', padding: '10px 14px',
+        background: C.panel, border: `1px solid ${C.panelBorder}`, borderRadius: 14, padding: '11px 15px',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div style={{
-            width: 34, height: 34, borderRadius: '10px', background: 'rgba(37,99,235,0.15)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18,
-          }}>🚐</div>
-          <div>
-            <div style={{ fontSize: 11, color: '#7c8aa5', letterSpacing: '0.08em', fontWeight: 600 }}>UNIDAD</div>
-            <div style={{ fontSize: 18, fontWeight: 800, color: '#93c5fd', lineHeight: 1 }}>{vehiculoId}</div>
-          </div>
+        <div>
+          <div style={{ fontSize: 10, letterSpacing: '0.14em', color: C.faint, fontWeight: 700 }}>UNIDAD</div>
+          <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: '0.02em', lineHeight: 1.05 }}>{vehiculoId}</div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{
-            width: 9, height: 9, borderRadius: '50%',
-            background: estado === 'activo' ? '#22c55e' : estado === 'error' ? '#ef4444' : '#64748b',
-            animation: estado === 'activo' ? 'dotPulse 1.4s ease-in-out infinite' : undefined,
+            width: 8, height: 8, borderRadius: '50%',
+            background: estado === 'activo' ? C.green : estado === 'error' ? C.red : C.faint,
+            animation: estado === 'activo' ? 'dot 1.5s ease-in-out infinite' : undefined,
           }} />
-          <span style={{ fontSize: 12, fontWeight: 600, color: '#9fb0cc' }}>
-            {estado === 'activo' ? 'GPS activo' : estado === 'error' ? 'GPS error' : 'GPS parado'}
+          <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', color: C.muted, textTransform: 'uppercase' }}>
+            {estado === 'activo' ? 'GPS en línea' : estado === 'error' ? 'GPS error' : 'GPS parado'}
           </span>
         </div>
-      </div>
+      </header>
 
-      {/* Panel de incidencia */}
-      {incidencia && meta ? (
-        <div style={{
-          background: 'linear-gradient(180deg, rgba(30,41,59,0.9), rgba(15,23,42,0.9))',
-          border: `1px solid ${alerta ? 'rgba(239,68,68,0.9)' : 'rgba(255,255,255,0.10)'}`,
-          borderRadius: '18px', overflow: 'hidden',
-          animation: alerta ? 'alertaPulse 0.9s ease-in-out infinite' : undefined,
+      {/* Incidencia */}
+      {incidencia && tipo ? (
+        <section style={{
+          background: C.panel, border: `1px solid ${alerta ? C.red : C.panelBorder}`,
+          borderRadius: 16, overflow: 'hidden',
+          animation: alerta ? 'edgePulse 1s ease-in-out infinite' : undefined,
         }}>
           {/* Franja de tipo */}
-          <div style={{
-            background: meta.color, padding: '12px 16px',
-            display: 'flex', alignItems: 'center', gap: 12,
-          }}>
-            <span style={{ fontSize: 30, lineHeight: 1 }}>{meta.icon}</span>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', opacity: 0.85, color: '#fff' }}>
-                INCIDENCIA · {incidencia.numero}
+          <div style={{ display: 'flex', alignItems: 'stretch' }}>
+            <div style={{ width: 6, background: tipo.color }} />
+            <div style={{ flex: 1, padding: '13px 16px' }}>
+              <div style={{ fontSize: 10, letterSpacing: '0.14em', color: C.muted, fontWeight: 700 }}>
+                INCIDENCIA ACTIVA · {incidencia.numero}
               </div>
-              <div style={{ fontSize: 21, fontWeight: 800, color: '#fff', lineHeight: 1.1, textTransform: 'uppercase' }}>
-                {meta.label}
-              </div>
+              <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: '0.01em', marginTop: 2 }}>{tipo.label}</div>
             </div>
           </div>
 
-          <div style={{ padding: '14px 16px' }}>
-            {/* Destino */}
-            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', color: '#7c8aa5', marginBottom: 4 }}>DESTINO</div>
-            <div style={{ fontSize: 16, fontWeight: 600, color: '#e5e7eb', lineHeight: 1.35, marginBottom: 14 }}>
-              {incidencia.direccion}
+          <div style={{ height: 1, background: C.panelBorder }} />
+
+          <div style={{ padding: 16 }}>
+            <div style={{ fontSize: 10, letterSpacing: '0.14em', color: C.faint, fontWeight: 700, marginBottom: 6 }}>DESTINO</div>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginBottom: 16 }}>
+              <span style={{ color: C.muted, marginTop: 2, flexShrink: 0 }}><IconPin /></span>
+              <span style={{ fontSize: 16, fontWeight: 600, lineHeight: 1.35 }}>{incidencia.direccion}</span>
             </div>
 
-            {/* Navegar */}
-            <a
-              href={urlNavegacion(incidencia)}
-              style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-                textDecoration: 'none', background: 'linear-gradient(180deg,#3b82f6,#2563eb)',
-                color: '#fff', fontWeight: 800, fontSize: 18, padding: '15px',
-                borderRadius: '14px', marginBottom: 16, boxShadow: '0 6px 16px rgba(37,99,235,0.4)',
-              }}
-            >
-              <span style={{ fontSize: 20 }}>🧭</span> INICIAR NAVEGACIÓN
+            <a href={urlNavegacion(incidencia)} style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+              textDecoration: 'none', background: C.blue, color: '#fff', fontWeight: 800,
+              fontSize: 17, letterSpacing: '0.02em', padding: 16, borderRadius: 12, marginBottom: 18,
+            }}>
+              <IconNav /> INICIAR NAVEGACIÓN
             </a>
 
-            {/* Tiempos */}
-            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', color: '#7c8aa5', marginBottom: 8 }}>TIEMPOS DE INTERVENCIÓN</div>
+            <div style={{ fontSize: 10, letterSpacing: '0.14em', color: C.faint, fontWeight: 700, marginBottom: 9 }}>TIEMPOS DE INTERVENCIÓN</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {ISOCRONAS.map(({ campo, label, t }) => {
                 const valor = incidencia[campo] as string | null
                 const marcada = !!valor
                 const cargando = marcando === campo
                 return (
-                  <button
-                    key={campo}
-                    onClick={() => !marcada && marcarIsocrona(campo)}
-                    disabled={marcada || cargando}
+                  <button key={campo} onClick={() => !marcada && marcarIsocrona(campo)} disabled={marcada || cargando}
                     style={{
-                      display: 'flex', alignItems: 'center', gap: 12,
-                      padding: '14px 14px', borderRadius: '13px', width: '100%',
-                      cursor: marcada ? 'default' : 'pointer',
-                      border: marcada ? '1px solid rgba(34,197,94,0.4)' : '1px solid rgba(255,255,255,0.10)',
-                      background: marcada ? 'rgba(22,101,52,0.35)' : 'rgba(255,255,255,0.05)',
-                      color: '#fff', opacity: cargando ? 0.6 : 1, textAlign: 'left',
-                    }}
-                  >
-                    <span style={{
-                      width: 30, height: 30, borderRadius: '9px', flexShrink: 0,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: 12, fontWeight: 800,
-                      background: marcada ? '#16a34a' : 'rgba(255,255,255,0.08)',
-                      color: marcada ? '#fff' : '#9fb0cc',
-                    }}>{marcada ? '✓' : t}</span>
-                    <span style={{ flex: 1, fontSize: 16, fontWeight: 800, letterSpacing: '0.02em' }}>{label}</span>
-                    <span style={{
-                      fontSize: marcada ? 17 : 13, fontWeight: 700, fontVariantNumeric: 'tabular-nums',
-                      color: marcada ? '#86efac' : '#7c8aa5',
+                      display: 'flex', alignItems: 'center', gap: 12, padding: 14, borderRadius: 12, width: '100%',
+                      cursor: marcada ? 'default' : 'pointer', textAlign: 'left',
+                      border: `1px solid ${marcada ? 'rgba(47,169,106,0.45)' : C.panelBorder}`,
+                      background: marcada ? 'rgba(47,169,106,0.14)' : 'rgba(255,255,255,0.035)',
+                      color: C.text, opacity: cargando ? 0.55 : 1,
                     }}>
-                      {marcada ? valor : (cargando ? '…' : 'MARCAR')}
-                    </span>
+                    <span style={{
+                      width: 32, height: 32, borderRadius: 9, flexShrink: 0, display: 'flex',
+                      alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 800,
+                      background: marcada ? C.green : 'rgba(255,255,255,0.06)', color: marcada ? '#fff' : C.muted,
+                    }}>{marcada ? <IconCheck c="#fff" /> : t}</span>
+                    <span style={{ flex: 1, fontSize: 16, fontWeight: 700 }}>{label}</span>
+                    <span style={{
+                      fontSize: marcada ? 17 : 12, fontWeight: 800, fontVariantNumeric: 'tabular-nums',
+                      letterSpacing: marcada ? 0 : '0.08em',
+                      color: marcada ? '#7BD3A0' : C.faint,
+                    }}>{marcada ? valor : (cargando ? '···' : 'MARCAR')}</span>
                   </button>
                 )
               })}
             </div>
 
-            {sonando && (
-              <button
-                onClick={detenerAlarma}
-                style={{
-                  marginTop: 12, width: '100%', padding: '14px', borderRadius: '12px',
-                  border: 'none', background: '#b45309', color: '#fff', fontSize: 15,
-                  fontWeight: 800, cursor: 'pointer',
-                }}
-              >
-                🔕 SILENCIAR ALARMA
-              </button>
-            )}
-            {!audioListo && !sonando && (
-              <button
-                onClick={armarAudio}
-                style={{
-                  marginTop: 12, width: '100%', padding: '10px', borderRadius: '11px',
-                  border: '1px dashed rgba(250,204,21,0.5)', background: 'rgba(250,204,21,0.08)',
-                  color: '#fde047', fontSize: 13, fontWeight: 600, cursor: 'pointer',
-                }}
-              >
-                🔔 Toca para activar el sonido de avisos
-              </button>
-            )}
+            {sonando ? (
+              <button onClick={detenerAlarma} style={{
+                marginTop: 14, width: '100%', padding: 14, borderRadius: 12, border: 'none',
+                background: C.red, color: '#fff', fontSize: 14, fontWeight: 800, letterSpacing: '0.06em', cursor: 'pointer',
+              }}>SILENCIAR ALARMA</button>
+            ) : !audioListo ? (
+              <button onClick={armarAudio} style={{
+                marginTop: 14, width: '100%', padding: 12, borderRadius: 11,
+                border: `1px solid ${C.panelBorder}`, background: 'rgba(255,255,255,0.03)',
+                color: C.muted, fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', cursor: 'pointer',
+              }}>ACTIVAR SONIDO DE AVISOS</button>
+            ) : null}
           </div>
-        </div>
+        </section>
       ) : (
-        /* Estado en espera */
-        <div style={{
+        <section style={{
           flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-          background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)',
-          borderRadius: '18px', padding: '32px 20px', textAlign: 'center', gap: 10,
+          background: C.panel, border: `1px solid ${C.panelBorder}`, borderRadius: 16, padding: '36px 22px', textAlign: 'center', gap: 12,
         }}>
-          <div style={{
-            width: 60, height: 60, borderRadius: '50%', background: 'rgba(34,197,94,0.12)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28,
-          }}>🛰️</div>
-          <div style={{ fontSize: 17, fontWeight: 700, color: '#cbd5e1' }}>En espera</div>
-          <div style={{ fontSize: 13, color: '#7c8aa5', maxWidth: 220, lineHeight: 1.4 }}>
-            Sin incidencias asignadas. Recibirás un aviso en cuanto CECOPAL active una.
+          <span style={{ color: C.green }}><IconSignal s={30} /></span>
+          <div style={{ fontSize: 16, fontWeight: 800, letterSpacing: '0.02em' }}>EN ESPERA</div>
+          <div style={{ fontSize: 13, color: C.muted, maxWidth: 230, lineHeight: 1.45 }}>
+            Sin incidencias asignadas. Recibirás aviso en cuanto CECOPAL active una.
           </div>
-        </div>
+        </section>
       )}
 
       {/* Pie: control GPS */}
-      <div style={{
-        background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
-        borderRadius: '14px', padding: '12px 14px',
+      <footer style={{
+        background: C.panel, border: `1px solid ${C.panelBorder}`, borderRadius: 14, padding: '11px 14px',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
       }}>
-        <div style={{ fontSize: 12, color: '#7c8aa5', lineHeight: 1.5 }}>
+        <div style={{ fontSize: 11.5, color: C.muted, lineHeight: 1.5, minWidth: 0 }}>
           {lastPos
-            ? <>📍 {lastPos.lat.toFixed(5)}, {lastPos.lng.toFixed(5)}<br /><span style={{ color: '#475569' }}>Envíos: {enviados}{lastPos.vel !== null ? ` · ${lastPos.vel} km/h` : ''}</span></>
-            : <>Pulsa iniciar al comenzar el turno<br /><span style={{ color: '#475569' }}>(activa GPS y sonido)</span></>}
-          {errorMsg && <div style={{ color: '#f87171', marginTop: 4 }}>{errorMsg}</div>}
+            ? <>{lastPos.lat.toFixed(5)}, {lastPos.lng.toFixed(5)}<br /><span style={{ color: C.faint }}>Envíos: {enviados}{lastPos.vel !== null ? ` · ${lastPos.vel} km/h` : ''}</span></>
+            : <>Pulsa iniciar al comenzar el turno<br /><span style={{ color: C.faint }}>Activa el GPS y el sonido</span></>}
+          {errorMsg && <div style={{ color: C.red, marginTop: 4 }}>{errorMsg}</div>}
         </div>
-        <button
-          onClick={estado === 'activo' ? detener : iniciar}
-          style={{
-            padding: '12px 20px', borderRadius: '12px', border: 'none', cursor: 'pointer',
-            fontSize: 14, fontWeight: 800, flexShrink: 0,
-            background: estado === 'activo' ? '#dc2626' : '#2563eb', color: '#fff',
-          }}
-        >
-          {estado === 'activo' ? 'DETENER' : 'INICIAR'}
-        </button>
-      </div>
+        <button onClick={estado === 'activo' ? detener : iniciar} style={{
+          padding: '12px 22px', borderRadius: 12, border: 'none', cursor: 'pointer',
+          fontSize: 13, fontWeight: 800, letterSpacing: '0.06em', flexShrink: 0,
+          background: estado === 'activo' ? C.red : C.blue, color: '#fff',
+        }}>{estado === 'activo' ? 'DETENER' : 'INICIAR'}</button>
+      </footer>
     </div>
   )
 }
