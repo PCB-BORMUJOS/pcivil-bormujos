@@ -171,10 +171,12 @@ export default function TrackingPage() {
   }
 
   const urlNavegacion = (inc: Incidencia) => {
+    // Enlace universal de Google Maps: abre la app de Google Maps si está
+    // instalada en el iPad; si no, la versión web.
     const destino = inc.latitud != null && inc.longitud != null
       ? `${inc.latitud},${inc.longitud}`
       : encodeURIComponent(inc.direccion || '')
-    return `https://maps.apple.com/?daddr=${destino}&dirflg=d`
+    return `https://www.google.com/maps/dir/?api=1&destination=${destino}&travelmode=driving`
   }
 
   const iniciar = () => {
