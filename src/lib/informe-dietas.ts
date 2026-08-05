@@ -6,6 +6,7 @@ import {
   cargarImagen, drawHeaderCorporativo, drawFooterCorporativo,
   PAGE_W as W, PAGE_H as H,
 } from '@/lib/pdf-corporativo'
+import { bloquesMemoriaDietas } from '@/lib/memoria-dietas'
 
 const MARGEN = 14
 const TOPE = H - 18 - 8
@@ -27,6 +28,7 @@ export interface ColumnaInforme { label: string; align?: 'left' | 'center' | 'ri
 export interface InformeDietasOpts {
   titulo: string
   periodoTexto: string          // "junio de 2026"
+  mesAnio?: string              // "2026-07" — si se indica, antepone la memoria justificativa
   intro?: string[]
   columnas: ColumnaInforme[]
   filas: string[][]
@@ -62,6 +64,41 @@ export async function generarInformeDietasPDF(o: InformeDietasOpts) {
     y = 35
   }
   const asegurar = (alto: number) => { if (y + alto > TOPE) nuevaPagina() }
+
+  // ── MEMORIA JUSTIFICATIVA (documento oficial, texto íntegro CON acentos) ──────
+  // Se antepone a la liquidación. Se renderiza SIN el normalizador txt() para
+  // conservar las tildes (jsPDF las representa correctamente).
+  if (o.mesAnio) {
+    const LH = 5.4
+    const escribir = (texto: string, opts: { size: number; bold?: boolean; indent?: number; align?: 'left' | 'center'; dot?: boolean; gap?: number }) => {
+      const { size, bold = false, indent = 0, align = 'left', dot = false, gap = 2.8 } = opts
+      doc.setFont('helvetica', bold ? 'bold' : 'normal')
+      doc.setFontSize(size)
+      doc.setTextColor(0, 0, 0)
+      const x = MARGEN + indent
+      const lineas: string[] = doc.splitTextToSize(texto, ANCHO - indent)
+      lineas.forEach((ln, i) => {
+        asegurar(LH)
+        if (dot && i === 0) { doc.setFillColor(...AZUL); doc.circle(MARGEN + 1.4, y - 1.3, 0.7, 'F') }
+        if (align === 'center') doc.text(ln, W / 2, y, { align: 'center' })
+        else doc.text(ln, x, y)
+        y += LH
+      })
+      y += gap
+    }
+    bloquesMemoriaDietas(o.mesAnio).forEach(b => {
+      if (b.tipo === 'titulo') { y += 3; escribir(b.texto, { size: 13, bold: true, align: 'center', gap: 2 }) }
+      else if (b.tipo === 'periodo') {
+        escribir(b.texto, { size: 11, bold: true, align: 'center', gap: 3 })
+        doc.setDrawColor(200, 200, 200); asegurar(3); doc.line(MARGEN, y, W - MARGEN, y); y += 4
+      }
+      else if (b.tipo === 'seccion') { asegurar(12); y += 3; escribir(b.texto, { size: 11.5, bold: true, gap: 2.5 }) }
+      else if (b.tipo === 'sub') { asegurar(9); y += 1; escribir(b.texto, { size: 10.5, bold: true, gap: 1.8 }) }
+      else if (b.tipo === 'bullet') { escribir(b.texto, { size: 10.5, indent: 5, dot: true, gap: 2.6 }) }
+      else { escribir(b.texto, { size: 10.5, gap: 3 }) }
+    })
+    nuevaPagina() // la liquidación empieza en página nueva
+  }
 
   // ── Título y periodo ────────────────────────────────────────────────────────
   doc.setTextColor(0, 0, 0)

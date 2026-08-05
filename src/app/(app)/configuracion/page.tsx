@@ -152,6 +152,7 @@ export default function ConfiguracionPage() {
     await generarInformeDietasPDF({
       titulo: 'Informe de liquidacion de dietas',
       periodoTexto: nombreMes(selectedMonth),
+      mesAnio: selectedMonth,
       intro: [
         'Se relaciona a continuacion la liquidacion de dietas del personal voluntario del Servicio de Proteccion Civil de Bormujos correspondiente al periodo indicado, con el numero de dias de servicio, el importe de dietas, el kilometraje y el total por efectivo.',
       ],
