@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'next/navigation'
+import { BEEP_AVISO } from '@/lib/tracking-beep'
 
 const INTERVAL_MS = 5000
 const INC_INTERVAL_MS = 3000 // sondeo de incidencia (casi instantáneo)
@@ -55,9 +56,10 @@ export default function TrackingPage() {
   const [marcando, setMarcando] = useState<string | null>(null)
   const [alerta, setAlerta] = useState(false)
   const [audioListo, setAudioListo] = useState(false)
+  const [sonando, setSonando] = useState(false)
   const incIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const prevIncIdRef = useRef<string | null>(null)
-  const audioCtxRef = useRef<AudioContext | null>(null)
+  const audioElRef = useRef<HTMLAudioElement | null>(null)
 
   // ─── GPS (sin cambios funcionales) ───
   const enviarUbicacion = async (pos: GeolocationPosition) => {
@@ -84,56 +86,40 @@ export default function TrackingPage() {
     }
   }
 
-  // ─── Audio (iOS exige gesto previo para poder sonar) ───
-  const desbloquearAudio = () => {
+  // ─── Audio: ALARMA EN BUCLE hasta que alguien toca el iPad ───
+  // iOS exige un gesto previo para poder reproducir audio: se "arma" al pulsar
+  // INICIAR (o el botón de activar sonido) al empezar el turno. A partir de ahí,
+  // cuando llega una incidencia nueva la alarma suena en bucle hasta que se toca
+  // la pantalla (o se inicia navegación / se marca una isócrona).
+  const armarAudio = () => {
+    const el = audioElRef.current
+    if (!el) return
     try {
-      if (!audioCtxRef.current) {
-        const AC = (window.AudioContext || (window as any).webkitAudioContext)
-        if (AC) audioCtxRef.current = new AC()
+      el.muted = true
+      const p = el.play()
+      if (p && typeof p.then === 'function') {
+        p.then(() => { el.pause(); el.currentTime = 0; el.muted = false; setAudioListo(true) })
+         .catch(() => { el.muted = false })
+      } else {
+        el.pause(); el.currentTime = 0; el.muted = false; setAudioListo(true)
       }
-      const ctx = audioCtxRef.current
-      if (!ctx) return
-      const prime = () => {
-        // Tono de cebado casi inaudible para "encender" el audio en iOS.
-        const osc = ctx.createOscillator()
-        const gain = ctx.createGain()
-        gain.gain.value = 0.0001
-        osc.connect(gain); gain.connect(ctx.destination)
-        osc.start()
-        osc.stop(ctx.currentTime + 0.05)
-        setAudioListo(true)
-      }
-      if (ctx.state === 'suspended') ctx.resume().then(prime).catch(() => {})
-      else prime()
     } catch { /* audio no disponible */ }
   }
 
-  const reproducirAlerta = () => {
-    desbloquearAudio()
-    const ctx = audioCtxRef.current
-    if (ctx && ctx.state === 'running') {
-      const pitido = (t0: number, freq: number, dur: number) => {
-        const osc = ctx.createOscillator()
-        const gain = ctx.createGain()
-        osc.type = 'square'
-        osc.frequency.value = freq
-        gain.gain.setValueAtTime(0.0001, t0)
-        gain.gain.exponentialRampToValueAtTime(0.6, t0 + 0.02)
-        gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur)
-        osc.connect(gain); gain.connect(ctx.destination)
-        osc.start(t0); osc.stop(t0 + dur)
-      }
-      const now = ctx.currentTime
-      // Dos rondas de 3 pitidos ascendentes, para que se oiga bien.
-      for (const base of [0, 1.15]) {
-        pitido(now + base, 880, 0.18)
-        pitido(now + base + 0.28, 1046, 0.18)
-        pitido(now + base + 0.56, 1318, 0.3)
-      }
-    }
-    try { (navigator as any).vibrate?.([300, 150, 300, 150, 500]) } catch { /* iOS ignora vibrate */ }
+  const iniciarAlarma = () => {
     setAlerta(true)
-    setTimeout(() => setAlerta(false), 8000)
+    try { (navigator as any).vibrate?.([500, 250, 500, 250, 500]) } catch { /* iOS ignora vibrate */ }
+    const el = audioElRef.current
+    if (el) {
+      try { el.currentTime = 0; el.loop = true; el.muted = false; el.play().then(() => setSonando(true)).catch(() => {}) } catch { /* */ }
+    }
+  }
+
+  const detenerAlarma = () => {
+    setAlerta(false)
+    setSonando(false)
+    const el = audioElRef.current
+    if (el) { try { el.pause(); el.currentTime = 0 } catch { /* */ } }
   }
 
   // ─── Incidencia ───
@@ -145,9 +131,10 @@ export default function TrackingPage() {
       const nueva: Incidencia | null = data.incidencia || null
       if (nueva?.id && nueva.id !== prevIncIdRef.current) {
         prevIncIdRef.current = nueva.id
-        reproducirAlerta()
+        iniciarAlarma()
       } else if (!nueva) {
         prevIncIdRef.current = null
+        detenerAlarma()
       }
       setIncidencia(nueva)
     } catch { /* se reintenta en el siguiente sondeo */ }
@@ -180,7 +167,7 @@ export default function TrackingPage() {
   }
 
   const iniciar = () => {
-    desbloquearAudio()
+    armarAudio()
     if (!navigator.geolocation) {
       setErrorMsg('Este dispositivo no soporta GPS')
       setEstado('error')
@@ -211,6 +198,17 @@ export default function TrackingPage() {
     return () => { if (incIntervalRef.current) clearInterval(incIntervalRef.current) }
   }, [vehiculoId])
 
+  // Cualquier toque en la pantalla detiene la alarma sonora (la dotación ya se ha
+  // percatado). También arma el audio en el primer toque, por si no se pulsó INICIAR.
+  useEffect(() => {
+    const alTocar = () => {
+      if (!audioListo) armarAudio()
+      detenerAlarma()
+    }
+    window.addEventListener('pointerdown', alTocar)
+    return () => window.removeEventListener('pointerdown', alTocar)
+  }, [audioListo])
+
   const meta = incidencia
     ? (TIPO_META[incidencia.tipoIncidencia] || { label: incidencia.tipoIncidencia, icon: '📌', color: '#475569' })
     : null
@@ -221,6 +219,8 @@ export default function TrackingPage() {
       color: '#e5e7eb', fontFamily: 'system-ui, -apple-system, sans-serif',
       display: 'flex', flexDirection: 'column', padding: '14px', gap: '14px',
     }}>
+      <audio ref={audioElRef} src={BEEP_AVISO} loop preload="auto" playsInline />
+
       <style>{`
         @keyframes alertaPulse {
           0%,100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.0); }
@@ -343,9 +343,21 @@ export default function TrackingPage() {
               })}
             </div>
 
-            {!audioListo && (
+            {sonando && (
               <button
-                onClick={desbloquearAudio}
+                onClick={detenerAlarma}
+                style={{
+                  marginTop: 12, width: '100%', padding: '14px', borderRadius: '12px',
+                  border: 'none', background: '#b45309', color: '#fff', fontSize: 15,
+                  fontWeight: 800, cursor: 'pointer',
+                }}
+              >
+                🔕 SILENCIAR ALARMA
+              </button>
+            )}
+            {!audioListo && !sonando && (
+              <button
+                onClick={armarAudio}
                 style={{
                   marginTop: 12, width: '100%', padding: '10px', borderRadius: '11px',
                   border: '1px dashed rgba(250,204,21,0.5)', background: 'rgba(250,204,21,0.08)',
