@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'next/navigation'
 
 const INTERVAL_MS = 5000
-const INC_INTERVAL_MS = 3000 // sondeo de incidencia asignada al vehículo (casi instantáneo)
+const INC_INTERVAL_MS = 3000 // sondeo de incidencia (casi instantáneo)
 const TRACK_TOKEN = process.env.NEXT_PUBLIC_TRACKING_TOKEN
 
 type Incidencia = {
@@ -22,12 +22,23 @@ type Incidencia = {
   horaDisponible: string | null
 }
 
-const ISOCRONAS: Array<{ campo: keyof Incidencia; label: string }> = [
-  { campo: 'horaSalida', label: 'SALIDA' },
-  { campo: 'horaLlegada', label: 'LLEGADA' },
-  { campo: 'horaTerminado', label: 'FINALIZADO' },
-  { campo: 'horaDisponible', label: 'DISPONIBLE' },
+const ISOCRONAS: Array<{ campo: keyof Incidencia; label: string; t: string }> = [
+  { campo: 'horaSalida', label: 'SALIDA', t: 'T1' },
+  { campo: 'horaLlegada', label: 'LLEGADA', t: 'T2' },
+  { campo: 'horaTerminado', label: 'FINALIZADO', t: 'T3' },
+  { campo: 'horaDisponible', label: 'DISPONIBLE', t: 'T4' },
 ]
+
+const TIPO_META: Record<string, { label: string; icon: string; color: string }> = {
+  incendio: { label: 'Incendio', icon: '🔥', color: '#ea580c' },
+  sanitaria: { label: 'Sanitaria · SVB', icon: '🚑', color: '#dc2626' },
+  accidente: { label: 'Accidente', icon: '⚠️', color: '#d97706' },
+  inundacion: { label: 'Inundación', icon: '🌊', color: '#2563eb' },
+  rescate: { label: 'Rescate', icon: '🧗', color: '#7c3aed' },
+  apoyo: { label: 'Apoyo', icon: '🤝', color: '#0891b2' },
+  prevencion: { label: 'Preventivo', icon: '🛡️', color: '#059669' },
+  otros: { label: 'Otros', icon: '📌', color: '#475569' },
+}
 
 export default function TrackingPage() {
   const params = useParams()
@@ -43,53 +54,95 @@ export default function TrackingPage() {
   const [incidencia, setIncidencia] = useState<Incidencia | null>(null)
   const [marcando, setMarcando] = useState<string | null>(null)
   const [alerta, setAlerta] = useState(false)
+  const [audioListo, setAudioListo] = useState(false)
   const incIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const prevIncIdRef = useRef<string | null>(null)
   const audioCtxRef = useRef<AudioContext | null>(null)
 
-  // El audio en iOS necesita desbloquearse con un gesto del usuario (el botón
-  // INICIAR RASTREO). A partir de ahí los avisos suenan sin interacción.
+  // ─── GPS (sin cambios funcionales) ───
+  const enviarUbicacion = async (pos: GeolocationPosition) => {
+    const { latitude, longitude, speed, accuracy } = pos.coords
+    try {
+      const res = await fetch('/api/vehiculos/ubicacion', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          vehiculoId,
+          latitud: latitude,
+          longitud: longitude,
+          velocidad: speed !== null ? Math.round(speed * 3.6 * 10) / 10 : null,
+          precision: accuracy,
+          token: TRACK_TOKEN,
+        }),
+      })
+      if (res.ok) {
+        setEnviados(n => n + 1)
+        setLastPos({ lat: latitude, lng: longitude, vel: speed ? Math.round(speed * 3.6) : null })
+      }
+    } catch (e) {
+      console.error('Error enviando ubicacion:', e)
+    }
+  }
+
+  // ─── Audio (iOS exige gesto previo para poder sonar) ───
   const desbloquearAudio = () => {
     try {
       if (!audioCtxRef.current) {
         const AC = (window.AudioContext || (window as any).webkitAudioContext)
         if (AC) audioCtxRef.current = new AC()
       }
-      if (audioCtxRef.current?.state === 'suspended') audioCtxRef.current.resume()
+      const ctx = audioCtxRef.current
+      if (!ctx) return
+      const prime = () => {
+        // Tono de cebado casi inaudible para "encender" el audio en iOS.
+        const osc = ctx.createOscillator()
+        const gain = ctx.createGain()
+        gain.gain.value = 0.0001
+        osc.connect(gain); gain.connect(ctx.destination)
+        osc.start()
+        osc.stop(ctx.currentTime + 0.05)
+        setAudioListo(true)
+      }
+      if (ctx.state === 'suspended') ctx.resume().then(prime).catch(() => {})
+      else prime()
     } catch { /* audio no disponible */ }
   }
 
-  // Aviso al llegar una incidencia nueva: 3 pitidos ascendentes + vibración.
   const reproducirAlerta = () => {
     desbloquearAudio()
     const ctx = audioCtxRef.current
-    if (ctx) {
+    if (ctx && ctx.state === 'running') {
       const pitido = (t0: number, freq: number, dur: number) => {
         const osc = ctx.createOscillator()
         const gain = ctx.createGain()
         osc.type = 'square'
         osc.frequency.value = freq
         gain.gain.setValueAtTime(0.0001, t0)
-        gain.gain.exponentialRampToValueAtTime(0.4, t0 + 0.02)
+        gain.gain.exponentialRampToValueAtTime(0.6, t0 + 0.02)
         gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur)
         osc.connect(gain); gain.connect(ctx.destination)
         osc.start(t0); osc.stop(t0 + dur)
       }
       const now = ctx.currentTime
-      pitido(now, 880, 0.18); pitido(now + 0.28, 1046, 0.18); pitido(now + 0.56, 1318, 0.3)
+      // Dos rondas de 3 pitidos ascendentes, para que se oiga bien.
+      for (const base of [0, 1.15]) {
+        pitido(now + base, 880, 0.18)
+        pitido(now + base + 0.28, 1046, 0.18)
+        pitido(now + base + 0.56, 1318, 0.3)
+      }
     }
     try { (navigator as any).vibrate?.([300, 150, 300, 150, 500]) } catch { /* iOS ignora vibrate */ }
     setAlerta(true)
-    setTimeout(() => setAlerta(false), 6000)
+    setTimeout(() => setAlerta(false), 8000)
   }
 
+  // ─── Incidencia ───
   const cargarIncidencia = async () => {
     try {
       const res = await fetch(`/api/tracking/incidencia?vehiculoId=${encodeURIComponent(vehiculoId)}&token=${encodeURIComponent(TRACK_TOKEN || '')}`)
       if (!res.ok) return
       const data = await res.json()
       const nueva: Incidencia | null = data.incidencia || null
-      // Detectar incidencia NUEVA (id distinto al anterior) para lanzar el aviso.
       if (nueva?.id && nueva.id !== prevIncIdRef.current) {
         prevIncIdRef.current = nueva.id
         reproducirAlerta()
@@ -97,7 +150,7 @@ export default function TrackingPage() {
         prevIncIdRef.current = null
       }
       setIncidencia(nueva)
-    } catch { /* red: se reintenta en el siguiente sondeo */ }
+    } catch { /* se reintenta en el siguiente sondeo */ }
   }
 
   const marcarIsocrona = async (campo: string) => {
@@ -117,7 +170,6 @@ export default function TrackingPage() {
     finally { setMarcando(null) }
   }
 
-  // URL de navegación (Apple Maps): coordenadas si las hay, si no la dirección.
   const urlNavegacion = (inc: Incidencia) => {
     const destino = inc.latitud != null && inc.longitud != null
       ? `${inc.latitud},${inc.longitud}`
@@ -125,39 +177,8 @@ export default function TrackingPage() {
     return `https://maps.apple.com/?daddr=${destino}&dirflg=d`
   }
 
-  // Sondeo de incidencia asignada al vehículo (independiente del GPS).
-  useEffect(() => {
-    cargarIncidencia()
-    incIntervalRef.current = setInterval(cargarIncidencia, INC_INTERVAL_MS)
-    return () => { if (incIntervalRef.current) clearInterval(incIntervalRef.current) }
-  }, [vehiculoId])
-
-  const enviarUbicacion = async (pos: GeolocationPosition) => {
-    const { latitude, longitude, speed, accuracy } = pos.coords
-    try {
-      const res = await fetch('/api/vehiculos/ubicacion', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          vehiculoId,
-          latitud: latitude,
-          longitud: longitude,
-          velocidad: speed !== null ? Math.round(speed * 3.6 * 10) / 10 : null,
-          precision: accuracy,
-          token: process.env.NEXT_PUBLIC_TRACKING_TOKEN,
-        }),
-      })
-      if (res.ok) {
-        setEnviados(n => n + 1)
-        setLastPos({ lat: latitude, lng: longitude, vel: speed ? Math.round(speed * 3.6) : null })
-      }
-    } catch (e) {
-      console.error('Error enviando ubicacion:', e)
-    }
-  }
-
   const iniciar = () => {
-    desbloquearAudio() // gesto del usuario: habilita los avisos sonoros en iOS
+    desbloquearAudio()
     if (!navigator.geolocation) {
       setErrorMsg('Este dispositivo no soporta GPS')
       setEstado('error')
@@ -182,110 +203,199 @@ export default function TrackingPage() {
 
   useEffect(() => { return () => detener() }, [])
 
+  useEffect(() => {
+    cargarIncidencia()
+    incIntervalRef.current = setInterval(cargarIncidencia, INC_INTERVAL_MS)
+    return () => { if (incIntervalRef.current) clearInterval(incIntervalRef.current) }
+  }, [vehiculoId])
+
+  const meta = incidencia
+    ? (TIPO_META[incidencia.tipoIncidencia] || { label: incidencia.tipoIncidencia, icon: '📌', color: '#475569' })
+    : null
+
   return (
     <div style={{
-      minHeight: '100vh', background: '#0f172a', color: 'white',
-      display: 'flex', flexDirection: 'column', alignItems: 'center',
-      justifyContent: 'center', fontFamily: 'system-ui', padding: '2rem',
+      minHeight: '100dvh', background: 'radial-gradient(120% 120% at 50% 0%, #14213a 0%, #0a0f1e 60%)',
+      color: '#e5e7eb', fontFamily: 'system-ui, -apple-system, sans-serif',
+      display: 'flex', flexDirection: 'column', padding: '14px', gap: '14px',
     }}>
-      <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>🚍</div>
-      <h1 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.25rem' }}>Rastreo GPS</h1>
-      <p style={{ color: '#94a3b8', marginBottom: '1.25rem', fontSize: '0.9rem' }}>
-        Vehículo: <strong style={{ color: '#60a5fa' }}>{vehiculoId}</strong>
-      </p>
-
       <style>{`
         @keyframes alertaPulse {
-          0%, 100% { box-shadow: 0 0 24px rgba(239,68,68,0.35); border-color: #ef4444; }
-          50% { box-shadow: 0 0 40px rgba(239,68,68,0.95); border-color: #fca5a5; }
+          0%,100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.0); }
+          50% { box-shadow: 0 0 0 6px rgba(239,68,68,0.25); }
         }
+        @keyframes dotPulse { 0%,100%{opacity:1} 50%{opacity:0.35} }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        button { font-family: inherit; }
       `}</style>
 
-      {incidencia && (
-        <div style={{
-          width: '100%', maxWidth: '360px', marginBottom: '1.5rem',
-          background: '#7f1d1d', border: '2px solid #ef4444', borderRadius: '16px',
-          padding: '1rem', boxShadow: '0 0 24px rgba(239,68,68,0.35)',
-          animation: alerta ? 'alertaPulse 0.6s ease-in-out infinite' : undefined,
-        }}>
-          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#fecaca', letterSpacing: '0.05em' }}>
-            ● INCIDENCIA ACTIVA · {incidencia.numero}
-          </div>
-          <div style={{ fontSize: '1.35rem', fontWeight: 800, textTransform: 'uppercase', margin: '0.25rem 0' }}>
-            {incidencia.tipoIncidencia}
-          </div>
-          <div style={{ fontSize: '1rem', color: '#fee2e2', marginBottom: '0.75rem', lineHeight: 1.3 }}>
-            📍 {incidencia.direccion}
-          </div>
-
-          <a
-            href={urlNavegacion(incidencia)}
-            style={{
-              display: 'block', textAlign: 'center', textDecoration: 'none',
-              background: '#2563eb', color: 'white', fontWeight: 800, fontSize: '1.25rem',
-              padding: '1rem', borderRadius: '12px', marginBottom: '0.75rem',
-            }}
-          >
-            🧭 NAVEGAR
-          </a>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            {ISOCRONAS.map(({ campo, label }) => {
-              const valor = incidencia[campo] as string | null
-              const marcada = !!valor
-              return (
-                <button
-                  key={campo}
-                  onClick={() => !marcada && marcarIsocrona(campo)}
-                  disabled={marcada || marcando === campo}
-                  style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    padding: '0.9rem 1.1rem', borderRadius: '12px', border: 'none',
-                    cursor: marcada ? 'default' : 'pointer',
-                    background: marcada ? '#166534' : '#334155',
-                    color: 'white', fontSize: '1.15rem', fontWeight: 800,
-                    opacity: marcando === campo ? 0.6 : 1,
-                  }}
-                >
-                  <span>{label}</span>
-                  <span style={{ fontVariantNumeric: 'tabular-nums' }}>
-                    {marcada ? `✓ ${valor}` : (marcando === campo ? '…' : '›')}
-                  </span>
-                </button>
-              )
-            })}
-          </div>
-        </div>
-      )}
+      {/* Cabecera */}
       <div style={{
-        padding: '0.5rem 1.5rem', borderRadius: '9999px', marginBottom: '2rem',
-        background: estado === 'activo' ? '#16a34a' : estado === 'error' ? '#dc2626' : '#374151',
-        fontSize: '0.9rem', fontWeight: 600,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
+        borderRadius: '14px', padding: '10px 14px',
       }}>
-        {estado === 'activo' ? '● Transmitiendo' : estado === 'error' ? '✕ Error' : '○ Inactivo'}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{
+            width: 34, height: 34, borderRadius: '10px', background: 'rgba(37,99,235,0.15)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18,
+          }}>🚐</div>
+          <div>
+            <div style={{ fontSize: 11, color: '#7c8aa5', letterSpacing: '0.08em', fontWeight: 600 }}>UNIDAD</div>
+            <div style={{ fontSize: 18, fontWeight: 800, color: '#93c5fd', lineHeight: 1 }}>{vehiculoId}</div>
+          </div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+          <span style={{
+            width: 9, height: 9, borderRadius: '50%',
+            background: estado === 'activo' ? '#22c55e' : estado === 'error' ? '#ef4444' : '#64748b',
+            animation: estado === 'activo' ? 'dotPulse 1.4s ease-in-out infinite' : undefined,
+          }} />
+          <span style={{ fontSize: 12, fontWeight: 600, color: '#9fb0cc' }}>
+            {estado === 'activo' ? 'GPS activo' : estado === 'error' ? 'GPS error' : 'GPS parado'}
+          </span>
+        </div>
       </div>
-      <button
-        onClick={estado === 'activo' ? detener : iniciar}
-        style={{
-          padding: '1rem 3rem', borderRadius: '12px', border: 'none', cursor: 'pointer',
-          fontSize: '1.1rem', fontWeight: 700, marginBottom: '2rem',
-          background: estado === 'activo' ? '#dc2626' : '#2563eb',
-          color: 'white', width: '100%', maxWidth: '320px',
-        }}
-      >
-        {estado === 'activo' ? 'DETENER' : 'INICIAR RASTREO'}
-      </button>
-      {lastPos && (
+
+      {/* Panel de incidencia */}
+      {incidencia && meta ? (
         <div style={{
-          background: '#1e293b', borderRadius: '12px', padding: '1rem 1.5rem',
-          width: '100%', maxWidth: '320px', fontSize: '0.85rem', lineHeight: '2',
+          background: 'linear-gradient(180deg, rgba(30,41,59,0.9), rgba(15,23,42,0.9))',
+          border: `1px solid ${alerta ? 'rgba(239,68,68,0.9)' : 'rgba(255,255,255,0.10)'}`,
+          borderRadius: '18px', overflow: 'hidden',
+          animation: alerta ? 'alertaPulse 0.9s ease-in-out infinite' : undefined,
         }}>
-          <div>📍 {lastPos.lat.toFixed(6)}, {lastPos.lng.toFixed(6)}</div>
-          {lastPos.vel !== null && <div>🏎️ {lastPos.vel} km/h</div>}
-          <div style={{ color: '#64748b' }}>Envíos: {enviados}</div>
+          {/* Franja de tipo */}
+          <div style={{
+            background: meta.color, padding: '12px 16px',
+            display: 'flex', alignItems: 'center', gap: 12,
+          }}>
+            <span style={{ fontSize: 30, lineHeight: 1 }}>{meta.icon}</span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', opacity: 0.85, color: '#fff' }}>
+                INCIDENCIA · {incidencia.numero}
+              </div>
+              <div style={{ fontSize: 21, fontWeight: 800, color: '#fff', lineHeight: 1.1, textTransform: 'uppercase' }}>
+                {meta.label}
+              </div>
+            </div>
+          </div>
+
+          <div style={{ padding: '14px 16px' }}>
+            {/* Destino */}
+            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', color: '#7c8aa5', marginBottom: 4 }}>DESTINO</div>
+            <div style={{ fontSize: 16, fontWeight: 600, color: '#e5e7eb', lineHeight: 1.35, marginBottom: 14 }}>
+              {incidencia.direccion}
+            </div>
+
+            {/* Navegar */}
+            <a
+              href={urlNavegacion(incidencia)}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+                textDecoration: 'none', background: 'linear-gradient(180deg,#3b82f6,#2563eb)',
+                color: '#fff', fontWeight: 800, fontSize: 18, padding: '15px',
+                borderRadius: '14px', marginBottom: 16, boxShadow: '0 6px 16px rgba(37,99,235,0.4)',
+              }}
+            >
+              <span style={{ fontSize: 20 }}>🧭</span> INICIAR NAVEGACIÓN
+            </a>
+
+            {/* Tiempos */}
+            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', color: '#7c8aa5', marginBottom: 8 }}>TIEMPOS DE INTERVENCIÓN</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {ISOCRONAS.map(({ campo, label, t }) => {
+                const valor = incidencia[campo] as string | null
+                const marcada = !!valor
+                const cargando = marcando === campo
+                return (
+                  <button
+                    key={campo}
+                    onClick={() => !marcada && marcarIsocrona(campo)}
+                    disabled={marcada || cargando}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 12,
+                      padding: '14px 14px', borderRadius: '13px', width: '100%',
+                      cursor: marcada ? 'default' : 'pointer',
+                      border: marcada ? '1px solid rgba(34,197,94,0.4)' : '1px solid rgba(255,255,255,0.10)',
+                      background: marcada ? 'rgba(22,101,52,0.35)' : 'rgba(255,255,255,0.05)',
+                      color: '#fff', opacity: cargando ? 0.6 : 1, textAlign: 'left',
+                    }}
+                  >
+                    <span style={{
+                      width: 30, height: 30, borderRadius: '9px', flexShrink: 0,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 12, fontWeight: 800,
+                      background: marcada ? '#16a34a' : 'rgba(255,255,255,0.08)',
+                      color: marcada ? '#fff' : '#9fb0cc',
+                    }}>{marcada ? '✓' : t}</span>
+                    <span style={{ flex: 1, fontSize: 16, fontWeight: 800, letterSpacing: '0.02em' }}>{label}</span>
+                    <span style={{
+                      fontSize: marcada ? 17 : 13, fontWeight: 700, fontVariantNumeric: 'tabular-nums',
+                      color: marcada ? '#86efac' : '#7c8aa5',
+                    }}>
+                      {marcada ? valor : (cargando ? '…' : 'MARCAR')}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+
+            {!audioListo && (
+              <button
+                onClick={desbloquearAudio}
+                style={{
+                  marginTop: 12, width: '100%', padding: '10px', borderRadius: '11px',
+                  border: '1px dashed rgba(250,204,21,0.5)', background: 'rgba(250,204,21,0.08)',
+                  color: '#fde047', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                }}
+              >
+                🔔 Toca para activar el sonido de avisos
+              </button>
+            )}
+          </div>
+        </div>
+      ) : (
+        /* Estado en espera */
+        <div style={{
+          flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+          background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)',
+          borderRadius: '18px', padding: '32px 20px', textAlign: 'center', gap: 10,
+        }}>
+          <div style={{
+            width: 60, height: 60, borderRadius: '50%', background: 'rgba(34,197,94,0.12)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28,
+          }}>🛰️</div>
+          <div style={{ fontSize: 17, fontWeight: 700, color: '#cbd5e1' }}>En espera</div>
+          <div style={{ fontSize: 13, color: '#7c8aa5', maxWidth: 220, lineHeight: 1.4 }}>
+            Sin incidencias asignadas. Recibirás un aviso en cuanto CECOPAL active una.
+          </div>
         </div>
       )}
-      {errorMsg && <div style={{ color: '#f87171', marginTop: '1rem', fontSize: '0.85rem' }}>{errorMsg}</div>}
+
+      {/* Pie: control GPS */}
+      <div style={{
+        background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
+        borderRadius: '14px', padding: '12px 14px',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+      }}>
+        <div style={{ fontSize: 12, color: '#7c8aa5', lineHeight: 1.5 }}>
+          {lastPos
+            ? <>📍 {lastPos.lat.toFixed(5)}, {lastPos.lng.toFixed(5)}<br /><span style={{ color: '#475569' }}>Envíos: {enviados}{lastPos.vel !== null ? ` · ${lastPos.vel} km/h` : ''}</span></>
+            : <>Pulsa iniciar al comenzar el turno<br /><span style={{ color: '#475569' }}>(activa GPS y sonido)</span></>}
+          {errorMsg && <div style={{ color: '#f87171', marginTop: 4 }}>{errorMsg}</div>}
+        </div>
+        <button
+          onClick={estado === 'activo' ? detener : iniciar}
+          style={{
+            padding: '12px 20px', borderRadius: '12px', border: 'none', cursor: 'pointer',
+            fontSize: 14, fontWeight: 800, flexShrink: 0,
+            background: estado === 'activo' ? '#dc2626' : '#2563eb', color: '#fff',
+          }}
+        >
+          {estado === 'activo' ? 'DETENER' : 'INICIAR'}
+        </button>
+      </div>
     </div>
   )
 }
