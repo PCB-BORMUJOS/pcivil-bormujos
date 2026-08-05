@@ -22,13 +22,13 @@ const RUTAS_SOLO_COORD_O_VISOR: string[] = [
   '/cuadrantes',
   '/estadisticas',
   '/presupuesto',
-  '/configuracion',
 ]
 
 // Rutas visibles SOLO para los roles 'admin' y 'superadmin'. Cualquier otro rol
 // queda fuera, incluido el coordinador (mismo nivel que admin) y el visor.
 const RUTAS_SOLO_ADMIN: string[] = [
   '/administracion',
+  '/configuracion',
 ]
 
 // Rutas que requieren nivel mínimo 5 (solo superadmin)

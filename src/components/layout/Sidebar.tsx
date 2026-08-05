@@ -89,7 +89,7 @@ const navigation: NavItem[] = [
   { name: 'Agentes IA',        href: '/agentes',        icon: Bot,         minNivel: 4, visibleVisor: false },
   { name: 'Compras',           href: '/compras',        icon: CarritoIcon, minNivel: 4, visibleVisor: false },
   { name: 'Gestión Económica', href: '/presupuesto',    icon: Wallet,      minNivel: 4, visibleVisor: true },
-  { name: 'Configuración',     href: '/configuracion',  icon: Settings,    minNivel: 4, visibleVisor: false },
+  { name: 'Configuración',     href: '/configuracion',  icon: Settings,    soloRoles: ['admin', 'superadmin'] },
 ]
 
 export default function Sidebar() {
