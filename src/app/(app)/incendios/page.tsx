@@ -61,7 +61,7 @@ function HidrantesClusterInner({ hidrantes, createIcon }: { hidrantes: any[], cr
       const marker = L.marker([hid.latitud, hid.longitud], { icon: createIcon(hid.tipo, hid.estado) });
       const presionHtml = hid.presion ? '<p style="font-size:11px;margin-top:4px">Presion: ' + hid.presion + ' bar</p>' : '';
       const caudalHtml = hid.caudal ? '<p style="font-size:11px">Caudal: ' + hid.caudal + ' m³/h (' + Math.round(hid.caudal * 1000 / 60) + ' L/min)</p>' : '';
-      marker.bindPopup('<div style="text-align:center;min-width:150px"><strong style="font-size:15px;display:block">' + hid.codigo + '</strong><p style="font-size:13px;color:#475569">' + hid.tipo + '</p><p style="font-size:11px;color:#64748b;margin-top:4px">' + (hid.ubicacion || '') + '</p>' + presionHtml + caudalHtml + '</div>');
+      marker.bindPopup('<div style="text-align:center;min-width:150px"><strong style="font-size:15px;display:block">' + hid.codigo + '</strong><p style="font-size:13px;color:#475569">' + tipoLabelHidrante(hid.tipo) + '</p><p style="font-size:11px;color:#64748b;margin-top:4px">' + (hid.ubicacion || '') + '</p>' + presionHtml + caudalHtml + '</div>');
       clusterGroup.addLayer(marker);
     });
     map.addLayer(clusterGroup);
@@ -141,6 +141,51 @@ interface EquipoECI {
   estado: string; fechaInstalacion: string | null; proximaRevision: string | null;
   edificio: Edificio; edificioId: string;
 }
+// Etiqueta legible del tipo de hidrante.
+const tipoLabelHidrante = (t?: string) => (({
+  columna: 'Columna',
+  arqueta: 'Arqueta',
+  arqueta_hornacina: 'Arqueta en hornacina',
+  arqueta_saneamiento: 'Arqueta de saneamiento',
+} as Record<string, string>)[t || ''] || (t || ''));
+
+// Opciones de tipo para los formularios de hidrante.
+const OPCIONES_TIPO_HIDRANTE = [
+  { value: 'columna', label: 'Columna' },
+  { value: 'arqueta_hornacina', label: 'Arqueta en hornacina' },
+  { value: 'arqueta_saneamiento', label: 'Arqueta de saneamiento' },
+  { value: 'arqueta', label: 'Arqueta (sin especificar)' },
+];
+
+// Caudal con dos campos sincronizados: m³/h y L/min (1 m³/h = 16,67 L/min).
+// Escribe el valor canónico (m³/h) en un input oculto name="caudal" para que el
+// envío del formulario (form.elements) lo recoja sin cambios.
+function CaudalInputs({ initialM3 }: { initialM3?: number | null }) {
+  const [m3, setM3] = React.useState(initialM3 != null ? String(initialM3) : '');
+  const [lmin, setLmin] = React.useState(initialM3 != null ? String(Math.round(initialM3 * 1000 / 60)) : '');
+  const onM3 = (v: string) => {
+    setM3(v);
+    setLmin(v === '' || isNaN(Number(v)) ? '' : String(Math.round(Number(v) * 1000 / 60)));
+  };
+  const onL = (v: string) => {
+    setLmin(v);
+    setM3(v === '' || isNaN(Number(v)) ? '' : String(Math.round((Number(v) * 60 / 1000) * 100) / 100));
+  };
+  return (
+    <>
+      <input type="hidden" name="caudal" value={m3} readOnly />
+      <div>
+        <label className="block text-sm font-medium text-slate-700 mb-2">Caudal (m³/h)</label>
+        <input type="number" step="0.1" value={m3} onChange={e => onM3(e.target.value)} className="w-full border border-slate-300 rounded-lg p-2.5" placeholder="30" />
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-slate-700 mb-2">Caudal (L/min)</label>
+        <input type="number" step="1" value={lmin} onChange={e => onL(e.target.value)} className="w-full border border-slate-300 rounded-lg p-2.5" placeholder="500" />
+      </div>
+    </>
+  );
+}
+
 interface Hidrante {
   id: string; codigo: string; tipo: string; ubicacion: string;
   latitud: number | null; longitud: number | null; presion: number | null;
@@ -1214,7 +1259,7 @@ export default function IncendiosPage() {
                     {hidrantes.map(hid => (
                       <tr key={hid.id} className="hover:bg-slate-50">
                         <td className="p-3 font-bold text-sm text-slate-800 whitespace-nowrap">{hid.codigo}</td>
-                        <td className="p-3 text-sm text-slate-600 whitespace-nowrap">{hid.tipo}</td>
+                        <td className="p-3 text-sm text-slate-600 whitespace-nowrap">{tipoLabelHidrante(hid.tipo)}</td>
                         <td className="p-3 text-sm text-slate-600">{hid.ubicacion}</td>
                         <td className="p-3 text-center text-sm text-slate-600 hidden lg:table-cell">
                           {hid.latitud ? hid.latitud.toFixed(8) : '-'}
@@ -1599,7 +1644,9 @@ export default function IncendiosPage() {
                   <label className="block text-sm font-medium text-slate-700 mb-2">Tipo *</label>
                   <select name="tipoHidrante" className="w-full border border-slate-300 rounded-lg p-2.5" required>
                     <option value="columna">Columna</option>
-                    <option value="arqueta">Arqueta</option>
+                    <option value="arqueta_hornacina">Arqueta en hornacina</option>
+                    <option value="arqueta_saneamiento">Arqueta de saneamiento</option>
+                    <option value="arqueta">Arqueta (sin especificar)</option>
                   </select>
                 </div>
                 <div>
@@ -1625,15 +1672,12 @@ export default function IncendiosPage() {
                   <input name="longitud" type="text" className="w-full border border-slate-300 rounded-lg p-2.5" placeholder="-6.072000" />
                 </div>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">Presión (bar)</label>
                   <input name="presion" type="number" step="0.1" className="w-full border border-slate-300 rounded-lg p-2.5" placeholder="3.5" />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Caudal (m³/h)</label>
-                  <input name="caudal" type="number" step="0.1" className="w-full border border-slate-300 rounded-lg p-2.5" placeholder="30" />
-                </div>
+                <CaudalInputs />
               </div>
               <div className="flex justify-end gap-3 pt-4 border-t">
                 <button type="button" onClick={() => setShowNuevoHidrante(false)} className="px-5 py-2.5 text-slate-600 hover:bg-slate-100 rounded-lg font-medium">Cancelar</button>
@@ -1801,7 +1845,9 @@ export default function IncendiosPage() {
                   <label className="block text-sm font-medium text-slate-700 mb-2">Tipo</label>
                   <select name="tipo" defaultValue={hidranteSeleccionado.tipo} className="w-full border border-slate-300 rounded-lg p-2.5">
                     <option value="columna">Columna</option>
-                    <option value="arqueta">Arqueta</option>
+                    <option value="arqueta_hornacina">Arqueta en hornacina</option>
+                    <option value="arqueta_saneamiento">Arqueta de saneamiento</option>
+                    <option value="arqueta">Arqueta (sin especificar)</option>
                   </select>
                 </div>
                 <div>
@@ -1827,15 +1873,12 @@ export default function IncendiosPage() {
                   <input name="longitud" type="text" defaultValue={hidranteSeleccionado.longitud?.toFixed(8) || ''} className="w-full border border-slate-300 rounded-lg p-2.5" />
                 </div>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">Presión (bar)</label>
                   <input name="presion" type="number" step="0.1" defaultValue={hidranteSeleccionado.presion || ''} className="w-full border border-slate-300 rounded-lg p-2.5" />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Caudal (m³/h)</label>
-                  <input name="caudal" type="number" step="0.1" defaultValue={hidranteSeleccionado.caudal || ''} className="w-full border border-slate-300 rounded-lg p-2.5" />
-                </div>
+                <CaudalInputs key={hidranteSeleccionado.id} initialM3={hidranteSeleccionado.caudal} />
               </div>
               <div className="flex justify-end gap-3 pt-4 border-t">
                 <button type="button" onClick={() => setHidranteSeleccionado(null)} className="px-5 py-2.5 text-slate-600 hover:bg-slate-100 rounded-lg font-medium">Cancelar</button>
