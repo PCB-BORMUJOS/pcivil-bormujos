@@ -718,7 +718,7 @@ model Hidrante {
   latitud          Float?
   longitud         Float?
   presion          Float?
-  caudal           Int?
+  caudal           Float?   // m³/h
   estado           String    @default("operativo")
   fechaInstalacion DateTime? @map("fecha_instalacion")
   ultimaRevision   DateTime? @map("ultima_revision")

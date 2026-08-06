@@ -60,7 +60,7 @@ function HidrantesClusterInner({ hidrantes, createIcon }: { hidrantes: any[], cr
     hidrantes.filter((h: any) => h.latitud && h.longitud).forEach((hid: any) => {
       const marker = L.marker([hid.latitud, hid.longitud], { icon: createIcon(hid.tipo, hid.estado) });
       const presionHtml = hid.presion ? '<p style="font-size:11px;margin-top:4px">Presion: ' + hid.presion + ' bar</p>' : '';
-      const caudalHtml = hid.caudal ? '<p style="font-size:11px">Caudal: ' + hid.caudal + ' l/min</p>' : '';
+      const caudalHtml = hid.caudal ? '<p style="font-size:11px">Caudal: ' + hid.caudal + ' m³/h (' + Math.round(hid.caudal * 1000 / 60) + ' L/min)</p>' : '';
       marker.bindPopup('<div style="text-align:center;min-width:150px"><strong style="font-size:15px;display:block">' + hid.codigo + '</strong><p style="font-size:13px;color:#475569">' + hid.tipo + '</p><p style="font-size:11px;color:#64748b;margin-top:4px">' + (hid.ubicacion || '') + '</p>' + presionHtml + caudalHtml + '</div>');
       clusterGroup.addLayer(marker);
     });
@@ -1205,7 +1205,7 @@ export default function IncendiosPage() {
                       <th className="text-center p-3 text-xs font-semibold text-slate-500 uppercase hidden lg:table-cell">Latitud</th>
                       <th className="text-center p-3 text-xs font-semibold text-slate-500 uppercase hidden lg:table-cell">Longitud</th>
                       <th className="text-center p-3 text-xs font-semibold text-slate-500 uppercase">Presión</th>
-                      <th className="text-center p-3 text-xs font-semibold text-slate-500 uppercase">Caudal</th>
+                      <th className="text-center p-3 text-xs font-semibold text-slate-500 uppercase">Caudal (m³/h · L/min)</th>
                       <th className="text-center p-3 text-xs font-semibold text-slate-500 uppercase">Estado</th>
                       <th className="text-center p-3 text-xs font-semibold text-slate-500 uppercase">Acciones</th>
                     </tr>
@@ -1223,7 +1223,7 @@ export default function IncendiosPage() {
                           {hid.longitud ? hid.longitud.toFixed(8) : '-'}
                         </td>
                         <td className="p-3 text-center text-sm">{hid.presion ? `${hid.presion} bar` : '-'}</td>
-                        <td className="p-3 text-center text-sm">{hid.caudal ? `${hid.caudal} l/min` : '-'}</td>
+                        <td className="p-3 text-center text-sm whitespace-nowrap">{hid.caudal ? <span>{hid.caudal} m³/h<br /><span className="text-xs text-slate-400">{Math.round(hid.caudal * 1000 / 60)} L/min</span></span> : '-'}</td>
                         <td className="p-3 text-center">
                           <span className={`px-2 py-1 rounded text-xs font-bold ${hid.estado === 'operativo' ? 'bg-green-100 text-green-700' :
                             hid.estado === 'averiado' ? 'bg-yellow-100 text-yellow-700' :
@@ -1631,8 +1631,8 @@ export default function IncendiosPage() {
                   <input name="presion" type="number" step="0.1" className="w-full border border-slate-300 rounded-lg p-2.5" placeholder="3.5" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Caudal (l/min)</label>
-                  <input name="caudal" type="number" className="w-full border border-slate-300 rounded-lg p-2.5" placeholder="1500" />
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Caudal (m³/h)</label>
+                  <input name="caudal" type="number" step="0.1" className="w-full border border-slate-300 rounded-lg p-2.5" placeholder="30" />
                 </div>
               </div>
               <div className="flex justify-end gap-3 pt-4 border-t">
@@ -1833,8 +1833,8 @@ export default function IncendiosPage() {
                   <input name="presion" type="number" step="0.1" defaultValue={hidranteSeleccionado.presion || ''} className="w-full border border-slate-300 rounded-lg p-2.5" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Caudal (l/min)</label>
-                  <input name="caudal" type="number" defaultValue={hidranteSeleccionado.caudal || ''} className="w-full border border-slate-300 rounded-lg p-2.5" />
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Caudal (m³/h)</label>
+                  <input name="caudal" type="number" step="0.1" defaultValue={hidranteSeleccionado.caudal || ''} className="w-full border border-slate-300 rounded-lg p-2.5" />
                 </div>
               </div>
               <div className="flex justify-end gap-3 pt-4 border-t">

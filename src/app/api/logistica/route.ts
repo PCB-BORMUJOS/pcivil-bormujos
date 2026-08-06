@@ -697,7 +697,7 @@ export async function POST(request: NextRequest) {
           latitud: (latitud && latitud !== "") ? parseFloat(latitud) : null,
           longitud: (longitud && longitud !== "") ? parseFloat(longitud) : null,
           presion: (presion && presion !== "") ? parseFloat(presion) : null,
-          caudal: (caudal && caudal !== "") ? parseInt(caudal) : null,
+          caudal: (caudal && caudal !== "") ? parseFloat(caudal) : null,
           estado: estadoFinal
         }
       })
@@ -1233,13 +1233,13 @@ export async function PUT(request: NextRequest) {
           latitud: isValid(latitud) ? parseFloat(latitud) : null,
           longitud: isValid(longitud) ? parseFloat(longitud) : null,
           presion: isValid(presion) ? parseFloat(presion) : null,
-          caudal: isValid(caudal) ? parseInt(caudal) : null,
+          caudal: isValid(caudal) ? parseFloat(caudal) : null,
           estado
         }
       })
 
       const detalles: string[] = []
-      if (caudal !== undefined && caudal !== null && caudal !== '') detalles.push(`caudal: ${caudal} l/min`)
+      if (caudal !== undefined && caudal !== null && caudal !== '') detalles.push(`caudal: ${caudal} m³/h`)
       if (presion !== undefined && presion !== null && presion !== '') detalles.push(`presión: ${presion} bar`)
       if (estado) detalles.push(`estado: ${estado}`)
       if (ubicacion) detalles.push(`ubicación: ${ubicacion}`)
