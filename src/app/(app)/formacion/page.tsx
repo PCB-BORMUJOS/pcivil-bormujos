@@ -10,7 +10,7 @@ import {
   Plus, Search, RefreshCw, Package, Users, Calendar, BookOpen,
   Award, AlertCircle, Layers, Edit, Trash2, X, ClipboardList,
   ArrowUpDown, Send, CheckCircle, AlertTriangle, Clock, ShoppingCart, Ban,
-  MapPin, Tag, FileText, CalendarDays
+  MapPin, Tag, FileText, CalendarDays, UserPlus
 } from 'lucide-react';
 import SignatureCanvas from '@/components/partes/SignatureCanvas';
 
@@ -448,6 +448,47 @@ export default function FormacionPage() {
   const toggleCursoExpand = (id: string) => setExpandedCursos(prev => ({ ...prev, [id]: !prev[id] }));
   const toggleConvocatoria = (id: string) => {
     setExpandedConvocatorias(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  // Estado: añadir participantes directamente a una convocatoria
+  const [showAddPart, setShowAddPart] = useState(false);
+  const [convocatoriaAdd, setConvocatoriaAdd] = useState<Convocatoria | null>(null);
+  const [volsDisponibles, setVolsDisponibles] = useState<any[]>([]);
+  const [buscarVol, setBuscarVol] = useState('');
+  const [selVols, setSelVols] = useState<Set<string>>(new Set());
+  const [addingParts, setAddingParts] = useState(false);
+
+  const abrirAddParticipantes = async (c: Convocatoria) => {
+    setConvocatoriaAdd(c); setSelVols(new Set()); setBuscarVol(''); setVolsDisponibles([]); setShowAddPart(true);
+    try {
+      const [rv, ri] = await Promise.all([
+        fetch('/api/formacion?tipo=voluntarios').then(r => r.json()),
+        fetch(`/api/formacion?tipo=inscripciones&convocatoriaId=${c.id}`).then(r => r.json()),
+      ]);
+      const yaIds = new Set((ri.inscripciones || []).map((i: any) => i.usuarioId));
+      setVolsDisponibles((rv.voluntarios || []).filter((v: any) => !yaIds.has(v.id)));
+    } catch { setVolsDisponibles([]); }
+  };
+
+  const toggleVol = (id: string) => setSelVols(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
+
+  const confirmarAddParticipantes = async () => {
+    if (!convocatoriaAdd || selVols.size === 0) return;
+    setAddingParts(true);
+    let ok = 0, fail = 0, sinPlazas = false;
+    for (const uid of Array.from(selVols)) {
+      try {
+        const res = await fetch('/api/formacion', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tipo: 'inscripcion', action: 'agregar', convocatoriaId: convocatoriaAdd.id, usuarioId: uid }),
+        });
+        if (res.ok) ok++; else { fail++; const d = await res.json().catch(() => ({})); if ((d.error || '').toLowerCase().includes('plaza')) sinPlazas = true; }
+      } catch { fail++; }
+    }
+    setAddingParts(false); setShowAddPart(false);
+    cargarConvocatorias();
+    if (sinPlazas) alert(`Añadidos ${ok} participante(s). No había plazas suficientes para el resto.`);
+    else if (fail) alert(`Añadidos ${ok} participante(s). ${fail} no se pudieron añadir.`);
   };
 
   // Estado Gestion Convocatoria
@@ -1695,6 +1736,9 @@ export default function FormacionPage() {
                       {(isAdmin || isFormacionMember) ? (
                         <>
                           <button onClick={() => { setConvocatoriaEditando(c); setNuevaConvocatoriaData({ ...nuevaConvocatoriaData, cursoId: c.curso?.id, fechaInicio: new Date(c.fechaInicio).toISOString().slice(0,10), fechaFin: new Date(c.fechaFin).toISOString().slice(0,10), lugar: c.lugar || '', plazasDisponibles: c.plazasDisponibles || 20, horario: c.horario || '', instructores: (c as any).instructores || '', formadorNombre: (c as any).formadorNombre || '', formadorExterno: (c as any).formadorExterno || false }); setShowNuevaConvocatoria(true); }} className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors" title="Editar"><Edit size={15} /></button>
+                          {c.estado !== 'finalizada' && c.estado !== 'cancelada' && (
+                            <button onClick={() => abrirAddParticipantes(c)} className="p-1.5 text-green-500 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors" title="Añadir participantes"><UserPlus size={15} /></button>
+                          )}
                           <button onClick={() => handleOpenGestion(c)} className="p-1.5 text-blue-400 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors" title="Acta / Firmas"><FileText size={15} /></button>
                           {(isAdmin || isFormacionMember) && c.estado !== 'finalizada' && (
                             <button onClick={() => handleEliminarConvocatoria(c.id, c.codigo)} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Eliminar"><Trash2 size={15} /></button>
@@ -2586,6 +2630,65 @@ export default function FormacionPage() {
             <div className="flex justify-end gap-2 pt-4 bg-slate-50 -mx-6 -mb-6 p-4 mt-4 border-t">
               <button onClick={() => setShowNuevaNecesidad(false)} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg font-medium">Cancelar</button>
               <button onClick={handleGuardarNecesidad} className="px-6 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 shadow-sm font-medium">Registrar Necesidad</button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* MODAL: Añadir participantes directamente */}
+      {showAddPart && convocatoriaAdd && (
+        <Modal title={`Añadir participantes — ${convocatoriaAdd.curso?.nombre || convocatoriaAdd.codigo}`} onClose={() => setShowAddPart(false)} size="lg">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-slate-600">
+                Plazas: <strong>{convocatoriaAdd.plazasOcupadas}/{convocatoriaAdd.plazasDisponibles}</strong>
+                {' · '}Libres: <strong>{Math.max(0, convocatoriaAdd.plazasDisponibles - convocatoriaAdd.plazasOcupadas)}</strong>
+              </span>
+              <span className="text-slate-500">{selVols.size} seleccionado(s)</span>
+            </div>
+
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+              <input
+                autoFocus
+                value={buscarVol}
+                onChange={e => setBuscarVol(e.target.value)}
+                placeholder="Buscar por nombre, apellidos o indicativo…"
+                className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-lg text-sm"
+              />
+            </div>
+
+            <div className="max-h-80 overflow-y-auto border border-slate-200 rounded-lg divide-y divide-slate-100">
+              {volsDisponibles.length === 0 ? (
+                <div className="p-6 text-center text-sm text-slate-400">No hay voluntarios disponibles para añadir.</div>
+              ) : (
+                volsDisponibles
+                  .filter(v => {
+                    const q = buscarVol.toLowerCase().trim();
+                    if (!q) return true;
+                    return `${v.numeroVoluntario || ''} ${v.nombre || ''} ${v.apellidos || ''}`.toLowerCase().includes(q);
+                  })
+                  .map(v => (
+                    <label key={v.id} className="flex items-center gap-3 px-3 py-2.5 hover:bg-slate-50 cursor-pointer">
+                      <input type="checkbox" checked={selVols.has(v.id)} onChange={() => toggleVol(v.id)} className="accent-green-600" />
+                      <div className="flex-1 min-w-0">
+                        <span className="text-sm font-medium text-slate-800">{v.nombre} {v.apellidos}</span>
+                        {v.numeroVoluntario && <span className="ml-2 text-xs px-1.5 py-0.5 bg-slate-100 rounded text-slate-500">{v.numeroVoluntario}</span>}
+                      </div>
+                    </label>
+                  ))
+              )}
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <button onClick={() => setShowAddPart(false)} className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg font-medium">Cancelar</button>
+              <button
+                onClick={confirmarAddParticipantes}
+                disabled={selVols.size === 0 || addingParts}
+                className="px-4 py-2 text-sm bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white rounded-lg font-semibold flex items-center gap-1.5"
+              >
+                <UserPlus size={15} /> {addingParts ? 'Añadiendo…' : `Añadir seleccionados (${selVols.size})`}
+              </button>
             </div>
           </div>
         </Modal>

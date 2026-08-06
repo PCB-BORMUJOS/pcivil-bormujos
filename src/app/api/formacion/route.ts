@@ -46,6 +46,16 @@ export async function GET(request: NextRequest) {
         const tipo = searchParams.get('tipo')
 
         switch (tipo) {
+            case 'voluntarios': {
+                // Listado básico de voluntarios activos para añadir participantes.
+                const voluntarios = await (prisma as any).usuario.findMany({
+                    where: { activo: true },
+                    select: { id: true, nombre: true, apellidos: true, numeroVoluntario: true },
+                    orderBy: [{ numeroVoluntario: 'asc' }, { nombre: 'asc' }],
+                })
+                return NextResponse.json({ voluntarios })
+            }
+
             case 'cursos':
                 const cursos = await (prisma as any).curso.findMany({
                     where: { activo: true },
@@ -439,6 +449,39 @@ export async function POST(request: NextRequest) {
                     })
 
                     return NextResponse.json({ success: true, inscripcion: inscripcionRechazada, mensaje: 'Inscripción rechazada' })
+                }
+
+                // Alta DIRECTA por el personal de Formación: inscripción CONFIRMADA
+                // (sin pasar por "pendiente"), respetando plazas y evitando duplicados.
+                if (action === 'agregar') {
+                    let creada: any
+                    try {
+                        creada = await (prisma as any).$transaction(async (tx: any) => {
+                            const conv = await tx.convocatoria.findUnique({ where: { id: data.convocatoriaId } })
+                            if (!conv) throw new Error('CONV_NOT_FOUND')
+                            if (['finalizada', 'cancelada'].includes(conv.estado)) throw new Error('CONV_CERRADA')
+                            const existente = await tx.inscripcion.findFirst({ where: { convocatoriaId: data.convocatoriaId, usuarioId: data.usuarioId } })
+                            if (existente?.estado === 'confirmada') throw new Error('YA_INSCRITO')
+                            if (conv.plazasOcupadas >= conv.plazasDisponibles) throw new Error('SIN_PLAZAS')
+                            const res = existente
+                                ? await tx.inscripcion.update({ where: { id: existente.id }, data: { estado: 'confirmada' } })
+                                : await tx.inscripcion.create({ data: { convocatoriaId: data.convocatoriaId, usuarioId: data.usuarioId, estado: 'confirmada' } })
+                            await tx.convocatoria.update({ where: { id: conv.id }, data: { plazasOcupadas: { increment: 1 } } })
+                            return res
+                        })
+                    } catch (e: any) {
+                        const map: Record<string, [string, number]> = {
+                            CONV_NOT_FOUND: ['Convocatoria no encontrada', 404],
+                            CONV_CERRADA: ['La convocatoria está cerrada', 400],
+                            YA_INSCRITO: ['La persona ya está inscrita', 400],
+                            SIN_PLAZAS: ['No hay plazas disponibles', 400],
+                        }
+                        const [msg, code] = map[e.message] || ['Error al añadir participante', 500]
+                        return NextResponse.json({ error: msg }, { status: code })
+                    }
+                    const { usuarioId: agId, usuarioNombre: agNom } = getUsuarioAudit(session)
+                    await registrarAudit({ accion: 'CREATE', entidad: 'Inscripción', entidadId: creada.id, descripcion: `Alta directa de participante (usuario ${data.usuarioId}) en convocatoria ${data.convocatoriaId}`, usuarioId: agId, usuarioNombre: agNom, modulo: 'Formación' })
+                    return NextResponse.json({ success: true, inscripcion: creada, mensaje: 'Participante añadido' })
                 }
 
                 // Crear nueva inscripción (solicitud)
