@@ -1458,7 +1458,7 @@ export default function FormacionPage() {
                 <div className="prose max-w-none text-slate-600">{selectedCurso.descripcion || 'Sin descripción'}</div>
               </div>
               <div className="flex gap-2 justify-end">
-                {isAdmin && (
+                {(isAdmin || isFormacionMember) && (
                   <button onClick={() => { setCursoEditando(selectedCurso); closeCursoDetails(); }} className="px-4 py-2 bg-purple-600 text-white rounded-lg">Editar curso</button>
                 )}
                 <button onClick={closeCursoDetails} className="px-4 py-2 bg-gray-100 rounded-lg">Cerrar</button>
@@ -1478,7 +1478,7 @@ export default function FormacionPage() {
                 <h3 className="text-lg font-bold text-slate-800">Catálogo de Cursos</h3>
                 <p className="text-slate-600 text-sm">Gestión del catálogo de cursos de formación</p>
               </div>
-              {isAdmin && (
+              {(isAdmin || isFormacionMember) && (
                 <button
                   onClick={() => setShowNuevoCurso(true)}
                   className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center gap-2"
@@ -1562,7 +1562,7 @@ export default function FormacionPage() {
                               <Edit size={15} />
                             </button>
                           )}
-                          {isAdmin && (
+                          {(isAdmin || isFormacionMember) && (
                             <button onClick={() => handleEliminarCurso(curso.id, curso.nombre)} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Eliminar">
                               <Trash2 size={15} />
                             </button>
@@ -1696,7 +1696,7 @@ export default function FormacionPage() {
                         <>
                           <button onClick={() => { setConvocatoriaEditando(c); setNuevaConvocatoriaData({ ...nuevaConvocatoriaData, cursoId: c.curso?.id, fechaInicio: new Date(c.fechaInicio).toISOString().slice(0,10), fechaFin: new Date(c.fechaFin).toISOString().slice(0,10), lugar: c.lugar || '', plazasDisponibles: c.plazasDisponibles || 20, horario: c.horario || '', instructores: (c as any).instructores || '', formadorNombre: (c as any).formadorNombre || '', formadorExterno: (c as any).formadorExterno || false }); setShowNuevaConvocatoria(true); }} className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors" title="Editar"><Edit size={15} /></button>
                           <button onClick={() => handleOpenGestion(c)} className="p-1.5 text-blue-400 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors" title="Acta / Firmas"><FileText size={15} /></button>
-                          {isAdmin && c.estado !== 'finalizada' && (
+                          {(isAdmin || isFormacionMember) && c.estado !== 'finalizada' && (
                             <button onClick={() => handleEliminarConvocatoria(c.id, c.codigo)} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Eliminar"><Trash2 size={15} /></button>
                           )}
                         </>
@@ -1793,7 +1793,7 @@ export default function FormacionPage() {
                                     {(isAdmin || isFormacionMember) && (
                                       <button onClick={(e) => { e.stopPropagation(); setSelectedConvocatoriaForGrading(g.convocatoria); setShowGestionConvocatoria(true); setInscripcionesGrading([ins]); }} className="px-2 py-1 bg-orange-100 text-orange-700 hover:bg-orange-200 rounded text-xs">Firmar</button>
                                     )}
-                                    {isAdmin && (
+                                    {(isAdmin || isFormacionMember) && (
                                       <button onClick={(e) => { e.stopPropagation(); handleEliminarInscripcion(ins.id); }} className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded" title="Eliminar inscripción"><Trash2 size={13} /></button>
                                     )}
                                   </div>

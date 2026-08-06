@@ -4,6 +4,26 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { registrarAudit, getUsuarioAudit } from '@/lib/audit'
 
+// Puede gestionar Formación quien sea nivel >= 4 (coordinador/admin/superadmin/visor)
+// O quien tenga asignada el área de Formación (principal o secundaria), aunque su
+// rol sea inferior. Así el personal del área puede crear/registrar cursos, etc.
+async function puedeGestionarFormacion(session: any): Promise<boolean> {
+    const rol = (session?.user as any)?.rol ?? 'voluntario'
+    const nivel = ({ superadmin: 5, coordinador: 4, admin: 4, jefe_area: 3, responsable_turno: 2, voluntario: 1, visor: 4 } as Record<string, number>)[rol] ?? 1
+    if (nivel >= 4) return true
+    const email = session?.user?.email
+    if (!email) return false
+    const u = await prisma.usuario.findUnique({
+        where: { email },
+        select: { fichaVoluntario: { select: { areaAsignada: true, areaSecundaria: true } } },
+    })
+    const esForm = (s?: string | null) => {
+        const n = (s || '').toLowerCase()
+        return n === 'formación' || n === 'formacion'
+    }
+    return esForm(u?.fichaVoluntario?.areaAsignada) || esForm(u?.fichaVoluntario?.areaSecundaria)
+}
+
 
 
 // Genera número de certificado secuencial único: CERT-YYYY-NNNNN
@@ -272,9 +292,7 @@ export async function POST(request: NextRequest) {
         if (!session?.user?.email) {
             return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
         }
-        const _rolF = (session?.user as any)?.rol ?? 'voluntario'
-        const _nivF = ({ superadmin: 5, coordinador: 4, admin: 4, jefe_area: 3, responsable_turno: 2, voluntario: 1, visor: 4 } as Record<string,number>)[_rolF] ?? 1
-        if (_nivF < 4) return NextResponse.json({ error: 'Sin permisos suficientes' }, { status: 403 })
+        if (!(await puedeGestionarFormacion(session))) return NextResponse.json({ error: 'Sin permisos suficientes' }, { status: 403 })
 
         const body = await request.json()
         const { tipo, ...data } = body
@@ -635,9 +653,7 @@ export async function PUT(request: NextRequest) {
         if (!session?.user?.email) {
             return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
         }
-        const _rolF = (session?.user as any)?.rol ?? 'voluntario'
-        const _nivF = ({ superadmin: 5, coordinador: 4, admin: 4, jefe_area: 3, responsable_turno: 2, voluntario: 1, visor: 4 } as Record<string,number>)[_rolF] ?? 1
-        if (_nivF < 4) return NextResponse.json({ error: 'Sin permisos suficientes' }, { status: 403 })
+        if (!(await puedeGestionarFormacion(session))) return NextResponse.json({ error: 'Sin permisos suficientes' }, { status: 403 })
 
         const body = await request.json()
         const { tipo, id, ...data } = body
@@ -775,9 +791,7 @@ export async function DELETE(request: NextRequest) {
         if (!session?.user?.email) {
             return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
         }
-        const _rolF = (session?.user as any)?.rol ?? 'voluntario'
-        const _nivF = ({ superadmin: 5, coordinador: 4, admin: 4, jefe_area: 3, responsable_turno: 2, voluntario: 1, visor: 4 } as Record<string,number>)[_rolF] ?? 1
-        if (_nivF < 4) return NextResponse.json({ error: 'Sin permisos suficientes' }, { status: 403 })
+        if (!(await puedeGestionarFormacion(session))) return NextResponse.json({ error: 'Sin permisos suficientes' }, { status: 403 })
 
         const { searchParams } = new URL(request.url)
         const tipo = searchParams.get('tipo')
