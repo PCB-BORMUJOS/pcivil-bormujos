@@ -70,6 +70,64 @@ function HidrantesClusterInner({ hidrantes, createIcon }: { hidrantes: any[], cr
   return null;
 }
 const HidrantesCluster = dynamic(() => Promise.resolve(HidrantesClusterInner), { ssr: false });
+
+// Capa(s) superpuesta(s) a partir de un KML de Google Maps. Se separa por
+// geometría en capas independientes —Hidrantes (puntos) y Sectores (polígonos)—
+// y se ofrece un control nativo de Leaflet para activar/desactivar cada una.
+function CapaKMLInner({ url }: { url: string }) {
+  const { useMap } = require('react-leaflet');
+  const L = require('leaflet');
+  const map = useMap();
+  const { useEffect } = require('react');
+  useEffect(() => {
+    let control: any, capaPuntos: any, capaPoligonos: any, cancelado = false;
+    const popupDe = (f: any, l: any) => {
+      const p = f?.properties || {};
+      const desc = typeof p.description === 'string' ? p.description : (p.description?.value || '');
+      const html = (p.name ? '<strong>' + p.name + '</strong>' : '') + (desc ? '<div style="margin-top:4px">' + desc + '</div>' : '');
+      if (html) l.bindPopup('<div style="min-width:170px;font-size:12px">' + html + '</div>');
+    };
+    (async () => {
+      try {
+        const res = await fetch(url);
+        if (!res.ok) return;
+        const texto = await res.text();
+        const dom = new window.DOMParser().parseFromString(texto, 'text/xml');
+        const tj = await import('@tmcw/togeojson');
+        const geo: any = tj.kml(dom as any);
+        if (cancelado) return;
+        const feats = geo.features || [];
+        const esPunto = (t: string) => t === 'Point' || t === 'MultiPoint';
+        const puntos = { type: 'FeatureCollection', features: feats.filter((f: any) => f.geometry && esPunto(f.geometry.type)) };
+        const poligonos = { type: 'FeatureCollection', features: feats.filter((f: any) => f.geometry && !esPunto(f.geometry.type)) };
+
+        capaPuntos = L.geoJSON(puntos, {
+          pointToLayer: (_f: any, latlng: any) => L.circleMarker(latlng, { radius: 5, color: '#1e40af', weight: 2, fillColor: '#60a5fa', fillOpacity: 0.9 }),
+          onEachFeature: popupDe,
+        });
+        capaPoligonos = L.geoJSON(poligonos, {
+          style: (f: any) => ({ color: f?.properties?.stroke || '#7c3aed', weight: 2, opacity: 0.9, fillColor: f?.properties?.fill || '#8b5cf6', fillOpacity: 0.18 }),
+          onEachFeature: popupDe,
+        });
+
+        // Se crean pero NO se añaden al mapa: empiezan desactivadas y el usuario
+        // las activa desde el control de capas (casillas).
+        const overlays: any = {};
+        if (puntos.features.length) overlays[`Hidrantes (mapa) · ${puntos.features.length}`] = capaPuntos;
+        if (poligonos.features.length) overlays[`Sectores · ${poligonos.features.length}`] = capaPoligonos;
+        control = L.control.layers(null, overlays, { collapsed: false, position: 'topright' }).addTo(map);
+      } catch (e) { console.error('Error cargando capa KML:', e); }
+    })();
+    return () => {
+      cancelado = true;
+      if (control && map) map.removeControl(control);
+      if (capaPuntos && map) map.removeLayer(capaPuntos);
+      if (capaPoligonos && map) map.removeLayer(capaPoligonos);
+    };
+  }, [map, url]);
+  return null;
+}
+const CapaKML = dynamic(() => Promise.resolve(CapaKMLInner), { ssr: false });
 const Popup = dynamic(() => import('react-leaflet').then((mod) => mod.Popup), { ssr: false });
 
 const createHidranteIcon = (tipo: string, estado: string) => {
@@ -1229,6 +1287,7 @@ export default function IncendiosPage() {
                       url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                     />
                     <HidrantesCluster hidrantes={hidrantes} createIcon={createHidranteIcon} />
+                    <CapaKML url="/hidrantes-bormujos.kml" />
                   </MapContainer>
                 )}
               </div>
