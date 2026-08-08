@@ -679,7 +679,7 @@ export async function POST(request: NextRequest) {
     const esHidrante = tipo === 'hidrante'
 
     if (esHidrante) {
-      const { codigo, tipoHidrante, ubicacion, latitud, longitud, presion, caudal, estado } = body
+      const { codigo, tipoHidrante, ubicacion, latitud, longitud, presion, caudal, estado, fotoUbicacion, fotoDetalle } = body
 
       // tipoHidrante ya viene en minúsculas del frontend
       const tipoFinal = tipoHidrante || 'columna'
@@ -698,6 +698,8 @@ export async function POST(request: NextRequest) {
           longitud: (longitud && longitud !== "") ? parseFloat(longitud) : null,
           presion: (presion && presion !== "") ? parseFloat(presion) : null,
           caudal: (caudal && caudal !== "") ? parseFloat(caudal) : null,
+          fotoUbicacion: fotoUbicacion || null,
+          fotoDetalle: fotoDetalle || null,
           estado: estadoFinal
         }
       })
@@ -1222,7 +1224,7 @@ export async function PUT(request: NextRequest) {
 
     // ===== HIDRANTE =====
     if (tipo === 'hidrante') {
-      const { codigo, tipoHidrante, ubicacion, latitud, longitud, presion, caudal, estado } = body
+      const { codigo, tipoHidrante, ubicacion, latitud, longitud, presion, caudal, estado, fotoUbicacion, fotoDetalle } = body
 
       const hidrante = await prisma.hidrante.update({
         where: { id },
@@ -1234,6 +1236,8 @@ export async function PUT(request: NextRequest) {
           longitud: isValid(longitud) ? parseFloat(longitud) : null,
           presion: isValid(presion) ? parseFloat(presion) : null,
           caudal: isValid(caudal) ? parseFloat(caudal) : null,
+          ...(fotoUbicacion !== undefined ? { fotoUbicacion: fotoUbicacion || null } : {}),
+          ...(fotoDetalle !== undefined ? { fotoDetalle: fotoDetalle || null } : {}),
           estado
         }
       })

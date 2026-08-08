@@ -9,7 +9,8 @@ import 'leaflet/dist/leaflet.css';
 import {
   Flame, Package, Search, AlertTriangle, Plus, RefreshCw, Building2, Shield, MapPin,
   Edit, Trash2, Eye, X, Save, ArrowLeft, ShoppingCart, Layers, Clock, Check, CheckCircle,
-  Ban, Filter, User, Building, Calendar, History, Send, Download, ClipboardCheck
+  Ban, Filter, User, Building, Calendar, History, Send, Download, ClipboardCheck,
+  Image as ImageIcon, ChevronLeft, ChevronRight, ZoomIn, Droplet, Gauge, Navigation
 } from 'lucide-react';
 
 // Iconos centralizados
@@ -61,7 +62,8 @@ function HidrantesClusterInner({ hidrantes, createIcon }: { hidrantes: any[], cr
       const marker = L.marker([hid.latitud, hid.longitud], { icon: createIcon(hid.tipo, hid.estado) });
       const presionHtml = hid.presion ? '<p style="font-size:11px;margin-top:4px">Presion: ' + hid.presion + ' bar</p>' : '';
       const caudalHtml = hid.caudal ? '<p style="font-size:11px">Caudal: ' + hid.caudal + ' m³/h (' + Math.round(hid.caudal * 1000 / 60) + ' L/min)</p>' : '';
-      marker.bindPopup('<div style="text-align:center;min-width:150px"><strong style="font-size:15px;display:block">' + hid.codigo + '</strong><p style="font-size:13px;color:#475569">' + tipoLabelHidrante(hid.tipo) + '</p><p style="font-size:11px;color:#64748b;margin-top:4px">' + (hid.ubicacion || '') + '</p>' + presionHtml + caudalHtml + '</div>');
+      marker.bindPopup('<div style="text-align:center;min-width:160px"><strong style="font-size:15px;display:block">' + hid.codigo + '</strong><p style="font-size:13px;color:#475569">' + tipoLabelHidrante(hid.tipo) + '</p><p style="font-size:11px;color:#64748b;margin-top:4px">' + (hid.ubicacion || '') + '</p>' + presionHtml + caudalHtml + '<button style="margin-top:8px;padding:5px 12px;background:#dc2626;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer" onclick="window.dispatchEvent(new CustomEvent(\'hidrante:ver\',{detail:\'' + hid.id + '\'}))">Ver ficha</button></div>');
+      marker.on('dblclick', () => window.dispatchEvent(new CustomEvent('hidrante:ver', { detail: hid.id })));
       clusterGroup.addLayer(marker);
     });
     map.addLayer(clusterGroup);
@@ -244,10 +246,52 @@ function CaudalInputs({ initialM3 }: { initialM3?: number | null }) {
   );
 }
 
+// Campo de imagen de hidrante: sube al servidor (que comprime/optimiza con sharp)
+// y expone la URL resultante en un input oculto para el envío del formulario.
+function FotoHidranteInput({ campo, tipoFoto, label, initialUrl, codigo }: { campo: string; tipoFoto: string; label: string; initialUrl?: string | null; codigo?: string }) {
+  const [url, setUrl] = React.useState(initialUrl || '');
+  const [subiendo, setSubiendo] = React.useState(false);
+  const inputRef = React.useRef<HTMLInputElement>(null);
+  const onFile = async (file: File) => {
+    setSubiendo(true);
+    try {
+      const fd = new FormData();
+      fd.append('imagen', file);
+      fd.append('codigo', codigo || 'nuevo');
+      fd.append('tipoFoto', tipoFoto);
+      const res = await fetch('/api/incendios/hidrante-imagen', { method: 'POST', body: fd });
+      const d = await res.json();
+      if (res.ok && d.url) setUrl(d.url); else alert(d.error || 'No se pudo subir la imagen');
+    } catch { alert('Error al subir la imagen'); }
+    finally { setSubiendo(false); }
+  };
+  return (
+    <div>
+      <label className="block text-sm font-medium text-slate-700 mb-2">{label}</label>
+      <input type="hidden" name={campo} value={url} readOnly />
+      <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) onFile(f); e.currentTarget.value = ''; }} />
+      {url ? (
+        <div className="relative group">
+          <img src={url} alt={label} className="w-full h-36 object-cover rounded-lg border border-slate-200" />
+          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition rounded-lg flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
+            <button type="button" onClick={() => inputRef.current?.click()} className="px-3 py-1.5 bg-white/95 rounded-lg text-xs font-semibold">Cambiar</button>
+            <button type="button" onClick={() => setUrl('')} className="px-3 py-1.5 bg-red-600 text-white rounded-lg text-xs font-semibold">Quitar</button>
+          </div>
+        </div>
+      ) : (
+        <button type="button" onClick={() => inputRef.current?.click()} disabled={subiendo} className="w-full h-36 border-2 border-dashed border-slate-300 rounded-lg flex flex-col items-center justify-center text-slate-400 hover:border-red-400 hover:text-red-500 transition disabled:opacity-60">
+          {subiendo ? <RefreshCw className="animate-spin" size={24} /> : <><ImageIcon size={24} /><span className="text-xs mt-1.5 font-medium">Subir imagen</span></>}
+        </button>
+      )}
+    </div>
+  );
+}
+
 interface Hidrante {
   id: string; codigo: string; tipo: string; ubicacion: string;
   latitud: number | null; longitud: number | null; presion: number | null;
   caudal: number | null; estado: string;
+  fotoUbicacion?: string | null; fotoDetalle?: string | null;
 }
 
 const ESTADOS_PETICION = {
@@ -271,6 +315,98 @@ const AREAS_NOMBRE: Record<string, string> = {
   'socorrismo': 'Socorrismo',
   'logistica': 'Logística',
 };
+
+// Ficha del hidrante: presentación enriquecida con las dos imágenes (ubicación y
+// detalle) navegables con flechas y ampliables (lightbox), más toda la información.
+function HidranteDetalleModal({ hidrante, onClose, onEditar, canEditar }: { hidrante: Hidrante; onClose: () => void; onEditar: (h: Hidrante) => void; canEditar: boolean }) {
+  const fotos = ([
+    { url: hidrante.fotoUbicacion, label: 'Ubicación' },
+    { url: hidrante.fotoDetalle, label: 'Detalle' },
+  ].filter(f => f.url) as { url: string; label: string }[]);
+  const [idx, setIdx] = React.useState(0);
+  const [zoom, setZoom] = React.useState(false);
+  const actual = fotos[idx];
+  const prev = () => setIdx(i => (i - 1 + fotos.length) % fotos.length);
+  const next = () => setIdx(i => (i + 1) % fotos.length);
+  const estadoColor = hidrante.estado === 'operativo' ? 'bg-green-100 text-green-700'
+    : hidrante.estado === 'averiado' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700';
+  const infoItem = (icon: React.ReactNode, label: string, value: React.ReactNode) => (
+    <div className="bg-slate-50 rounded-lg p-3">
+      <div className="flex items-center gap-1.5 text-slate-400 text-[11px] font-semibold uppercase tracking-wide mb-1">{icon}{label}</div>
+      <div className="text-sm font-semibold text-slate-800 break-words">{value}</div>
+    </div>
+  );
+  return (
+    <div className="fixed inset-0 z-[1100] flex items-center justify-center p-4 bg-black/60" onClick={onClose}>
+      <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[92vh] overflow-hidden flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
+        <div className="bg-gradient-to-r from-red-600 to-red-700 p-5 text-white flex items-start justify-between">
+          <div>
+            <div className="text-xs font-semibold uppercase tracking-wide text-red-100">Hidrante</div>
+            <h2 className="text-2xl font-bold leading-tight">{hidrante.codigo}</h2>
+            <span className={`inline-block mt-2 px-2.5 py-0.5 rounded-full text-xs font-bold ${estadoColor}`}>{hidrante.estado}</span>
+          </div>
+          <button onClick={onClose} className="text-white/90 hover:text-white"><X size={24} /></button>
+        </div>
+
+        <div className="p-5 overflow-y-auto space-y-5">
+          {fotos.length === 0 ? (
+            <div className="h-56 rounded-xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-slate-300">
+              <ImageIcon size={30} /><span className="text-sm mt-1">Sin imágenes</span>
+            </div>
+          ) : (
+            <div className="relative">
+              <div className="absolute top-2 left-2 z-10 px-2.5 py-1 bg-black/60 text-white text-xs font-semibold rounded-full">{actual.label}</div>
+              <button type="button" onClick={() => setZoom(true)} className="block w-full">
+                <img src={actual.url} alt={actual.label} className="w-full h-64 object-cover rounded-xl border border-slate-200" />
+              </button>
+              <span className="absolute top-2 right-2 z-10 p-1.5 bg-black/60 text-white rounded-full"><ZoomIn size={16} /></span>
+              {fotos.length > 1 && (
+                <>
+                  <button type="button" onClick={prev} className="absolute left-2 top-1/2 -translate-y-1/2 p-2 bg-white/90 rounded-full shadow hover:bg-white"><ChevronLeft size={20} /></button>
+                  <button type="button" onClick={next} className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-white/90 rounded-full shadow hover:bg-white"><ChevronRight size={20} /></button>
+                </>
+              )}
+              {fotos.length > 1 && (
+                <div className="flex justify-center gap-1.5 mt-2">
+                  {fotos.map((_, i) => <button key={i} onClick={() => setIdx(i)} className={`w-2 h-2 rounded-full ${i === idx ? 'bg-red-600' : 'bg-slate-300'}`} />)}
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-3">
+            {infoItem(<Layers size={14} />, 'Tipo', tipoLabelHidrante(hidrante.tipo))}
+            {infoItem(<MapPin size={14} />, 'Ubicación', hidrante.ubicacion || '-')}
+            {infoItem(<Gauge size={14} />, 'Presión', hidrante.presion ? `${hidrante.presion} bar` : '-')}
+            {infoItem(<Droplet size={14} />, 'Caudal', hidrante.caudal ? `${hidrante.caudal} m³/h · ${Math.round(hidrante.caudal * 1000 / 60)} L/min` : '-')}
+            {infoItem(<Navigation size={14} />, 'Coordenadas', (hidrante.latitud && hidrante.longitud) ? `${hidrante.latitud.toFixed(6)}, ${hidrante.longitud.toFixed(6)}` : '-')}
+          </div>
+
+          {hidrante.latitud && hidrante.longitud && (
+            <a href={`https://www.google.com/maps/dir/?api=1&destination=${hidrante.latitud},${hidrante.longitud}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-sm font-semibold text-blue-600 hover:text-blue-700"><Navigation size={15} /> Cómo llegar</a>
+          )}
+        </div>
+
+        {canEditar && (
+          <div className="p-4 border-t flex justify-end">
+            <button onClick={() => { onEditar(hidrante); onClose(); }} className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-sm font-semibold flex items-center gap-2"><Edit size={15} /> Editar hidrante</button>
+          </div>
+        )}
+      </div>
+
+      {zoom && actual && (
+        <div className="fixed inset-0 z-[1200] bg-black/90 flex items-center justify-center p-4" onClick={() => setZoom(false)}>
+          <img src={actual.url} alt={actual.label} className="max-w-full max-h-full object-contain" onClick={e => e.stopPropagation()} />
+          <button onClick={() => setZoom(false)} className="absolute top-4 right-4 text-white"><X size={28} /></button>
+          {fotos.length > 1 && <>
+            <button onClick={(e) => { e.stopPropagation(); prev(); }} className="absolute left-4 top-1/2 -translate-y-1/2 text-white p-2 bg-white/10 rounded-full"><ChevronLeft size={28} /></button>
+            <button onClick={(e) => { e.stopPropagation(); next(); }} className="absolute right-4 top-1/2 -translate-y-1/2 text-white p-2 bg-white/10 rounded-full"><ChevronRight size={28} /></button>
+          </>}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function IncendiosPage() {
   const { canCreate, canEdit, canDelete, canCreatePeticion, isAdmin } = usePermisos()
@@ -346,6 +482,17 @@ export default function IncendiosPage() {
   const [edificioSeleccionado, setEdificioSeleccionado] = useState<Edificio | null>(null);
   const [equipoSeleccionado, setEquipoSeleccionado] = useState<EquipoECI | null>(null);
   const [hidranteSeleccionado, setHidranteSeleccionado] = useState<Hidrante | null>(null);
+  const [hidranteDetalle, setHidranteDetalle] = useState<Hidrante | null>(null);
+
+  // Abrir la ficha del hidrante al pulsar su marcador en el mapa.
+  useEffect(() => {
+    const abrir = (e: any) => {
+      const h = hidrantes.find(x => x.id === e.detail);
+      if (h) setHidranteDetalle(h);
+    };
+    window.addEventListener('hidrante:ver', abrir as any);
+    return () => window.removeEventListener('hidrante:ver', abrir as any);
+  }, [hidrantes]);
 
   useEffect(() => {
     cargarDatos();
@@ -569,7 +716,7 @@ export default function IncendiosPage() {
       const res = await fetch('/api/logistica', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tipo: 'hidrante', id, tipoHidrante: formData.tipo, codigo: formData.codigo, ubicacion: formData.ubicacion, latitud: formData.latitud, longitud: formData.longitud, presion: formData.presion, caudal: formData.caudal, estado: formData.estado })
+        body: JSON.stringify({ tipo: 'hidrante', id, tipoHidrante: formData.tipo, codigo: formData.codigo, ubicacion: formData.ubicacion, latitud: formData.latitud, longitud: formData.longitud, presion: formData.presion, caudal: formData.caudal, fotoUbicacion: formData.fotoUbicacion ?? null, fotoDetalle: formData.fotoDetalle ?? null, estado: formData.estado })
       })
       if (res.ok) {
         await cargarDatos()
@@ -1338,6 +1485,9 @@ export default function IncendiosPage() {
                         </td>
                         <td className="p-3">
                           <div className="flex justify-center gap-2">
+                            <button onClick={() => setHidranteDetalle(hid)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded" title="Ver ficha">
+                              <Eye size={16} />
+                            </button>
                             <button onClick={() => setHidranteSeleccionado(hid)} className="p-1.5 text-slate-600 hover:bg-slate-100 rounded" title="Editar hidrante">
                               <Edit size={16} />
                             </button>
@@ -1686,6 +1836,8 @@ export default function IncendiosPage() {
                 longitud: fd.get('longitud') || null,
                 presion: fd.get('presion') || null,
                 caudal: fd.get('caudal') || null,
+                fotoUbicacion: fd.get('fotoUbicacion') || null,
+                fotoDetalle: fd.get('fotoDetalle') || null,
                 estado: fd.get('estado')
               })
               if (success) {
@@ -1737,6 +1889,10 @@ export default function IncendiosPage() {
                   <input name="presion" type="number" step="0.1" className="w-full border border-slate-300 rounded-lg p-2.5" placeholder="3.5" />
                 </div>
                 <CaudalInputs />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <FotoHidranteInput campo="fotoUbicacion" tipoFoto="ubicacion" label="Foto de ubicación" />
+                <FotoHidranteInput campo="fotoDetalle" tipoFoto="detalle" label="Foto de detalle" />
               </div>
               <div className="flex justify-end gap-3 pt-4 border-t">
                 <button type="button" onClick={() => setShowNuevoHidrante(false)} className="px-5 py-2.5 text-slate-600 hover:bg-slate-100 rounded-lg font-medium">Cancelar</button>
@@ -1872,6 +2028,15 @@ export default function IncendiosPage() {
       )}
 
       {/* ======================================== MODAL: EDITAR HIDRANTE ======================================== */}
+      {hidranteDetalle && (
+        <HidranteDetalleModal
+          hidrante={hidranteDetalle}
+          onClose={() => setHidranteDetalle(null)}
+          onEditar={(h) => setHidranteSeleccionado(h)}
+          canEditar={canEdit}
+        />
+      )}
+
       {hidranteSeleccionado && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60" onClick={() => setHidranteSeleccionado(null)}>
           <div className="bg-white rounded-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
@@ -1890,6 +2055,8 @@ export default function IncendiosPage() {
                 longitud: (form.elements.namedItem('longitud') as HTMLInputElement).value,
                 presion: (form.elements.namedItem('presion') as HTMLInputElement).value,
                 caudal: (form.elements.namedItem('caudal') as HTMLInputElement).value,
+                fotoUbicacion: (form.elements.namedItem('fotoUbicacion') as HTMLInputElement)?.value || null,
+                fotoDetalle: (form.elements.namedItem('fotoDetalle') as HTMLInputElement)?.value || null,
                 estado: (form.elements.namedItem('estado') as HTMLSelectElement).value
               }
               const success = await editarHidrante(hidranteSeleccionado.id, formData)
@@ -1938,6 +2105,10 @@ export default function IncendiosPage() {
                   <input name="presion" type="number" step="0.1" defaultValue={hidranteSeleccionado.presion || ''} className="w-full border border-slate-300 rounded-lg p-2.5" />
                 </div>
                 <CaudalInputs key={hidranteSeleccionado.id} initialM3={hidranteSeleccionado.caudal} />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <FotoHidranteInput key={'ub-' + hidranteSeleccionado.id} campo="fotoUbicacion" tipoFoto="ubicacion" label="Foto de ubicación" initialUrl={hidranteSeleccionado.fotoUbicacion} codigo={hidranteSeleccionado.codigo} />
+                <FotoHidranteInput key={'det-' + hidranteSeleccionado.id} campo="fotoDetalle" tipoFoto="detalle" label="Foto de detalle" initialUrl={hidranteSeleccionado.fotoDetalle} codigo={hidranteSeleccionado.codigo} />
               </div>
               <div className="flex justify-end gap-3 pt-4 border-t">
                 <button type="button" onClick={() => setHidranteSeleccionado(null)} className="px-5 py-2.5 text-slate-600 hover:bg-slate-100 rounded-lg font-medium">Cancelar</button>
