@@ -164,7 +164,10 @@ export function usePsiForm() {
                     ...extra,
                     id: parte.id,
                     numero: parte.numeroParte || '',
-                    fecha: parte.fecha ? new Date(parte.fecha).toISOString().split('T')[0] : '',
+                    // 'sv-SE' produce YYYY-MM-DD; con timeZone Madrid el día nunca se desplaza
+                    fecha: parte.fecha
+                        ? new Date(parte.fecha).toLocaleDateString('sv-SE', { timeZone: 'Europe/Madrid' })
+                        : '',
                     lugar: parte.lugar || '',
                     motivo: parte.motivo || '',
                     alertante: parte.alertante || extra.alertante || '',
@@ -362,6 +365,9 @@ export function usePsiForm() {
             const saved = data
             const newId = saved.parte ? saved.parte.id : saved.id
             const newNumero = saved.parte ? saved.parte.numeroParte : saved.numeroParte
+            // El estado lo decide el servidor (pendiente_vb hasta que firme el Jefe de Servicio)
+            const newEstado = saved.parte ? saved.parte.estado : saved.estado
+            if (newEstado) setEstadoParte(newEstado)
 
             console.log('Parte saved:', saved)
 
