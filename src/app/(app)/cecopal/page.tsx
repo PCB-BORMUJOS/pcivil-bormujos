@@ -8,7 +8,7 @@ import {
   RefreshCw, Bell, FileText, Activity, Cloud, Wind, Droplets,
   Siren, Edit, Send, X, BookUser, Search, Plus, Trash2, Pencil,
   FlaskConical, ChevronDown, AlertOctagon, Flame as FlameIcon, Droplet, Wind as WindIcon,
-  ShieldAlert, Eye, Zap, Package
+  ShieldAlert, Eye, Zap, Package, Maximize2, Minimize2
 } from 'lucide-react'
 import { CLASES_ADR } from '@/data/adr-data'
 import type { SustanciaADR } from '@/data/adr-data'
@@ -121,6 +121,8 @@ export default function CecopalPage() {
   const [dirBusqueda, setDirBusqueda] = useState('')
   const [dirCategoria, setDirCategoria] = useState('')
   const [dirModal, setDirModal] = useState<'nuevo' | 'editar' | 'categoria' | null>(null)
+  // Desarrollo del servicio a pantalla completa (para redactar con espacio)
+  const [desarrolloAmpliado, setDesarrolloAmpliado] = useState(false)
   const [dirContactoSel, setDirContactoSel] = useState<any>(null)
   const [dirForm, setDirForm] = useState<{ nombre: string; entidad: string; categoria: string; cargo: string; telefono: string; telefonoAlt: string; email: string; extension3cx: string; disponibilidad: string; notas: string; ambitos: string[] }>({ nombre: '', entidad: '', categoria: '', cargo: '', telefono: '', telefonoAlt: '', email: '', extension3cx: '', disponibilidad: '', notas: '', ambitos: ['cecopal'] })
   const [dirNuevaCat, setDirNuevaCat] = useState({ nombre: '', color: '#3b82f6' })
@@ -768,23 +770,27 @@ export default function CecopalPage() {
                     <button onClick={resolverIncidencia} disabled={guardando} className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white rounded-lg text-sm font-semibold transition-colors"><CheckCircle size={15} />{guardando ? 'Cerrando...' : 'Resolver Incidencia'}</button>
                   </div>
                 </div>
-                <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden flex flex-col" style={{ maxHeight: '420px' }}>
+                <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden flex flex-col" style={{ minHeight: '680px' }}>
                   <div className="px-4 py-3 border-b border-slate-700 flex items-center gap-2"><Activity size={14} className="text-purple-400" /><h3 className="text-white text-xs font-semibold uppercase tracking-wider">Log de la Incidencia</h3></div>
-                  <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                  {/* Cronología: acotada a las 5 isocronas (T0-T4) para dejar el resto del panel a la redacción */}
+                  <div className="flex-shrink-0 max-h-[232px] overflow-y-auto p-4 space-y-3">
                     <div className="flex gap-3"><div className="w-1 rounded-full bg-red-500 flex-shrink-0" /><div><p className="text-white text-xs font-medium">T0 Llamada</p><p className="text-slate-500 text-xs">{incidenciaActiva.horaLlamada || '—'} · {incidenciaActiva.origenAviso}</p></div></div>
                     {incidenciaActiva.horaSalida && <div className="flex gap-3"><div className="w-1 rounded-full bg-blue-500 flex-shrink-0" /><div><p className="text-white text-xs font-medium">T1 Salida</p><p className="text-slate-500 text-xs">{incidenciaActiva.horaSalida}</p></div></div>}
                     {incidenciaActiva.horaLlegada && <div className="flex gap-3"><div className="w-1 rounded-full bg-amber-500 flex-shrink-0" /><div><p className="text-white text-xs font-medium">T2 Llegada</p><p className="text-slate-500 text-xs">{incidenciaActiva.horaLlegada}</p></div></div>}
                     {incidenciaActiva.horaTerminado && <div className="flex gap-3"><div className="w-1 rounded-full bg-emerald-500 flex-shrink-0" /><div><p className="text-white text-xs font-medium">T3 Finalizado</p><p className="text-slate-500 text-xs">{incidenciaActiva.horaTerminado}</p></div></div>}
                     {incidenciaActiva.horaDisponible && <div className="flex gap-3"><div className="w-1 rounded-full bg-purple-500 flex-shrink-0" /><div><p className="text-white text-xs font-medium">T4 Disponible</p><p className="text-slate-500 text-xs">{incidenciaActiva.horaDisponible}</p></div></div>}
                   </div>
-                  <div className="p-3 border-t border-slate-700 space-y-1.5">
-                    <div className="flex items-center justify-between">
+                  <div className="flex-1 min-h-0 flex flex-col p-3 border-t border-slate-700 gap-1.5">
+                    <div className="flex items-center justify-between flex-shrink-0">
                       <label className="text-xs font-semibold text-purple-300 uppercase tracking-wider flex items-center gap-1.5"><FileText size={11} /> Desarrollo del servicio</label>
-                      <button onClick={anadirHoraDesarrollo} className="flex items-center gap-1 text-xs text-purple-300 hover:text-purple-200 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 rounded px-1.5 py-0.5 transition-colors"><Clock size={10} /> Hora</button>
+                      <div className="flex items-center gap-1.5">
+                        <button onClick={anadirHoraDesarrollo} className="flex items-center gap-1 text-xs text-purple-300 hover:text-purple-200 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 rounded px-1.5 py-0.5 transition-colors"><Clock size={10} /> Hora</button>
+                        <button onClick={() => setDesarrolloAmpliado(true)} title="Ampliar a pantalla completa" className="flex items-center gap-1 text-xs text-purple-300 hover:text-purple-200 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 rounded px-1.5 py-0.5 transition-colors"><Maximize2 size={10} /> Ampliar</button>
+                      </div>
                     </div>
-                    <textarea placeholder="Se irá volcando al cuerpo del parte (introducción-desarrollo-conclusión)…" rows={4} value={incidenciaActiva.desarrollo || ''} onChange={e => patchIncidencia(incidenciaActiva.id, { desarrollo: e.target.value })} onBlur={e => guardarDesarrollo(e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded-lg p-2.5 text-white text-xs placeholder-slate-500 focus:outline-none focus:border-purple-500 resize-none" />
+                    <textarea placeholder="Se irá volcando al cuerpo del parte (introducción-desarrollo-conclusión)…" value={incidenciaActiva.desarrollo || ''} onChange={e => patchIncidencia(incidenciaActiva.id, { desarrollo: e.target.value })} onBlur={e => guardarDesarrollo(e.target.value)} className="flex-1 min-h-[220px] w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white text-sm leading-relaxed placeholder-slate-500 focus:outline-none focus:border-purple-500 resize-y" />
                   </div>
-                  <div className="p-3 border-t border-slate-700"><textarea placeholder="Añadir observación..." rows={2} value={incidenciaActiva.observaciones || ''} onChange={e => patchIncidencia(incidenciaActiva.id, { observaciones: e.target.value })} onBlur={e => { fetch('/api/cecopal', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'actualizar', id: incidenciaActiva.id, observaciones: e.target.value }) }).catch(() => {}) }} className="w-full bg-slate-700 border border-slate-600 rounded-lg p-2.5 text-white text-xs placeholder-slate-500 focus:outline-none focus:border-blue-500 resize-none" /></div>
+                  <div className="flex-shrink-0 p-3 border-t border-slate-700"><textarea placeholder="Añadir observación..." rows={2} value={incidenciaActiva.observaciones || ''} onChange={e => patchIncidencia(incidenciaActiva.id, { observaciones: e.target.value })} onBlur={e => { fetch('/api/cecopal', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'actualizar', id: incidenciaActiva.id, observaciones: e.target.value }) }).catch(() => {}) }} className="w-full bg-slate-700 border border-slate-600 rounded-lg p-2.5 text-white text-xs placeholder-slate-500 focus:outline-none focus:border-blue-500 resize-y" /></div>
                 </div>
               </div>
               </div>
@@ -904,6 +910,40 @@ export default function CecopalPage() {
           </div>
         </div>
       </div>
+
+      {/* Desarrollo del servicio a pantalla completa */}
+      {desarrolloAmpliado && incidenciaActiva && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[3000] p-4">
+          <div className="bg-slate-800 rounded-xl border border-slate-600 w-full max-w-5xl flex flex-col" style={{ height: 'calc(100vh - 4rem)' }}>
+            <div className="flex items-center justify-between px-5 py-3 border-b border-slate-700 flex-shrink-0">
+              <div className="flex items-center gap-2 min-w-0">
+                <FileText size={14} className="text-purple-400 flex-shrink-0" />
+                <h3 className="text-white font-semibold text-sm">Desarrollo del servicio</h3>
+                <span className="text-slate-500 text-xs font-mono truncate">{incidenciaActiva.numero}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button onClick={anadirHoraDesarrollo} className="flex items-center gap-1.5 text-xs text-purple-300 hover:text-purple-200 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 rounded-lg px-2.5 py-1.5 transition-colors"><Clock size={12} /> Insertar hora</button>
+                <button onClick={() => { guardarDesarrollo(incidenciaActiva.desarrollo || ''); setDesarrolloAmpliado(false) }} className="flex items-center gap-1.5 text-xs text-slate-300 hover:text-white bg-slate-700 hover:bg-slate-600 rounded-lg px-2.5 py-1.5 transition-colors"><Minimize2 size={12} /> Reducir</button>
+                <button onClick={() => { guardarDesarrollo(incidenciaActiva.desarrollo || ''); setDesarrolloAmpliado(false) }} className="text-slate-500 hover:text-white"><X size={16} /></button>
+              </div>
+            </div>
+            <div className="flex-1 min-h-0 p-4">
+              <textarea
+                autoFocus
+                placeholder="Se irá volcando al cuerpo del parte (introducción-desarrollo-conclusión)…"
+                value={incidenciaActiva.desarrollo || ''}
+                onChange={e => patchIncidencia(incidenciaActiva.id, { desarrollo: e.target.value })}
+                onBlur={e => guardarDesarrollo(e.target.value)}
+                className="w-full h-full bg-slate-700 border border-slate-600 rounded-lg p-4 text-white text-sm leading-relaxed placeholder-slate-500 focus:outline-none focus:border-purple-500 resize-none"
+              />
+            </div>
+            <div className="px-5 py-3 border-t border-slate-700 flex items-center justify-between flex-shrink-0">
+              <span className="text-slate-500 text-xs">{(incidenciaActiva.desarrollo || '').length} caracteres · se guarda automáticamente al cerrar</span>
+              <button onClick={() => { guardarDesarrollo(incidenciaActiva.desarrollo || ''); setDesarrolloAmpliado(false) }} className="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold transition-colors">Guardar y cerrar</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal nuevo / editar contacto */}
       {(dirModal === 'nuevo' || dirModal === 'editar') && (
