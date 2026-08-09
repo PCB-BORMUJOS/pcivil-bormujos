@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { generarNumeroParte } from '@/lib/partesPSI'
+import { parseFechaES } from '@/lib/date-utils'
 
 const VEHICULOS_VALIDOS = ['UMJ', 'VIR', 'FSV', 'PMA']
 
@@ -126,7 +127,7 @@ function construirDatos(
   }
 
   return {
-    fecha: datos.fecha ? new Date(datos.fecha + 'T12:00:00+02:00') : new Date(),
+    fecha: parseFechaES(datos.fecha),
     lugar: String(datos.lugar || '').trim(),
     motivo: datos.motivo ? String(datos.motivo).trim() : null,
     alertante: datos.alertante ? String(datos.alertante).trim() : null,

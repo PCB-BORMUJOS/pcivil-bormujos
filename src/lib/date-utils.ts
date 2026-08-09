@@ -28,6 +28,31 @@ export function isToday(day: number, month: number, year: number): boolean {
 }
 
 /**
+ * Convierte a Date la fecha de un parte aceptando tanto 'YYYY-MM-DD' como un
+ * datetime ISO completo (lo que produce JSON.stringify sobre un objeto Date).
+ * Siempre ancla al mediodía de España para que el día no se desplace al
+ * almacenarse en UTC. Si el valor falta o es inválido, devuelve hoy.
+ */
+export function parseFechaES(input?: unknown): Date {
+  let dia: string | null = null
+
+  if (typeof input === "string" && input.trim() !== "") {
+    const raw = input.trim()
+    if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+      dia = raw
+    } else {
+      const d = new Date(raw)
+      if (isValid(d)) dia = d.toLocaleDateString("sv-SE", { timeZone: "Europe/Madrid" })
+    }
+  } else if (input instanceof Date && isValid(input)) {
+    dia = input.toLocaleDateString("sv-SE", { timeZone: "Europe/Madrid" })
+  }
+
+  if (!dia) dia = getTodaySpain()
+  return new Date(`${dia}T12:00:00+02:00`)
+}
+
+/**
  * Devuelve { day, month (0-indexed), year } de hoy en España.
  */
 export function getTodayParts(): { day: number; month: number; year: number } {

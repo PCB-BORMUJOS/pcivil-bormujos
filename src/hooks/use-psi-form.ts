@@ -4,6 +4,7 @@ import { PsiFormState, INITIAL_PSI_STATE, TimeKey } from '@/types/psi'
 import { toast } from 'react-hot-toast'
 import { validarPartePSI, validarBorradorPSI } from '@/lib/psi-validation'
 import { registerInactivitySaveCallback } from '@/components/InactivityGuard'
+import { getTodaySpain } from '@/lib/date-utils'
 
 const LOCALSTORAGE_KEY = 'psi_form_draft'
 
@@ -265,7 +266,9 @@ export function usePsiForm() {
 
             const payload = {
                 // Fechas y horas
-                fecha: form.fecha ? new Date(form.fecha) : new Date(),
+                // Enviar siempre 'YYYY-MM-DD'; la API la ancla al mediodía de España.
+                // (Un objeto Date se serializaría a ISO y rompería el parseo en el servidor)
+                fecha: form.fecha || getTodaySpain(),
                 horaLlamada: form.tiempos.llamada,
                 horaSalida: form.tiempos.salida,
                 horaLlegada: form.tiempos.llegada,
@@ -344,6 +347,7 @@ export function usePsiForm() {
 
             if (!res.ok) {
                 // Handle API errors
+                console.error(`Error ${method} ${url} (${res.status}):`, data)
                 if (data.errores && Array.isArray(data.errores)) {
                     data.errores.forEach((e: string) => toast.error(e))
                 } else if (data.error) {

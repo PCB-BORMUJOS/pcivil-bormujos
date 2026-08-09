@@ -6,6 +6,7 @@ import { generarNumeroParte } from '@/lib/partesPSI'
 import { validarPartePSI, validarBorradorPSI } from '@/lib/psi-validation'
 import { put } from '@vercel/blob'
 import { registrarAudit, getUsuarioAudit } from '@/lib/audit'
+import { parseFechaES } from '@/lib/date-utils'
 
 /**
  * GET /api/partes/psi
@@ -180,7 +181,7 @@ export async function POST(request: NextRequest) {
         const parte = await prisma.partePSI.create({
             data: {
                 numeroParte,
-                fecha: body.fecha ? new Date(body.fecha + 'T12:00:00+02:00') : new Date(),
+                fecha: parseFechaES(body.fecha),
                 estado,
                 horaLlamada: body.horaLlamada,
                 horaSalida: body.horaSalida,
@@ -243,7 +244,7 @@ export async function POST(request: NextRequest) {
     } catch (error) {
         console.error('Error POST /api/partes/psi:', error)
         return NextResponse.json(
-            { error: 'Error creando parte' },
+            { error: 'Error creando parte', detalle: error instanceof Error ? error.message : String(error) },
             { status: 500 }
         )
     }

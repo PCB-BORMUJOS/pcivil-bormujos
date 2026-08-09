@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db'
 import { authOptions } from '@/lib/auth'
 import { getServerSession } from 'next-auth'
 import { getNivel } from '@/lib/permisos'
+import { parseFechaES } from '@/lib/date-utils'
 
 export async function GET(
     _req: Request,
@@ -93,7 +94,7 @@ export async function PUT(
         const updateData: Record<string, unknown> = {}
 
         // Only include fields that are present in the payload
-        if (body.fecha !== undefined) updateData.fecha = new Date(body.fecha)
+        if (body.fecha !== undefined) updateData.fecha = parseFechaES(body.fecha)
         if (estado !== undefined) updateData.estado = estado
         if (body.horaLlamada !== undefined) updateData.horaLlamada = body.horaLlamada
         if (body.horaSalida !== undefined) updateData.horaSalida = body.horaSalida
