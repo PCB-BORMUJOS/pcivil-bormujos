@@ -90,11 +90,21 @@ export async function middleware(request: NextRequest) {
   if (pathname.startsWith('/api/') && RUTAS_API_SUPERADMIN.some(r => pathname.startsWith(r)) && nivelTok < 5) {
     return NextResponse.json({ error: 'Solo superadmin' }, { status: 403 })
   }
-  // Usuario con permisos personalizados: las escrituras requieren 'editar' del módulo.
-  if (esApiEscritura && personalizado) {
+  // Usuario con permisos personalizados: control total de la API por módulo.
+  // - Sin 'ver:<modulo>'  => no puede ni LEER (GET) la API de ese módulo.
+  // - Sin 'editar:<modulo>' => no puede ESCRIBIR (POST/PUT/DELETE/PATCH).
+  // Las APIs no asociadas a un módulo (auth, mi-área, notificaciones, mensajes,
+  // eventos, guardias, disponibilidad, voluntarios, etc.) no se bloquean: son de
+  // uso transversal y no constituyen "zonas restringidas".
+  if (personalizado && pathname.startsWith('/api/') && !pathname.startsWith('/api/auth/')) {
     const mod = moduloDeApi(pathname)
-    if (mod && !permisosExtra.includes('editar:' + mod)) {
-      return NextResponse.json({ error: 'Sin permiso de edición en este módulo' }, { status: 403 })
+    if (mod) {
+      if (!permisosExtra.includes('ver:' + mod)) {
+        return NextResponse.json({ error: 'Sin acceso a este módulo' }, { status: 403 })
+      }
+      if (esApiEscritura && !permisosExtra.includes('editar:' + mod)) {
+        return NextResponse.json({ error: 'Sin permiso de edición en este módulo' }, { status: 403 })
+      }
     }
   }
 
@@ -122,11 +132,13 @@ export async function middleware(request: NextRequest) {
     }
 
     if (personalizado) {
-      // Acceso gobernado EXCLUSIVAMENTE por los permisos por módulo (ver:<modulo>).
-      // Dashboard y Mi Área son siempre accesibles.
+      // DENEGAR POR DEFECTO: solo se permite una página protegida si es "siempre"
+      // (Dashboard, Mi Área, Buscar) o si el usuario tiene 'ver:<modulo>'. Cualquier
+      // ruta no mapeada a un módulo permitido queda bloqueada.
       const mod = moduloDePath(pathname)
-      const info = MODULOS_APP.find(m => m.key === mod)
-      if (mod && !info?.siempre && !permisosExtra.includes('ver:' + mod)) {
+      const info = mod ? MODULOS_APP.find(m => m.key === mod) : null
+      const permitido = !!info?.siempre || (!!mod && permisosExtra.includes('ver:' + mod))
+      if (!permitido) {
         return NextResponse.redirect(new URL('/dashboard', request.url))
       }
     } else {
