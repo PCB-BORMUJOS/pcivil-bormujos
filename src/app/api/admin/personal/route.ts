@@ -393,8 +393,15 @@ export async function DELETE(request: NextRequest) {
       modulo: 'Administración',
     })
     return NextResponse.json({ success: true, message: 'Usuario eliminado' })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error al eliminar voluntario:', error)
+    // Clave foránea: la persona tiene datos asociados. NO se borra nada (para no
+    // perder información) y se informa de que se dé de baja.
+    if (error?.code === 'P2003' || /foreign key|constraint/i.test(error?.message || '')) {
+      return NextResponse.json({
+        error: 'No se puede eliminar: la persona tiene datos asociados en el sistema. Para no perder información, usa "Dar de baja" (la desactiva sin borrar su historial).',
+      }, { status: 400 })
+    }
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
   }
 }
