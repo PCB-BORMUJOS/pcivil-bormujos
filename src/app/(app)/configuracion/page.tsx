@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { Settings, Shield, CreditCard, History, Users, TrendingUp, Download, Edit, Loader2, Plus, X, Eye, EyeOff, Trash2, Save, ArrowUp, ArrowDown, ArrowUpDown, Lock } from 'lucide-react';
 import TrazabilidadPanel from '@/components/configuracion/TrazabilidadPanel';
+import GestionPermisos from '@/components/configuracion/GestionPermisos';
 import { generarInformeDietasPDF, generarLiquidacionJ44PDF } from '@/lib/informe-dietas';
 
 interface Usuario {
@@ -48,7 +49,7 @@ export default function ConfiguracionPage() {
   const { data: session } = useSession()
   const esSuperadmin = (session?.user as any)?.rol === 'superadmin'
 
-  const [activeTab, setActiveTab] = useState<'liquidaciones' | 'roles' | 'criterios' | 'audit'>('roles');
+  const [activeTab, setActiveTab] = useState<'liquidaciones' | 'roles' | 'criterios' | 'audit' | 'permisos'>('roles');
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().substring(0, 7));
   const [loading, setLoading] = useState(false);
   const [reportData, setReportData] = useState<any[]>([]);
@@ -544,7 +545,24 @@ export default function ConfiguracionPage() {
         >
           <History size={18} /><span className="leading-none">Trazabilidad</span>
         </button>
+        <button
+          role="tab"
+          id="tab-permisos"
+          aria-selected={activeTab === 'permisos'}
+          aria-controls="panel-permisos"
+          tabIndex={activeTab === 'permisos' ? 0 : -1}
+          onClick={() => setActiveTab('permisos')}
+          className={`flex-1 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 py-3 sm:py-4 px-1 text-xs font-bold uppercase tracking-wide transition-colors border-b-4 ${
+            activeTab === 'permisos' ? 'text-orange-600 border-orange-600 bg-orange-50/50' : 'text-slate-400 border-transparent hover:text-slate-600 hover:bg-slate-50'
+          }`}
+        >
+          <Lock size={18} /><span className="leading-none">Permisos</span>
+        </button>
       </div>
+
+      {activeTab === 'permisos' && (
+        <div className="mt-4"><GestionPermisos /></div>
+      )}
 
       {/* Liquidaciones */}
       {activeTab === 'liquidaciones' && (

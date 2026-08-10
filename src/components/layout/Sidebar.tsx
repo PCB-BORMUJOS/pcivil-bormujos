@@ -34,6 +34,7 @@ import {
   Wallet,
 } from 'lucide-react'
 import { getNivel, ROLES_LABEL } from '@/lib/permisos'
+import { MODULOS_APP, moduloDePath } from '@/lib/modulos-permisos'
 
 interface NavItem {
   name: string
@@ -89,7 +90,7 @@ const navigation: NavItem[] = [
   { name: 'Agentes IA',        href: '/agentes',        icon: Bot,         minNivel: 4, visibleVisor: false },
   { name: 'Compras',           href: '/compras',        icon: CarritoIcon, minNivel: 4, visibleVisor: false },
   { name: 'Gestión Económica', href: '/presupuesto',    icon: Wallet,      minNivel: 4, visibleVisor: true },
-  { name: 'Configuración',     href: '/configuracion',  icon: Settings,    soloRoles: ['admin', 'superadmin'] },
+  { name: 'Configuración',     href: '/configuracion',  icon: Settings,    soloRoles: ['superadmin'] },
 ]
 
 export default function Sidebar() {
@@ -143,8 +144,19 @@ export default function Sidebar() {
   }
 
   const isVisor = userRol === 'visor'
+  const personalizado = (session?.user as any)?.permisosPersonalizados === true && userRol !== 'superadmin'
+  const permisosExtra: string[] = (session?.user as any)?.permisosExtra ?? []
 
   const filteredNavigation = navigation.filter(item => {
+    // Usuario con permisos personalizados: solo ve los módulos con 'ver:<modulo>'
+    // (Dashboard y Mi Área siempre visibles). Configuración nunca (no es módulo).
+    if (personalizado) {
+      const mod = moduloDePath(item.href)
+      const info = MODULOS_APP.find(m => m.key === mod)
+      if (info?.siempre) return true
+      if (item.href === '/configuracion') return false
+      return !!mod && permisosExtra.includes('ver:' + mod)
+    }
     if (item.soloRoles) return item.soloRoles.includes(userRol)
     if (isVisor) return item.visibleVisor !== false
     return nivelUsuario >= (item.minNivel ?? 1)

@@ -54,6 +54,7 @@ export const authOptions: AuthOptions = {
           rolId: usuario.rolId,
           permisos: usuario.rol.permisos,
           permisosExtraData: usuario.permisosExtra ?? [],
+          permisosPersonalizados: usuario.permisosPersonalizados ?? false,
           servicioId: usuario.servicioId,
           numeroVoluntario: usuario.numeroVoluntario,
           ip
@@ -81,19 +82,21 @@ export const authOptions: AuthOptions = {
         token.rol = (user as any).rol
         token.rolId = (user as any).rolId
         ;(token as any).permisosExtra = (user as any).permisosExtraData ?? []
+        ;(token as any).permisosPersonalizados = (user as any).permisosPersonalizados ?? false
         token.permisos = (user as any).permisos
         token.servicioId = (user as any).servicioId
         token.numeroVoluntario = (user as any).numeroVoluntario
       } else {
-        // Renovación de token: releer permisosExtra desde BD para reflejar cambios sin re-login
+        // Renovación de token: releer permisos desde BD para reflejar cambios sin re-login
         if (token.id) {
           try {
             const u = await prisma.usuario.findUnique({
               where: { id: token.id as string },
-              select: { permisosExtra: true, rol: { select: { permisos: true } } }
+              select: { permisosExtra: true, permisosPersonalizados: true, rol: { select: { permisos: true } } }
             })
             if (u) {
               ;(token as any).permisosExtra = (u.permisosExtra as string[]) ?? []
+              ;(token as any).permisosPersonalizados = u.permisosPersonalizados ?? false
               token.permisos = u.rol.permisos as any
             }
           } catch (_) {}
@@ -110,6 +113,7 @@ export const authOptions: AuthOptions = {
         (session.user as any).rol = token.rol as string
         (session.user as any).rolId = token.rolId as string
         (session.user as any).permisosExtra = (token as any).permisosExtra ?? [];
+        (session.user as any).permisosPersonalizados = (token as any).permisosPersonalizados ?? false;
         (session.user as any).permisos = token.permisos as any
         (session.user as any).servicioId = token.servicioId as string
         (session.user as any).numeroVoluntario = token.numeroVoluntario as string

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { getToken } from 'next-auth/jwt'
+import { MODULOS_APP, moduloDePath, moduloDeApi } from '@/lib/modulos-permisos'
 
 const NIVEL: Record<string, number> = {
   superadmin:        5,
@@ -28,11 +29,16 @@ const RUTAS_SOLO_COORD_O_VISOR: string[] = [
 // queda fuera, incluido el coordinador (mismo nivel que admin) y el visor.
 const RUTAS_SOLO_ADMIN: string[] = [
   '/administracion',
-  '/configuracion',
 ]
 
-// Rutas que requieren nivel mínimo 5 (solo superadmin)
-const RUTAS_SUPERADMIN: string[] = []
+// Rutas que requieren nivel mínimo 5 (SOLO superadmin). Configuración contiene
+// datos sensibles (p. ej. económico de J-44) y es exclusiva de superadmin.
+const RUTAS_SUPERADMIN: string[] = [
+  '/configuracion',
+]
+const RUTAS_API_SUPERADMIN: string[] = [
+  '/api/configuracion',
+]
 
 // Todas las rutas protegidas (requieren autenticación mínima)
 const RUTAS_PROTEGIDAS: string[] = [
@@ -59,6 +65,8 @@ const RUTAS_PROTEGIDAS: string[] = [
   '/practicas',
   '/cecopal',
   '/megacode',
+  '/agentes',
+  '/compras',
 ]
 
 export async function middleware(request: NextRequest) {
@@ -66,12 +74,28 @@ export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname
   const isAuthPage = pathname === '/login'
 
+  const rolTok = ((token as any)?.rol as string) ?? 'voluntario'
+  const nivelTok = getNivel(rolTok)
+  const personalizado = (token as any)?.permisosPersonalizados === true && rolTok !== 'superadmin'
+  const permisosExtra: string[] = ((token as any)?.permisosExtra as string[]) ?? []
+
   // Visor = solo lectura: bloquear escrituras en toda la API
   const esApiEscritura = pathname.startsWith('/api/') &&
     !pathname.startsWith('/api/auth/') &&
     ['POST', 'PUT', 'DELETE', 'PATCH'].includes(request.method)
-  if (esApiEscritura && ((token as any)?.rol === 'visor')) {
+  if (esApiEscritura && rolTok === 'visor') {
     return NextResponse.json({ error: 'Perfil de solo lectura' }, { status: 403 })
+  }
+  // API de Configuración: solo superadmin.
+  if (pathname.startsWith('/api/') && RUTAS_API_SUPERADMIN.some(r => pathname.startsWith(r)) && nivelTok < 5) {
+    return NextResponse.json({ error: 'Solo superadmin' }, { status: 403 })
+  }
+  // Usuario con permisos personalizados: las escrituras requieren 'editar' del módulo.
+  if (esApiEscritura && personalizado) {
+    const mod = moduloDeApi(pathname)
+    if (mod && !permisosExtra.includes('editar:' + mod)) {
+      return NextResponse.json({ error: 'Sin permiso de edición en este módulo' }, { status: 403 })
+    }
   }
 
   const esRutaProtegida = RUTAS_PROTEGIDAS.some(r => pathname.startsWith(r))
@@ -89,27 +113,35 @@ export async function middleware(request: NextRequest) {
   }
 
   if (token && esRutaProtegida) {
-    const rol = ((token as any).rol as string) ?? 'voluntario'
-    const nivel = getNivel(rol)
+    const rol = rolTok
+    const nivel = nivelTok
 
-    // Rutas solo superadmin
+    // Configuración: SIEMPRE solo superadmin (aplica también a personalizados).
     if (RUTAS_SUPERADMIN.some(r => pathname.startsWith(r)) && nivel < 5) {
       return NextResponse.redirect(new URL('/dashboard', request.url))
     }
 
-    // Rutas exclusivas de los roles 'admin' y 'superadmin'. Cualquier otro rol
-    // (incluido coordinador, aunque comparta nivel con admin) queda fuera.
-    if (RUTAS_SOLO_ADMIN.some(r => pathname.startsWith(r))) {
-      if (rol !== 'admin' && rol !== 'superadmin') {
+    if (personalizado) {
+      // Acceso gobernado EXCLUSIVAMENTE por los permisos por módulo (ver:<modulo>).
+      // Dashboard y Mi Área son siempre accesibles.
+      const mod = moduloDePath(pathname)
+      const info = MODULOS_APP.find(m => m.key === mod)
+      if (mod && !info?.siempre && !permisosExtra.includes('ver:' + mod)) {
         return NextResponse.redirect(new URL('/dashboard', request.url))
       }
-    }
-
-    // Rutas bloqueadas para niveles intermedios (voluntario/responsable/jefe_area)
-    // visor (0) y coordinador+ (>=4) sí pueden acceder
-    if (RUTAS_SOLO_COORD_O_VISOR.some(r => pathname.startsWith(r))) {
-      if (nivel >= 1 && nivel < 4) {
-        return NextResponse.redirect(new URL('/dashboard', request.url))
+    } else {
+      // Rutas exclusivas de 'admin' y 'superadmin'.
+      if (RUTAS_SOLO_ADMIN.some(r => pathname.startsWith(r))) {
+        if (rol !== 'admin' && rol !== 'superadmin') {
+          return NextResponse.redirect(new URL('/dashboard', request.url))
+        }
+      }
+      // Rutas bloqueadas para niveles intermedios (voluntario/responsable/jefe_area);
+      // visor (0) y coordinador+ (>=4) sí pueden acceder.
+      if (RUTAS_SOLO_COORD_O_VISOR.some(r => pathname.startsWith(r))) {
+        if (nivel >= 1 && nivel < 4) {
+          return NextResponse.redirect(new URL('/dashboard', request.url))
+        }
       }
     }
   }
@@ -143,6 +175,8 @@ export const config = {
     '/practicas/:path*',
     '/cecopal/:path*',
     '/megacode/:path*',
+    '/agentes/:path*',
+    '/compras/:path*',
     '/login',
   ],
 }
