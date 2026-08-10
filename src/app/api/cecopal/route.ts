@@ -175,6 +175,7 @@ export async function POST(request: NextRequest) {
         estado: 'activa',
         tipoIncidencia: body.tipoIncidencia,
         origenAviso: body.origenAviso,
+        origenDetalle: body.origenDetalle || null,
         direccion: body.direccion,
         descripcion: body.descripcion || null,
         horaLlamada: body.horaLlamada || getHoraActual(),
@@ -242,7 +243,7 @@ export async function PUT(request: NextRequest) {
       // tocar), para no borrar datos al guardar una edición parcial.
       const data: any = {}
       const campos = [
-        'tipoIncidencia', 'origenAviso', 'direccion', 'descripcion', 'observaciones',
+        'tipoIncidencia', 'origenAviso', 'origenDetalle', 'direccion', 'descripcion', 'observaciones',
         'desarrollo', 'parteId',
         'vehiculosIds', 'voluntariosIds', 'horaLlamada', 'horaSalida', 'horaLlegada',
         'horaTerminado', 'horaDisponible',

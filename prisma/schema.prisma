@@ -1225,6 +1225,7 @@ model IncidenciaCecopal {
   estado         String   @default("activa")
   tipoIncidencia String   @map("tipo_incidencia")
   origenAviso    String   @map("origen_aviso")
+  origenDetalle  String?  @map("origen_detalle")
   direccion      String
   descripcion    String?  @db.Text
   horaLlamada    String?  @map("hora_llamada")

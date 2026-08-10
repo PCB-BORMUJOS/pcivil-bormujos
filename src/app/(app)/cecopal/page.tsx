@@ -36,6 +36,24 @@ const ORIGENES_AVISO = [
   { value: 'presencial', label: 'Presencial', icon: Users },
 ]
 
+const EMISORAS = [
+  { value: 'servicio', label: 'Servicio' },
+  { value: 'policia_local', label: 'Policía Local' },
+  { value: 'red_emergencias', label: 'Red de Emergencias' },
+]
+
+// Texto del alertante para el parte, según el origen y su detalle.
+function textoAlertante(origen?: string, detalle?: string | null): string {
+  if (origen === 'telefono') return detalle ? `Teléfono ${detalle}` : 'Teléfono'
+  if (origen === 'emisora') {
+    const l = EMISORAS.find(e => e.value === detalle)?.label || detalle || ''
+    return l ? `Emisora — ${l}` : 'Emisora'
+  }
+  if (origen === '112') return '112'
+  if (origen === 'presencial') return 'Presencial'
+  return origen || ''
+}
+
 const ISOCRONAS = [
   { campo: 'horaLlamada', label: 'T0 Llamada', color: 'bg-slate-600' },
   { campo: 'horaSalida', label: 'T1 Salida', color: 'bg-blue-600' },
@@ -91,6 +109,7 @@ export default function CecopalPage() {
   const [alertasOpen, setAlertasOpen] = useState(false)
   const [tipoSeleccionado, setTipoSeleccionado] = useState('')
   const [origenSeleccionado, setOrigenSeleccionado] = useState('')
+  const [origenDetalle, setOrigenDetalle] = useState('')
   const [direccion, setDireccion] = useState('')
   const [descripcion, setDescripcion] = useState('')
   const [vehiculosSeleccionados, setVehiculosSeleccionados] = useState<string[]>([])
@@ -261,14 +280,14 @@ export default function CecopalPage() {
     if (!tipoSeleccionado || !origenSeleccionado || !direccion) return
     setGuardando(true)
     try {
-      const res = await fetch('/api/cecopal', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'incidencia', tipoIncidencia: tipoSeleccionado, origenAviso: origenSeleccionado, direccion, descripcion, horaLlamada: getHoraActual(), vehiculosIds: vehiculosSeleccionados, voluntariosIds: voluntariosSeleccionados }) })
+      const res = await fetch('/api/cecopal', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'incidencia', tipoIncidencia: tipoSeleccionado, origenAviso: origenSeleccionado, origenDetalle: origenDetalle || null, direccion, descripcion, horaLlamada: getHoraActual(), vehiculosIds: vehiculosSeleccionados, voluntariosIds: voluntariosSeleccionados }) })
       const data = await res.json()
       if (data.incidencia) {
         setIncidenciasActivas(prev => [...prev, data.incidencia])
         setIncidenciaSelId(data.incidencia.id)
         setModo('activa')
         // Limpiar el formulario para una posible siguiente incidencia.
-        setTipoSeleccionado(''); setOrigenSeleccionado(''); setDireccion(''); setDescripcion('')
+        setTipoSeleccionado(''); setOrigenSeleccionado(''); setOrigenDetalle(''); setDireccion(''); setDescripcion('')
         setVehiculosSeleccionados([]); setVoluntariosSeleccionados([])
       }
       else { alert('Error: ' + (data.error || JSON.stringify(data))) }
@@ -280,6 +299,7 @@ export default function CecopalPage() {
     setEditInc({
       tipoIncidencia: incidenciaActiva.tipoIncidencia,
       origenAviso: incidenciaActiva.origenAviso,
+      origenDetalle: incidenciaActiva.origenDetalle || '',
       direccion: incidenciaActiva.direccion || '',
       descripcion: incidenciaActiva.descripcion || '',
       vehiculosIds: incidenciaActiva.vehiculosIds || [],
@@ -451,7 +471,7 @@ export default function CecopalPage() {
       // lo carga tal cual: tablas, tipologías, tiempos, heridos, etc.).
       const informacionExtra = {
         fecha: hoy, hora: getHoraActual(), lugar: incidenciaActiva.direccion || '', motivo: motivoFinal,
-        alertante: incidenciaActiva.origenAviso || '', circulacion,
+        alertante: textoAlertante(incidenciaActiva.origenAviso, incidenciaActiva.origenDetalle), circulacion,
         tiempos, tabla1, tabla2, prevencion, intervencion, otros: otrosTip,
         otrosDescripcion: otrosDescripcionFinal, posiblesCausas: '',
         heridos: '', heridosNum: '', fallecidos: '', fallecidosNum: '',
@@ -467,7 +487,7 @@ export default function CecopalPage() {
         fecha: hoy,
         lugar: incidenciaActiva.direccion || '',
         motivo: motivoFinal,
-        alertante: incidenciaActiva.origenAviso || '',
+        alertante: textoAlertante(incidenciaActiva.origenAviso, incidenciaActiva.origenDetalle),
         circulacion,
         horaLlamada: incidenciaActiva.horaLlamada || '',
         horaSalida: incidenciaActiva.horaSalida || '',
@@ -658,7 +678,16 @@ export default function CecopalPage() {
                 <div className="p-5 space-y-5">
                   <div><label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Tipo de Incidencia *</label><div className="grid grid-cols-8 gap-2">{TIPOS_INCIDENCIA.map(t => { const Icon = t.icon; return (<button key={t.value} onClick={() => setTipoSeleccionado(t.value)} className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all ${tipoSeleccionado === t.value ? `${t.color} border-transparent text-white shadow-lg` : 'bg-slate-700/50 border-slate-600 text-slate-400 hover:border-slate-500'}`}><Icon size={20} /><span className="text-xs font-semibold text-center leading-tight">{t.label}</span></button>) })}</div></div>
                   <div className="grid grid-cols-2 gap-4">
-                    <div><label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Origen del Aviso *</label><div className="grid grid-cols-2 gap-2">{ORIGENES_AVISO.map(o => { const Icon = o.icon; return (<button key={o.value} onClick={() => setOrigenSeleccionado(o.value)} className={`flex items-center gap-2 px-3 py-2 rounded-lg border-2 text-sm font-medium transition-all ${origenSeleccionado === o.value ? 'bg-blue-600 border-blue-500 text-white' : 'bg-slate-700/50 border-slate-600 text-slate-400 hover:border-slate-500'}`}><Icon size={13} />{o.label}</button>) })}</div></div>
+                    <div><label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Origen del Aviso *</label><div className="grid grid-cols-2 gap-2">{ORIGENES_AVISO.map(o => { const Icon = o.icon; return (<button key={o.value} onClick={() => { setOrigenSeleccionado(o.value); setOrigenDetalle('') }} className={`flex items-center gap-2 px-3 py-2 rounded-lg border-2 text-sm font-medium transition-all ${origenSeleccionado === o.value ? 'bg-blue-600 border-blue-500 text-white' : 'bg-slate-700/50 border-slate-600 text-slate-400 hover:border-slate-500'}`}><Icon size={13} />{o.label}</button>) })}</div>
+                      {origenSeleccionado === 'telefono' && (
+                        <input value={origenDetalle} onChange={e => setOrigenDetalle(e.target.value)} placeholder="Nº de teléfono del alertante" className="mt-2 w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm placeholder-slate-500 focus:outline-none focus:border-blue-500" />
+                      )}
+                      {origenSeleccionado === 'emisora' && (
+                        <div className="mt-2 grid grid-cols-3 gap-1.5">{EMISORAS.map(em => (
+                          <button key={em.value} onClick={() => setOrigenDetalle(em.value)} className={`px-2 py-1.5 rounded-lg border text-xs font-medium transition-all ${origenDetalle === em.value ? 'bg-blue-600 border-blue-400 text-white' : 'bg-slate-700/50 border-slate-600 text-slate-300 hover:border-slate-500'}`}>{em.label}</button>
+                        ))}</div>
+                      )}
+                    </div>
                     <div><label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Localización *</label><div className="relative"><MapPin size={13} className="absolute left-3 top-3 text-slate-400" /><input value={direccion} onChange={e => setDireccion(e.target.value)} placeholder="Dirección o punto kilométrico..." className="w-full bg-slate-700 border border-slate-600 rounded-lg pl-8 pr-3 py-2.5 text-white text-sm placeholder-slate-500 focus:outline-none focus:border-blue-500" /></div><textarea value={descripcion} onChange={e => setDescripcion(e.target.value)} placeholder="Descripción de la incidencia..." rows={2} className="mt-2 w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white text-sm placeholder-slate-500 focus:outline-none focus:border-blue-500 resize-none" /></div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
@@ -701,7 +730,7 @@ export default function CecopalPage() {
                       <div className="p-4 space-y-3">
                         <div><p className="text-slate-400 text-xs uppercase tracking-wider font-medium mb-1">Localización</p><p className="text-white text-sm flex items-start gap-1.5"><MapPin size={12} className="text-slate-400 mt-0.5 flex-shrink-0" />{incidenciaActiva.direccion}</p></div>
                         {incidenciaActiva.descripcion && <div><p className="text-slate-400 text-xs uppercase tracking-wider font-medium mb-1">Descripción</p><p className="text-slate-300 text-sm">{incidenciaActiva.descripcion}</p></div>}
-                        <div><p className="text-slate-400 text-xs uppercase tracking-wider font-medium mb-1">Origen</p><p className="text-white text-sm">{ORIGENES_AVISO.find(o => o.value === incidenciaActiva.origenAviso)?.label || incidenciaActiva.origenAviso}</p></div>
+                        <div><p className="text-slate-400 text-xs uppercase tracking-wider font-medium mb-1">Origen</p><p className="text-white text-sm">{textoAlertante(incidenciaActiva.origenAviso, incidenciaActiva.origenDetalle)}</p></div>
                       </div>
                     ) : (
                       <div className="p-4 space-y-3">
@@ -717,9 +746,17 @@ export default function CecopalPage() {
                           <p className="text-slate-400 text-xs uppercase tracking-wider font-medium mb-1.5">Origen del aviso</p>
                           <div className="flex flex-wrap gap-1.5">
                             {ORIGENES_AVISO.map(o => (
-                              <button key={o.value} onClick={() => setEditInc((p: any) => ({ ...p, origenAviso: o.value }))} className={`px-2.5 py-1 rounded-lg border text-xs ${editInc.origenAviso === o.value ? 'bg-blue-600 border-blue-400 text-white' : 'bg-slate-700/50 border-slate-600 text-slate-300 hover:border-slate-500'}`}>{o.label}</button>
+                              <button key={o.value} onClick={() => setEditInc((p: any) => ({ ...p, origenAviso: o.value, origenDetalle: '' }))} className={`px-2.5 py-1 rounded-lg border text-xs ${editInc.origenAviso === o.value ? 'bg-blue-600 border-blue-400 text-white' : 'bg-slate-700/50 border-slate-600 text-slate-300 hover:border-slate-500'}`}>{o.label}</button>
                             ))}
                           </div>
+                          {editInc.origenAviso === 'telefono' && (
+                            <input value={editInc.origenDetalle || ''} onChange={e => setEditInc((p: any) => ({ ...p, origenDetalle: e.target.value }))} placeholder="Nº de teléfono del alertante" className="mt-2 w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-1.5 text-white text-xs placeholder-slate-500 focus:outline-none focus:border-blue-500" />
+                          )}
+                          {editInc.origenAviso === 'emisora' && (
+                            <div className="mt-2 flex flex-wrap gap-1.5">{EMISORAS.map(em => (
+                              <button key={em.value} onClick={() => setEditInc((p: any) => ({ ...p, origenDetalle: em.value }))} className={`px-2.5 py-1 rounded-lg border text-xs ${editInc.origenDetalle === em.value ? 'bg-blue-600 border-blue-400 text-white' : 'bg-slate-700/50 border-slate-600 text-slate-300 hover:border-slate-500'}`}>{em.label}</button>
+                            ))}</div>
+                          )}
                         </div>
                         <div>
                           <label className="block text-slate-400 text-xs uppercase tracking-wider font-medium mb-1">Localización</label>
