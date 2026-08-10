@@ -1,4 +1,5 @@
 'use client'
+import { useSession } from 'next-auth/react'
 import TicketOCRUploader from '@/components/admin/TicketOCRUploader'
 import { PERMISOS_DISPONIBLES } from '@/lib/permisos';
 import { generarPdfPersonal, ordenIndicativo } from '@/lib/pdf-personal';
@@ -328,6 +329,8 @@ function TabButton({ active, onClick, icon: Icon, label, count, alert }: {
 // COMPONENTE PRINCIPAL
 // ============================================
 export default function AdministracionPage() {
+  const { data: session } = useSession();
+  const esSuperadmin = (session?.user as any)?.rol === 'superadmin';
   // DRAG & DROP STATE
   const [activeId, setActiveId] = useState<string | null>(null);
   const sensors = useSensors(
@@ -900,6 +903,24 @@ export default function AdministracionPage() {
       }
     } catch (error) {
       alert('Error al guardar la ficha');
+    }
+  };
+
+  const handleEliminarPersona = async (voluntario: Voluntario) => {
+    const nombre = `${voluntario.nombre} ${voluntario.apellidos || ''}`.trim();
+    if (!confirm(`ELIMINAR DEFINITIVAMENTE a ${nombre}.\n\nEsto borra su registro por completo (no se puede deshacer). Si la persona tiene historial (guardias, dietas, partes…), NO se podrá eliminar: usa "dar de baja" en su lugar.\n\n¿Continuar?`)) return;
+    if (!confirm(`Confirma otra vez: ¿eliminar definitivamente a ${nombre}?`)) return;
+    try {
+      const res = await fetch(`/api/admin/personal?id=${voluntario.id}`, { method: 'DELETE' });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setVoluntarios(prev => prev.filter(v => v.id !== voluntario.id));
+        alert('Registro eliminado.');
+      } else {
+        alert(data.error || 'No se pudo eliminar. Si tiene historial, dala de baja.');
+      }
+    } catch {
+      alert('Error de conexión al eliminar.');
     }
   };
 
@@ -1704,6 +1725,15 @@ export default function AdministracionPage() {
                               >
                                 {v.activo ? <XCircle size={18} /> : <CheckCircle size={18} />}
                               </button>
+                              {esSuperadmin && (
+                                <button
+                                  onClick={() => handleEliminarPersona(v)}
+                                  className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                                  title="Eliminar definitivamente (solo superadmin)"
+                                >
+                                  <Trash2 size={18} />
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>

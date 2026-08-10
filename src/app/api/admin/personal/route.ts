@@ -334,6 +334,10 @@ export async function DELETE(request: NextRequest) {
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
+    // El borrado definitivo de una persona es exclusivo de superadmin.
+    if ((session.user as any)?.rol !== 'superadmin') {
+      return NextResponse.json({ error: 'Solo el superadmin puede eliminar registros de personal' }, { status: 403 })
+    }
 
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
@@ -351,7 +355,29 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
     }
 
-    // Eliminar usuario (hard delete)
+    // Protección: si la persona tiene historial, NO se elimina (para no perder
+    // datos). En ese caso hay que "dar de baja".
+    const [guardias, dietas, partes, inscripciones] = await Promise.all([
+      prisma.guardia.count({ where: { usuarioId: id } }),
+      prisma.dieta.count({ where: { usuarioId: id } }),
+      prisma.partePSI.count({ where: { creadoPorId: id } }),
+      (prisma as any).inscripcion.count({ where: { usuarioId: id } }).catch(() => 0),
+    ])
+    const total = guardias + dietas + partes + inscripciones
+    if (total > 0) {
+      const partesTxt = [
+        guardias ? `${guardias} guardia(s)` : '',
+        dietas ? `${dietas} dieta(s)` : '',
+        partes ? `${partes} parte(s)` : '',
+        inscripciones ? `${inscripciones} inscripción(es)` : '',
+      ].filter(Boolean).join(', ')
+      return NextResponse.json({
+        error: `No se puede eliminar: la persona tiene historial (${partesTxt}). Usa "Dar de baja" para desactivarla conservando el historial.`,
+      }, { status: 400 })
+    }
+
+    // Eliminar usuario (hard delete). La ficha y otras relaciones 1:1 con borrado
+    // en cascada se eliminan automáticamente.
     await prisma.usuario.delete({
       where: { id }
     })
