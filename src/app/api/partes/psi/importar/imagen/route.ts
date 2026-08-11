@@ -26,10 +26,13 @@ export async function POST(request: NextRequest) {
 
     const inputBuffer = Buffer.from(await imagen.arrayBuffer())
 
-    // Comprimir con Sharp: redimensionar si supera MAX_WIDTH, convertir a JPEG calidad 82
+    // Comprimir/optimizar con Sharp para el mínimo tamaño sin perder detalle útil
+    // (impresión a tamaño parte). Se respeta la orientación EXIF y se eliminan los
+    // metadatos (sharp los descarta por defecto al no usar withMetadata()).
     const comprimido = await sharp(inputBuffer)
-      .resize({ width: MAX_WIDTH, withoutEnlargement: true }) // no ampliar si ya es pequeña
-      .jpeg({ quality: 82, progressive: true, mozjpeg: true })
+      .rotate() // respeta la orientación EXIF antes de perder los metadatos
+      .resize({ width: MAX_WIDTH, withoutEnlargement: true })
+      .jpeg({ quality: 80, progressive: true, mozjpeg: true, chromaSubsampling: '4:2:0' })
       .toBuffer()
 
     const blob = await put(

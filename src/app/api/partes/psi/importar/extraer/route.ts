@@ -122,13 +122,23 @@ export async function POST(request: NextRequest) {
     const file = formData.get('pdf') as File | null
     if (!file) return NextResponse.json({ error: 'No se recibió el archivo PDF' }, { status: 400 })
 
+    // Guarda de tipo: solo PDF.
+    const esPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name || '')
+    if (!esPdf) {
+      return NextResponse.json({ error: 'El archivo debe ser un PDF' }, { status: 400 })
+    }
+
     const buffer = Buffer.from(await file.arrayBuffer())
+    // Guarda de tamaño: el PDF debe ser razonable (límite del modelo ~32 MB).
+    if (buffer.length > 28 * 1024 * 1024) {
+      return NextResponse.json({ error: 'El PDF es demasiado grande (máx. 28 MB). Reduce su tamaño o divídelo.' }, { status: 400 })
+    }
     const pdfBase64 = buffer.toString('base64')
 
     const anthropic = new Anthropic({ apiKey })
     const msg = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
-      max_tokens: 4000,
+      max_tokens: 8000,
       messages: [{
         role: 'user',
         content: [
@@ -141,10 +151,23 @@ export async function POST(request: NextRequest) {
       }],
     })
 
-    let texto = ((msg.content[0] as any).text as string).trim()
+    // Extracción robusta del JSON: quita fences y, si hiciera falta, aísla el
+    // objeto entre la primera '{' y la última '}' (por si el modelo añade texto).
+    const bloque = (msg.content || []).find((b: any) => b?.type === 'text') as any
+    let texto = ((bloque?.text as string) || '').trim()
     texto = texto.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim()
-
-    const datos = JSON.parse(texto)
+    let datos: any
+    try {
+      datos = JSON.parse(texto)
+    } catch {
+      const i = texto.indexOf('{')
+      const j = texto.lastIndexOf('}')
+      if (i !== -1 && j > i) {
+        datos = JSON.parse(texto.slice(i, j + 1))
+      } else {
+        return NextResponse.json({ error: 'La IA no devolvió un JSON válido a partir del PDF. Revisa que el documento sea un parte PSI legible.' }, { status: 422 })
+      }
+    }
 
     // Normalizar numeroParte: reemplazar / por - si Claude no lo hizo
     if (datos.numeroParte && typeof datos.numeroParte === 'string') {

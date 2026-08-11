@@ -5,6 +5,7 @@ import { prisma } from '@/lib/db'
 import { generarNumeroParte } from '@/lib/partesPSI'
 import { validarPartePSI, validarBorradorPSI } from '@/lib/psi-validation'
 import { put } from '@vercel/blob'
+import sharp from 'sharp'
 import { registrarAudit, getUsuarioAudit } from '@/lib/audit'
 import { parseFechaES } from '@/lib/date-utils'
 
@@ -130,23 +131,27 @@ export async function POST(request: NextRequest) {
             for (let i = 0; i < Math.min(body.fotos.length, 3); i++) {
                 const foto = body.fotos[i]
 
-                // Si es base64, extraer y subir
+                // Si ya es una URL (foto subida y comprimida aparte), se conserva.
+                if (typeof foto === 'string' && /^https?:\/\//.test(foto)) {
+                    fotosUrls.push(foto)
+                    continue
+                }
+                // Si es base64: comprimir/optimizar con sharp antes de subir.
                 if (typeof foto === 'string' && foto.startsWith('data:image')) {
                     const matches = foto.match(/^data:image\/(\w+);base64,(.+)$/)
                     if (!matches) continue
 
-                    const extension = matches[1]
-                    const base64Data = matches[2]
-                    const buffer = Buffer.from(base64Data, 'base64')
+                    const buffer = Buffer.from(matches[2], 'base64')
+                    const comprimido = await sharp(buffer)
+                        .rotate()
+                        .resize({ width: 1600, withoutEnlargement: true })
+                        .jpeg({ quality: 80, progressive: true, mozjpeg: true, chromaSubsampling: '4:2:0' })
+                        .toBuffer()
 
-                    // Nombre del archivo
-                    const filename = `partes/psi/${numeroParte}/foto-${i + 1}-${Date.now()}.${extension}`
-
-                    // Subir a Vercel Blob
-                    const { url } = await put(filename, buffer, {
+                    const filename = `partes/psi/${numeroParte}/foto-${i + 1}-${Date.now()}.jpg`
+                    const { url } = await put(filename, comprimido, {
                         access: 'public',
-                        contentType: `image/${extension}`,
-                        // token: process.env.BLOB_READ_WRITE_TOKEN // Implicit if env var is set
+                        contentType: 'image/jpeg',
                     })
 
                     fotosUrls.push(url)
