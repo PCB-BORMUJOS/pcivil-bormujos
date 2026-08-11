@@ -71,47 +71,44 @@ function extraerFirmasDeCanvas(
   // Extrae SOLO la rúbrica de una columna: quita bordes/líneas del recuadro,
   // recorta ceñido al trazo y devuelve un PNG con fondo transparente.
   const extraerRubrica = (colIndex: number, topY: number): string | null => {
-    const x0 = Math.max(0, Math.round(MARGIN_PX + colIndex * COL_W) + INSET)
-    const y0 = Math.max(0, topY + INSET)
-    const x1 = Math.min(PW, Math.round(MARGIN_PX + (colIndex + 1) * COL_W) - INSET)
-    const y1 = Math.min(footerTop, sigBottom)
-    const w = x1 - x0, h = y1 - y0
+    let x0 = Math.max(0, Math.round(MARGIN_PX + colIndex * COL_W) + INSET)
+    let y0 = Math.max(0, topY + INSET)
+    let x1 = Math.min(PW, Math.round(MARGIN_PX + (colIndex + 1) * COL_W) - INSET)
+    let y1 = Math.min(footerTop, sigBottom)
+    let w = x1 - x0, h = y1 - y0
     if (w <= 6 || h <= 6) return null
 
     const img = ctx.getImageData(x0, y0, w, h)
     const d = img.data
-    const lum = (idx: number) => 0.299 * d[idx] + 0.587 * d[idx + 1] + 0.114 * d[idx + 2]
-    const UMBRAL = 190 // < UMBRAL = tinta
+    const lum = (px: number, py: number) => {
+      const idx = (py * w + px) * 4
+      return 0.299 * d[idx] + 0.587 * d[idx + 1] + 0.114 * d[idx + 2]
+    }
+    const INK = 175      // < INK: trazo pleno
+    const SOFT = 235     // entre INK y SOFT: borde suave (semitransparente)
 
-    // Detectar filas/columnas que son LÍNEA de recuadro (mayoría de píxeles con tinta).
+    // Recuento por fila/columna para recortar SOLO las líneas del recuadro que
+    // estén pegadas a los bordes (no se tocan los trazos del interior).
     const rowInk = new Array(h).fill(0)
     const colInk = new Array(w).fill(0)
-    for (let y = 0; y < h; y++) {
-      for (let x = 0; x < w; x++) {
-        if (lum((y * w + x) * 4) < UMBRAL) { rowInk[y]++; colInk[x]++ }
-      }
-    }
-    const rowLinea = rowInk.map(c => c > w * 0.5)
-    const colLinea = colInk.map(c => c > h * 0.5)
+    for (let py = 0; py < h; py++) for (let px = 0; px < w; px++) if (lum(px, py) < INK) { rowInk[py]++; colInk[px]++ }
+    let t = 0; while (t < h - 1 && rowInk[t] > w * 0.5) t++
+    let b = h - 1; while (b > t && rowInk[b] > w * 0.5) b--
+    let l = 0; while (l < w - 1 && colInk[l] > h * 0.5) l++
+    let r = w - 1; while (r > l && colInk[r] > h * 0.5) r--
 
-    // Bounding box de la tinta REAL (ignorando las líneas de recuadro).
-    let minX = w, minY = h, maxX = -1, maxY = -1, tinta = 0
-    for (let y = 0; y < h; y++) {
-      if (rowLinea[y]) continue
-      for (let x = 0; x < w; x++) {
-        if (colLinea[x]) continue
-        if (lum((y * w + x) * 4) < UMBRAL) {
-          tinta++
-          if (x < minX) minX = x; if (x > maxX) maxX = x
-          if (y < minY) minY = y; if (y > maxY) maxY = y
-        }
-      }
+    // Bounding box de la tinta dentro del área ya sin bordes.
+    let minX = r, minY = b, maxX = l, maxY = t, tinta = 0
+    for (let py = t; py <= b; py++) for (let px = l; px <= r; px++) if (lum(px, py) < INK) {
+      tinta++
+      if (px < minX) minX = px; if (px > maxX) maxX = px
+      if (py < minY) minY = py; if (py > maxY) maxY = py
     }
     if (tinta < 40 || maxX < minX) return null
 
-    const pad = 6
-    minX = Math.max(0, minX - pad); minY = Math.max(0, minY - pad)
-    maxX = Math.min(w - 1, maxX + pad); maxY = Math.min(h - 1, maxY + pad)
+    const pad = 8
+    minX = Math.max(l, minX - pad); minY = Math.max(t, minY - pad)
+    maxX = Math.min(r, maxX + pad); maxY = Math.min(b, maxY + pad)
     const bw = maxX - minX + 1, bh = maxY - minY + 1
 
     const out = document.createElement('canvas')
@@ -119,21 +116,17 @@ function extraerFirmasDeCanvas(
     const octx = out.getContext('2d')!
     const outImg = octx.createImageData(bw, bh)
     const od = outImg.data
-    for (let y = 0; y < bh; y++) {
-      const sy = minY + y
-      for (let x = 0; x < bw; x++) {
-        const sx = minX + x
-        const oIdx = (y * bw + x) * 4
-        if (rowLinea[sy] || colLinea[sx]) { od[oIdx + 3] = 0; continue }
-        const l = lum((sy * w + sx) * 4)
-        if (l < UMBRAL) {
-          // Trazo en color oscuro; alpha según intensidad (bordes suaves).
-          od[oIdx] = 17; od[oIdx + 1] = 24; od[oIdx + 2] = 39
-          od[oIdx + 3] = Math.min(255, Math.round(((UMBRAL - l) / UMBRAL) * 255) + 70)
-        } else {
-          od[oIdx + 3] = 0 // fondo transparente
-        }
-      }
+    for (let y = 0; y < bh; y++) for (let x = 0; x < bw; x++) {
+      const sx = minX + x, sy = minY + y
+      const sIdx = (sy * w + sx) * 4
+      const oIdx = (y * bw + x) * 4
+      const L = lum(sx, sy)
+      // Alpha suave: oscuro = opaco, claro = transparente (conserva el antialias).
+      let alpha = 0
+      if (L < INK) alpha = 255
+      else if (L < SOFT) alpha = Math.round(((SOFT - L) / (SOFT - INK)) * 255)
+      od[oIdx] = d[sIdx]; od[oIdx + 1] = d[sIdx + 1]; od[oIdx + 2] = d[sIdx + 2]
+      od[oIdx + 3] = alpha
     }
     octx.putImageData(outImg, 0, 0)
     return out.toDataURL('image/png')

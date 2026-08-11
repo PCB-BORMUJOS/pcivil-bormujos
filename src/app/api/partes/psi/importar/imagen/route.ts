@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
     const blob = await put(
       `partes/psi/${numeroParte}/foto-${indice}.jpg`,
       comprimido,
-      { access: 'public', contentType: 'image/jpeg' }
+      { access: 'public', contentType: 'image/jpeg', allowOverwrite: true }
     )
 
     return NextResponse.json({ ok: true, url: blob.url })
