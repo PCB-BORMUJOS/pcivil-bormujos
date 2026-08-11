@@ -65,8 +65,8 @@ function extraerFirmasDeCanvas(
   ]
 
   const ctx = canvas.getContext('2d')!
-  const INSET = Math.round(MM(2))                 // margen interior: evita el borde de la caja
-  const footerTop = PH - Math.round(MM(20))       // excluye el pie del documento (~20 mm)
+  const INSET = Math.round(MM(4))                 // margen interior: evita bordes/divisores de la caja
+  const footerTop = PH - Math.round(MM(22))       // excluye el pie del documento (~22 mm)
 
   // Extrae SOLO la rúbrica de una columna: quita bordes/líneas del recuadro,
   // recorta ceñido al trazo y devuelve un PNG con fondo transparente.
@@ -84,14 +84,24 @@ function extraerFirmasDeCanvas(
       const idx = (py * w + px) * 4
       return 0.299 * d[idx] + 0.587 * d[idx + 1] + 0.114 * d[idx + 2]
     }
+    // Saturación (max-min de RGB): la rúbrica es tinta neutra (gris/negro),
+    // el pie del documento es AZUL saturado. Distinguirlos evita colar el pie.
+    const sat = (px: number, py: number) => {
+      const idx = (py * w + px) * 4
+      const r = d[idx], g = d[idx + 1], b = d[idx + 2]
+      return Math.max(r, g, b) - Math.min(r, g, b)
+    }
     const INK = 175      // < INK: trazo pleno
     const SOFT = 235     // entre INK y SOFT: borde suave (semitransparente)
+    const SATMAX = 45    // > SATMAX: color saturado (pie azul, logos) → NO es tinta
+    // Es tinta de firma: oscuro Y casi neutro (excluye el pie azul y cualquier color).
+    const esTinta = (px: number, py: number) => lum(px, py) < INK && sat(px, py) < SATMAX
 
     // Recuento por fila/columna para recortar SOLO las líneas del recuadro que
     // estén pegadas a los bordes (no se tocan los trazos del interior).
     const rowInk = new Array(h).fill(0)
     const colInk = new Array(w).fill(0)
-    for (let py = 0; py < h; py++) for (let px = 0; px < w; px++) if (lum(px, py) < INK) { rowInk[py]++; colInk[px]++ }
+    for (let py = 0; py < h; py++) for (let px = 0; px < w; px++) if (esTinta(px, py)) { rowInk[py]++; colInk[px]++ }
     // Recorte de bordes: SOLO líneas casi macizas (>85%) y únicamente si están
     // pegadas al borde (primeros/últimos ~12 px). Así no se corta la rúbrica.
     const BORDE = 12
@@ -102,7 +112,7 @@ function extraerFirmasDeCanvas(
 
     // Bounding box de la tinta dentro del área ya sin bordes.
     let minX = r, minY = b, maxX = l, maxY = t, tinta = 0
-    for (let py = t; py <= b; py++) for (let px = l; px <= r; px++) if (lum(px, py) < INK) {
+    for (let py = t; py <= b; py++) for (let px = l; px <= r; px++) if (esTinta(px, py)) {
       tinta++
       if (px < minX) minX = px; if (px > maxX) maxX = px
       if (py < minY) minY = py; if (py > maxY) maxY = py
@@ -124,10 +134,14 @@ function extraerFirmasDeCanvas(
       const sIdx = (sy * w + sx) * 4
       const oIdx = (y * bw + x) * 4
       const L = lum(sx, sy)
+      const S = sat(sx, sy)
       // Alpha suave: oscuro = opaco, claro = transparente (conserva el antialias).
+      // Solo tonos neutros (tinta): el color saturado del pie/logos queda transparente.
       let alpha = 0
-      if (L < INK) alpha = 255
-      else if (L < SOFT) alpha = Math.round(((SOFT - L) / (SOFT - INK)) * 255)
+      if (S < SATMAX) {
+        if (L < INK) alpha = 255
+        else if (L < SOFT) alpha = Math.round(((SOFT - L) / (SOFT - INK)) * 255)
+      }
       od[oIdx] = d[sIdx]; od[oIdx + 1] = d[sIdx + 1]; od[oIdx + 2] = d[sIdx + 2]
       od[oIdx + 3] = alpha
     }
