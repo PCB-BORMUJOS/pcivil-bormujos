@@ -37,7 +37,7 @@ function extraerFirmasDeCanvas(
   canvas: HTMLCanvasElement,
   anns: Array<{ fieldName?: string; rect?: number[] }>
 ): { informante: string | null; responsable: string | null; jefe: string | null } {
-  const SCALE  = 1.5
+  const SCALE  = 2.5 // debe coincidir con el render de la página 1
   const PH     = canvas.height
   const PW     = canvas.width
 
@@ -92,10 +92,13 @@ function extraerFirmasDeCanvas(
     const rowInk = new Array(h).fill(0)
     const colInk = new Array(w).fill(0)
     for (let py = 0; py < h; py++) for (let px = 0; px < w; px++) if (lum(px, py) < INK) { rowInk[py]++; colInk[px]++ }
-    let t = 0; while (t < h - 1 && rowInk[t] > w * 0.5) t++
-    let b = h - 1; while (b > t && rowInk[b] > w * 0.5) b--
-    let l = 0; while (l < w - 1 && colInk[l] > h * 0.5) l++
-    let r = w - 1; while (r > l && colInk[r] > h * 0.5) r--
+    // Recorte de bordes: SOLO líneas casi macizas (>85%) y únicamente si están
+    // pegadas al borde (primeros/últimos ~12 px). Así no se corta la rúbrica.
+    const BORDE = 12
+    let t = 0; while (t < BORDE && rowInk[t] > w * 0.85) t++
+    let b = h - 1; while (b > h - 1 - BORDE && rowInk[b] > w * 0.85) b--
+    let l = 0; while (l < BORDE && colInk[l] > h * 0.85) l++
+    let r = w - 1; while (r > w - 1 - BORDE && colInk[r] > h * 0.85) r--
 
     // Bounding box de la tinta dentro del área ya sin bordes.
     let minX = r, minY = b, maxX = l, maxY = t, tinta = 0
@@ -159,9 +162,10 @@ async function extraerFotosFormulario(file: File): Promise<{
   const blobs: Blob[] = []
 
   // Página 1 → render + anotaciones para extraer firmas
+  // Escala alta (2.5) para que las rúbricas salgan nítidas, no pixeladas.
   if (pdf.numPages >= 1) {
     const pag1 = await pdf.getPage(1)
-    const vp1  = pag1.getViewport({ scale: 1.5 })
+    const vp1  = pag1.getViewport({ scale: 2.5 })
     const c1   = document.createElement('canvas')
     c1.width = vp1.width; c1.height = vp1.height
     await pag1.render({ canvasContext: c1.getContext('2d')!, viewport: vp1 }).promise
