@@ -65,33 +65,85 @@ function extraerFirmasDeCanvas(
   ]
 
   const ctx = canvas.getContext('2d')!
-  const resultado: (string | null)[] = []
+  const INSET = Math.round(MM(2))                 // margen interior: evita el borde de la caja
+  const footerTop = PH - Math.round(MM(20))       // excluye el pie del documento (~20 mm)
 
-  for (let i = 0; i < 3; i++) {
-    const cx = Math.max(0, Math.round(MARGIN_PX + i * COL_W))
-    const cy = Math.max(0, sigTops[i])
-    const cw = Math.min(COL_W, PW - cx)
-    const ch = Math.min(sigBottom - cy, PH - cy)
+  // Extrae SOLO la rúbrica de una columna: quita bordes/líneas del recuadro,
+  // recorta ceñido al trazo y devuelve un PNG con fondo transparente.
+  const extraerRubrica = (colIndex: number, topY: number): string | null => {
+    const x0 = Math.max(0, Math.round(MARGIN_PX + colIndex * COL_W) + INSET)
+    const y0 = Math.max(0, topY + INSET)
+    const x1 = Math.min(PW, Math.round(MARGIN_PX + (colIndex + 1) * COL_W) - INSET)
+    const y1 = Math.min(footerTop, sigBottom)
+    const w = x1 - x0, h = y1 - y0
+    if (w <= 6 || h <= 6) return null
 
-    if (cw <= 0 || ch <= 0) { resultado.push(null); continue }
+    const img = ctx.getImageData(x0, y0, w, h)
+    const d = img.data
+    const lum = (idx: number) => 0.299 * d[idx] + 0.587 * d[idx + 1] + 0.114 * d[idx + 2]
+    const UMBRAL = 190 // < UMBRAL = tinta
 
-    // Umbral: al menos 60 píxeles no blancos (firma escaneada siempre tiene tinta)
-    const pix = ctx.getImageData(cx, cy, cw, ch)
-    let noBlanco = 0
-    for (let k = 0; k < pix.data.length; k += 4) {
-      if (pix.data[k] < 220 || pix.data[k + 1] < 220 || pix.data[k + 2] < 220) {
-        if (++noBlanco >= 60) break
+    // Detectar filas/columnas que son LÍNEA de recuadro (mayoría de píxeles con tinta).
+    const rowInk = new Array(h).fill(0)
+    const colInk = new Array(w).fill(0)
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        if (lum((y * w + x) * 4) < UMBRAL) { rowInk[y]++; colInk[x]++ }
       }
     }
-    if (noBlanco < 60) { resultado.push(null); continue }
+    const rowLinea = rowInk.map(c => c > w * 0.5)
+    const colLinea = colInk.map(c => c > h * 0.5)
 
-    const crop = document.createElement('canvas')
-    crop.width = cw; crop.height = ch
-    crop.getContext('2d')!.drawImage(canvas, cx, cy, cw, ch, 0, 0, cw, ch)
-    resultado.push(crop.toDataURL('image/png'))
+    // Bounding box de la tinta REAL (ignorando las líneas de recuadro).
+    let minX = w, minY = h, maxX = -1, maxY = -1, tinta = 0
+    for (let y = 0; y < h; y++) {
+      if (rowLinea[y]) continue
+      for (let x = 0; x < w; x++) {
+        if (colLinea[x]) continue
+        if (lum((y * w + x) * 4) < UMBRAL) {
+          tinta++
+          if (x < minX) minX = x; if (x > maxX) maxX = x
+          if (y < minY) minY = y; if (y > maxY) maxY = y
+        }
+      }
+    }
+    if (tinta < 40 || maxX < minX) return null
+
+    const pad = 6
+    minX = Math.max(0, minX - pad); minY = Math.max(0, minY - pad)
+    maxX = Math.min(w - 1, maxX + pad); maxY = Math.min(h - 1, maxY + pad)
+    const bw = maxX - minX + 1, bh = maxY - minY + 1
+
+    const out = document.createElement('canvas')
+    out.width = bw; out.height = bh
+    const octx = out.getContext('2d')!
+    const outImg = octx.createImageData(bw, bh)
+    const od = outImg.data
+    for (let y = 0; y < bh; y++) {
+      const sy = minY + y
+      for (let x = 0; x < bw; x++) {
+        const sx = minX + x
+        const oIdx = (y * bw + x) * 4
+        if (rowLinea[sy] || colLinea[sx]) { od[oIdx + 3] = 0; continue }
+        const l = lum((sy * w + sx) * 4)
+        if (l < UMBRAL) {
+          // Trazo en color oscuro; alpha según intensidad (bordes suaves).
+          od[oIdx] = 17; od[oIdx + 1] = 24; od[oIdx + 2] = 39
+          od[oIdx + 3] = Math.min(255, Math.round(((UMBRAL - l) / UMBRAL) * 255) + 70)
+        } else {
+          od[oIdx + 3] = 0 // fondo transparente
+        }
+      }
+    }
+    octx.putImageData(outImg, 0, 0)
+    return out.toDataURL('image/png')
   }
 
-  return { informante: resultado[0] ?? null, responsable: resultado[1] ?? null, jefe: resultado[2] ?? null }
+  return {
+    informante: extraerRubrica(0, sigTops[0]),
+    responsable: extraerRubrica(1, sigTops[1]),
+    jefe: extraerRubrica(2, sigTops[2]),
+  }
 }
 
 // Extrae las fotos de los 3 campos de imagen del formulario PSI (página 3).
