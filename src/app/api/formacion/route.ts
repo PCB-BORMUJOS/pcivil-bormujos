@@ -706,9 +706,13 @@ export async function PUT(request: NextRequest) {
         }
 
         switch (tipo) {
-            case 'curso':
+            case 'curso': {
+                // El frontend envía 'tipo_curso' (para no chocar con el 'tipo' de la
+                // acción); se mapea a la columna 'tipo' del modelo y se descarta.
+                const { tipo_curso, ...restoCurso } = data
+                const dataCurso = { ...restoCurso, ...(tipo_curso !== undefined ? { tipo: tipo_curso } : {}) }
                 const cursoAnterior = await (prisma as any).curso.findUnique({ where: { id } })
-                const curso = await (prisma as any).curso.update({ where: { id }, data })
+                const curso = await (prisma as any).curso.update({ where: { id }, data: dataCurso })
                 const { usuarioId: modIdC, usuarioNombre: modNomC } = getUsuarioAudit(session)
                 await registrarAudit({
                     accion: 'UPDATE',
@@ -722,6 +726,7 @@ export async function PUT(request: NextRequest) {
                     datosNuevos: curso
                 })
                 return NextResponse.json({ success: true, curso })
+            }
 
             case 'convocatoria':
                 const convAnterior = await (prisma as any).convocatoria.findUnique({ where: { id } })
