@@ -37,48 +37,32 @@ function extraerFirmasDeCanvas(
   canvas: HTMLCanvasElement,
   anns: Array<{ fieldName?: string; rect?: number[] }>
 ): { informante: string | null; responsable: string | null; jefe: string | null } {
-  const SCALE  = 2.5 // debe coincidir con el render de la página 1
-  const PH     = canvas.height
-  const PW     = canvas.width
-
-  // Misma geometría que pdf-generator-v3.ts: margen 8 mm, 3 columnas iguales
-  const MM         = (mm: number) => mm * (72 / 25.4) * SCALE   // mm → px a escala 1.5
-  const MARGIN_PX  = MM(8)
-  const COL_W      = Math.round((PW - 2 * MARGIN_PX) / 3)
-  const sigBottom  = PH - Math.round(MM(4))                      // 4 mm de margen inferior
-
-  // Buscar anotaciones por nombre para obtener la Y de cada campo combo
-  const find = (term: string) =>
-    anns.find(a => typeof a.fieldName === 'string' && a.fieldName.toUpperCase().includes(term.toUpperCase()))
-
-  const aInfo = find('INDICATIVO INFORMA') || find('INDICATIVO')
-  const aResp = find('RESPONSABLE')
-  const aJefe = find('VB JEFE') || find('JEFE DE SERVICIO')
-
-  // rect PDF = [x1, y1_bottom, x2, y2_top] con y desde abajo.
-  // La firma está DEBAJO del borde inferior del campo (y1), que en canvas es PH - y1*SCALE.
-  const fallbackY = Math.floor(PH * 0.87)
-  const sigTops = [
-    aInfo?.rect ? Math.floor(PH - aInfo.rect[1] * SCALE) : fallbackY,
-    aResp?.rect ? Math.floor(PH - aResp.rect[1] * SCALE) : fallbackY,
-    aJefe?.rect ? Math.floor(PH - aJefe.rect[1] * SCALE) : fallbackY,
-  ]
-
+  const PH  = canvas.height
+  const PW  = canvas.width
   const ctx = canvas.getContext('2d')!
-  const INSET = Math.round(MM(4))                 // margen interior: evita bordes/divisores de la caja
-  const footerTop = PH - Math.round(MM(22))       // excluye el pie del documento (~22 mm)
+  void anns // los PDF importados están aplanados (sin AcroForm): se usa geometría fija
 
-  // Extrae SOLO la rúbrica de una columna: quita bordes/líneas del recuadro,
-  // recorta ceñido al trazo y devuelve un PNG con fondo transparente.
-  const extraerRubrica = (colIndex: number, topY: number): string | null => {
-    let x0 = Math.max(0, Math.round(MARGIN_PX + colIndex * COL_W) + INSET)
-    // Se sube el borde superior unos mm para no recortar la parte alta del trazo
-    // (algunas rúbricas rebasan el borde del campo). La línea del campo, al ser
-    // una recta larga, se elimina después con el filtro de líneas.
-    let y0 = Math.max(0, topY - Math.round(MM(6)))
-    let x1 = Math.min(PW, Math.round(MARGIN_PX + (colIndex + 1) * COL_W) - INSET)
-    let y1 = Math.min(footerTop, sigBottom)
-    let w = x1 - x0, h = y1 - y0
+  // GEOMETRÍA EXACTA de pdf-generator-v3.ts (A4 210×297 mm). El recuadro de la
+  // IMAGEN de firma de cada columna es fijo e idéntico en todos los partes:
+  //   x: sx+3 .. sx+3+(sigColW-6) ,  y: 267 .. 282 mm   (sx = 8 + col·sigColW)
+  // Al recortar SOLO ese recuadro se excluyen por completo los rótulos, el
+  // indicativo y las bandas de cabecera que antes se colaban.
+  const PAGE_W = 210, PAGE_H = 297, MARGIN = 8
+  const sigColW = (PAGE_W - 2 * MARGIN) / 3        // 64.667 mm
+  const IMG_TOP_MM = 267, IMG_BOT_MM = 282         // recuadro de la imagen de firma
+  const PAD_MM = 0.8                               // margen interior: descarta el borde del recuadro
+  const fx = (mm: number) => Math.round((mm / PAGE_W) * PW)
+  const fy = (mm: number) => Math.round((mm / PAGE_H) * PH)
+
+  // Extrae SOLO la rúbrica de una columna: recorta el recuadro exacto de la
+  // firma, aísla el trazo neutro y devuelve un PNG con fondo transparente.
+  const extraerRubrica = (colIndex: number): string | null => {
+    const sx = MARGIN + colIndex * sigColW
+    const x0 = Math.max(0, fx(sx + 3 + PAD_MM))
+    const x1 = Math.min(PW, fx(sx + 3 + (sigColW - 6) - PAD_MM))
+    const y0 = Math.max(0, fy(IMG_TOP_MM + PAD_MM))
+    const y1 = Math.min(PH, fy(IMG_BOT_MM - PAD_MM))
+    const w = x1 - x0, h = y1 - y0
     if (w <= 6 || h <= 6) return null
 
     const img = ctx.getImageData(x0, y0, w, h)
@@ -153,9 +137,9 @@ function extraerFirmasDeCanvas(
   }
 
   return {
-    informante: extraerRubrica(0, sigTops[0]),
-    responsable: extraerRubrica(1, sigTops[1]),
-    jefe: extraerRubrica(2, sigTops[2]),
+    informante: extraerRubrica(0),
+    responsable: extraerRubrica(1),
+    jefe: extraerRubrica(2),
   }
 }
 
