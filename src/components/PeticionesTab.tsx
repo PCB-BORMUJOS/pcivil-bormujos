@@ -514,7 +514,7 @@ export default function PeticionesTab({ areaOrigen, isAdmin, accentColor = 'from
                               </button>
                               {expandidas.has(`rc-popup-${peticion.id}`) && (
                                 <DocPopup
-                                  label="Adjuntar RC" icon={<FileText size={13} />} color="blue"
+                                  label="Adjuntar RC" icon={<FileText size={13} />} color="blue" tipo="rc"
                                   onSave={(url, num) => adjuntarDoc(peticion.id, 'rc', url, num)}
                                   onCancel={() => togglePopup(`rc-popup-${peticion.id}`)}
                                 />
@@ -558,7 +558,7 @@ export default function PeticionesTab({ areaOrigen, isAdmin, accentColor = 'from
                               </button>
                               {expandidas.has(`albaran-popup-${peticion.id}`) && (
                                 <DocPopup
-                                  label="Adjuntar Albarán" icon={<FileCheck size={13} />} color="green" align="right"
+                                  label="Adjuntar Albarán" icon={<FileCheck size={13} />} color="green" align="right" tipo="albaran"
                                   onSave={(url, num) => adjuntarDoc(peticion.id, 'albaran', url, num)}
                                   onCancel={() => togglePopup(`albaran-popup-${peticion.id}`)}
                                 />
@@ -1054,18 +1054,39 @@ export default function PeticionesTab({ areaOrigen, isAdmin, accentColor = 'from
 // ──────────────────────────────────────────
 // Sub-componente para popup de documento
 // ──────────────────────────────────────────
-function DocPopup({ label, icon, color, align = 'left', onSave, onCancel }: {
+function DocPopup({ label, icon, color, align = 'left', tipo, onSave, onCancel }: {
   label: string; icon: React.ReactNode; color: 'blue' | 'green'
   align?: 'left' | 'right'
+  tipo: 'rc' | 'albaran'
   onSave: (url: string, numero: string) => void
   onCancel: () => void
 }) {
   const [url, setUrl] = useState('')
   const [numero, setNumero] = useState('')
+  const [archivo, setArchivo] = useState<string | null>(null)
+  const [subiendo, setSubiendo] = useState(false)
   const borderColor = color === 'blue' ? 'border-blue-200' : 'border-green-200'
   const textColor = color === 'blue' ? 'text-blue-700' : 'text-green-700'
   const btnColor = color === 'blue' ? 'bg-blue-600' : 'bg-green-600'
   const posClass = align === 'right' ? 'right-0' : 'left-1/2 -translate-x-1/2'
+
+  const subir = async (file: File) => {
+    setSubiendo(true)
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      fd.append('tipo', tipo)
+      const res = await fetch('/api/logistica/peticiones/documento', { method: 'POST', body: fd })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Error subiendo el archivo')
+      setUrl(data.url)
+      setArchivo(data.nombre || file.name)
+    } catch (e: any) {
+      alert(e.message || 'No se pudo subir el archivo')
+    } finally {
+      setSubiendo(false)
+    }
+  }
 
   return (
     <div className={`absolute top-6 ${posClass} z-50 bg-white border ${borderColor} rounded-xl shadow-xl p-3 w-72`}>
@@ -1073,9 +1094,21 @@ function DocPopup({ label, icon, color, align = 'left', onSave, onCancel }: {
       <input type="text" value={numero} onChange={e => setNumero(e.target.value)}
         className="w-full text-xs p-2 border border-slate-200 rounded-lg mb-1.5 focus:ring-2 focus:ring-blue-400 outline-none"
         placeholder="Número (ej: RC-2026-001)" />
-      <input type="url" value={url} onChange={e => setUrl(e.target.value)}
-        className="w-full text-xs p-2 border border-slate-200 rounded-lg mb-2 focus:ring-2 focus:ring-blue-400 outline-none"
-        placeholder="URL del documento (opcional)" />
+      {url ? (
+        <div className="flex items-center gap-1.5 border border-green-200 bg-green-50 rounded-lg p-2 mb-2 text-xs">
+          <FileCheck size={13} className="text-green-600 shrink-0" />
+          <a href={url} target="_blank" rel="noopener noreferrer" className="text-green-700 font-medium truncate min-w-0 flex items-center gap-1">
+            <span className="truncate">{archivo || 'Documento adjunto'}</span><ExternalLink size={10} className="shrink-0" />
+          </a>
+          <button onClick={() => { setUrl(''); setArchivo(null) }} className="ml-auto text-slate-400 hover:text-red-500 shrink-0"><X size={13} /></button>
+        </div>
+      ) : (
+        <label className={`flex items-center justify-center gap-1.5 border border-dashed rounded-lg p-2 mb-2 text-xs cursor-pointer ${subiendo ? 'border-slate-200 text-slate-400' : 'border-slate-300 text-slate-500 hover:border-purple-400 hover:text-purple-600'}`}>
+          {subiendo ? <><Loader2 size={13} className="animate-spin" /> Subiendo…</> : <><Upload size={13} /> Subir PDF (opcional)</>}
+          <input type="file" accept="application/pdf,image/*" className="hidden" disabled={subiendo}
+            onChange={e => { const f = e.target.files?.[0]; if (f) subir(f); e.target.value = '' }} />
+        </label>
+      )}
       <div className="flex gap-2">
         <button onClick={onCancel} className="flex-1 text-xs py-1.5 border border-slate-200 rounded-lg text-slate-500">Cancelar</button>
         <button onClick={() => onSave(url, numero)} className={`flex-1 text-xs py-1.5 ${btnColor} text-white rounded-lg font-semibold`}>Guardar</button>
