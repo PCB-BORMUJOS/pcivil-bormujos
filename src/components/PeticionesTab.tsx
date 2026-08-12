@@ -9,6 +9,7 @@ import {
   Clock, CheckCircle, TrendingUp, TrendingDown, BarChart3, Upload, Loader2
 } from 'lucide-react'
 import { TbDrone } from 'react-icons/tb'
+import { comprimirArchivo } from '@/lib/comprimir-archivo'
 
 // ============================================
 // TIPOS
@@ -61,6 +62,7 @@ export interface Peticion {
   motivoRechazo: string | null
   urlRc: string | null
   urlAlbaran: string | null
+  albaranes?: { url?: string | null; numero?: string | null; fecha?: string }[] | null
   items: PeticionItem[]
   solicitante: { nombre: string; apellidos: string; numeroVoluntario: string }
   articulo: { id: string; nombre: string; codigo: string } | null
@@ -213,8 +215,9 @@ export default function PeticionesTab({ areaOrigen, isAdmin, accentColor = 'from
   const subirAlbaran = async (file: File) => {
     setSubiendoAlbaran(true)
     try {
+      const comprimido = await comprimirArchivo(file)
       const fd = new FormData()
-      fd.append('file', file)
+      fd.append('file', comprimido)
       fd.append('tipo', 'albaran')
       const res = await fetch('/api/logistica/peticiones/documento', { method: 'POST', body: fd })
       const data = await res.json()
@@ -338,10 +341,11 @@ export default function PeticionesTab({ areaOrigen, isAdmin, accentColor = 'from
       await fetch(`/api/logistica/peticiones/${peticionId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          accion: 'actualizar_docs',
-          ...(tipo === 'rc' ? { urlRc: valor, numeroRc: numero } : { urlAlbaran: valor, numeroAlbaran: numero })
-        })
+        body: JSON.stringify(
+          tipo === 'rc'
+            ? { accion: 'actualizar_docs', urlRc: valor, numeroRc: numero }
+            : { accion: 'add_albaran', urlAlbaran: valor, numeroAlbaran: numero }
+        )
       })
       togglePopup(`${tipo}-popup-${peticionId}`)
       cargar()
@@ -550,30 +554,43 @@ export default function PeticionesTab({ areaOrigen, isAdmin, accentColor = 'from
                       <div className="flex flex-col items-center flex-1 relative">
                         <div className="flex items-center gap-1">
                           <div className={`w-3 h-3 rounded-full border-2 border-white shadow-sm ring-1 ${peticion.fechaRecepcion ? 'bg-green-500 ring-green-300' : 'bg-slate-200 ring-slate-200'}`} />
-                          {isAdmin && !peticion.urlAlbaran && (peticion.estado === 'recibida') && (
-                            <div className="relative">
-                              <button onClick={() => togglePopup(`albaran-popup-${peticion.id}`)}
-                                className="flex items-center gap-0.5 px-1.5 py-0.5 bg-green-100 hover:bg-green-200 text-green-700 rounded text-[9px] font-bold border border-green-200 whitespace-nowrap">
-                                <FileCheck size={9} /> Albarán
-                              </button>
-                              {expandidas.has(`albaran-popup-${peticion.id}`) && (
-                                <DocPopup
-                                  label="Adjuntar Albarán" icon={<FileCheck size={13} />} color="green" align="right" tipo="albaran"
-                                  onSave={(url, num) => adjuntarDoc(peticion.id, 'albaran', url, num)}
-                                  onCancel={() => togglePopup(`albaran-popup-${peticion.id}`)}
-                                />
-                              )}
-                            </div>
-                          )}
-                          {peticion.urlAlbaran && (
-                            <a href={peticion.urlAlbaran} target="_blank" rel="noopener noreferrer"
-                              className="flex items-center gap-0.5 px-1.5 py-0.5 bg-green-600 text-white rounded text-[9px] font-bold whitespace-nowrap">
-                              <FileCheck size={9} /> Albarán <ExternalLink size={8} />
-                            </a>
-                          )}
-                          {peticion.numeroAlbaran && !peticion.urlAlbaran && (
-                            <span className="text-[9px] text-green-600 font-mono">{peticion.numeroAlbaran}</span>
-                          )}
+                          {(() => {
+                            const lista = (peticion.albaranes && peticion.albaranes.length > 0)
+                              ? peticion.albaranes
+                              : (peticion.urlAlbaran || peticion.numeroAlbaran)
+                                ? [{ url: peticion.urlAlbaran, numero: peticion.numeroAlbaran }]
+                                : []
+                            return (
+                              <>
+                                {lista.map((alb, idx) => (
+                                  alb.url ? (
+                                    <a key={idx} href={alb.url} target="_blank" rel="noopener noreferrer"
+                                      title={alb.numero || `Albarán ${idx + 1}`}
+                                      className="flex items-center gap-0.5 px-1.5 py-0.5 bg-green-600 text-white rounded text-[9px] font-bold whitespace-nowrap max-w-[110px]">
+                                      <FileCheck size={9} /> <span className="truncate">{alb.numero || `Albarán ${idx + 1}`}</span> <ExternalLink size={8} />
+                                    </a>
+                                  ) : (
+                                    <span key={idx} className="text-[9px] text-green-600 font-mono">{alb.numero}</span>
+                                  )
+                                ))}
+                                {isAdmin && peticion.estado === 'recibida' && (
+                                  <div className="relative">
+                                    <button onClick={() => togglePopup(`albaran-popup-${peticion.id}`)}
+                                      className="flex items-center gap-0.5 px-1.5 py-0.5 bg-green-100 hover:bg-green-200 text-green-700 rounded text-[9px] font-bold border border-green-200 whitespace-nowrap">
+                                      <FileCheck size={9} /> {lista.length ? '+ Albarán' : 'Albarán'}
+                                    </button>
+                                    {expandidas.has(`albaran-popup-${peticion.id}`) && (
+                                      <DocPopup
+                                        label="Añadir Albarán" icon={<FileCheck size={13} />} color="green" align="right" tipo="albaran"
+                                        onSave={(url, num) => adjuntarDoc(peticion.id, 'albaran', url, num)}
+                                        onCancel={() => togglePopup(`albaran-popup-${peticion.id}`)}
+                                      />
+                                    )}
+                                  </div>
+                                )}
+                              </>
+                            )
+                          })()}
                         </div>
                         <span className={`text-[9px] font-bold uppercase mt-0.5 ${peticion.fechaRecepcion ? 'text-slate-500' : 'text-slate-300'}`}>Recibida</span>
                         {peticion.fechaRecepcion && <span className="text-[9px] text-slate-400">{formatearFecha(peticion.fechaRecepcion)}</span>}
@@ -875,10 +892,39 @@ export default function PeticionesTab({ areaOrigen, isAdmin, accentColor = 'from
                   {showDetalle.costeFinal !== null && <div><span className="text-slate-500">Final:</span> <span className="font-bold text-green-700">{Number(showDetalle.costeFinal).toFixed(2)} €</span></div>}
                   {showDetalle.numeroFactura && <div><span className="text-slate-500">Factura:</span> <span className="font-mono">{showDetalle.numeroFactura}</span></div>}
                   {showDetalle.numeroRc && <div><span className="text-slate-500">Nº RC:</span> <span className="font-mono">{showDetalle.numeroRc}</span></div>}
-                  {showDetalle.numeroAlbaran && <div><span className="text-slate-500">Nº Albarán:</span> <span className="font-mono">{showDetalle.numeroAlbaran}</span></div>}
                 </div>
               </div>
             )}
+
+            {/* Albaranes (entregas) */}
+            {(() => {
+              const lista = (showDetalle.albaranes && showDetalle.albaranes.length > 0)
+                ? showDetalle.albaranes
+                : (showDetalle.urlAlbaran || showDetalle.numeroAlbaran)
+                  ? [{ url: showDetalle.urlAlbaran, numero: showDetalle.numeroAlbaran }]
+                  : []
+              if (lista.length === 0) return null
+              return (
+                <div className="bg-slate-50 rounded-lg p-3">
+                  <p className="text-xs text-slate-500 uppercase font-bold mb-2">Albaranes ({lista.length})</p>
+                  <div className="flex flex-col gap-1.5">
+                    {lista.map((alb, idx) => (
+                      <div key={idx} className="flex items-center gap-2 text-sm">
+                        <FileCheck size={14} className="text-green-600 shrink-0" />
+                        <span className="font-mono text-slate-700">{alb.numero || `Albarán ${idx + 1}`}</span>
+                        {alb.fecha && <span className="text-xs text-slate-400">· {formatearFecha(alb.fecha)}</span>}
+                        {alb.url && (
+                          <a href={alb.url} target="_blank" rel="noopener noreferrer"
+                            className="ml-auto flex items-center gap-1 text-green-700 font-medium hover:underline">
+                            Ver <ExternalLink size={12} />
+                          </a>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )
+            })()}
 
             {/* Historial */}
             <div>
@@ -1073,8 +1119,9 @@ function DocPopup({ label, icon, color, align = 'left', tipo, onSave, onCancel }
   const subir = async (file: File) => {
     setSubiendo(true)
     try {
+      const comprimido = await comprimirArchivo(file)
       const fd = new FormData()
-      fd.append('file', file)
+      fd.append('file', comprimido)
       fd.append('tipo', tipo)
       const res = await fetch('/api/logistica/peticiones/documento', { method: 'POST', body: fd })
       const data = await res.json()

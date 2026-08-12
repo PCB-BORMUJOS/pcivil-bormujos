@@ -159,6 +159,14 @@ export async function PUT(
           ...(urlAlbaran ? { urlAlbaran } : {}),
           ...(numeroAlbaran ? { numeroAlbaran } : {})
         }
+        // Registrar el albarán de esta entrega en la lista (llegadas parciales)
+        if (urlAlbaran || numeroAlbaran) {
+          const prevAlb = Array.isArray(peticionActual.albaranes) ? (peticionActual.albaranes as any[]) : []
+          datosActualizar.albaranes = [
+            ...prevAlb,
+            { url: urlAlbaran || null, numero: numeroAlbaran || null, fecha: new Date().toISOString() }
+          ]
+        }
 
         // Actualizar stock de cada item de la petición
         const itemsAActualizar = peticionActual.items.length > 0
@@ -238,6 +246,21 @@ export async function PUT(
         if (numeroAlbaran !== undefined) datosActualizar.numeroAlbaran = numeroAlbaran
         break
 
+      case 'add_albaran': {
+        // Añade un albarán a la lista sin cambiar el estado (entregas parciales).
+        if (!urlAlbaran && !numeroAlbaran) {
+          return NextResponse.json({ error: 'Indica número o adjunta el albarán' }, { status: 400 })
+        }
+        const prevAlb = Array.isArray(peticionActual.albaranes) ? (peticionActual.albaranes as any[]) : []
+        datosActualizar = {
+          albaranes: [...prevAlb, { url: urlAlbaran || null, numero: numeroAlbaran || null, fecha: new Date().toISOString() }],
+          // Espejo del último para compatibilidad con vistas antiguas
+          ...(urlAlbaran ? { urlAlbaran } : {}),
+          ...(numeroAlbaran ? { numeroAlbaran } : {})
+        }
+        break
+      }
+
       default:
         return NextResponse.json({ error: 'Acción no válida' }, { status: 400 })
     }
@@ -267,6 +290,7 @@ export async function PUT(
     })
 
     try {
+      if (nuevoEstado !== estadoAnterior)
       await notificarCambioPeticion(
         {
           id: peticionActual.id,
@@ -284,7 +308,7 @@ export async function PUT(
     const { usuarioId, usuarioNombre } = getUsuarioAudit(session)
     const auditAccionMap: Record<string, string> = {
       aprobar: 'APPROVE', rechazar: 'REJECT', en_compra: 'UPDATE',
-      recibir: 'UPDATE', cancelar: 'DELETE', editar: 'UPDATE', actualizar_docs: 'UPDATE'
+      recibir: 'UPDATE', cancelar: 'DELETE', editar: 'UPDATE', actualizar_docs: 'UPDATE', add_albaran: 'UPDATE'
     }
     const auditDescMap: Record<string, string> = {
       aprobar: `Petición ${peticionActualizada.numero} aprobada`,
@@ -293,7 +317,8 @@ export async function PUT(
       recibir: `Petición ${peticionActualizada.numero} recibida. Albarán: ${numeroAlbaran || '-'}`,
       cancelar: `Petición ${peticionActualizada.numero} cancelada`,
       editar: `Petición ${peticionActualizada.numero} editada`,
-      actualizar_docs: `Petición ${peticionActualizada.numero} documentos actualizados`
+      actualizar_docs: `Petición ${peticionActualizada.numero} documentos actualizados`,
+      add_albaran: `Petición ${peticionActualizada.numero}: albarán añadido (${numeroAlbaran || 'PDF'})`
     }
     await registrarAudit({
       accion: auditAccionMap[accion] || 'UPDATE',
