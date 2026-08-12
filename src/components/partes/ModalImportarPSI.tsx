@@ -30,9 +30,11 @@ const ESTADOS: Record<Estado, { label: string; color: string }> = {
   error:      { label: 'Error',               color: 'text-red-600' },
 }
 
-// Recorta las firmas de la página 1 usando el mismo layout de columnas que pdf-generator-v3.ts.
-// Las 3 columnas son iguales (CONTENT_W / 3). El Y de cada área se ancla en el borde inferior
-// del campo combo correspondiente (obtenido de las anotaciones AcroForm).
+// Recorta las firmas de la página 1. Los PDF están aplanados (sin AcroForm),
+// así que se usa la posición REAL del recuadro de firma medida sobre el render
+// del propio parte (pdf-generator-v3). Estas fracciones son idénticas en todos
+// los partes del año. Se recorta el recuadro COMPLETO (se conserva el marco →
+// sin distorsión al colocarlo en el campo de firma) y se deja fondo transparente.
 function extraerFirmasDeCanvas(
   canvas: HTMLCanvasElement,
   anns: Array<{ fieldName?: string; rect?: number[] }>
@@ -40,98 +42,56 @@ function extraerFirmasDeCanvas(
   const PH  = canvas.height
   const PW  = canvas.width
   const ctx = canvas.getContext('2d')!
-  void anns // los PDF importados están aplanados (sin AcroForm): se usa geometría fija
+  void anns // sin AcroForm: geometría fija medida por píxeles
 
-  // GEOMETRÍA EXACTA de pdf-generator-v3.ts (A4 210×297 mm). El recuadro de la
-  // IMAGEN de firma de cada columna es fijo e idéntico en todos los partes:
-  //   x: sx+3 .. sx+3+(sigColW-6) ,  y: 267 .. 282 mm   (sx = 8 + col·sigColW)
-  // Al recortar SOLO ese recuadro se excluyen por completo los rótulos, el
-  // indicativo y las bandas de cabecera que antes se colaban.
-  const PAGE_W = 210, PAGE_H = 297, MARGIN = 8
-  const sigColW = (PAGE_W - 2 * MARGIN) / 3        // 64.667 mm
-  const IMG_TOP_MM = 267, IMG_BOT_MM = 282         // recuadro de la imagen de firma
-  const PAD_MM = 0.8                               // margen interior: descarta el borde del recuadro
-  const fx = (mm: number) => Math.round((mm / PAGE_W) * PW)
-  const fy = (mm: number) => Math.round((mm / PAGE_H) * PH)
+  // Recuadro de firma medido (fracción de la página). Y común a las 3 columnas.
+  const Y_TOP = 0.9044, Y_BOT = 0.9394
+  const COLS_X: Array<[number, number]> = [
+    [0.0469, 0.3333], // INDICATIVO QUE INFORMA
+    [0.3554, 0.6419], // RESPONSABLE DE TURNO
+    [0.6640, 0.9505], // VB JEFE DE SERVICIO
+  ]
 
-  // Extrae SOLO la rúbrica de una columna: recorta el recuadro exacto de la
-  // firma, aísla el trazo neutro y devuelve un PNG con fondo transparente.
   const extraerRubrica = (colIndex: number): string | null => {
-    const sx = MARGIN + colIndex * sigColW
-    const x0 = Math.max(0, fx(sx + 3 + PAD_MM))
-    const x1 = Math.min(PW, fx(sx + 3 + (sigColW - 6) - PAD_MM))
-    const y0 = Math.max(0, fy(IMG_TOP_MM + PAD_MM))
-    const y1 = Math.min(PH, fy(IMG_BOT_MM - PAD_MM))
+    // Recuadro exacto + pequeño margen interior (2 px) para descartar el borde.
+    const INSET = 2
+    const [fxa, fxb] = COLS_X[colIndex]
+    const x0 = Math.min(PW - 1, Math.round(fxa * PW) + INSET)
+    const x1 = Math.max(x0 + 1, Math.round(fxb * PW) - INSET)
+    const y0 = Math.min(PH - 1, Math.round(Y_TOP * PH) + INSET)
+    const y1 = Math.max(y0 + 1, Math.round(Y_BOT * PH) - INSET)
     const w = x1 - x0, h = y1 - y0
     if (w <= 6 || h <= 6) return null
 
     const img = ctx.getImageData(x0, y0, w, h)
     const d = img.data
-    const lum = (px: number, py: number) => {
-      const idx = (py * w + px) * 4
-      return 0.299 * d[idx] + 0.587 * d[idx + 1] + 0.114 * d[idx + 2]
-    }
-    // Saturación (max-min de RGB): la rúbrica es tinta neutra (gris/negro),
-    // el pie del documento es AZUL saturado. Distinguirlos evita colar el pie.
-    const sat = (px: number, py: number) => {
-      const idx = (py * w + px) * 4
-      const r = d[idx], g = d[idx + 1], b = d[idx + 2]
-      return Math.max(r, g, b) - Math.min(r, g, b)
-    }
-    const INK = 175      // < INK: trazo pleno
-    const SOFT = 235     // entre INK y SOFT: borde suave (semitransparente)
-    const SATMAX = 45    // > SATMAX: color saturado (pie azul, logos) → NO es tinta
-    // Es tinta de firma: oscuro Y casi neutro (excluye el pie azul y cualquier color).
-    const esTinta = (px: number, py: number) => lum(px, py) < INK && sat(px, py) < SATMAX
-
-    // Recuento por fila/columna para localizar las líneas del recuadro (borde
-    // inferior, base de firma, divisor de columna). Una línea recta larga ocupa
-    // casi toda una fila o columna; una rúbrica no. Se eliminan estén donde estén.
-    const rowInk = new Array(h).fill(0)
-    const colInk = new Array(w).fill(0)
-    for (let py = 0; py < h; py++) for (let px = 0; px < w; px++) if (esTinta(px, py)) { rowInk[py]++; colInk[px]++ }
-    const rowLine = rowInk.map(v => v > w * 0.55)   // fila casi completa = línea horizontal
-    const colLine = colInk.map(v => v > h * 0.55)   // columna casi completa = línea vertical
-    // Tinta "limpia": trazo de firma que NO pertenece a una línea recta larga.
-    const esTintaLimpia = (px: number, py: number) => esTinta(px, py) && !rowLine[py] && !colLine[px]
-
-    const t = 0, b = h - 1, l = 0, r = w - 1
-
-    // Bounding box de la tinta real (ya sin líneas del recuadro).
-    let minX = r, minY = b, maxX = l, maxY = t, tinta = 0
-    for (let py = t; py <= b; py++) for (let px = l; px <= r; px++) if (esTintaLimpia(px, py)) {
-      tinta++
-      if (px < minX) minX = px; if (px > maxX) maxX = px
-      if (py < minY) minY = py; if (py > maxY) maxY = py
-    }
-    if (tinta < 40 || maxX < minX) return null
-
-    const pad = 8
-    minX = Math.max(l, minX - pad); minY = Math.max(t, minY - pad)
-    maxX = Math.min(r, maxX + pad); maxY = Math.min(b, maxY + pad)
-    const bw = maxX - minX + 1, bh = maxY - minY + 1
+    // Umbrales de tinta: la rúbrica es NEUTRA y oscura. El fondo del recuadro
+    // (gris claro 241/245/249) y su borde (203/213/225, lum≈211) son claros →
+    // transparentes. Cualquier color saturado (pie azul, logos) → transparente.
+    const INK = 160      // < INK: trazo pleno
+    const SOFT = 205     // INK..SOFT: antialias del trazo (semitransparente)
+    const SATMAX = 45    // saturación máxima para considerarse tinta neutra
 
     const out = document.createElement('canvas')
-    out.width = bw; out.height = bh
+    out.width = w; out.height = h
     const octx = out.getContext('2d')!
-    const outImg = octx.createImageData(bw, bh)
+    const outImg = octx.createImageData(w, h)
     const od = outImg.data
-    for (let y = 0; y < bh; y++) for (let x = 0; x < bw; x++) {
-      const sx = minX + x, sy = minY + y
-      const sIdx = (sy * w + sx) * 4
-      const oIdx = (y * bw + x) * 4
-      const L = lum(sx, sy)
-      const S = sat(sx, sy)
-      // Alpha suave: oscuro = opaco, claro = transparente (conserva el antialias).
-      // Solo tonos neutros (tinta) y fuera de líneas rectas del recuadro.
+    let tinta = 0
+    for (let i = 0; i < w * h; i++) {
+      const s = i * 4
+      const r = d[s], g = d[s + 1], b = d[s + 2]
+      const L = 0.299 * r + 0.587 * g + 0.114 * b
+      const S = Math.max(r, g, b) - Math.min(r, g, b)
       let alpha = 0
-      if (S < SATMAX && !rowLine[sy] && !colLine[sx]) {
-        if (L < INK) alpha = 255
-        else if (L < SOFT) alpha = Math.round(((SOFT - L) / (SOFT - INK)) * 255)
+      if (S < SATMAX) {
+        if (L < INK) { alpha = 255; tinta++ }
+        else if (L < SOFT) { alpha = Math.round(((SOFT - L) / (SOFT - INK)) * 255); if (alpha > 120) tinta++ }
       }
-      od[oIdx] = d[sIdx]; od[oIdx + 1] = d[sIdx + 1]; od[oIdx + 2] = d[sIdx + 2]
-      od[oIdx + 3] = alpha
+      // Trazo en negro puro (más limpio y uniforme que conservar el gris del render).
+      od[s] = 17; od[s + 1] = 17; od[s + 2] = 17; od[s + 3] = alpha
     }
+    if (tinta < 30) return null // recuadro vacío (sin firma)
     octx.putImageData(outImg, 0, 0)
     return out.toDataURL('image/png')
   }
@@ -163,10 +123,10 @@ async function extraerFotosFormulario(file: File): Promise<{
   const blobs: Blob[] = []
 
   // Página 1 → render + anotaciones para extraer firmas
-  // Escala alta (2.5) para que las rúbricas salgan nítidas, no pixeladas.
+  // Escala alta (4.0) para que las rúbricas salgan nítidas, no pixeladas.
   if (pdf.numPages >= 1) {
     const pag1 = await pdf.getPage(1)
-    const vp1  = pag1.getViewport({ scale: 2.5 })
+    const vp1  = pag1.getViewport({ scale: 4.0 })
     const c1   = document.createElement('canvas')
     c1.width = vp1.width; c1.height = vp1.height
     await pag1.render({ canvasContext: c1.getContext('2d')!, viewport: vp1 }).promise
