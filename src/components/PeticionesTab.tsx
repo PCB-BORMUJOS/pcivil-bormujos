@@ -6,7 +6,7 @@ import {
   Flame, Heart, Truck, Radio, BookOpen, Shirt, Tent, Users,
   ClipboardList, ShoppingCart, Check, FileText, FileCheck, Send, Ban,
   History, User, Building, Calendar, Filter, Plus,
-  Clock, CheckCircle, TrendingUp, TrendingDown, BarChart3
+  Clock, CheckCircle, TrendingUp, TrendingDown, BarChart3, Upload, Loader2
 } from 'lucide-react'
 import { TbDrone } from 'react-icons/tb'
 
@@ -206,6 +206,27 @@ export default function PeticionesTab({ areaOrigen, isAdmin, accentColor = 'from
     comentario: '', proveedor: '', costeEstimado: '', costeFinal: '',
     numeroFactura: '', numeroRc: '', numeroAlbaran: '', urlRc: '', urlAlbaran: ''
   })
+  const [albaranArchivo, setAlbaranArchivo] = useState<{ nombre: string } | null>(null)
+  const [subiendoAlbaran, setSubiendoAlbaran] = useState(false)
+
+  // Sube el PDF/imagen del albarán y guarda su URL en el formulario de acción.
+  const subirAlbaran = async (file: File) => {
+    setSubiendoAlbaran(true)
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      fd.append('tipo', 'albaran')
+      const res = await fetch('/api/logistica/peticiones/documento', { method: 'POST', body: fd })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Error subiendo el archivo')
+      setAccionForm(prev => ({ ...prev, urlAlbaran: data.url }))
+      setAlbaranArchivo({ nombre: data.nombre || file.name })
+    } catch (e: any) {
+      alert(e.message || 'No se pudo subir el archivo')
+    } finally {
+      setSubiendoAlbaran(false)
+    }
+  }
 
   // Abre el modal si el padre lo solicita desde fuera (botón dashboard)
   useEffect(() => {
@@ -302,6 +323,7 @@ export default function PeticionesTab({ areaOrigen, isAdmin, accentColor = 'from
       if (r.ok) {
         setShowAccion(null)
         setAccionForm({ comentario: '', proveedor: '', costeEstimado: '', costeFinal: '', numeroFactura: '', numeroRc: '', numeroAlbaran: '', urlRc: '', urlAlbaran: '' })
+        setAlbaranArchivo(null)
         cargar()
       } else {
         const d = await r.json(); alert('Error: ' + d.error)
@@ -976,12 +998,25 @@ export default function PeticionesTab({ areaOrigen, isAdmin, accentColor = 'from
                       className="w-full border border-slate-200 rounded-lg p-2.5 text-sm" />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">URL Albarán (opcional)</label>
-                    <div className="flex rounded-lg overflow-hidden border border-slate-200">
-                      <span className="bg-slate-50 flex items-center px-3 border-r border-slate-200 text-slate-400"><FileCheck size={16} /></span>
-                      <input type="url" value={accionForm.urlAlbaran} onChange={e => setAccionForm(prev => ({ ...prev, urlAlbaran: e.target.value }))}
-                        className="w-full p-2.5 text-sm outline-none" placeholder="https://..." />
-                    </div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Albarán (PDF, opcional)</label>
+                    {accionForm.urlAlbaran ? (
+                      <div className="flex items-center gap-2 border border-green-200 bg-green-50 rounded-lg p-2 text-sm">
+                        <FileCheck size={16} className="text-green-600 shrink-0" />
+                        <a href={accionForm.urlAlbaran} target="_blank" rel="noopener noreferrer"
+                          className="text-green-700 font-medium truncate flex items-center gap-1 min-w-0">
+                          <span className="truncate">{albaranArchivo?.nombre || 'Documento adjunto'}</span>
+                          <ExternalLink size={12} className="shrink-0" />
+                        </a>
+                        <button type="button" onClick={() => { setAccionForm(prev => ({ ...prev, urlAlbaran: '' })); setAlbaranArchivo(null) }}
+                          className="ml-auto text-slate-400 hover:text-red-500 shrink-0"><X size={16} /></button>
+                      </div>
+                    ) : (
+                      <label className={`flex items-center justify-center gap-2 border border-dashed rounded-lg p-2.5 text-sm cursor-pointer ${subiendoAlbaran ? 'border-slate-200 text-slate-400' : 'border-slate-300 text-slate-500 hover:border-purple-400 hover:text-purple-600'}`}>
+                        {subiendoAlbaran ? <><Loader2 size={16} className="animate-spin" /> Subiendo…</> : <><Upload size={16} /> Subir PDF</>}
+                        <input type="file" accept="application/pdf,image/*" className="hidden" disabled={subiendoAlbaran}
+                          onChange={e => { const f = e.target.files?.[0]; if (f) subirAlbaran(f); e.target.value = '' }} />
+                      </label>
+                    )}
                   </div>
                 </div>
                 {/* Info actualización stock */}
@@ -1002,7 +1037,7 @@ export default function PeticionesTab({ areaOrigen, isAdmin, accentColor = 'from
             </div>
 
             <div className="flex gap-3 pt-2">
-              <button onClick={() => setShowAccion(null)}
+              <button onClick={() => { setShowAccion(null); setAccionForm(prev => ({ ...prev, urlAlbaran: '' })); setAlbaranArchivo(null) }}
                 className="flex-1 py-2.5 border border-slate-300 text-slate-700 rounded-lg font-medium">Cancelar</button>
               <button onClick={ejecutarAccion}
                 className={`flex-1 py-2.5 text-white rounded-lg font-medium ${showAccion.accion === 'rechazar' ? 'bg-red-500 hover:bg-red-600' : showAccion.accion === 'aprobar' ? 'bg-green-500 hover:bg-green-600' : 'bg-purple-500 hover:bg-purple-600'}`}>
