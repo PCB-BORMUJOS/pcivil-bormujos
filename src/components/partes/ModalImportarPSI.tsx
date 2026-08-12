@@ -72,7 +72,10 @@ function extraerFirmasDeCanvas(
   // recorta ceñido al trazo y devuelve un PNG con fondo transparente.
   const extraerRubrica = (colIndex: number, topY: number): string | null => {
     let x0 = Math.max(0, Math.round(MARGIN_PX + colIndex * COL_W) + INSET)
-    let y0 = Math.max(0, topY + INSET)
+    // Se sube el borde superior unos mm para no recortar la parte alta del trazo
+    // (algunas rúbricas rebasan el borde del campo). La línea del campo, al ser
+    // una recta larga, se elimina después con el filtro de líneas.
+    let y0 = Math.max(0, topY - Math.round(MM(6)))
     let x1 = Math.min(PW, Math.round(MARGIN_PX + (colIndex + 1) * COL_W) - INSET)
     let y1 = Math.min(footerTop, sigBottom)
     let w = x1 - x0, h = y1 - y0
@@ -97,22 +100,22 @@ function extraerFirmasDeCanvas(
     // Es tinta de firma: oscuro Y casi neutro (excluye el pie azul y cualquier color).
     const esTinta = (px: number, py: number) => lum(px, py) < INK && sat(px, py) < SATMAX
 
-    // Recuento por fila/columna para recortar SOLO las líneas del recuadro que
-    // estén pegadas a los bordes (no se tocan los trazos del interior).
+    // Recuento por fila/columna para localizar las líneas del recuadro (borde
+    // inferior, base de firma, divisor de columna). Una línea recta larga ocupa
+    // casi toda una fila o columna; una rúbrica no. Se eliminan estén donde estén.
     const rowInk = new Array(h).fill(0)
     const colInk = new Array(w).fill(0)
     for (let py = 0; py < h; py++) for (let px = 0; px < w; px++) if (esTinta(px, py)) { rowInk[py]++; colInk[px]++ }
-    // Recorte de bordes: SOLO líneas casi macizas (>85%) y únicamente si están
-    // pegadas al borde (primeros/últimos ~12 px). Así no se corta la rúbrica.
-    const BORDE = 12
-    let t = 0; while (t < BORDE && rowInk[t] > w * 0.85) t++
-    let b = h - 1; while (b > h - 1 - BORDE && rowInk[b] > w * 0.85) b--
-    let l = 0; while (l < BORDE && colInk[l] > h * 0.85) l++
-    let r = w - 1; while (r > w - 1 - BORDE && colInk[r] > h * 0.85) r--
+    const rowLine = rowInk.map(v => v > w * 0.55)   // fila casi completa = línea horizontal
+    const colLine = colInk.map(v => v > h * 0.55)   // columna casi completa = línea vertical
+    // Tinta "limpia": trazo de firma que NO pertenece a una línea recta larga.
+    const esTintaLimpia = (px: number, py: number) => esTinta(px, py) && !rowLine[py] && !colLine[px]
 
-    // Bounding box de la tinta dentro del área ya sin bordes.
+    const t = 0, b = h - 1, l = 0, r = w - 1
+
+    // Bounding box de la tinta real (ya sin líneas del recuadro).
     let minX = r, minY = b, maxX = l, maxY = t, tinta = 0
-    for (let py = t; py <= b; py++) for (let px = l; px <= r; px++) if (esTinta(px, py)) {
+    for (let py = t; py <= b; py++) for (let px = l; px <= r; px++) if (esTintaLimpia(px, py)) {
       tinta++
       if (px < minX) minX = px; if (px > maxX) maxX = px
       if (py < minY) minY = py; if (py > maxY) maxY = py
@@ -136,9 +139,9 @@ function extraerFirmasDeCanvas(
       const L = lum(sx, sy)
       const S = sat(sx, sy)
       // Alpha suave: oscuro = opaco, claro = transparente (conserva el antialias).
-      // Solo tonos neutros (tinta): el color saturado del pie/logos queda transparente.
+      // Solo tonos neutros (tinta) y fuera de líneas rectas del recuadro.
       let alpha = 0
-      if (S < SATMAX) {
+      if (S < SATMAX && !rowLine[sy] && !colLine[sx]) {
         if (L < INK) alpha = 255
         else if (L < SOFT) alpha = Math.round(((SOFT - L) / (SOFT - INK)) * 255)
       }
