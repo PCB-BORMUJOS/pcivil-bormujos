@@ -5,6 +5,10 @@ import React, { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { usePermisos } from '@/lib/permisos';
 import {
+  DIAS_SEMANA, DIAS_LABEL, TURNOS_CATALOGO, TODOS_LOS_TURNOS, configSemanaHabitual,
+  type ConfigSemana, type TurnoKey,
+} from '@/lib/turnos';
+import {
   Users, Car, MapPin, Sun, Wind,
   ChevronLeft, ChevronRight, Clock,
   CheckSquare, Square, Save, Droplets,
@@ -73,16 +77,11 @@ function AvailabilityForm({ onClose }: { onClose: () => void }) {
   const [puedeDobleturno, setPuedeDobleturno] = useState(false);
   const [turnosDeseados, setTurnosDeseados] = useState(1);
   const [notas, setNotas] = useState('');
+  // Dispositivo de la semana elegida. Arranca en el habitual (mañana y tarde),
+  // así que si la consulta falla o la semana es normal, se ve lo de siempre.
+  const [configSemana, setConfigSemana] = useState<ConfigSemana>(() => configSemanaHabitual());
 
-  const diasSemana = [
-    { key: 'lunes', label: 'Lunes' },
-    { key: 'martes', label: 'Martes' },
-    { key: 'miercoles', label: 'Miércoles' },
-    { key: 'jueves', label: 'Jueves' },
-    { key: 'viernes', label: 'Viernes' },
-    { key: 'sabado', label: 'Sábado' },
-    { key: 'domingo', label: 'Domingo' }
-  ];
+  const diasSemana = DIAS_SEMANA.map(key => ({ key, label: DIAS_LABEL[key] }));
 
   // Generar próximas 6 semanas (mínimo 3 semanas de antelación)
   useEffect(() => {
@@ -110,6 +109,21 @@ function AvailabilityForm({ onClose }: { onClose: () => void }) {
       setSemanaSeleccionada(semanas[0].value);
     }
   }, []);
+
+  // Dispositivo de la semana elegida (Feria, Navidad...). Si falla la consulta
+  // se mantiene el reparto habitual: nunca deja al voluntario sin poder enviar.
+  useEffect(() => {
+    if (!semanaSeleccionada) return;
+    let cancelado = false;
+    fetch(`/api/semanas-especiales?semana=${semanaSeleccionada}`)
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (cancelado) return;
+        setConfigSemana(data?.config ?? configSemanaHabitual());
+      })
+      .catch(() => { if (!cancelado) setConfigSemana(configSemanaHabitual()); });
+    return () => { cancelado = true };
+  }, [semanaSeleccionada]);
 
   // Cargar disponibilidad existente cuando cambia la semana
   useEffect(() => {
@@ -159,13 +173,22 @@ function AvailabilityForm({ onClose }: { onClose: () => void }) {
     setSaving(true);
 
     try {
+      // Solo se envían franjas que realmente se prestan ese día. Evita que
+      // queden marcas residuales si el dispositivo de la semana cambia después.
+      const detallesDepurados = Object.fromEntries(
+        DIAS_SEMANA.map(dia => [
+          dia,
+          (detalles[dia] || []).filter(t => (configSemana.turnosPorDia[dia] ?? []).includes(t as TurnoKey)),
+        ])
+      );
+
       const response = await fetch('/api/disponibilidad', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           semanaInicio: semanaSeleccionada,
           noDisponible,
-          detalles: noDisponible ? {} : detalles,
+          detalles: noDisponible ? {} : detallesDepurados,
           turnosDeseados: noDisponible ? 0 : turnosDeseados,
           puedeDobleturno: noDisponible ? false : puedeDobleturno,
           notas
@@ -230,35 +253,66 @@ function AvailabilityForm({ onClose }: { onClose: () => void }) {
 
       <div className={`transition-opacity ${noDisponible ? 'opacity-40 pointer-events-none' : ''}`}>
         <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Selección de Franjas</label>
+        {configSemana.esEspecial && (
+          <div className="mb-2 flex items-start gap-2 bg-indigo-50 border border-indigo-200 text-indigo-800 rounded-lg p-2.5 text-xs">
+            <AlertTriangle size={14} className="flex-shrink-0 mt-0.5" />
+            <span>
+              <strong>{configSemana.nombre}</strong>: esta semana tiene un dispositivo especial.
+              Revisa bien las franjas de cada día, no son las habituales.
+            </span>
+          </div>
+        )}
         <div className="border border-slate-200 rounded-lg overflow-hidden">
-          <div className="grid grid-cols-3 bg-slate-100 text-xs font-bold text-slate-600">
+          {/* Cabecera: una columna por cada franja que se usa esta semana */}
+          <div
+            className="grid bg-slate-100 text-xs font-bold text-slate-600"
+            style={{ gridTemplateColumns: `1.2fr repeat(${configSemana.turnosUsados.length}, 1fr)` }}
+          >
             <div className="p-3 border-r border-slate-200">Día</div>
-            <div className="p-3 text-center border-r border-slate-200">Mañana</div>
-            <div className="p-3 text-center">Tarde</div>
+            {configSemana.turnosUsados.map((t, i) => (
+              <div key={t} className={`p-3 text-center ${i < configSemana.turnosUsados.length - 1 ? 'border-r border-slate-200' : ''}`}>
+                {TURNOS_CATALOGO[t].label}
+              </div>
+            ))}
           </div>
           {diasSemana.map(({ key, label }) => {
             const turnos = detalles[key] || [];
+            const turnosDelDia = configSemana.turnosPorDia[key] ?? [];
+            const sinServicio = turnosDelDia.length === 0;
             return (
-              <div key={key} className="grid grid-cols-3 border-t border-slate-200 hover:bg-slate-50">
-                <div className="p-3 text-sm font-medium text-slate-700 border-r border-slate-200">{label}</div>
-                <div
-                  className="p-3 flex justify-center border-r border-slate-200 cursor-pointer"
-                  onClick={() => toggleTurno(key, 'mañana')}
-                >
-                  <div className={`w-6 h-6 rounded border-2 flex items-center justify-center transition-colors ${turnos.includes('mañana') ? 'bg-green-500 border-green-500 text-white' : 'border-slate-300 hover:border-green-400'
-                    }`}>
-                    {turnos.includes('mañana') && <CheckSquare size={14} />}
-                  </div>
+              <div
+                key={key}
+                className={`grid border-t border-slate-200 ${sinServicio ? 'bg-slate-50' : 'hover:bg-slate-50'}`}
+                style={{ gridTemplateColumns: `1.2fr repeat(${configSemana.turnosUsados.length}, 1fr)` }}
+              >
+                <div className="p-3 text-sm font-medium text-slate-700 border-r border-slate-200">
+                  {label}
+                  {sinServicio && <span className="block text-[10px] font-normal text-slate-400 uppercase">Sin servicio</span>}
                 </div>
-                <div
-                  className="p-3 flex justify-center cursor-pointer"
-                  onClick={() => toggleTurno(key, 'tarde')}
-                >
-                  <div className={`w-6 h-6 rounded border-2 flex items-center justify-center transition-colors ${turnos.includes('tarde') ? 'bg-blue-500 border-blue-500 text-white' : 'border-slate-300 hover:border-blue-400'
-                    }`}>
-                    {turnos.includes('tarde') && <CheckSquare size={14} />}
-                  </div>
-                </div>
+                {configSemana.turnosUsados.map((t, i) => {
+                  const bordeDer = i < configSemana.turnosUsados.length - 1 ? 'border-r border-slate-200' : '';
+                  // Un turno que no se presta ese día no se puede marcar
+                  if (!turnosDelDia.includes(t)) {
+                    return (
+                      <div key={t} className={`p-3 flex justify-center items-center ${bordeDer} bg-slate-50`}>
+                        <span className="text-slate-300 text-xs">—</span>
+                      </div>
+                    );
+                  }
+                  const marcado = turnos.includes(t);
+                  return (
+                    <div
+                      key={t}
+                      className={`p-3 flex justify-center cursor-pointer ${bordeDer}`}
+                      onClick={() => toggleTurno(key, t)}
+                    >
+                      <div className={`w-6 h-6 rounded border-2 flex items-center justify-center transition-colors ${marcado ? TURNOS_CATALOGO[t].colorActivo : `border-slate-300 ${TURNOS_CATALOGO[t].colorHover}`
+                        }`}>
+                        {marcado && <CheckSquare size={14} />}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             );
           })}
@@ -275,7 +329,7 @@ function AvailabilityForm({ onClose }: { onClose: () => void }) {
           {puedeDobleturno && <CheckSquare size={14} />}
         </div>
         <span className="text-sm font-medium text-slate-700">
-          Disponible para Doblar Turno (M+T)
+          Disponible para Doblar Turno ({configSemana.turnosUsados.map(t => TURNOS_CATALOGO[t].label.charAt(0)).join('+')})
         </span>
       </div>
 
@@ -473,8 +527,6 @@ function CalendarView({ eventos, guardias, resumenDisponibilidad, onEventClick, 
         {days.map((day, idx) => {
           const eventosDelDia = day.current ? getEventosDelDia(day.date) : [];
           const guardiasDelDia = day.current ? getGuardiasDelDia(day.date) : [];
-          const guardiasMañana = guardiasDelDia.filter(g => g.turno === 'mañana');
-          const guardiasTarde = guardiasDelDia.filter(g => g.turno === 'tarde');
           const isDragOver = dragOverDate === day.date;
 
           return (
@@ -495,23 +547,35 @@ function CalendarView({ eventos, guardias, resumenDisponibilidad, onEventClick, 
               <div className="mt-8 space-y-1">
                 {(() => {
                   const resumenDia = resumenDisponibilidad[day.date] || {};
-                  const resMañana = resumenDia['mañana'];
-                  const resTarde = resumenDia['tarde'];
+
+                  // Franjas a pintar este día: las que trae el resumen (que ya
+                  // respeta el dispositivo de la semana) más las que tengan
+                  // guardia asignada. En una semana normal salen mañana y tarde.
+                  const turnosDelDia = TODOS_LOS_TURNOS.filter(
+                    t => resumenDia[t] || guardiasDelDia.some(g => g.turno === t)
+                  );
+
+                  const COLOR_LLENO: Record<TurnoKey, string> = {
+                    'mañana': 'bg-green-100 text-green-700 border-green-500',
+                    'tarde': 'bg-blue-100 text-blue-700 border-blue-500',
+                    'noche': 'bg-indigo-100 text-indigo-700 border-indigo-500',
+                  };
+                  const HOVER_LLENO: Record<TurnoKey, string> = {
+                    'mañana': 'hover:bg-green-200',
+                    'tarde': 'hover:bg-blue-200',
+                    'noche': 'hover:bg-indigo-200',
+                  };
 
                   // Reglas de color por número de indicativos asignados
-                  const colorPorCount = (turno: 'mañana' | 'tarde', count: number) => {
-                    if (count >= 4) return turno === 'mañana'
-                      ? 'bg-green-100 text-green-700 border-green-500 hover:bg-green-200'
-                      : 'bg-blue-100 text-blue-700 border-blue-500 hover:bg-blue-200';
+                  const colorPorCount = (turno: TurnoKey, count: number) => {
+                    if (count >= 4) return `${COLOR_LLENO[turno]} ${HOVER_LLENO[turno]}`;
                     if (count === 3) return 'bg-amber-100 text-amber-700 border-amber-500 hover:bg-amber-200';
                     return 'bg-red-100 text-red-700 border-red-500 hover:bg-red-200';
                   };
 
                   // Color para disponibilidad estimada (sin guardias asignadas, usa total del resumen)
-                  const colorDisponibilidad = (turno: 'mañana' | 'tarde', total: number) => {
-                    if (total >= 4) return turno === 'mañana'
-                      ? 'bg-green-100 text-green-700 border-green-500'
-                      : 'bg-blue-100 text-blue-700 border-blue-500';
+                  const colorDisponibilidad = (turno: TurnoKey, total: number) => {
+                    if (total >= 4) return COLOR_LLENO[turno];
                     if (total === 3) return 'bg-amber-100 text-amber-700 border-amber-500';
                     return 'bg-red-100 text-red-700 border-red-500';
                   };
@@ -528,40 +592,35 @@ function CalendarView({ eventos, guardias, resumenDisponibilidad, onEventClick, 
 
                   return (
                     <>
-                      {mostrarGuardias && guardiasMañana.length > 0 ? (
-                        <div
-                          className={`text-[9px] px-1.5 py-1 rounded border-l-2 cursor-pointer ${colorPorCount('mañana', guardiasMañana.length)}`}
-                          onClick={(e) => { e.stopPropagation(); onGuardiaClick(day.date, 'mañana', guardiasMañana); }}
-                          title={`Asignados: ${guardiasMañana.length}${resMañana ? ` | Disponibles: ${resMañana.total}` : ''}`}
-                        >
-                          <span className="font-bold">T. Mañana</span> ({guardiasMañana.length})
-                        </div>
-                      ) : resMañana ? (
-                        <div
-                          className={`text-[9px] px-1.5 py-1 rounded border-l-2 cursor-pointer ${colorDisponibilidad('mañana', resMañana.total)}`}
-                          onClick={(e) => { e.stopPropagation(); e.preventDefault(); onGuardiaClick(day.date, 'mañana', guardiasMañana); }}
-                          title={`Mañana: ${resMañana.total} disponibles | Resp: ${resMañana.responsables} | Carnet: ${resMañana.conCarnet}`}
-                        >
-                          <span className="font-bold">Mañana</span> <span className="font-semibold">{resMañana.total}</span>
-                        </div>
-                      ) : null}
-                      {mostrarGuardias && guardiasTarde.length > 0 ? (
-                        <div
-                          className={`text-[9px] px-1.5 py-1 rounded border-l-2 cursor-pointer ${colorPorCount('tarde', guardiasTarde.length)}`}
-                          onClick={(e) => { e.stopPropagation(); onGuardiaClick(day.date, 'tarde', guardiasTarde); }}
-                          title={`Asignados: ${guardiasTarde.length}${resTarde ? ` | Disponibles: ${resTarde.total}` : ''}`}
-                        >
-                          <span className="font-bold">T. Tarde</span> ({guardiasTarde.length})
-                        </div>
-                      ) : resTarde ? (
-                        <div
-                          className={`text-[9px] px-1.5 py-1 rounded border-l-2 cursor-pointer ${colorDisponibilidad('tarde', resTarde.total)}`}
-                          onClick={(e) => { e.stopPropagation(); e.preventDefault(); onGuardiaClick(day.date, 'tarde', guardiasTarde); }}
-                          title={`Tarde: ${resTarde.total} disponibles | Resp: ${resTarde.responsables} | Carnet: ${resTarde.conCarnet}`}
-                        >
-                          <span className="font-bold">Tarde</span> <span className="font-semibold">{resTarde.total}</span>
-                        </div>
-                      ) : null}
+                      {turnosDelDia.map(turno => {
+                        const guardiasTurno = guardiasDelDia.filter(g => g.turno === turno);
+                        const res = resumenDia[turno];
+                        const etiqueta = TURNOS_CATALOGO[turno].label;
+
+                        if (mostrarGuardias && guardiasTurno.length > 0) {
+                          return (
+                            <div
+                              key={turno}
+                              className={`text-[9px] px-1.5 py-1 rounded border-l-2 cursor-pointer ${colorPorCount(turno, guardiasTurno.length)}`}
+                              onClick={(e) => { e.stopPropagation(); onGuardiaClick(day.date, turno, guardiasTurno); }}
+                              title={`Asignados: ${guardiasTurno.length}${res ? ` | Disponibles: ${res.total}` : ''}`}
+                            >
+                              <span className="font-bold">T. {etiqueta}</span> ({guardiasTurno.length})
+                            </div>
+                          );
+                        }
+                        if (!res) return null;
+                        return (
+                          <div
+                            key={turno}
+                            className={`text-[9px] px-1.5 py-1 rounded border-l-2 cursor-pointer ${colorDisponibilidad(turno, res.total)}`}
+                            onClick={(e) => { e.stopPropagation(); e.preventDefault(); onGuardiaClick(day.date, turno, guardiasTurno); }}
+                            title={`${etiqueta}: ${res.total} disponibles | Resp: ${res.responsables} | Carnet: ${res.conCarnet}`}
+                          >
+                            <span className="font-bold">{etiqueta}</span> <span className="font-semibold">{res.total}</span>
+                          </div>
+                        );
+                      })}
                     </>
                   );
                 })()}

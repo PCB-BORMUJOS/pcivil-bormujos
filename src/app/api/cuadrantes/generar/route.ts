@@ -4,6 +4,8 @@ import { registrarAudit, getUsuarioAudit } from '@/lib/audit'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { safeJsonParse } from '@/lib/utils'
+import { getConfigSemana } from '@/lib/turnos-server'
+import { DIAS_SEMANA, mismoTurno } from '@/lib/turnos'
 
 // POST: Generar cuadrante automáticamente basado en disponibilidades
 export async function POST(request: NextRequest) {
@@ -67,6 +69,9 @@ export async function POST(request: NextRequest) {
             })
         }
 
+        // Dispositivo de la semana: sin fila de SemanaEspecial son mañana y tarde
+        const configSemana = await getConfigSemana(semanaInicio)
+
         // Generar sugerencias
         const sugerencias: any[] = []
         const usuariosAsignados = new Set<string>()
@@ -77,22 +82,24 @@ export async function POST(request: NextRequest) {
             conteoAsignaciones[d.usuarioId] = 0
         })
 
-        const diasSemana = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo']
+        const diasSemana = DIAS_SEMANA
         const inicioSemana = new Date(semanaInicio)
 
         diasSemana.forEach((dia, index) => {
             const fechaDia = new Date(inicioSemana)
             fechaDia.setDate(fechaDia.getDate() + index)
 
-            // Turnos para este día
-            const turnos = ['mañana', 'tarde']
+            // Turnos activos de este día. En una semana sin dispositivo especial
+            // son mañana y tarde; en una especial puede haber noche, y hay días
+            // que pueden no tener ningún turno.
+            const turnos = configSemana.turnosPorDia[dia]
 
             turnos.forEach(turno => {
                 // Filtrar usuarios disponibles para este día y turno
                 const disponiblesParaTurno = disponibilidades.filter(d => {
                     const detalles = safeJsonParse(d.detalles, {} as Record<string, string[]>)
                     const turnosDia = detalles[dia] || []
-                    return turnosDia.includes(turno)
+                    return turnosDia.some(t => mismoTurno(t, turno))
                 })
 
                 if (disponiblesParaTurno.length === 0) {

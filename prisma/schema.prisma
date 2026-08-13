@@ -2229,6 +2229,25 @@ model SemanaPublicada {
   @@map("semanas_publicadas")
 }
 
+/// Semanas con un dispositivo distinto al habitual (Feria, Navidad, Semana Santa,
+/// Romería...). Si una semana NO tiene fila aquí, rige el reparto habitual de
+/// mañana y tarde: nada del funcionamiento normal depende de este modelo.
+model SemanaEspecial {
+  id           String   @id @default(cuid())
+  semana       String   @unique  // YYYY-MM-DD (lunes de la semana)
+  nombre       String            // "Feria de Bormujos"
+  /// { lunes: ["mañana","tarde"], miercoles: ["mañana","tarde","noche"], ... }
+  /// Los días ausentes usan el reparto habitual.
+  turnosPorDia Json     @map("turnos_por_dia")
+  activa       Boolean  @default(true)
+  creadoPorId  String?  @map("creado_por_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@index([semana])
+  @@map("semanas_especiales")
+}
+
 model UbicacionVehiculo {
   id         String   @id @default(cuid())
   vehiculoId String

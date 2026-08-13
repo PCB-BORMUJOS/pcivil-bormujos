@@ -1,10 +1,15 @@
 'use client'
 
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { usePermisos } from '@/lib/permisos'
 import {
   Calendar, ChevronLeft, ChevronRight, RefreshCw, Save, Send, Zap,
-  Shield, Car, Minus, Plus, Clock, AlertTriangle, CheckCircle2, Info, X } from 'lucide-react'
+  Shield, Car, Minus, Plus, Clock, AlertTriangle, CheckCircle2, Info, X, Sparkles, Trash2 } from 'lucide-react'
+import {
+  DIAS_SEMANA, DIAS_LABEL, TURNOS_CATALOGO, TODOS_LOS_TURNOS,
+  configSemanaHabitual, mismoTurno, turnosPorDiaHabitual,
+  type ConfigSemana, type TurnoKey, type TurnosPorDia,
+} from '@/lib/turnos'
 
 interface UsuarioDisponible {
   id: string
@@ -82,10 +87,22 @@ const formatRange = (start: Date): string => {
 const DIAS = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo']
 const DIA_LABELS = ['LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB', 'DOM']
 
-const TURNOS = [
-  { key: 'mañana' as const, label: 'Mañana', defaultInicio: '09:00', defaultFin: '14:30' },
-  { key: 'tarde' as const, label: 'Tarde', defaultInicio: '17:00', defaultFin: '22:00' },
-]
+/** Colores de cada franja en la rejilla del cuadrante. */
+const COLOR_SLOT: Record<TurnoKey, { fondo: string; borde: string; icono: string; texto: string }> = {
+  'mañana': { fondo: '',                 borde: 'border-amber-100',  icono: 'text-amber-500',  texto: 'text-amber-600' },
+  'tarde':  { fondo: 'bg-slate-50/30',   borde: 'border-indigo-100', icono: 'text-indigo-500', texto: 'text-indigo-600' },
+  'noche':  { fondo: 'bg-slate-100/50',  borde: 'border-violet-200', icono: 'text-violet-500', texto: 'text-violet-600' },
+}
+
+/** Turnos del reparto habitual, en el formato que ya usaba esta pantalla. */
+function turnosDesdeConfig(config: ConfigSemana) {
+  return config.turnosUsados.map(key => ({
+    key,
+    label: TURNOS_CATALOGO[key].label,
+    defaultInicio: TURNOS_CATALOGO[key].defaultInicio,
+    defaultFin: TURNOS_CATALOGO[key].defaultFin,
+  }))
+}
 
 function calcularHorasEntreTiempos(inicio: string, fin: string): number {
   const [hI, mI] = inicio.split(':').map(Number)
@@ -107,6 +124,15 @@ export default function CuadrantesPage() {
   const [loading, setLoading] = useState(true)
   const [guardando, setGuardando] = useState(false)
   const [pendiente, setPendiente] = useState(false)
+  // Dispositivo de la semana. Por defecto el habitual (mañana y tarde), así que
+  // mientras no se marque como especial esta pantalla funciona igual que siempre.
+  const [configSemana, setConfigSemana] = useState<ConfigSemana>(() => configSemanaHabitual())
+  const TURNOS = useMemo(() => turnosDesdeConfig(configSemana), [configSemana])
+  // Editor del dispositivo especial de la semana
+  const [editorDispositivo, setEditorDispositivo] = useState(false)
+  const [dispNombre, setDispNombre] = useState('')
+  const [dispTurnos, setDispTurnos] = useState<TurnosPorDia>(() => turnosPorDiaHabitual())
+  const [guardandoDisp, setGuardandoDisp] = useState(false)
   const [horasSlot, setHorasSlot] = useState<Record<string, number>>({})
   const [guardandoHoras, setGuardandoHoras] = useState<Record<string, boolean>>({})
   // Horas individuales por persona por slot: key = `${uid}_${dateStr}_${turno}`
@@ -237,8 +263,7 @@ export default function CuadrantesPage() {
           const diaNombre = DIAS[idx]
           const turnosDia: string[] = detalles[diaNombre] || []
           TURNOS.forEach(({ key }) => {
-            const variantes = key === 'mañana' ? ['mañana', 'Mañana'] : ['tarde', 'Tarde']
-            if (turnosDia.some(t => variantes.includes(t))) {
+            if (turnosDia.some(t => mismoTurno(t, key))) {
               const sk = slotKey(dateStr, key)
               if (!dispMap[sk]) dispMap[sk] = []
               if (!dispMap[sk].find(u => u.id === disp.usuario.id)) {
@@ -313,6 +338,75 @@ export default function CuadrantesPage() {
       setLoading(false)
     }
   }, [semanaStart])
+
+  // Dispositivo de la semana (Feria, Navidad...). Ante cualquier fallo se
+  // mantiene el habitual, para no dejar el cuadrante sin turnos que rellenar.
+  const cargarConfigSemana = useCallback(async () => {
+    const semana = toDateStr(semanaStart)
+    try {
+      const res = await fetch(`/api/semanas-especiales?semana=${semana}`)
+      const data = res.ok ? await res.json() : null
+      setConfigSemana(data?.config ?? configSemanaHabitual())
+    } catch {
+      setConfigSemana(configSemanaHabitual())
+    }
+  }, [semanaStart])
+
+  useEffect(() => { cargarConfigSemana() }, [cargarConfigSemana])
+
+  const abrirEditorDispositivo = () => {
+    setDispNombre(configSemana.nombre ?? '')
+    setDispTurnos(configSemana.turnosPorDia)
+    setEditorDispositivo(true)
+  }
+
+  const alternarTurnoDia = (dia: typeof DIAS_SEMANA[number], turno: TurnoKey) => {
+    setDispTurnos(prev => {
+      const actuales = prev[dia] ?? []
+      const nuevos = actuales.includes(turno)
+        ? actuales.filter(t => t !== turno)
+        : TODOS_LOS_TURNOS.filter(t => t === turno || actuales.includes(t))
+      return { ...prev, [dia]: nuevos }
+    })
+  }
+
+  const guardarDispositivo = async () => {
+    if (!dispNombre.trim()) { alert('Ponle un nombre al dispositivo (por ejemplo, "Feria de Bormujos")'); return }
+    setGuardandoDisp(true)
+    try {
+      const res = await fetch('/api/semanas-especiales', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ semana: toDateStr(semanaStart), nombre: dispNombre.trim(), turnosPorDia: dispTurnos }),
+      })
+      const data = await res.json()
+      if (!res.ok) { alert(data.error || 'No se pudo guardar el dispositivo'); return }
+      setConfigSemana(data.config)
+      setEditorDispositivo(false)
+      cargarDatos()
+    } catch {
+      alert('Error de conexión al guardar el dispositivo')
+    } finally {
+      setGuardandoDisp(false)
+    }
+  }
+
+  const quitarDispositivo = async () => {
+    if (!confirm('¿Devolver esta semana al reparto habitual de mañana y tarde?\n\nLas disponibilidades ya enviadas no se borran, pero las franjas que dejen de existir no se tendrán en cuenta.')) return
+    setGuardandoDisp(true)
+    try {
+      const res = await fetch(`/api/semanas-especiales?semana=${toDateStr(semanaStart)}`, { method: 'DELETE' })
+      const data = await res.json()
+      if (!res.ok) { alert(data.error || 'No se pudo quitar el dispositivo'); return }
+      setConfigSemana(data.config)
+      setEditorDispositivo(false)
+      cargarDatos()
+    } catch {
+      alert('Error de conexión al quitar el dispositivo')
+    } finally {
+      setGuardandoDisp(false)
+    }
+  }
 
   useEffect(() => {
     cargarDatos()
@@ -641,6 +735,18 @@ export default function CuadrantesPage() {
               <ChevronRight size={17} />
             </button>
           </div>
+          {isAdmin && (
+            <button
+              onClick={abrirEditorDispositivo}
+              className={`px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 border transition-colors ${configSemana.esEspecial
+                ? 'bg-violet-600 text-white border-violet-600 hover:bg-violet-700'
+                : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}
+              title="Configurar las franjas de esta semana (Feria, Navidad, Semana Santa...)"
+            >
+              <Sparkles size={14} />
+              {configSemana.esEspecial ? configSemana.nombre : 'Dispositivo especial'}
+            </button>
+          )}
           <button
             onClick={aplicarPropuesta}
             disabled={loading || !Object.keys(sugerencias).length}
@@ -734,10 +840,21 @@ export default function CuadrantesPage() {
             ))}
           </div>
           {TURNOS.map((turno, turnoIdx) => (
-            <div key={turno.key} className={`grid grid-cols-7 min-w-[1200px] ${turnoIdx === 0 ? 'border-b-2 border-slate-200' : ''}`}>
+            <div key={turno.key} className={`grid grid-cols-7 min-w-[1200px] ${turnoIdx < TURNOS.length - 1 ? 'border-b-2 border-slate-200' : ''}`}>
               {weekDays.map((day, dayIdx) => {
                 const dateStr = toDateStr(day)
                 const sk = slotKey(dateStr, turno.key)
+                // En una semana con dispositivo especial hay días que no llevan
+                // esta franja: el hueco se marca y no admite asignaciones.
+                const diaClave = DIAS_SEMANA[dayIdx]
+                if (!(configSemana.turnosPorDia[diaClave] ?? []).includes(turno.key)) {
+                  return (
+                    <div key={dayIdx} className="border-r border-slate-100 last:border-r-0 p-2.5 bg-slate-100/70 flex flex-col items-center justify-center min-h-[120px]">
+                      <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">{turno.label}</span>
+                      <span className="text-[10px] text-slate-400 mt-0.5">Sin servicio</span>
+                    </div>
+                  )
+                }
                 const disponibles = disponibilidades[sk] || []
                 const asignados = asignaciones[sk] || []
                 const sugeridosSk = sugerencias[sk] || []
@@ -752,12 +869,12 @@ export default function CuadrantesPage() {
                 const slotOk = asignadosOp.length >= cap
                 const slotParcial = asignadosOp.length > 0 && asignadosOp.length < cap
                 return (
-                  <div key={dayIdx} className={`border-r border-slate-100 last:border-r-0 p-2.5 ${dayIdx >= 5 ? 'bg-slate-50/60' : ''} ${turno.key === 'tarde' ? 'bg-slate-50/30' : ''}`}>
+                  <div key={dayIdx} className={`border-r border-slate-100 last:border-r-0 p-2.5 ${dayIdx >= 5 ? 'bg-slate-50/60' : ''} ${COLOR_SLOT[turno.key].fondo}`}>
                     {/* Cabecera del slot: nombre del turno + contador de cobertura */}
-                    <div className={`flex items-center justify-between mb-1.5 pb-1 border-b ${turno.key === 'mañana' ? 'border-amber-100' : 'border-indigo-100'}`}>
+                    <div className={`flex items-center justify-between mb-1.5 pb-1 border-b ${COLOR_SLOT[turno.key].borde}`}>
                       <div className="flex items-center gap-1">
-                        <Clock size={12} className={turno.key === 'mañana' ? 'text-amber-500' : 'text-indigo-500'} />
-                        <span className={`text-[11px] font-bold uppercase tracking-wide ${turno.key === 'mañana' ? 'text-amber-600' : 'text-indigo-600'}`}>{turno.label}</span>
+                        <Clock size={12} className={COLOR_SLOT[turno.key].icono} />
+                        <span className={`text-[11px] font-bold uppercase tracking-wide ${COLOR_SLOT[turno.key].texto}`}>{turno.label}</span>
                       </div>
                       <div className="flex items-center gap-0.5">
                         <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded ${slotOk ? 'bg-green-100 text-green-700' : slotParcial ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-400'}`}>
@@ -1325,6 +1442,109 @@ export default function CuadrantesPage() {
                 <button type="submit" className="px-5 py-2.5 bg-orange-500 text-white rounded-lg hover:bg-orange-600 font-medium">Crear Servicio Extraordinario</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Dispositivo especial de la semana (Feria, Navidad, Semana Santa...) */}
+      {editorDispositivo && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000] p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+              <div className="flex items-center gap-2">
+                <Sparkles size={18} className="text-violet-600" />
+                <div>
+                  <h3 className="font-bold text-slate-800">Dispositivo de la semana</h3>
+                  <p className="text-xs text-slate-500">{formatRange(semanaStart)}</p>
+                </div>
+              </div>
+              <button onClick={() => setEditorDispositivo(false)} className="text-slate-400 hover:text-slate-700"><X size={18} /></button>
+            </div>
+
+            <div className="p-6 space-y-5">
+              <div className="bg-blue-50 border border-blue-200 text-blue-800 rounded-lg p-3 text-xs flex items-start gap-2">
+                <Info size={14} className="flex-shrink-0 mt-0.5" />
+                <span>
+                  Marca qué franjas se prestan cada día. Los voluntarios verán exactamente estas casillas
+                  al enviar su disponibilidad. Si no configuras nada, la semana funciona con el reparto
+                  habitual de mañana y tarde.
+                </span>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1.5">Nombre del dispositivo</label>
+                <input
+                  value={dispNombre}
+                  onChange={e => setDispNombre(e.target.value)}
+                  placeholder="Feria de Bormujos"
+                  className="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-violet-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Franjas por día</label>
+                <div className="border border-slate-200 rounded-lg overflow-hidden">
+                  <div className="grid grid-cols-4 bg-slate-100 text-xs font-bold text-slate-600">
+                    <div className="p-2.5 border-r border-slate-200">Día</div>
+                    {TODOS_LOS_TURNOS.map((t, i) => (
+                      <div key={t} className={`p-2.5 text-center ${i < TODOS_LOS_TURNOS.length - 1 ? 'border-r border-slate-200' : ''}`}>
+                        {TURNOS_CATALOGO[t].label}
+                      </div>
+                    ))}
+                  </div>
+                  {DIAS_SEMANA.map(dia => {
+                    const activos = dispTurnos[dia] ?? []
+                    return (
+                      <div key={dia} className={`grid grid-cols-4 border-t border-slate-200 ${activos.length === 0 ? 'bg-slate-50' : ''}`}>
+                        <div className="p-2.5 text-sm font-medium text-slate-700 border-r border-slate-200">
+                          {DIAS_LABEL[dia]}
+                          {activos.length === 0 && <span className="block text-[10px] font-normal text-slate-400 uppercase">Sin servicio</span>}
+                        </div>
+                        {TODOS_LOS_TURNOS.map((t, i) => {
+                          const on = activos.includes(t)
+                          return (
+                            <div
+                              key={t}
+                              onClick={() => alternarTurnoDia(dia, t)}
+                              className={`p-2.5 flex justify-center cursor-pointer hover:bg-slate-50 ${i < TODOS_LOS_TURNOS.length - 1 ? 'border-r border-slate-200' : ''}`}
+                            >
+                              <div className={`w-6 h-6 rounded border-2 flex items-center justify-center transition-colors ${on ? TURNOS_CATALOGO[t].colorActivo : `border-slate-300 ${TURNOS_CATALOGO[t].colorHover}`}`}>
+                                {on && <CheckCircle2 size={13} />}
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )
+                  })}
+                </div>
+                <p className="text-[11px] text-slate-400 mt-1.5">
+                  El horario concreto de cada turno se fija después, slot a slot, en la propia rejilla del cuadrante.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between gap-3 px-6 py-4 border-t border-slate-200">
+              {configSemana.esEspecial ? (
+                <button
+                  onClick={quitarDispositivo}
+                  disabled={guardandoDisp}
+                  className="px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg text-sm font-medium flex items-center gap-1.5 disabled:opacity-50"
+                >
+                  <Trash2 size={14} /> Volver al reparto habitual
+                </button>
+              ) : <span />}
+              <div className="flex gap-3">
+                <button onClick={() => setEditorDispositivo(false)} className="px-5 py-2.5 text-slate-600 hover:bg-slate-100 rounded-lg font-medium text-sm">Cancelar</button>
+                <button
+                  onClick={guardarDispositivo}
+                  disabled={guardandoDisp}
+                  className="px-5 py-2.5 bg-violet-600 text-white rounded-lg hover:bg-violet-700 font-medium text-sm disabled:opacity-50"
+                >
+                  {guardandoDisp ? 'Guardando…' : 'Guardar dispositivo'}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

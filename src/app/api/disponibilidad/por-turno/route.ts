@@ -2,6 +2,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { mismoTurno, type TurnoKey } from '@/lib/turnos';
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions)
@@ -61,15 +62,13 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    // Filtrar los que tienen disponibilidad para ese turno específico
+    // Filtrar los que tienen disponibilidad para ese turno específico.
+    // La comparación ignora mayúsculas y acentos porque históricamente se han
+    // guardado variantes ("Mañana" y "mañana").
     const disponiblesTurno = disponibilidades.filter((disp) => {
       const detalles = disp.detalles as Record<string, string[]>;
       const turnosDelDia = detalles[diaSemanaNombre] || [];
-      if (turno === 'mañana') {
-        return turnosDelDia.includes('Mañana') || turnosDelDia.includes('mañana');
-      } else {
-        return turnosDelDia.includes('Tarde') || turnosDelDia.includes('tarde');
-      }
+      return turnosDelDia.some(t => mismoTurno(t, turno as TurnoKey));
     });
 
     const voluntariosData = disponiblesTurno.map((disp) => ({
