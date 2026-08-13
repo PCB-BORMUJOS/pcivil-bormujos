@@ -30,11 +30,12 @@ const ESTADOS: Record<Estado, { label: string; color: string }> = {
   error:      { label: 'Error',               color: 'text-red-600' },
 }
 
-// Recorta las firmas de la página 1. Los PDF están aplanados (sin AcroForm),
-// así que se usa la posición REAL del recuadro de firma medida sobre el render
-// del propio parte (pdf-generator-v3). Estas fracciones son idénticas en todos
-// los partes del año. Se recorta el recuadro COMPLETO (se conserva el marco →
-// sin distorsión al colocarlo en el campo de firma) y se deja fondo transparente.
+// Extrae las firmas de la página 1 de forma robusta y AGNÓSTICA a la plantilla.
+// Idea: dentro de la banda de firmas de cada firmante se aísla la rúbrica por
+// COMPONENTES CONEXOS de tinta. El garabato es un trazo grande y alto; las
+// etiquetas impresas son glifos pequeños y la línea base es fina → se descartan.
+// Así no se cuela ni el rótulo, ni el indicativo, ni líneas del recuadro.
+// La banda/columnas se eligen según la plantilla detectada por sus campos.
 function extraerFirmasDeCanvas(
   canvas: HTMLCanvasElement,
   anns: Array<{ fieldName?: string; rect?: number[] }>
@@ -42,56 +43,92 @@ function extraerFirmasDeCanvas(
   const PH  = canvas.height
   const PW  = canvas.width
   const ctx = canvas.getContext('2d')!
-  void anns // sin AcroForm: geometría fija medida por píxeles
 
-  // Recuadro de firma medido (fracción de la página). Y común a las 3 columnas.
-  const Y_TOP = 0.9044, Y_BOT = 0.9394
-  const COLS_X: Array<[number, number]> = [
-    [0.0469, 0.3333], // INDICATIVO QUE INFORMA
-    [0.3554, 0.6419], // RESPONSABLE DE TURNO
-    [0.6640, 0.9505], // VB JEFE DE SERVICIO
-  ]
+  // ¿Plantilla OFICIAL (AcroForm) o la generada por la app (aplanada)?
+  const nombres = anns.map(a => (a.fieldName || '').toUpperCase())
+  const esOficial = nombres.some(n => /INDICATIVO INFORMA|RESPONSABLE TURNO|CUMPLIMENTA/.test(n))
+
+  // Banda vertical (Y) y columnas (X) del área de firmas, en fracción de página.
+  // Medidas sobre el render real de cada plantilla.
+  const BAND: [number, number] = esOficial ? [0.866, 0.921] : [0.9044, 0.9394]
+  const COLS: Array<[number, number]> = esOficial
+    ? [[0.03, 0.29], [0.29, 0.50], [0.50, 0.955]]   // informa / responsable / VB jefe
+    : [[0.0469, 0.3333], [0.3554, 0.6419], [0.6640, 0.9505]]
 
   const extraerRubrica = (colIndex: number): string | null => {
-    // Recuadro exacto + pequeño margen interior (2 px) para descartar el borde.
-    const INSET = 2
-    const [fxa, fxb] = COLS_X[colIndex]
-    const x0 = Math.min(PW - 1, Math.round(fxa * PW) + INSET)
-    const x1 = Math.max(x0 + 1, Math.round(fxb * PW) - INSET)
-    const y0 = Math.min(PH - 1, Math.round(Y_TOP * PH) + INSET)
-    const y1 = Math.max(y0 + 1, Math.round(Y_BOT * PH) - INSET)
+    const [fxa, fxb] = COLS[colIndex]
+    const x0 = Math.max(0, Math.round(fxa * PW))
+    const x1 = Math.min(PW, Math.round(fxb * PW))
+    const y0 = Math.max(0, Math.round(BAND[0] * PH))
+    const y1 = Math.min(PH, Math.round(BAND[1] * PH))
     const w = x1 - x0, h = y1 - y0
     if (w <= 6 || h <= 6) return null
 
-    const img = ctx.getImageData(x0, y0, w, h)
-    const d = img.data
-    // Umbrales de tinta: la rúbrica es NEUTRA y oscura. El fondo del recuadro
-    // (gris claro 241/245/249) y su borde (203/213/225, lum≈211) son claros →
-    // transparentes. Cualquier color saturado (pie azul, logos) → transparente.
-    const INK = 160      // < INK: trazo pleno
-    const SOFT = 205     // INK..SOFT: antialias del trazo (semitransparente)
-    const SATMAX = 45    // saturación máxima para considerarse tinta neutra
+    const d = ctx.getImageData(x0, y0, w, h).data
+    const n = w * h
 
+    // Máscara de tinta: NEUTRA (baja saturación) y oscura. Excluye fondo claro,
+    // el gris del recuadro, el azul del pie y cualquier logo de color.
+    const ink = new Uint8Array(n)
+    for (let i = 0; i < n; i++) {
+      const s = i * 4
+      const r = d[s], g = d[s + 1], b = d[s + 2]
+      const L = 0.299 * r + 0.587 * g + 0.114 * b
+      const S = Math.max(r, g, b) - Math.min(r, g, b)
+      if (L < 150 && S < 45) ink[i] = 1
+    }
+
+    // Componentes conexos (8-conexión) por pila. Guardamos tamaño y bounding box.
+    const lab = new Int32Array(n).fill(-1)
+    const comps: Array<{ pix: number; bw: number; bh: number }> = []
+    const stack: number[] = []
+    for (let p = 0; p < n; p++) {
+      if (!ink[p] || lab[p] >= 0) continue
+      const id = comps.length
+      let pix = 0, minx = w, miny = h, maxx = 0, maxy = 0
+      lab[p] = id; stack.push(p)
+      while (stack.length) {
+        const q = stack.pop()!
+        const qx = q % w, qy = (q / w) | 0
+        pix++
+        if (qx < minx) minx = qx; if (qx > maxx) maxx = qx
+        if (qy < miny) miny = qy; if (qy > maxy) maxy = qy
+        for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+          if (!dx && !dy) continue
+          const nx = qx + dx, ny = qy + dy
+          if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue
+          const np = ny * w + nx
+          if (ink[np] && lab[np] < 0) { lab[np] = id; stack.push(np) }
+        }
+      }
+      comps.push({ pix, bw: maxx - minx + 1, bh: maxy - miny + 1 })
+    }
+
+    // Nos quedamos con los componentes "de firma": trazo GRANDE y ALTO. Se
+    // descartan glifos de texto (bajos) y líneas finas (alto < 6 px).
+    const keep = new Set<number>()
+    for (let id = 0; id < comps.length; id++) {
+      const c = comps[id]
+      if (c.pix < 150) continue          // ruido / puntos
+      if (c.bh < 6) continue             // línea recta fina (base / divisor)
+      if (c.bh < 0.40 * h) continue      // texto de una sola línea → fuera
+      keep.add(id)
+    }
+    if (keep.size === 0) return null      // sin firma (recuadro vacío)
+
+    // Salida: trazo en negro puro sobre fondo transparente, tamaño de la banda
+    // (se conserva la posición/proporción → sin distorsión al inyectarla).
     const out = document.createElement('canvas')
     out.width = w; out.height = h
     const octx = out.getContext('2d')!
     const outImg = octx.createImageData(w, h)
     const od = outImg.data
-    let tinta = 0
-    for (let i = 0; i < w * h; i++) {
-      const s = i * 4
-      const r = d[s], g = d[s + 1], b = d[s + 2]
-      const L = 0.299 * r + 0.587 * g + 0.114 * b
-      const S = Math.max(r, g, b) - Math.min(r, g, b)
-      let alpha = 0
-      if (S < SATMAX) {
-        if (L < INK) { alpha = 255; tinta++ }
-        else if (L < SOFT) { alpha = Math.round(((SOFT - L) / (SOFT - INK)) * 255); if (alpha > 120) tinta++ }
+    for (let p = 0; p < n; p++) {
+      if (ink[p] && keep.has(lab[p])) {
+        const s = p * 4
+        od[s] = 17; od[s + 1] = 17; od[s + 2] = 17; od[s + 3] = 255
       }
-      // Trazo en negro puro (más limpio y uniforme que conservar el gris del render).
-      od[s] = 17; od[s + 1] = 17; od[s + 2] = 17; od[s + 3] = alpha
     }
-    if (tinta < 30) return null // recuadro vacío (sin firma)
     octx.putImageData(outImg, 0, 0)
     return out.toDataURL('image/png')
   }
