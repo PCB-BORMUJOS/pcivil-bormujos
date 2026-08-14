@@ -6,7 +6,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { usePermisos } from '@/lib/permisos'
-import { generarPropuestaGasto, TIPOS_COMPRA } from '@/lib/informe-compras'
+import { generarPropuestaGasto, TIPOS_COMPRA, etiquetaTipoCompra } from '@/lib/informe-compras'
 import { generar09A, DATOS_09A_VACIOS, type Datos09A } from '@/lib/formulario-09a'
 import {
   ShoppingCart, RefreshCw, FolderOpen, FileText, Euro, CheckCircle2, Clock,
@@ -55,6 +55,7 @@ export default function ComprasPage() {
   const [guardando, setGuardando] = useState(false)
   const [aviso, setAviso] = useState<string | null>(null)
   const [form, setForm] = useState<any>({})
+  const [lineas, setLineas] = useState<any[]>([])
   const [nuevaOferta, setNuevaOferta] = useState<any>({ proveedorNombre: '', importe: '', iva: '21' })
   const [nuevaFactura, setNuevaFactura] = useState<any>({ numeroFactura: '', importeBase: '', iva: '21' })
   const [arrastrando, setArrastrando] = useState<string | null>(null)
@@ -86,6 +87,7 @@ export default function ComprasPage() {
       const r = await fetch(`/api/compras?tipo=expediente&id=${id}`)
       const d = await r.json()
       setExpediente(d.expediente)
+      setLineas(d.expediente?.lineas || [])
       setForm({
         titulo: d.expediente?.titulo || '', objeto: d.expediente?.objeto || '',
         justificacion: d.expediente?.justificacion || '', propuestaGasto: d.expediente?.propuestaGasto || '',
@@ -303,7 +305,37 @@ export default function ComprasPage() {
 
   const areas = useMemo(() => Array.from(new Set(peticiones.map(p => p.areaOrigen).filter(Boolean))), [peticiones])
   const alertasTotal = kpis ? Object.values(kpis.alertas || {}).reduce((s: number, n: any) => s + Number(n), 0) : 0
-  const ofertasMin = (t?: string) => (t === 'menor3000' || t === 'mayor3000') ? 3 : 1
+  // Compra directa: 1 oferta. El resto de modalidades exigen 3 presupuestos.
+  const ofertasMin = (t?: string) => (!t || t === 'directa_menor500') ? 1 : 3
+
+  // Edita una línea en el estado local; recalcula el importe al cambiar cantidad/precio.
+  const editarLinea = (i: number, patch: any) => setLineas(prev => prev.map((l, idx) => {
+    if (idx !== i) return l
+    const nl = { ...l, ...patch }
+    if ('cantidad' in patch || 'precioUnitario' in patch) {
+      const c = parseFloat(String(nl.cantidad).replace(',', '.')) || 0
+      const p = (nl.precioUnitario === '' || nl.precioUnitario === null || nl.precioUnitario === undefined)
+        ? null : parseFloat(String(nl.precioUnitario).replace(',', '.'))
+      if (p !== null && !Number.isNaN(p)) nl.importeTotal = +(c * p).toFixed(2)
+    }
+    return nl
+  }))
+
+  // Guarda una línea (unidades, precio unidad, importe) en el expediente.
+  const guardarLinea = async (l: any) => {
+    setGuardando(true)
+    try {
+      const r = await fetch('/api/compras?tipo=linea', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: l.id, descripcion: l.descripcion, unidad: l.unidad,
+          cantidad: l.cantidad, precioUnitario: l.precioUnitario, importeTotal: l.importeTotal,
+        }),
+      })
+      if (r.ok) { setAviso('Línea actualizada.'); await abrirExpediente(expediente.id); await cargar() }
+      else setAviso('No se ha podido guardar la línea')
+    } catch { setAviso('Error al guardar la línea') } finally { setGuardando(false) }
+  }
 
   if (!isAdmin) return (
     <div className="flex flex-col items-center justify-center h-96 text-slate-400">
@@ -533,6 +565,9 @@ export default function ComprasPage() {
                       <input value={form.objeto} onChange={e => setForm({ ...form, objeto: e.target.value })} className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm" /></div>
                     <div><label className="block text-sm font-medium text-slate-700 mb-1">Modalidad de compra</label>
                       <select value={form.tipoCompra} onChange={e => setForm({ ...form, tipoCompra: e.target.value })} className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm">
+                        {form.tipoCompra && !TIPOS_COMPRA[form.tipoCompra] && (
+                          <option value={form.tipoCompra}>{etiquetaTipoCompra(form.tipoCompra)}</option>
+                        )}
                         {Object.entries(TIPOS_COMPRA).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                       </select></div>
                     <div><label className="block text-sm font-medium text-slate-700 mb-1">Partida presupuestaria</label>
@@ -569,21 +604,53 @@ export default function ComprasPage() {
                   <div><label className="block text-sm font-medium text-slate-700 mb-1">Propuesta de gasto</label>
                     <textarea value={form.propuestaGasto} onChange={e => setForm({ ...form, propuestaGasto: e.target.value })} rows={4} className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm" /></div>
 
-                  {expediente.lineas?.length > 0 && (
+                  {lineas.length > 0 && (
                     <div className="border border-slate-200 rounded-xl overflow-hidden">
                       <p className="bg-slate-50 px-4 py-2.5 text-xs font-bold text-slate-600 uppercase tracking-wide border-b border-slate-200">Detalle del suministro</p>
-                      <table className="w-full text-sm">
-                        <tbody className="divide-y divide-slate-100">
-                          {expediente.lineas.map((l: any) => (
-                            <tr key={l.id}>
-                              <td className="px-4 py-2.5 text-slate-700">{l.descripcion}</td>
-                              <td className="px-4 py-2.5 text-center text-slate-600 whitespace-nowrap">{l.cantidad} {l.unidad}</td>
-                              <td className="px-4 py-2.5 text-center text-slate-600 whitespace-nowrap">{fmtEur(l.precioUnitario)}</td>
-                              <td className="px-4 py-2.5 text-right font-semibold whitespace-nowrap">{fmtEur(l.importeTotal)}</td>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="text-[11px] text-slate-500 uppercase tracking-wide bg-slate-50/60">
+                              <th className="px-3 py-2 text-left font-semibold">Descripción</th>
+                              <th className="px-3 py-2 text-center font-semibold">Unidades</th>
+                              <th className="px-3 py-2 text-center font-semibold">Unidad</th>
+                              <th className="px-3 py-2 text-center font-semibold">Precio/ud (€)</th>
+                              <th className="px-3 py-2 text-center font-semibold">Importe (€)</th>
+                              <th className="px-3 py-2"></th>
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100">
+                            {lineas.map((l: any, i: number) => (
+                              <tr key={l.id}>
+                                <td className="px-2 py-1.5">
+                                  <input value={l.descripcion ?? ''} onChange={e => editarLinea(i, { descripcion: e.target.value })}
+                                    className="w-full min-w-[140px] px-2 py-1.5 border border-slate-200 rounded-lg text-sm" />
+                                </td>
+                                <td className="px-2 py-1.5">
+                                  <input type="number" step="0.001" value={l.cantidad ?? ''} onChange={e => editarLinea(i, { cantidad: e.target.value })}
+                                    className="w-20 px-2 py-1.5 border border-slate-200 rounded-lg text-sm text-center" />
+                                </td>
+                                <td className="px-2 py-1.5">
+                                  <input value={l.unidad ?? ''} onChange={e => editarLinea(i, { unidad: e.target.value })}
+                                    className="w-24 px-2 py-1.5 border border-slate-200 rounded-lg text-sm text-center" />
+                                </td>
+                                <td className="px-2 py-1.5">
+                                  <input type="number" step="0.0001" value={l.precioUnitario ?? ''} onChange={e => editarLinea(i, { precioUnitario: e.target.value })}
+                                    className="w-24 px-2 py-1.5 border border-slate-200 rounded-lg text-sm text-right" />
+                                </td>
+                                <td className="px-2 py-1.5">
+                                  <input type="number" step="0.01" value={l.importeTotal ?? ''} onChange={e => editarLinea(i, { importeTotal: e.target.value })}
+                                    className="w-28 px-2 py-1.5 border border-slate-200 rounded-lg text-sm text-right font-semibold" />
+                                </td>
+                                <td className="px-2 py-1.5 text-right">
+                                  <button onClick={() => guardarLinea(l)} disabled={guardando}
+                                    className="px-2.5 py-1.5 text-xs font-semibold text-violet-700 bg-violet-50 hover:bg-violet-100 border border-violet-200 rounded-lg disabled:opacity-50">Guardar</button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
                   )}
                 </>

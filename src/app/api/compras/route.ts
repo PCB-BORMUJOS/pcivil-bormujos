@@ -22,9 +22,9 @@ const dec = (v: any) => v === null || v === undefined ? null : Number(v)
 
 /** Umbrales de referencia para el número de ofertas exigibles. */
 function ofertasExigidas(tipoCompra?: string | null): number {
-  if (tipoCompra === 'mayor3000') return 3
-  if (tipoCompra === 'menor3000') return 3
-  return 1
+  // Compra directa: 1 oferta. El resto de modalidades exigen 3 presupuestos.
+  if (!tipoCompra || tipoCompra === 'directa_menor500') return 1
+  return 3
 }
 
 async function siguienteNumero(ejercicio: number): Promise<string> {
@@ -394,7 +394,17 @@ export async function PUT(request: NextRequest) {
         'tipoCompra', 'informeTecnico', 'propuestaGasto', 'numeroRC', 'plazoEntrega', 'responsable', 'estado',
       ]
       const datos: any = {}
-      campos.forEach(c => { if (body[c] !== undefined) datos[c] = body[c] || null })
+      campos.forEach(c => {
+        if (body[c] === undefined) return
+        // 'titulo' es obligatorio (NOT NULL): nunca se guarda vacío/null; si viene
+        // vacío se conserva el valor anterior para no romper el guardado completo.
+        if (c === 'titulo') {
+          const t = typeof body.titulo === 'string' ? body.titulo.trim() : body.titulo
+          if (t) datos.titulo = t
+          return
+        }
+        datos[c] = body[c] || null
+      })
       if (body.importeEstimado !== undefined) datos.importeEstimado = num(body.importeEstimado)
       if (body.importeAdjudicado !== undefined) datos.importeAdjudicado = num(body.importeAdjudicado)
       if (body.partidaId !== undefined) datos.partidaId = body.partidaId || null
@@ -409,6 +419,32 @@ export async function PUT(request: NextRequest) {
       }
       await registrarAudit({ accion: 'UPDATE', entidad: 'ExpedienteCompra', entidadId: id, descripcion: `Expediente ${expediente.numero} actualizado`, usuarioId, usuarioNombre, modulo: 'Compras', datosAnteriores: anterior, datosNuevos: expediente })
       return NextResponse.json({ expediente })
+    }
+
+    // Edición de una línea de detalle (unidades, precio unidad, importe).
+    if (tipo === 'linea') {
+      const actual = await prisma.lineaExpediente.findUnique({ where: { id } })
+      if (!actual) return NextResponse.json({ error: 'Línea no encontrada' }, { status: 404 })
+
+      const datos: any = {}
+      if (body.descripcion !== undefined) datos.descripcion = String(body.descripcion || '').trim() || actual.descripcion
+      if (body.unidad !== undefined) datos.unidad = String(body.unidad || '').trim() || 'unidades'
+      if (body.cantidad !== undefined) datos.cantidad = num(body.cantidad) ?? 0
+      if (body.precioUnitario !== undefined) datos.precioUnitario = num(body.precioUnitario)
+      if (body.iva !== undefined) datos.iva = num(body.iva) ?? 21
+
+      // Importe: si se envía explícito se respeta; si no, se recalcula con los
+      // valores efectivos (cantidad × precio unidad).
+      if (body.importeTotal !== undefined && body.importeTotal !== '' && body.importeTotal !== null) {
+        datos.importeTotal = num(body.importeTotal)
+      } else if (body.cantidad !== undefined || body.precioUnitario !== undefined) {
+        const cant = datos.cantidad ?? dec(actual.cantidad) ?? 0
+        const precio = datos.precioUnitario ?? dec(actual.precioUnitario)
+        datos.importeTotal = (precio !== null && precio !== undefined) ? +(precio * cant).toFixed(2) : null
+      }
+
+      const linea = await prisma.lineaExpediente.update({ where: { id }, data: datos })
+      return NextResponse.json({ linea })
     }
 
     // Adjudicación: se elige la oferta ganadora y se propaga al expediente.

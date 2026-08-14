@@ -62,11 +62,23 @@ const eur = (n?: number | null) => (n === null || n === undefined)
   ? '-'
   : n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' EUR'
 
+// Modalidades de compra (las que se ofrecen en el desplegable, en orden).
 export const TIPOS_COMPRA: Record<string, string> = {
-  directa_menor500: 'Compra directa (importe inferior a 500 EUR)',
+  directa_menor500: 'Compra directa (importe inferior a 500 €)',
+  superior500: 'Compra superior a 500 € (requiere RC y 3 presupuestos)',
+  contrato_menor: 'Contrato menor (superior a 15.000 €: 3 presupuestos y expediente completo)',
+  contrato_mayor: 'Contrato mayor (licitación)',
+}
+
+// Etiquetas heredadas (expedientes antiguos) para que sigan mostrándose bien.
+export const TIPOS_COMPRA_LEGACY: Record<string, string> = {
   menor3000: 'Contrato menor (se recaban tres ofertas)',
   mayor3000: 'Contrato menor de importe elevado (tres ofertas y expediente)',
 }
+
+// Devuelve la etiqueta de una modalidad, incluyendo las heredadas.
+export const etiquetaTipoCompra = (k?: string | null): string =>
+  (k && (TIPOS_COMPRA[k] || TIPOS_COMPRA_LEGACY[k])) || k || '-'
 
 export async function generarPropuestaGasto(d: DatosPropuesta): Promise<{ referencia: string }> {
   const hoy = new Date()
@@ -148,7 +160,7 @@ export async function generarPropuestaGasto(d: DatosPropuesta): Promise<{ refere
   const filas: [string, string][] = [
     ['Numero de expediente', `${d.numero} (ejercicio ${d.ejercicio})`],
     ['Objeto', d.objeto || d.titulo],
-    ['Modalidad', TIPOS_COMPRA[d.tipoCompra || ''] || d.tipoCompra || '-'],
+    ['Modalidad', etiquetaTipoCompra(d.tipoCompra).replace(/€/g, 'EUR')],
     ['Partida presupuestaria', d.partida || 'Pendiente de asignar'],
     ['Importe estimado', eur(d.importeEstimado)],
     ...(d.importeAdjudicado ? [['Importe adjudicado', eur(d.importeAdjudicado)] as [string, string]] : []),
