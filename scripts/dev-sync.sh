@@ -36,5 +36,17 @@ else
   msg="Sin remoto configurado; nada que sincronizar."
 fi
 
+# --- Copia de seguridad diaria (respaldo del launchd, que en ~/Documents queda
+# bloqueado por la privacidad de macOS salvo con Acceso a disco completo). Aquí
+# se ejecuta desde el contexto de la terminal, que SÍ tiene acceso. Máx. 1/día. ---
+STAMP="backups/.last-backup-date"
+today="$(date +%Y-%m-%d)"
+if [ "$(cat "$STAMP" 2>/dev/null)" != "$today" ]; then
+  mkdir -p backups
+  # En segundo plano para no demorar el arranque; marca la fecha si termina bien.
+  ( bash scripts/backup_full.sh >/dev/null 2>&1 && echo "$today" > "$STAMP" ) &
+  msg="${msg} Copia de seguridad diaria en marcha."
+fi
+
 # Salida JSON para Claude Code (msg no contiene comillas ni barras).
 printf '{"systemMessage":"%s"}\n' "$msg"
