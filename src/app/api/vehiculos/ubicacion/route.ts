@@ -6,7 +6,7 @@ import prisma from "@/lib/db"
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { vehiculoId, latitud, longitud, velocidad, precision, token } = body
+    const { vehiculoId, latitud, longitud, velocidad, precision, token, timestampGps } = body
 
     if (process.env.TRACKING_TOKEN && token !== process.env.TRACKING_TOKEN) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 })
@@ -29,13 +29,18 @@ export async function POST(req: NextRequest) {
       data: { activo: false },
     })
 
+    // Hora real del GPS (si la envía la tablet); si no, la de recepción.
+    const tsGps = timestampGps ? new Date(timestampGps) : null
+
     const ubicacion = await prisma.ubicacionVehiculo.create({
       data: {
-        id: `${vehiculo.id}_${Date.now()}`,
+        // id único aunque lleguen varios puntos en el mismo ms (cola offline).
+        id: `${vehiculo.id}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
         vehiculoId: vehiculo.id,
         latitud, longitud,
         velocidad: velocidad ?? null,
         precision: precision ?? null,
+        timestampGps: tsGps && !isNaN(tsGps.getTime()) ? tsGps : null,
         activo: true,
       },
     })

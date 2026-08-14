@@ -59,13 +59,23 @@ const IconSignal = ({ s = 26, c = 'currentColor' }: { s?: number; c?: string }) 
 export default function TrackingPage() {
   const params = useParams()
   const vehiculoId = params.vehiculoId as string
-  const [estado, setEstado] = useState<'inactivo' | 'activo' | 'error'>('inactivo')
+  const [estado, setEstado] = useState<'inactivo' | 'activo' | 'sin_senal' | 'error'>('inactivo')
+  const [rastreando, setRastreando] = useState(false)
   const [lastPos, setLastPos] = useState<{ lat: number; lng: number; vel: number | null } | null>(null)
   const [errorMsg, setErrorMsg] = useState('')
   const [enviados, setEnviados] = useState(0)
+  const [pendientes, setPendientes] = useState(0)
   const watchRef = useRef<number | null>(null)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const lastPosRef = useRef<GeolocationPosition | null>(null)
+  // Robustez del tracking:
+  const activoRef = useRef(false)                 // ¿tracking en marcha? (evita closures obsoletos)
+  const lastFixAtRef = useRef(0)                   // ms del último fix GPS válido
+  const lastEnqueueRef = useRef(0)                 // ms del último punto encolado (throttle 1/INTERVAL)
+  const outboxRef = useRef<Array<{ lat: number; lng: number; vel: number | null; acc: number | null; tsGps: string }>>([]) // cola offline
+  const flushingRef = useRef(false)                // evita envíos solapados
+  const errCountRef = useRef(0)
+  const wakeLockRef = useRef<any>(null)            // Screen Wake Lock (pantalla despierta)
 
   const [incidencia, setIncidencia] = useState<Incidencia | null>(null)
   const [marcando, setMarcando] = useState<string | null>(null)
@@ -77,23 +87,63 @@ export default function TrackingPage() {
   const audioElRef = useRef<HTMLAudioElement | null>(null)
 
   // ─── GPS ───
-  const enviarUbicacion = async (pos: GeolocationPosition) => {
+  type Punto = { lat: number; lng: number; vel: number | null; acc: number | null; tsGps: string }
+  const puntoDe = (pos: GeolocationPosition): Punto => {
     const { latitude, longitude, speed, accuracy } = pos.coords
+    return {
+      lat: latitude, lng: longitude,
+      vel: speed !== null && speed !== undefined ? Math.round(speed * 3.6 * 10) / 10 : null,
+      acc: accuracy ?? null,
+      tsGps: new Date(pos.timestamp || Date.now()).toISOString(),
+    }
+  }
+
+  const postPunto = async (p: Punto) => {
+    const res = await fetch('/api/vehiculos/ubicacion', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        vehiculoId, latitud: p.lat, longitud: p.lng,
+        velocidad: p.vel, precision: p.acc, timestampGps: p.tsGps, token: TRACK_TOKEN,
+      }),
+    })
+    if (!res.ok) throw new Error('HTTP ' + res.status)
+  }
+
+  // Vacía la cola en orden. Si falla la red, los puntos se CONSERVAN y se
+  // reintentan en el siguiente ciclo (no se pierde el recorrido en zonas sin cobertura).
+  const flushOutbox = async () => {
+    if (flushingRef.current || outboxRef.current.length === 0) return
+    flushingRef.current = true
+    const lote = outboxRef.current
+    outboxRef.current = []
+    const fallidos: Punto[] = []
+    for (const p of lote) {
+      try { await postPunto(p) } catch { fallidos.push(p) }
+    }
+    if (fallidos.length) {
+      // conservar como máx. los últimos ~500 puntos (~40 min a 1/5s) para no crecer sin fin
+      outboxRef.current = [...fallidos, ...outboxRef.current].slice(-500)
+    } else {
+      setEnviados(n => n + lote.length)
+      const u = lote[lote.length - 1]
+      setLastPos({ lat: u.lat, lng: u.lng, vel: u.vel !== null ? Math.round(u.vel) : null })
+    }
+    setPendientes(outboxRef.current.length)
+    flushingRef.current = false
+  }
+
+  // ─── Wake Lock: evita que la pantalla se atenúe/bloquee (y con ella se
+  // suspendan los temporizadores y el GPS). Se re-solicita al volver a primer plano.
+  const pedirWakeLock = async () => {
     try {
-      const res = await fetch('/api/vehiculos/ubicacion', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          vehiculoId, latitud: latitude, longitud: longitude,
-          velocidad: speed !== null ? Math.round(speed * 3.6 * 10) / 10 : null,
-          precision: accuracy, token: TRACK_TOKEN,
-        }),
-      })
-      if (res.ok) {
-        setEnviados(n => n + 1)
-        setLastPos({ lat: latitude, lng: longitude, vel: speed ? Math.round(speed * 3.6) : null })
+      if ('wakeLock' in navigator) {
+        wakeLockRef.current = await (navigator as any).wakeLock.request('screen')
       }
-    } catch (e) { console.error('Error enviando ubicacion:', e) }
+    } catch { /* algunos navegadores lo deniegan; no es crítico */ }
+  }
+  const liberarWakeLock = () => {
+    try { wakeLockRef.current?.release?.() } catch { /* */ }
+    wakeLockRef.current = null
   }
 
   // ─── Audio: alarma en bucle hasta que se toca el iPad ───
@@ -168,25 +218,79 @@ export default function TrackingPage() {
     return `https://www.google.com/maps/dir/?api=1&destination=${destino}&travelmode=driving`
   }
 
-  const iniciar = () => {
+  // Arranca (o reinicia) el watch de geolocalización. Se llama también tras un
+  // error o al volver a primer plano, para recuperar el flujo sin intervención.
+  const startWatch = () => {
+    if (!navigator.geolocation) return
+    if (watchRef.current !== null) { try { navigator.geolocation.clearWatch(watchRef.current) } catch { /* */ } }
+    watchRef.current = navigator.geolocation.watchPosition(
+      (pos) => {
+        lastPosRef.current = pos
+        lastFixAtRef.current = Date.now()
+        errCountRef.current = 0
+        setEstado('activo'); setErrorMsg('')
+        // Encolar como mucho 1 punto por intervalo (throttle), con la hora REAL del GPS.
+        const now = Date.now()
+        if (now - lastEnqueueRef.current >= INTERVAL_MS) {
+          lastEnqueueRef.current = now
+          outboxRef.current.push(puntoDe(pos))
+          if (outboxRef.current.length > 500) outboxRef.current = outboxRef.current.slice(-500)
+          setPendientes(outboxRef.current.length)
+        }
+      },
+      (err) => {
+        setErrorMsg(`GPS: ${err.message}`)
+        if (err.code === err.PERMISSION_DENIED) { setEstado('error'); return } // permiso revocado: no reintentar
+        // Señal perdida / timeout: NO congelar. Reiniciar el watch para recuperar.
+        errCountRef.current++
+        if (errCountRef.current >= 2) setEstado('sin_senal')
+        setTimeout(() => { if (activoRef.current) startWatch() }, 2000)
+      },
+      { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 }
+    )
+  }
+
+  const iniciar = async () => {
     armarAudio()
     if (!navigator.geolocation) { setErrorMsg('Este dispositivo no soporta GPS'); setEstado('error'); return }
-    watchRef.current = navigator.geolocation.watchPosition(
-      (pos) => { lastPosRef.current = pos },
-      (err) => { setErrorMsg(`Error GPS: ${err.message}`); setEstado('error') },
-      { enableHighAccuracy: true, maximumAge: 3000, timeout: 10000 }
-    )
-    intervalRef.current = setInterval(() => { if (lastPosRef.current) enviarUbicacion(lastPosRef.current) }, INTERVAL_MS)
+    activoRef.current = true
+    setRastreando(true)
+    errCountRef.current = 0
+    lastFixAtRef.current = Date.now()
+    await pedirWakeLock()
+    startWatch()
+    // Ciclo cada INTERVAL: envía la cola (con reintento) y vigila la señal.
+    intervalRef.current = setInterval(() => {
+      flushOutbox()
+      if (activoRef.current && Date.now() - lastFixAtRef.current > 25000) setEstado('sin_senal')
+    }, INTERVAL_MS)
     setEstado('activo')
   }
 
   const detener = () => {
-    if (watchRef.current !== null) navigator.geolocation.clearWatch(watchRef.current)
-    if (intervalRef.current) clearInterval(intervalRef.current)
+    activoRef.current = false
+    setRastreando(false)
+    if (watchRef.current !== null) { navigator.geolocation.clearWatch(watchRef.current); watchRef.current = null }
+    if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null }
+    liberarWakeLock()
     setEstado('inactivo')
   }
 
   useEffect(() => { return () => detener() }, [])
+
+  // Al volver a primer plano (p. ej. tras usar Google Maps para navegar), el
+  // navegador pudo suspender el GPS y soltar el Wake Lock: se re-piden.
+  useEffect(() => {
+    const onVis = () => {
+      if (document.visibilityState === 'visible' && activoRef.current) {
+        pedirWakeLock()
+        startWatch()
+        flushOutbox()
+      }
+    }
+    document.addEventListener('visibilitychange', onVis)
+    return () => document.removeEventListener('visibilitychange', onVis)
+  }, [])
 
   useEffect(() => {
     cargarIncidencia()
@@ -209,8 +313,14 @@ export default function TrackingPage() {
     bg: 'radial-gradient(130% 100% at 50% 0%, #16213b 0%, #0a0e19 62%)',
     panel: '#111a2c', panelBorder: 'rgba(255,255,255,0.07)',
     text: '#E8EDF4', muted: '#8A97AD', faint: '#5a6b86',
-    blue: '#2F6BFF', green: '#2FA96A', red: '#E5484D',
+    blue: '#2F6BFF', green: '#2FA96A', red: '#E5484D', amber: '#E0A93B',
   }
+
+  const gps = estado === 'activo'
+    ? { color: C.green, texto: 'GPS en línea' }
+    : estado === 'sin_senal' ? { color: C.amber, texto: 'GPS sin señal' }
+    : estado === 'error' ? { color: C.red, texto: 'GPS error' }
+    : { color: C.faint, texto: 'GPS parado' }
 
   return (
     <div style={{
@@ -237,12 +347,11 @@ export default function TrackingPage() {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{
-            width: 8, height: 8, borderRadius: '50%',
-            background: estado === 'activo' ? C.green : estado === 'error' ? C.red : C.faint,
+            width: 8, height: 8, borderRadius: '50%', background: gps.color,
             animation: estado === 'activo' ? 'dot 1.5s ease-in-out infinite' : undefined,
           }} />
           <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', color: C.muted, textTransform: 'uppercase' }}>
-            {estado === 'activo' ? 'GPS en línea' : estado === 'error' ? 'GPS error' : 'GPS parado'}
+            {gps.texto}
           </span>
         </div>
       </header>
@@ -347,15 +456,16 @@ export default function TrackingPage() {
       }}>
         <div style={{ fontSize: 11.5, color: C.muted, lineHeight: 1.5, minWidth: 0 }}>
           {lastPos
-            ? <>{lastPos.lat.toFixed(5)}, {lastPos.lng.toFixed(5)}<br /><span style={{ color: C.faint }}>Envíos: {enviados}{lastPos.vel !== null ? ` · ${lastPos.vel} km/h` : ''}</span></>
+            ? <>{lastPos.lat.toFixed(5)}, {lastPos.lng.toFixed(5)}<br /><span style={{ color: C.faint }}>Envíos: {enviados}{lastPos.vel !== null ? ` · ${lastPos.vel} km/h` : ''}{pendientes > 0 ? ` · ${pendientes} en cola` : ''}</span></>
             : <>Pulsa iniciar al comenzar el turno<br /><span style={{ color: C.faint }}>Activa el GPS y el sonido</span></>}
-          {errorMsg && <div style={{ color: C.red, marginTop: 4 }}>{errorMsg}</div>}
+          {pendientes > 0 && <div style={{ color: C.amber, marginTop: 4 }}>Sin conexión: {pendientes} punto(s) guardados, se enviarán al recuperar señal.</div>}
+          {errorMsg && <div style={{ color: estado === 'error' ? C.red : C.amber, marginTop: 4 }}>{errorMsg}</div>}
         </div>
-        <button onClick={estado === 'activo' ? detener : iniciar} style={{
+        <button onClick={rastreando ? detener : iniciar} style={{
           padding: '12px 22px', borderRadius: 12, border: 'none', cursor: 'pointer',
           fontSize: 13, fontWeight: 800, letterSpacing: '0.06em', flexShrink: 0,
-          background: estado === 'activo' ? C.red : C.blue, color: '#fff',
-        }}>{estado === 'activo' ? 'DETENER' : 'INICIAR'}</button>
+          background: rastreando ? C.red : C.blue, color: '#fff',
+        }}>{rastreando ? 'DETENER' : 'INICIAR'}</button>
       </footer>
     </div>
   )

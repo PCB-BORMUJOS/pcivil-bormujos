@@ -105,6 +105,32 @@ function NivelIndicador({ nivel }: { nivel?: string }) {
   return (<div className="flex items-center gap-2"><div className={`w-3 h-3 rounded-full ${n.color}`} /><span className="text-sm text-slate-600">{n.label}</span></div>)
 }
 
+// Hora real de un punto: la del GPS del dispositivo si existe; si no, la de recepción.
+const tiempoPunto = (p: any) => new Date(p.timestampGps || p.createdAt).getTime()
+
+// Parte el recorrido en TRAMOS continuos y detecta los SALTOS (cortes) cuando
+// entre dos puntos consecutivos pasa más de `gapMs`. Así un corte se dibuja como
+// hueco/línea discontinua en vez de una recta que finge continuidad.
+function construirRecorrido(puntos: any[], gapMs: number) {
+  const ordenados = [...puntos].sort((a, b) => tiempoPunto(a) - tiempoPunto(b))
+  const tramos: any[][] = []
+  const saltos: Array<{ from: any; to: any; min: number }> = []
+  let actual: any[] = []
+  for (let i = 0; i < ordenados.length; i++) {
+    if (i > 0) {
+      const dt = tiempoPunto(ordenados[i]) - tiempoPunto(ordenados[i - 1])
+      if (dt > gapMs) {
+        if (actual.length) tramos.push(actual)
+        saltos.push({ from: ordenados[i - 1], to: ordenados[i], min: Math.round(dt / 60000) })
+        actual = []
+      }
+    }
+    actual.push(ordenados[i])
+  }
+  if (actual.length) tramos.push(actual)
+  return { ordenados, tramos, saltos }
+}
+
 export default function VehiculosPage() {
   const { canCreate, canEdit, canDelete, canCreatePeticion, isAdmin } = usePermisos()
   const [peticiones, setPeticiones] = useState<any[]>([])
@@ -598,29 +624,59 @@ export default function VehiculosPage() {
             </div>
             <MapContainer center={[37.3710, -6.0710]} zoom={14} style={{ height: 'calc(100% - 37px)', width: '100%' }} scrollWheelZoom={true}>
               <TileLayer attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-              {ubicacionesGPS.map((u: any) => (
-                <CircleMarker key={u.id} center={[u.latitud, u.longitud]} radius={14} pathOptions={{ color: '#16a34a', fillColor: '#22c55e', fillOpacity: 0.85, weight: 2 }}>
-                  <Popup>
-                    <div style={{ minWidth: 140, textAlign: 'center' }}>
-                      <p style={{ fontWeight: 700, fontSize: 15, margin: '0 0 4px' }}>{u.vehiculo?.indicativo}</p>
-                      <p style={{ fontSize: 12, color: '#666', margin: '0 0 2px' }}>{u.vehiculo?.modelo}</p>
-                      {u.velocidad !== null && <p style={{ fontSize: 12, color: '#16a34a', margin: '0 0 2px' }}>{u.velocidad} km/h</p>}
-                      <p style={{ fontSize: 11, color: '#999', margin: 0 }}>{new Date(u.createdAt).toLocaleTimeString('es-ES')}</p>
-                    </div>
-                  </Popup>
-                </CircleMarker>
-              ))}
-              {recorrido.length > 0 && (
-                <>
-                  <Polyline positions={recorrido.map((p: any) => [p.latitud, p.longitud] as [number, number])} pathOptions={{ color: '#2563eb', weight: 3, opacity: 0.8 }} />
-                  <CircleMarker center={[recorrido[0].latitud, recorrido[0].longitud]} radius={8} pathOptions={{ color: '#16a34a', fillColor: '#22c55e', fillOpacity: 1 }}>
-                    <Popup><div style={{ textAlign: 'center' }}><strong>Inicio</strong><br /><span style={{ fontSize: 11 }}>{new Date(recorrido[0].createdAt).toLocaleTimeString('es-ES')}</span></div></Popup>
+              {ubicacionesGPS.map((u: any) => {
+                // Antigüedad del último punto: si hace >90 s que no envía, se marca
+                // como sin señal; >5 min, desconectado. Así no aparece "activo" eterno.
+                const edadMin = Math.round((Date.now() - tiempoPunto(u)) / 60000)
+                const edadMs = Date.now() - tiempoPunto(u)
+                const col = edadMs > 300000
+                  ? { c: '#b91c1c', f: '#ef4444', txt: 'Desconectado' }
+                  : edadMs > 90000
+                  ? { c: '#b45309', f: '#f59e0b', txt: 'Sin señal' }
+                  : { c: '#16a34a', f: '#22c55e', txt: 'En línea' }
+                return (
+                  <CircleMarker key={u.id} center={[u.latitud, u.longitud]} radius={14} pathOptions={{ color: col.c, fillColor: col.f, fillOpacity: 0.85, weight: 2 }}>
+                    <Popup>
+                      <div style={{ minWidth: 150, textAlign: 'center' }}>
+                        <p style={{ fontWeight: 700, fontSize: 15, margin: '0 0 4px' }}>{u.vehiculo?.indicativo}</p>
+                        <p style={{ fontSize: 12, color: '#666', margin: '0 0 2px' }}>{u.vehiculo?.modelo}</p>
+                        <p style={{ fontSize: 12, fontWeight: 700, color: col.c, margin: '0 0 2px' }}>{col.txt}{edadMs > 90000 ? ` · hace ${edadMin} min` : ''}</p>
+                        {u.velocidad !== null && edadMs <= 90000 && <p style={{ fontSize: 12, color: '#16a34a', margin: '0 0 2px' }}>{u.velocidad} km/h</p>}
+                        <p style={{ fontSize: 11, color: '#999', margin: 0 }}>{new Date(u.timestampGps || u.createdAt).toLocaleTimeString('es-ES')}</p>
+                      </div>
+                    </Popup>
                   </CircleMarker>
-                  <CircleMarker center={[recorrido[recorrido.length-1].latitud, recorrido[recorrido.length-1].longitud]} radius={8} pathOptions={{ color: '#dc2626', fillColor: '#ef4444', fillOpacity: 1 }}>
-                    <Popup><div style={{ textAlign: 'center' }}><strong>Fin</strong><br /><span style={{ fontSize: 11 }}>{new Date(recorrido[recorrido.length-1].createdAt).toLocaleTimeString('es-ES')}</span></div></Popup>
-                  </CircleMarker>
-                </>
-              )}
+                )
+              })}
+              {recorrido.length > 0 && (() => {
+                // Corte = más de 2 min sin puntos entre dos posiciones consecutivas.
+                const { ordenados, tramos, saltos } = construirRecorrido(recorrido, 120000)
+                const t = (p: any) => new Date(p.timestampGps || p.createdAt).toLocaleTimeString('es-ES')
+                const ini = ordenados[0], fin = ordenados[ordenados.length - 1]
+                return (
+                  <>
+                    {/* Tramos continuos (azul sólido) */}
+                    {tramos.map((tr, i) => (
+                      <Polyline key={`tr-${i}`} positions={tr.map((p: any) => [p.latitud, p.longitud] as [number, number])}
+                        pathOptions={{ color: '#2563eb', weight: 3, opacity: 0.85 }} />
+                    ))}
+                    {/* Cortes (rojo discontinuo): tramo NO registrado del recorrido */}
+                    {saltos.map((s, i) => (
+                      <Polyline key={`gap-${i}`} positions={[[s.from.latitud, s.from.longitud], [s.to.latitud, s.to.longitud]] as [number, number][]}
+                        pathOptions={{ color: '#dc2626', weight: 2.5, opacity: 0.9, dashArray: '6 8' }}>
+                        <Popup><div style={{ textAlign: 'center' }}><strong style={{ color: '#dc2626' }}>Corte de señal</strong><br />
+                          <span style={{ fontSize: 11 }}>{s.min} min sin datos<br />{t(s.from)} → {t(s.to)}</span></div></Popup>
+                      </Polyline>
+                    ))}
+                    <CircleMarker center={[ini.latitud, ini.longitud]} radius={8} pathOptions={{ color: '#16a34a', fillColor: '#22c55e', fillOpacity: 1 }}>
+                      <Popup><div style={{ textAlign: 'center' }}><strong>Inicio</strong><br /><span style={{ fontSize: 11 }}>{t(ini)}</span></div></Popup>
+                    </CircleMarker>
+                    <CircleMarker center={[fin.latitud, fin.longitud]} radius={8} pathOptions={{ color: '#dc2626', fillColor: '#ef4444', fillOpacity: 1 }}>
+                      <Popup><div style={{ textAlign: 'center' }}><strong>Fin</strong><br /><span style={{ fontSize: 11 }}>{t(fin)}</span></div></Popup>
+                    </CircleMarker>
+                  </>
+                )
+              })()}
             </MapContainer>
           </div>
         </div>

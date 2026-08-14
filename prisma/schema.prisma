@@ -2258,6 +2258,9 @@ model UbicacionVehiculo {
   precision  Float?
   activo     Boolean  @default(true)
   createdAt  DateTime @default(now())
+  // Hora REAL de captura del GPS en el dispositivo (para ordenar el recorrido y
+  // detectar cortes; createdAt es la hora de recepción en el servidor).
+  timestampGps DateTime? @map("timestamp_gps")
 
   @@index([vehiculoId])
   @@index([createdAt])
