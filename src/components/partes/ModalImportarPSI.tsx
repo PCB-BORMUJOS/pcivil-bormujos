@@ -67,68 +67,111 @@ function extraerFirmasDeCanvas(
     const d = ctx.getImageData(x0, y0, w, h).data
     const n = w * h
 
-    // Máscara de tinta: NEUTRA (baja saturación) y oscura. Excluye fondo claro,
-    // el gris del recuadro, el azul del pie y cualquier logo de color.
+    // Luminancia, saturación y máscara de tinta (NEUTRA y oscura). Excluye fondo
+    // claro, gris del recuadro, azul del pie y cualquier logo de color.
+    const Lum = new Float32Array(n)
+    const Sat = new Float32Array(n)
     const ink = new Uint8Array(n)
     for (let i = 0; i < n; i++) {
       const s = i * 4
       const r = d[s], g = d[s + 1], b = d[s + 2]
       const L = 0.299 * r + 0.587 * g + 0.114 * b
       const S = Math.max(r, g, b) - Math.min(r, g, b)
+      Lum[i] = L; Sat[i] = S
       if (L < 150 && S < 45) ink[i] = 1
     }
 
-    // Componentes conexos (8-conexión) por pila. Guardamos tamaño y bounding box.
+    // ── Eliminar LÍNEAS RECTAS del recuadro (base, divisor, borde) aunque la
+    // firma las toque: se miden las rachas (run-length) horizontal y vertical de
+    // tinta; una línea recta produce una racha larga, una rúbrica no. Robusto
+    // frente al grosor de la línea (no depende del componente conexo).
+    const hRun = new Int32Array(n)
+    const vRun = new Int32Array(n)
+    for (let y = 0; y < h; y++) {
+      let x = 0
+      while (x < w) {
+        if (!ink[y * w + x]) { x++; continue }
+        let x2 = x; while (x2 < w && ink[y * w + x2]) x2++
+        const len = x2 - x; for (let k = x; k < x2; k++) hRun[y * w + k] = len; x = x2
+      }
+    }
+    for (let x = 0; x < w; x++) {
+      let y = 0
+      while (y < h) {
+        if (!ink[y * w + x]) { y++; continue }
+        let y2 = y; while (y2 < h && ink[y2 * w + x]) y2++
+        const len = y2 - y; for (let k = y; k < y2; k++) vRun[k * w + x] = len; y = y2
+      }
+    }
+    const HL = 0.50 * w, VL = 0.50 * h
+    const esLinea = (p: number) => hRun[p] >= HL || vRun[p] >= VL
+    const ink2 = new Uint8Array(n)   // tinta SIN las líneas rectas largas
+    for (let p = 0; p < n; p++) if (ink[p] && !esLinea(p)) ink2[p] = 1
+
+    // Componentes conexos (8-conexión) sobre la tinta ya sin líneas.
     const lab = new Int32Array(n).fill(-1)
-    const comps: Array<{ pix: number; minx: number; miny: number; maxx: number; maxy: number; bw: number; bh: number }> = []
+    const comps: Array<{ pix: number; bh: number }> = []
     const stack: number[] = []
     for (let p = 0; p < n; p++) {
-      if (!ink[p] || lab[p] >= 0) continue
+      if (!ink2[p] || lab[p] >= 0) continue
       const id = comps.length
-      let pix = 0, minx = w, miny = h, maxx = 0, maxy = 0
+      let pix = 0, miny = h, maxy = 0
       lab[p] = id; stack.push(p)
       while (stack.length) {
         const q = stack.pop()!
         const qx = q % w, qy = (q / w) | 0
         pix++
-        if (qx < minx) minx = qx; if (qx > maxx) maxx = qx
         if (qy < miny) miny = qy; if (qy > maxy) maxy = qy
         for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
           if (!dx && !dy) continue
           const nx = qx + dx, ny = qy + dy
           if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue
           const np = ny * w + nx
-          if (ink[np] && lab[np] < 0) { lab[np] = id; stack.push(np) }
+          if (ink2[np] && lab[np] < 0) { lab[np] = id; stack.push(np) }
         }
       }
-      comps.push({ pix, minx, miny, maxx, maxy, bw: maxx - minx + 1, bh: maxy - miny + 1 })
+      comps.push({ pix, bh: maxy - miny + 1 })
     }
 
-    // Nos quedamos con los componentes "de firma": trazo 2D grande y alto. Se
-    // descartan glifos de texto (bajos), ruido y líneas finas del recuadro
-    // (tanto horizontales como verticales: base, divisor, borde lateral).
+    // Firma = componentes grandes y de suficiente altura. Fuera glifos de texto
+    // (bajos) y restos de ruido.
     const keep = new Set<number>()
     for (let id = 0; id < comps.length; id++) {
       const c = comps[id]
-      if (c.pix < 150) continue                    // ruido / puntos
-      if (Math.min(c.bw, c.bh) < 7) continue        // línea fina (horizontal o vertical)
-      if (c.bh < 0.40 * h) continue                 // texto de una sola línea → fuera
+      if (c.pix < 120) continue
+      if (c.bh < 0.30 * h) continue
       keep.add(id)
     }
-    if (keep.size === 0) return null                // sin firma (recuadro vacío)
+    if (keep.size === 0) return null   // sin firma (recuadro vacío)
 
-    // Bounding box del conjunto de la firma (unión de los componentes válidos).
+    // Máscara de firma y su bounding box (SOLO trazo, sin líneas → centra bien).
+    const km = new Uint8Array(n)
     let bx0 = w, by0 = h, bx1 = 0, by1 = 0
-    keep.forEach(id => {
-      const c = comps[id]
-      if (c.minx < bx0) bx0 = c.minx; if (c.maxx > bx1) bx1 = c.maxx
-      if (c.miny < by0) by0 = c.miny; if (c.maxy > by1) by1 = c.maxy
-    })
+    for (let p = 0; p < n; p++) {
+      if (ink2[p] && keep.has(lab[p])) {
+        km[p] = 1
+        const px = p % w, py = (p / w) | 0
+        if (px < bx0) bx0 = px; if (px > bx1) bx1 = px
+        if (py < by0) by0 = py; if (py > by1) by1 = py
+      }
+    }
+    // Región de dibujado = firma dilatada 2 px (para conservar el antialias del
+    // borde del trazo), excluyendo siempre píxeles de línea.
+    const reg = new Uint8Array(n)
+    for (let p = 0; p < n; p++) {
+      if (!km[p]) continue
+      const px = p % w, py = (p / w) | 0
+      for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {
+        const nx = px + dx, ny = py + dy
+        if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue
+        const np = ny * w + nx
+        if (!esLinea(np)) reg[np] = 1
+      }
+    }
     const bw = bx1 - bx0 + 1, bh = by1 - by0 + 1
 
-    // Lienzo de salida con proporción ~ la del campo de firma del formulario
-    // (~2.5:1). La firma se coloca CENTRADA y ocupando ~82% → grande y sin
-    // distorsión al inyectarla (la pizarra la estira a ese mismo aspecto).
+    // Lienzo de salida con proporción ~ la del campo (~2.5:1). La firma se coloca
+    // CENTRADA ocupando ~82% → grande y sin distorsión al inyectarla.
     const TARGET = 2.5, FILL = 0.82
     const contW = bw / FILL, contH = bh / FILL
     let CW: number, CH: number
@@ -143,13 +186,18 @@ function extraerFirmasDeCanvas(
     const outImg = octx.createImageData(CW, CH)
     const od = outImg.data
     for (let p = 0; p < n; p++) {
-      if (ink[p] && keep.has(lab[p])) {
-        const px = p % w, py = (p / w) | 0
-        const dx = px + offX, dy = py + offY
-        if (dx < 0 || dy < 0 || dx >= CW || dy >= CH) continue
-        const s = (dy * CW + dx) * 4
-        od[s] = 17; od[s + 1] = 17; od[s + 2] = 17; od[s + 3] = 255
-      }
+      if (!reg[p] || Sat[p] >= 50) continue
+      // Alpha suave por luminancia → trazo NÍTIDO con antialias, no dentado.
+      const L = Lum[p]
+      let a = 0
+      if (L <= 130) a = 255
+      else if (L < 215) a = Math.round(((215 - L) / (215 - 130)) * 255)
+      if (a <= 0) continue
+      const px = p % w, py = (p / w) | 0
+      const dx = px + offX, dy = py + offY
+      if (dx < 0 || dy < 0 || dx >= CW || dy >= CH) continue
+      const s = (dy * CW + dx) * 4
+      od[s] = 17; od[s + 1] = 17; od[s + 2] = 17; od[s + 3] = a
     }
     octx.putImageData(outImg, 0, 0)
     return out.toDataURL('image/png')
