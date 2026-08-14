@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash scripts/dev-sync.sh",
+            "timeout": 120,
+            "statusMessage": "Sincronizando repo (git pull --ff-only + prisma generate)…"
+          }
+        ]
+      }
+    ]
+  }
+}
