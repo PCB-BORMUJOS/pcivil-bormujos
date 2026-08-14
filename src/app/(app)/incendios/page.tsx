@@ -512,7 +512,7 @@ export default function IncendiosPage() {
         fetch("/api/logistica?inventario=incendios"),
         fetch("/api/logistica?tipo=edificios"),
         fetch("/api/logistica?tipo=equipos-eci"),
-        fetch("/api/logistica?tipo=hidrantes"),
+        fetch("/api/incendios/hidrante"),
         fetch("/api/logistica?tipo=categoria&slug=incendios")
       ]);
       const dataArt = await resArt.json();
@@ -624,10 +624,10 @@ export default function IncendiosPage() {
 
   const guardarHidrante = async (formData: any) => {
     try {
-      const res = await fetch('/api/logistica', {
+      const res = await fetch('/api/incendios/hidrante', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tipo: 'hidrante', ...formData })
+        body: JSON.stringify({ ...formData })
       })
 
       if (res.ok) {
@@ -713,10 +713,10 @@ export default function IncendiosPage() {
 
   const editarHidrante = async (id: string, formData: any) => {
     try {
-      const res = await fetch('/api/logistica', {
+      const res = await fetch('/api/incendios/hidrante', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tipo: 'hidrante', id, tipoHidrante: formData.tipo, codigo: formData.codigo, ubicacion: formData.ubicacion, latitud: formData.latitud, longitud: formData.longitud, presion: formData.presion, caudal: formData.caudal, fotoUbicacion: formData.fotoUbicacion ?? null, fotoDetalle: formData.fotoDetalle ?? null, estado: formData.estado })
+        body: JSON.stringify({ id, tipoHidrante: formData.tipo, codigo: formData.codigo, ubicacion: formData.ubicacion, latitud: formData.latitud, longitud: formData.longitud, presion: formData.presion, caudal: formData.caudal, fotoUbicacion: formData.fotoUbicacion ?? null, fotoDetalle: formData.fotoDetalle ?? null, estado: formData.estado })
       })
       if (res.ok) {
         await cargarDatos()
