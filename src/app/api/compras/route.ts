@@ -219,7 +219,11 @@ export async function POST(request: NextRequest) {
         }
         const destino = campos[campo]
         if (!destino) return NextResponse.json({ error: 'Campo no válido' }, { status: 400 })
-        await prisma.expedienteCompra.update({ where: { id: expedienteId }, data: { [destino]: blob.url } })
+        const exp = await prisma.expedienteCompra.update({ where: { id: expedienteId }, data: { [destino]: blob.url } })
+        // Documento RC: se refleja también en la petición vinculada (trazabilidad).
+        if (campo === 'documentoRC' && exp.peticionId) {
+          await prisma.peticionMaterial.update({ where: { id: exp.peticionId }, data: { urlRc: blob.url } }).catch(() => null)
+        }
       }
 
       await registrarAudit({ accion: 'UPLOAD', entidad: 'ExpedienteCompra', entidadId: expedienteId || '', descripcion: `Documento adjuntado (${campo}): ${file.name}`, usuarioId, usuarioNombre, modulo: 'Compras' })
@@ -245,7 +249,9 @@ export async function POST(request: NextRequest) {
       const expediente = await prisma.expedienteCompra.create({
         data: {
           numero, ejercicio: anio,
-          titulo: titulo || peticion?.nombreArticulo || `Expediente ${numero}`,
+          // Título: el explícito; si no, la descripción de la petición (editable)
+          // y, en último término, el resumen de artículos.
+          titulo: titulo || peticion?.descripcion?.trim() || peticion?.nombreArticulo || `Expediente ${numero}`,
           descripcion: descripcion || peticion?.descripcion || null,
           tipo: 'suministro',
           estado: 'propuesta',
@@ -414,6 +420,19 @@ export async function PUT(request: NextRequest) {
       if (body.fechaAlbaran !== undefined) datos.fechaAlbaran = body.fechaAlbaran ? new Date(body.fechaAlbaran) : null
 
       const expediente = await prisma.expedienteCompra.update({ where: { id }, data: datos })
+
+      // Propagar la RC a la petición vinculada: si se asigna/edita el nº de RC (o
+      // su documento) en el expediente, la trazabilidad de la petición lo refleja
+      // automáticamente, sin tener que introducirlo a mano en cada sitio.
+      if (expediente.peticionId && (body.numeroRC !== undefined || body.documentoRC !== undefined)) {
+        const rcData: any = {}
+        if (body.numeroRC !== undefined) rcData.numeroRc = expediente.numeroRC || null
+        if (body.documentoRC !== undefined) rcData.urlRc = expediente.documentoRC || null
+        if (Object.keys(rcData).length) {
+          await prisma.peticionMaterial.update({ where: { id: expediente.peticionId }, data: rcData }).catch(() => null)
+        }
+      }
+
       if (body.estado && body.estado !== anterior.estado) {
         await anotarHistorial(id, anterior.estado, body.estado, body.comentario || 'Cambio de estado', session)
       }

@@ -129,6 +129,12 @@ function resumenItems(peticion: Peticion): string {
   }
   return peticion.nombreArticulo || '—'
 }
+// Título mostrado del pedido: la descripción (editable) si existe; si no, el
+// resumen automático de artículos. Así se puede personalizar y editar.
+function tituloPeticion(peticion: Peticion): string {
+  const d = (peticion.descripcion || '').trim()
+  return d || resumenItems(peticion)
+}
 function totalItems(peticion: Peticion): string {
   if (peticion.items && peticion.items.length > 0) {
     if (peticion.items.length === 1) return `× ${peticion.items[0].cantidad} ${peticion.items[0].unidad}`
@@ -465,7 +471,7 @@ export default function PeticionesTab({ areaOrigen, isAdmin, accentColor = 'from
                     {/* Fila 2: artículo(s) + botones acción workflow */}
                     <div className="flex items-center gap-2 mt-1.5">
                       <div className="flex-1 flex items-center gap-1.5 cursor-pointer group min-w-0" onClick={() => toggleExpandida(peticion.id)}>
-                        <span className="font-medium text-slate-800 text-sm truncate">{resumenItems(peticion)}</span>
+                        <span className="font-medium text-slate-800 text-sm truncate" title={tituloPeticion(peticion)}>{tituloPeticion(peticion)}</span>
                         <span className="text-slate-400 text-xs whitespace-nowrap">{totalItems(peticion)}</span>
                         {peticion.items.length > 1 && (
                           <span className="px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-600 text-[9px] font-bold">{peticion.items.length} arts.</span>
@@ -810,11 +816,12 @@ export default function PeticionesTab({ areaOrigen, isAdmin, accentColor = 'from
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Descripción / notas adicionales</label>
+              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Título / descripción del pedido</label>
               <textarea value={formBase.descripcion}
                 onChange={e => setFormBase(prev => ({ ...prev, descripcion: e.target.value }))}
                 rows={3} className="w-full border border-slate-200 rounded-lg p-2.5 text-sm"
-                placeholder="Especificaciones, marca preferida, urgencia, para qué se usará..." />
+                placeholder="Ej: Material EPI para incendios 2026 (si se deja vacío se mostrará «N artículos»)" />
+              <p className="text-[11px] text-slate-400 mt-1">Este texto es el título que verá el pedido en peticiones, logística y en el expediente de compra.</p>
             </div>
 
             <div className="flex gap-3 pt-2 border-t">
