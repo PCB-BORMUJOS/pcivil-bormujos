@@ -109,6 +109,22 @@ export const CAPAS_BASE: CapaOficial[] = [
         visiblePorDefecto: false,
         orden: 4,
     },
+    {
+        clave: 'bca10',
+        nombre: 'Base topográfica 1:10.000 (BCA)',
+        descripcion: 'Base Cartográfica de Andalucía 1:10.000 del IECA: máximo detalle local — edificaciones, viario, hidrografía, relieve, servicios y toponimia. El mejor fondo operativo del municipio.',
+        categoria: 'base',
+        grupo: 'Fondo',
+        wmsUrl: 'https://www.juntadeandalucia.es/institutodeestadisticaycartografia/geoserver-ieca/bca/wms',
+        wmsLayers: '00_BCA',
+        wmsVersion: '1.3.0',
+        wmsFormat: 'image/png',
+        transparente: false,
+        atribucion: '© Instituto de Estadística y Cartografía de Andalucía · BCA10',
+        opacidad: 1,
+        visiblePorDefecto: false,
+        orden: 5,
+    },
 ]
 
 /**
