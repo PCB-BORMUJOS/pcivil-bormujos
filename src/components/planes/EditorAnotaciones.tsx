@@ -7,7 +7,7 @@ import {
 import L from 'leaflet'
 import {
     X, Save, Trash2, Route, Hexagon, MapPin, Type, MousePointer2, Upload,
-    Check, Undo2, Plus, ChevronDown, Layers,
+    Check, Undo2, Plus, Layers,
 } from 'lucide-react'
 import { BORMUJOS, TILES_CALLEJERO } from '@/lib/cartografia'
 import type { Capa } from './MapaCartografia'
@@ -357,7 +357,7 @@ export default function EditorAnotaciones({
                         <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-2">Herramientas</label>
                         <div className="grid grid-cols-5 gap-1">
                             {HERRAMIENTAS.map(h => (
-                                <button key={h.id} title={h.txt} onClick={() => { setTool(h.id); setDraft([]) }}
+                                <button key={h.id} title={h.txt} onClick={() => { setTool(h.id); setDraft([]); if (h.id !== 'sel') setSelId(null) }}
                                     className={`aspect-square rounded-lg flex items-center justify-center border transition-colors ${tool === h.id ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'}`}>
                                     <h.icono size={16} />
                                 </button>
