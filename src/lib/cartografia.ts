@@ -521,13 +521,43 @@ export const CAPAS_TEMATICAS: CapaOficial[] = [
         geojsonUrl: '/cartografia/energia-oleoductos.geojson', color: '#7c3aed',
         atribucion: '© IECA · DERA', opacidad: 0.95, visiblePorDefecto: false, orden: 65,
     },
+
+    // ── Riesgo de inundación (SNCZI 2º ciclo 2024, cuenca del Guadalquivir,
+    //    recortado al entorno de Bormujos). El riesgo natural principal. ───────
+    {
+        clave: 'inundable-flujo-preferente',
+        nombre: 'Zona de flujo preferente',
+        descripcion: 'Vía de intenso desagüe donde el agua circula con más fuerza. Máxima peligrosidad: evitar como zona de intervención o concentración.',
+        categoria: 'tematica', grupo: 'Riesgo de inundación',
+        wmsUrl: '', wmsLayers: '', wmsVersion: '1.1.1', wmsFormat: 'image/png', transparente: true,
+        geojsonUrl: '/cartografia/inundable-flujo-preferente.geojson', color: '#1e3a8a',
+        atribucion: '© SNCZI · MITECO', opacidad: 0.6, visiblePorDefecto: false, orden: 66,
+    },
+    {
+        clave: 'inundable-t100',
+        nombre: 'Zona inundable T=100 años',
+        descripcion: 'Zona inundable de probabilidad media (periodo de retorno 100 años). Referencia para ordenación y protección civil.',
+        categoria: 'tematica', grupo: 'Riesgo de inundación',
+        wmsUrl: '', wmsLayers: '', wmsVersion: '1.1.1', wmsFormat: 'image/png', transparente: true,
+        geojsonUrl: '/cartografia/inundable-t100.geojson', color: '#2563eb',
+        atribucion: '© SNCZI · MITECO', opacidad: 0.5, visiblePorDefecto: false, orden: 67,
+    },
+    {
+        clave: 'inundable-t500',
+        nombre: 'Zona inundable T=500 años',
+        descripcion: 'Zona inundable de probabilidad baja (periodo de retorno 500 años). Extensión máxima de la avenida.',
+        categoria: 'tematica', grupo: 'Riesgo de inundación',
+        wmsUrl: '', wmsLayers: '', wmsVersion: '1.1.1', wmsFormat: 'image/png', transparente: true,
+        geojsonUrl: '/cartografia/inundable-t500.geojson', color: '#60a5fa',
+        atribucion: '© SNCZI · MITECO', opacidad: 0.45, visiblePorDefecto: false, orden: 68,
+    },
 ]
 
 export const TODAS_LAS_CAPAS_OFICIALES = [...CAPAS_BASE, ...CAPAS_TEMATICAS]
 
 /** Orden en que se muestran las secciones del panel de capas. */
 export const ORDEN_GRUPOS = [
-    'Territorio', 'Relieve', 'Hidrografía', 'Viario y accesos',
+    'Territorio', 'Relieve', 'Hidrografía', 'Riesgo de inundación', 'Viario y accesos',
     'Usos del suelo', 'Población y vulnerables', 'Medios y equipamientos',
     'Riesgo tecnológico e industrial', 'Infraestructura energética',
     'Geología y riesgos naturales', 'Otras',
