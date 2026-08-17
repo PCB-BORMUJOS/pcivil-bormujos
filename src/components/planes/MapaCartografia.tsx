@@ -248,6 +248,9 @@ export default function MapaCartografia({
                 : 'flex gap-3'}
             style={pantallaCompleta ? undefined : { height: altura }}
         >
+            {/* Halo blanco alrededor de las capas vectoriales: hace que su color
+                resalte sobre cualquier fondo (ortofoto, topográfico, callejero). */}
+            <style>{`.leaflet-overlay-pane .capa-contraste{filter:drop-shadow(0 0 1.5px #fff) drop-shadow(0 0 1px #fff);}`}</style>
         {/* El mapa y el panel van UNO AL LADO DEL OTRO en pantallas grandes: si el
             panel flotase encima taparía justo la zona que se quiere mirar. */}
         <div
@@ -309,13 +312,21 @@ export default function MapaCartografia({
                         <GeoJSONLayer
                             key={c.id}
                             data={geo}
-                            style={() => ({
-                                color: c.color,
-                                weight: 2,
-                                opacity: opacidades[c.id] ?? c.opacidad,
-                                fillColor: c.color,
-                                fillOpacity: (opacidades[c.id] ?? c.opacidad) * 0.28,
-                            })}
+                            style={(feature: any) => {
+                                const op = opacidades[c.id] ?? c.opacidad
+                                // Las líneas (límites, curvas) más gruesas y sin relleno;
+                                // los polígonos con relleno tenue. El halo blanco (CSS) hace
+                                // que el color resalte sobre ortofoto, topográfico o callejero.
+                                const esLinea = String(feature?.geometry?.type || '').includes('LineString')
+                                return {
+                                    color: c.color,
+                                    weight: esLinea ? 3.5 : 2.5,
+                                    opacity: op,
+                                    fillColor: c.color,
+                                    fillOpacity: esLinea ? 0 : op * 0.25,
+                                    className: 'capa-contraste',
+                                }
+                            }}
                             onEachFeature={(feature: any, layer: any) => {
                                 const props = feature?.properties || {}
                                 const filas = Object.entries(props).slice(0, 8)

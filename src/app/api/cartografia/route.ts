@@ -17,7 +17,31 @@ function puedeEditar(session: any): boolean {
  * El callejero se excluye porque no es WMS: son teselas y va fijo en el visor.
  */
 async function sembrarOficiales() {
-    const existentes = new Set((await prisma.capaCartografica.findMany({ select: { nombre: true } })).map(c => c.nombre))
+    // Sincroniza la DEFINICIÓN de las capas oficiales con el catálogo del código
+    // (fuente/estilo/grupo), sin tocar el estado del usuario (activa/opacidad).
+    // Así, cambiar una capa de WMS a GeoJSON o su color se refleja al instante.
+    const oficialesBD = await prisma.capaCartografica.findMany({ where: { esOficial: true }, select: { id: true, nombre: true } })
+    const idPorNombre = new Map(oficialesBD.map(c => [c.nombre, c.id]))
+    for (const c of TODAS_LAS_CAPAS_OFICIALES) {
+        const id = idPorNombre.get(c.nombre)
+        if (!id) continue
+        await prisma.capaCartografica.update({
+            where: { id },
+            data: {
+                descripcion: c.descripcion, grupo: c.grupo, orden: c.orden, atribucion: c.atribucion,
+                tipo: c.geojsonUrl ? 'archivo' : 'wms',
+                wmsUrl: c.geojsonUrl ? null : c.wmsUrl,
+                wmsLayers: c.geojsonUrl ? null : c.wmsLayers,
+                wmsVersion: c.geojsonUrl ? null : c.wmsVersion,
+                wmsFormat: c.geojsonUrl ? null : c.wmsFormat,
+                geojsonUrl: c.geojsonUrl ?? null,
+                ...(c.color ? { color: c.color } : {}),
+            },
+        }).catch(() => null)
+    }
+
+    const existentes = new Set(oficialesBD.map(c => c.nombre)
+        .concat((await prisma.capaCartografica.findMany({ where: { esOficial: false }, select: { nombre: true } })).map(c => c.nombre)))
     // Capas oficiales: WMS (servicio) o GeoJSON local (fichero en /public).
     const aCrear = TODAS_LAS_CAPAS_OFICIALES.filter(c => (c.wmsUrl || c.geojsonUrl) && !existentes.has(c.nombre))
     if (aCrear.length === 0) return 0
