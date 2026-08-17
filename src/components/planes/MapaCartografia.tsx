@@ -1,21 +1,31 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import dynamic from 'next/dynamic'
 import {
     Layers, Eye, EyeOff, Crosshair, Maximize2, Minimize2, AlertTriangle,
     MapPin, ChevronDown, Image as ImageIcon, Mountain, Map as MapIcon, Waves,
 } from 'lucide-react'
 import { BORMUJOS, TILES_CALLEJERO, ORDEN_GRUPOS } from '@/lib/cartografia'
 
-// Leaflet siempre con carga dinámica y sin render en servidor (regla del proyecto).
-const MapContainer  = dynamic(() => import('react-leaflet').then(m => m.MapContainer),  { ssr: false })
-const TileLayer     = dynamic(() => import('react-leaflet').then(m => m.TileLayer),     { ssr: false })
-const WMSTileLayer  = dynamic(() => import('react-leaflet').then(m => m.WMSTileLayer),  { ssr: false })
-const GeoJSONLayer  = dynamic(() => import('react-leaflet').then(m => m.GeoJSON),       { ssr: false })
-const CircleMarker  = dynamic(() => import('react-leaflet').then(m => m.CircleMarker),  { ssr: false })
-const Popup         = dynamic(() => import('react-leaflet').then(m => m.Popup),         { ssr: false })
-const ScaleControl  = dynamic(() => import('react-leaflet').then(m => m.ScaleControl),  { ssr: false })
+// OJO: el CSS de Leaflet NO se importa aquí, sino en la página que monta este
+// componente. Comprobado en el build: importado en este fichero su CSS acaba en
+// un chunk aparte (porque la página carga el componente con dynamic) y no entra
+// en el paquete de la ruta, con lo que el mapa se queda gris y sin interacción.
+//
+// Importación estática a propósito. La regla del proyecto (Leaflet nunca en el
+// servidor) se cumple un nivel más arriba: la página carga este componente con
+// dynamic({ ssr: false }). Hacerlo además aquí, componente a componente, rompía
+// el ref del mapa —next/dynamic no propaga refs—, y con mapRef siempre en null
+// invalidateSize, el centrado y el encuadre no hacían nada.
+import {
+    MapContainer,
+    TileLayer,
+    WMSTileLayer,
+    GeoJSON as GeoJSONLayer,
+    CircleMarker,
+    Popup,
+    ScaleControl,
+} from 'react-leaflet'
 
 export type Capa = {
     id: string
@@ -123,10 +133,41 @@ export default function MapaCartografia({
         detectRetina: false,
     } as const
 
+    /**
+     * Los servidores oficiales pierden teselas de vez en cuando, y Leaflet no
+     * reintenta: deja un cuadro gris en el mapa. Aquí se reintenta cada tesela
+     * fallida hasta dos veces antes de rendirse.
+     *
+     * Y la capa solo se marca como caída tras varios fallos seguidos: con un
+     * único tropiezo se avisaba de "servicio no disponible" sin motivo.
+     */
+    const fallosPorCapa = useRef<Record<string, number>>({})
+    const UMBRAL_CAPA_CAIDA = 6
+
     const manejadoresCarga = (id: string) => ({
         loading: () => setCargandoTeselas(n => n + 1),
         load: () => setCargandoTeselas(n => Math.max(0, n - 1)),
-        tileerror: () => { setFallidas(p => new Set(p).add(id)); setCargandoTeselas(n => Math.max(0, n - 1)) },
+        tileerror: (e: any) => {
+            setCargandoTeselas(n => Math.max(0, n - 1))
+
+            const tesela = e?.tile as (HTMLImageElement & { _intentos?: number }) | undefined
+            if (tesela) {
+                tesela._intentos = (tesela._intentos ?? 0) + 1
+                if (tesela._intentos <= 2) {
+                    const src = tesela.src
+                    // El parámetro extra fuerza a saltarse la caché del navegador.
+                    setTimeout(() => {
+                        tesela.src = `${src}${src.includes('?') ? '&' : '?'}_r=${tesela._intentos}`
+                    }, 400 * tesela._intentos)
+                    return
+                }
+            }
+
+            fallosPorCapa.current[id] = (fallosPorCapa.current[id] ?? 0) + 1
+            if (fallosPorCapa.current[id] >= UMBRAL_CAPA_CAIDA) {
+                setFallidas(p => new Set(p).add(id))
+            }
+        },
     })
 
     // Sincronizar cuando llegan las capas del servidor

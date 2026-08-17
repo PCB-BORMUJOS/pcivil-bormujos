@@ -2,6 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import dynamic from 'next/dynamic'
+// El CSS de Leaflet se importa AQUÍ, en la página, igual que en el resto de
+// módulos con mapa. Importado dentro del componente del visor no funciona: al
+// cargarse ese componente con dynamic(), su CSS queda en un chunk aparte y no
+// entra en el paquete de la ruta, así que el mapa se quedaba en gris.
+import 'leaflet/dist/leaflet.css'
 import {
     ShieldCheck, Plus, Search, Loader2, MapPin, FileText, CalendarClock,
     Building2, PartyPopper, Landmark, Layers, AlertTriangle, CheckCircle2,
