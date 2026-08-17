@@ -2592,6 +2592,9 @@ model CapaCartografica {
   descripcion String?
   /// "base" pinta el fondo (excluyentes entre sí); "tematica" se superpone.
   categoria   String  @default("tematica")
+  /// Sección del panel de capas. Con más de veinte capas una lista plana es
+  /// inmanejable: el grupo permite plegarlas por temática.
+  grupo       String  @default("Otras")
   /// "wms" | "archivo"
   tipo        String
 

@@ -367,7 +367,9 @@ function PestanaCartografia({ capas, puntos, isAdmin, alPulsarPunto, alBorrarCap
                 </p>
             </div>
 
-            <div style={{ height: 'clamp(520px, 68vh, 900px)' }}>
+            {/* Alto generoso: con el panel acoplado al lado, el mapa necesita
+                espacio real para poder trabajar sobre él. */}
+            <div style={{ height: 'clamp(600px, 78vh, 1100px)' }}>
                 <MapaCartografia capas={capas} puntos={puntos} alPulsarPunto={alPulsarPunto} />
             </div>
 

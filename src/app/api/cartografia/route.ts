@@ -26,6 +26,7 @@ async function sembrarOficiales() {
             nombre: c.nombre,
             descripcion: c.descripcion,
             categoria: c.categoria,
+            grupo: c.grupo,
             tipo: 'wms',
             wmsUrl: c.wmsUrl,
             wmsLayers: c.wmsLayers,

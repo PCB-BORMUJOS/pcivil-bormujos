@@ -15,6 +15,8 @@ export type CapaOficial = {
     nombre: string
     descripcion: string
     categoria: 'base' | 'tematica'
+    /// Sección del panel de capas.
+    grupo: string
     wmsUrl: string
     wmsLayers: string
     wmsVersion: '1.1.1' | '1.3.0'
@@ -43,6 +45,7 @@ export const CAPAS_BASE: CapaOficial[] = [
         nombre: 'Callejero',
         descripcion: 'Mapa de calles estándar. El fondo por defecto para localizar direcciones.',
         categoria: 'base',
+        grupo: 'Fondo',
         wmsUrl: '',            // OpenStreetMap: teselas directas, no WMS
         wmsLayers: '',
         wmsVersion: '1.1.1',
@@ -58,6 +61,7 @@ export const CAPAS_BASE: CapaOficial[] = [
         nombre: 'Ortofoto (PNOA)',
         descripcion: 'Fotografía aérea oficial de máxima actualidad del Plan Nacional de Ortofotografía Aérea.',
         categoria: 'base',
+        grupo: 'Fondo',
         wmsUrl: 'https://www.ign.es/wms-inspire/pnoa-ma',
         wmsLayers: 'OI.OrthoimageCoverage',
         wmsVersion: '1.3.0',
@@ -73,6 +77,7 @@ export const CAPAS_BASE: CapaOficial[] = [
         nombre: 'Topográfico (MTN)',
         descripcion: 'Mapa Topográfico Nacional: curvas de nivel, relieve, caminos y toponimia.',
         categoria: 'base',
+        grupo: 'Fondo',
         wmsUrl: 'https://www.ign.es/wms-inspire/mapa-raster',
         wmsLayers: 'mtn_rasterizado',
         wmsVersion: '1.3.0',
@@ -88,6 +93,7 @@ export const CAPAS_BASE: CapaOficial[] = [
         nombre: 'Topográfico de Andalucía',
         descripcion: 'Cartografía topográfica 1:10.000 de la Junta de Andalucía, con más detalle local que el MTN.',
         categoria: 'base',
+        grupo: 'Fondo',
         wmsUrl: 'https://www.ideandalucia.es/services/toporaster10/wms',
         wmsLayers: 'toporaster10',
         wmsVersion: '1.1.1',
@@ -109,6 +115,7 @@ export const CAPAS_TEMATICAS: CapaOficial[] = [
         nombre: 'Término municipal',
         descripcion: 'Límite administrativo del municipio. Delimita hasta dónde llega la competencia del servicio.',
         categoria: 'tematica',
+        grupo: 'Territorio',
         wmsUrl: 'https://www.ign.es/wms-inspire/unidades-administrativas',
         wmsLayers: 'AU.AdministrativeBoundary',
         wmsVersion: '1.3.0',
@@ -124,6 +131,7 @@ export const CAPAS_TEMATICAS: CapaOficial[] = [
         nombre: 'Parcelario catastral',
         descripcion: 'Parcelas y construcciones del Catastro. Útil para localizar un edificio concreto y sus lindes.',
         categoria: 'tematica',
+        grupo: 'Territorio',
         wmsUrl: 'https://ovc.catastro.meh.es/Cartografia/WMS/ServidorWMS.aspx',
         wmsLayers: 'Catastro',
         wmsVersion: '1.1.1',
@@ -139,6 +147,7 @@ export const CAPAS_TEMATICAS: CapaOficial[] = [
         nombre: 'Red hidrográfica',
         descripcion: 'Ríos, arroyos y cauces de Andalucía. Base para valorar el riesgo por avenidas.',
         categoria: 'tematica',
+        grupo: 'Hidrografía',
         wmsUrl: 'https://www.ideandalucia.es/services/DERA_g3_hidrografia/wms',
         wmsLayers: 'g03_01_Rio',
         wmsVersion: '1.1.1',
@@ -154,6 +163,7 @@ export const CAPAS_TEMATICAS: CapaOficial[] = [
         nombre: 'Masas de agua',
         descripcion: 'Embalses, lagunas y láminas de agua permanentes.',
         categoria: 'tematica',
+        grupo: 'Hidrografía',
         wmsUrl: 'https://www.ideandalucia.es/services/DERA_g3_hidrografia/wms',
         wmsLayers: 'g03_02_MasaAgua',
         wmsVersion: '1.1.1',
@@ -164,9 +174,179 @@ export const CAPAS_TEMATICAS: CapaOficial[] = [
         visiblePorDefecto: false,
         orden: 4,
     },
+
+    // ── Relieve y topografía ────────────────────────────────────────────────
+    {
+        clave: 'curvas-nivel',
+        nombre: 'Curvas de nivel',
+        descripcion: 'Curvas de nivel del Modelo Digital del Terreno. Base para el plano de relieve del PTEL.',
+        categoria: 'tematica', grupo: 'Relieve',
+        wmsUrl: 'https://servicios.idee.es/wms-inspire/mdt',
+        wmsLayers: 'EL.ContourLine',
+        wmsVersion: '1.3.0', wmsFormat: 'image/png', transparente: true,
+        atribucion: '© Instituto Geográfico Nacional · MDT',
+        opacidad: 0.85, visiblePorDefecto: false, orden: 10,
+    },
+    {
+        clave: 'altimetria',
+        nombre: 'Intervalos altimétricos',
+        descripcion: 'Cotas por franjas de color. Permite leer de un vistazo las zonas altas y las hondonadas donde se acumula el agua.',
+        categoria: 'tematica', grupo: 'Relieve',
+        wmsUrl: 'https://www.ideandalucia.es/services/DERA_g1_relieve/wms',
+        wmsLayers: 'g01_05_IntervaloAltimetrico',
+        wmsVersion: '1.1.1', wmsFormat: 'image/png', transparente: true,
+        atribucion: '© IECA · DERA',
+        opacidad: 0.55, visiblePorDefecto: false, orden: 11,
+    },
+
+    // ── Red viaria y accesos ────────────────────────────────────────────────
+    {
+        clave: 'carreteras',
+        nombre: 'Red de carreteras',
+        descripcion: 'Red viaria oficial. Base para el plano de accesos y para trazar las vías de evacuación.',
+        categoria: 'tematica', grupo: 'Viario y accesos',
+        wmsUrl: 'https://servicios.idee.es/wms-inspire/transportes',
+        wmsLayers: 'TN.RoadTransportNetwork.RoadLink',
+        wmsVersion: '1.3.0', wmsFormat: 'image/png', transparente: true,
+        atribucion: '© Instituto Geográfico Nacional',
+        opacidad: 0.9, visiblePorDefecto: false, orden: 20,
+    },
+    {
+        clave: 'ferrocarril',
+        nombre: 'Red ferroviaria',
+        descripcion: 'Líneas de ferrocarril, relevantes para riesgo de transporte de mercancías peligrosas.',
+        categoria: 'tematica', grupo: 'Viario y accesos',
+        wmsUrl: 'https://servicios.idee.es/wms-inspire/transportes',
+        wmsLayers: 'TN.RailTransportNetwork.RailwayLink',
+        wmsVersion: '1.3.0', wmsFormat: 'image/png', transparente: true,
+        atribucion: '© Instituto Geográfico Nacional',
+        opacidad: 0.9, visiblePorDefecto: false, orden: 21,
+    },
+
+    // ── Usos del suelo ──────────────────────────────────────────────────────
+    {
+        clave: 'usos-suelo',
+        nombre: 'Usos del suelo',
+        descripcion: 'Cubierta y uso del suelo de Andalucía. Base para el riesgo de incendio forestal y para el plano de usos.',
+        categoria: 'tematica', grupo: 'Usos del suelo',
+        wmsUrl: 'https://www.ideandalucia.es/services/DERA_g6_usos_suelo/wms',
+        wmsLayers: 'g06_01_UsoSuelo',
+        wmsVersion: '1.1.1', wmsFormat: 'image/png', transparente: true,
+        atribucion: '© IECA · DERA',
+        opacidad: 0.6, visiblePorDefecto: false, orden: 30,
+    },
+    {
+        clave: 'espacios-protegidos',
+        nombre: 'Espacios naturales protegidos',
+        descripcion: 'Figuras de protección ambiental. Contexto para el riesgo de incendio forestal y el ámbito del INFOCA.',
+        categoria: 'tematica', grupo: 'Usos del suelo',
+        wmsUrl: 'https://www.juntadeandalucia.es/medioambiente/mapwms/REDIAM_Espacios_Naturales_Protegidos',
+        wmsLayers: 'eennpp',
+        wmsVersion: '1.3.0', wmsFormat: 'image/png', transparente: true,
+        atribucion: '© REDIAM · Junta de Andalucía',
+        opacidad: 0.6, visiblePorDefecto: false, orden: 31,
+    },
+
+    // ── Población y elementos vulnerables ───────────────────────────────────
+    {
+        clave: 'nucleos-urbanos',
+        nombre: 'Núcleos urbanos',
+        descripcion: 'Delimitación de los núcleos de población: la mancha urbana a proteger.',
+        categoria: 'tematica', grupo: 'Población y vulnerables',
+        wmsUrl: 'https://www.ideandalucia.es/services/DERA_g7_sistema_urbano/wms',
+        wmsLayers: 'g07_07_NucleosUrbanos_pol',
+        wmsVersion: '1.1.1', wmsFormat: 'image/png', transparente: true,
+        atribucion: '© IECA · DERA',
+        opacidad: 0.5, visiblePorDefecto: false, orden: 40,
+    },
+    {
+        clave: 'manzanas',
+        nombre: 'Manzanas urbanas',
+        descripcion: 'Trama de manzanas. Útil para sectorizar el municipio en la cartografía operativa del CECOPAL.',
+        categoria: 'tematica', grupo: 'Población y vulnerables',
+        wmsUrl: 'https://www.ideandalucia.es/services/DERA_g7_sistema_urbano/wms',
+        wmsLayers: 'g07_04_Manzana',
+        wmsVersion: '1.1.1', wmsFormat: 'image/png', transparente: true,
+        atribucion: '© IECA · DERA',
+        opacidad: 0.55, visiblePorDefecto: false, orden: 41,
+    },
+    {
+        clave: 'zonas-verdes',
+        nombre: 'Zonas verdes',
+        descripcion: 'Parques y espacios libres: candidatos naturales a zona de concentración o área de seguridad.',
+        categoria: 'tematica', grupo: 'Población y vulnerables',
+        wmsUrl: 'https://www.ideandalucia.es/services/DERA_g7_sistema_urbano/wms',
+        wmsLayers: 'g07_06_ZonaVerde',
+        wmsVersion: '1.1.1', wmsFormat: 'image/png', transparente: true,
+        atribucion: '© IECA · DERA',
+        opacidad: 0.7, visiblePorDefecto: false, orden: 42,
+    },
+
+    // ── Medios, recursos y equipamientos sensibles ──────────────────────────
+    {
+        clave: 'centros-salud',
+        nombre: 'Centros de salud',
+        descripcion: 'Centros de atención primaria. Recurso sanitario y, a la vez, elemento vulnerable.',
+        categoria: 'tematica', grupo: 'Medios y equipamientos',
+        wmsUrl: 'https://www.ideandalucia.es/services/DERA_g12_servicios/wms',
+        wmsLayers: 'g12_01_CentroSalud',
+        wmsVersion: '1.1.1', wmsFormat: 'image/png', transparente: true,
+        atribucion: '© IECA · DERA',
+        opacidad: 1, visiblePorDefecto: false, orden: 50,
+    },
+    {
+        clave: 'hospitales',
+        nombre: 'Hospitales',
+        descripcion: 'Hospitales y centros de alta resolución de referencia para evacuación sanitaria.',
+        categoria: 'tematica', grupo: 'Medios y equipamientos',
+        wmsUrl: 'https://www.ideandalucia.es/services/DERA_g12_servicios/wms',
+        wmsLayers: 'g12_02_Hospital_CAE',
+        wmsVersion: '1.1.1', wmsFormat: 'image/png', transparente: true,
+        atribucion: '© IECA · DERA',
+        opacidad: 1, visiblePorDefecto: false, orden: 51,
+    },
+    {
+        clave: 'farmacias',
+        nombre: 'Farmacias',
+        descripcion: 'Oficinas de farmacia, recurso de apoyo en emergencias sanitarias.',
+        categoria: 'tematica', grupo: 'Medios y equipamientos',
+        wmsUrl: 'https://www.ideandalucia.es/services/DERA_g12_servicios/wms',
+        wmsLayers: 'g12_04_Farmacia',
+        wmsVersion: '1.1.1', wmsFormat: 'image/png', transparente: true,
+        atribucion: '© IECA · DERA',
+        opacidad: 1, visiblePorDefecto: false, orden: 52,
+    },
+    {
+        clave: 'centros-educativos',
+        nombre: 'Centros educativos',
+        descripcion: 'Colegios e institutos: población especialmente vulnerable y, muchos de ellos, con plan de autoprotección propio.',
+        categoria: 'tematica', grupo: 'Medios y equipamientos',
+        wmsUrl: 'https://www.ideandalucia.es/services/DERA_g12_servicios/wms',
+        wmsLayers: 'g12_05_CentroEducativo',
+        wmsVersion: '1.1.1', wmsFormat: 'image/png', transparente: true,
+        atribucion: '© IECA · DERA',
+        opacidad: 1, visiblePorDefecto: false, orden: 53,
+    },
+    {
+        clave: 'ayuntamiento',
+        nombre: 'Ayuntamiento y sedes',
+        descripcion: 'Sede municipal, donde se constituye el CECOPAL.',
+        categoria: 'tematica', grupo: 'Medios y equipamientos',
+        wmsUrl: 'https://www.ideandalucia.es/services/DERA_g12_servicios/wms',
+        wmsLayers: 'g12_11_Ayuntamiento',
+        wmsVersion: '1.1.1', wmsFormat: 'image/png', transparente: true,
+        atribucion: '© IECA · DERA',
+        opacidad: 1, visiblePorDefecto: false, orden: 54,
+    },
 ]
 
 export const TODAS_LAS_CAPAS_OFICIALES = [...CAPAS_BASE, ...CAPAS_TEMATICAS]
+
+/** Orden en que se muestran las secciones del panel de capas. */
+export const ORDEN_GRUPOS = [
+    'Territorio', 'Relieve', 'Hidrografía', 'Viario y accesos',
+    'Usos del suelo', 'Población y vulnerables', 'Medios y equipamientos', 'Otras',
+]
 
 /** Teselas del callejero de fondo (no es WMS). */
 export const TILES_CALLEJERO = {

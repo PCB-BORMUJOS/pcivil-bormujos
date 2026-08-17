@@ -6,7 +6,7 @@ import {
     Layers, Eye, EyeOff, Crosshair, Maximize2, Minimize2, AlertTriangle,
     MapPin, ChevronDown, Image as ImageIcon, Mountain, Map as MapIcon, Waves,
 } from 'lucide-react'
-import { BORMUJOS, TILES_CALLEJERO } from '@/lib/cartografia'
+import { BORMUJOS, TILES_CALLEJERO, ORDEN_GRUPOS } from '@/lib/cartografia'
 
 // Leaflet siempre con carga dinámica y sin render en servidor (regla del proyecto).
 const MapContainer  = dynamic(() => import('react-leaflet').then(m => m.MapContainer),  { ssr: false })
@@ -22,6 +22,7 @@ export type Capa = {
     nombre: string
     descripcion: string | null
     categoria: string
+    grupo: string
     tipo: string
     wmsUrl: string | null
     wmsLayers: string | null
@@ -85,7 +86,48 @@ export default function MapaCartografia({
     const [panelAbierto, setPanelAbierto] = useState(true)
     const [pantallaCompleta, setPantallaCompleta] = useState(false)
     const [mostrarPuntos, setMostrarPuntos] = useState(true)
+    const [cargandoTeselas, setCargandoTeselas] = useState(0)
     const mapRef = useRef<any>(null)
+    const contenedorRef = useRef<HTMLDivElement>(null)
+
+    // Leaflet solo mide su contenedor al montarse. Si después cambia de tamaño
+    // —al abrir el panel, entrar en pantalla completa o al mostrarse la pestaña—
+    // se queda con la medida antigua y aparecen franjas grises con las teselas
+    // descolocadas. Un ResizeObserver lo mantiene sincronizado.
+    useEffect(() => {
+        const cont = contenedorRef.current
+        if (!cont) return
+        const ro = new ResizeObserver(() => {
+            requestAnimationFrame(() => mapRef.current?.invalidateSize({ animate: false }))
+        })
+        ro.observe(cont)
+        return () => ro.disconnect()
+    }, [])
+
+    useEffect(() => {
+        const t = setTimeout(() => mapRef.current?.invalidateSize({ animate: false }), 220)
+        return () => clearTimeout(t)
+    }, [pantallaCompleta, panelAbierto])
+
+    /**
+     * Ajustes comunes de las capas WMS. Teselas de 512 en vez de 256: se piden
+     * cuatro veces menos imágenes, se ven muchas menos costuras y los servidores
+     * de la Junta y el IGN responden mejor. Además, no se recargan mientras se
+     * arrastra o se hace zoom, que es lo que hacía la navegación incómoda.
+     */
+    const opcionesTesela = {
+        tileSize: 512,
+        updateWhenIdle: true,
+        updateWhenZooming: false,
+        keepBuffer: 2,
+        detectRetina: false,
+    } as const
+
+    const manejadoresCarga = (id: string) => ({
+        loading: () => setCargandoTeselas(n => n + 1),
+        load: () => setCargandoTeselas(n => Math.max(0, n - 1)),
+        tileerror: () => { setFallidas(p => new Set(p).add(id)); setCargandoTeselas(n => Math.max(0, n - 1)) },
+    })
 
     // Sincronizar cuando llegan las capas del servidor
     useEffect(() => {
@@ -130,12 +172,46 @@ export default function MapaCartografia({
     const baseSeleccionada = capasBase.find(c => c.id === baseActiva)
     const nActivas = activas.size
 
+    // Capas temáticas repartidas por sección, en el orden del catálogo.
+    const gruposOrdenados = useMemo(() => {
+        const mapa = new Map<string, Capa[]>()
+        for (const c of capasTema) {
+            const g = c.grupo || 'Otras'
+            if (!mapa.has(g)) mapa.set(g, [])
+            mapa.get(g)!.push(c)
+        }
+        const posicion = (g: string) => {
+            const i = ORDEN_GRUPOS.indexOf(g)
+            return i === -1 ? ORDEN_GRUPOS.length : i
+        }
+        return Array.from(mapa.entries()).sort((a, b) => posicion(a[0]) - posicion(b[0]))
+    }, [capasTema])
+
+    // Al entrar solo se despliegan las secciones que ya traen algo encendido;
+    // el resto quedan plegadas para que el panel se lea de una ojeada.
+    const [gruposAbiertos, setGruposAbiertos] = useState<Set<string>>(new Set())
+    const gruposIniciados = useRef(false)
+    useEffect(() => {
+        if (gruposIniciados.current || gruposOrdenados.length === 0) return
+        gruposIniciados.current = true
+        const conAlgo = gruposOrdenados
+            .filter(([, lista]) => lista.some(c => c.visiblePorDefecto))
+            .map(([g]) => g)
+        setGruposAbiertos(new Set(conAlgo.length ? conAlgo : [gruposOrdenados[0][0]]))
+    }, [gruposOrdenados])
+
     return (
         <div
             className={pantallaCompleta
-                ? 'fixed inset-0 z-[1200] bg-slate-900'
-                : 'relative rounded-2xl overflow-hidden border border-slate-200 shadow-sm bg-slate-100'}
+                ? 'fixed inset-0 z-[1200] bg-slate-900 flex gap-0 lg:gap-3 lg:p-3'
+                : 'flex gap-3'}
             style={pantallaCompleta ? undefined : { height: altura }}
+        >
+        {/* El mapa y el panel van UNO AL LADO DEL OTRO en pantallas grandes: si el
+            panel flotase encima taparía justo la zona que se quiere mirar. */}
+        <div
+            ref={contenedorRef}
+            className="relative flex-1 min-w-0 rounded-2xl overflow-hidden border border-slate-200 shadow-sm bg-slate-100"
         >
             <MapContainer
                 center={BORMUJOS.centro}
@@ -161,7 +237,8 @@ export default function MapaCartografia({
                             version: (baseSeleccionada.wmsVersion || '1.1.1') as any,
                         }}
                         attribution={baseSeleccionada.atribucion || ''}
-                        eventHandlers={{ tileerror: () => setFallidas(p => new Set(p).add(baseSeleccionada.id)) }}
+                        {...opcionesTesela}
+                        eventHandlers={manejadoresCarga(baseSeleccionada.id)}
                     />
                 )}
 
@@ -180,7 +257,8 @@ export default function MapaCartografia({
                                     version: (c.wmsVersion || '1.1.1') as any,
                                 }}
                                 attribution={c.atribucion || ''}
-                                eventHandlers={{ tileerror: () => setFallidas(p => new Set(p).add(c.id)) }}
+                                {...opcionesTesela}
+                                eventHandlers={manejadoresCarga(c.id)}
                             />
                         )
                     }
@@ -268,10 +346,21 @@ export default function MapaCartografia({
                 </button>
             </div>
 
-            {/* ── Panel de capas ── */}
+            {/* Aviso de carga: los servidores oficiales tardan, y sin esto parece
+                que el mapa se ha quedado colgado. */}
+            {cargandoTeselas > 0 && (
+                <div className="absolute bottom-3 right-3 z-[500] flex items-center gap-2 bg-white/95 backdrop-blur border border-slate-200 shadow-lg rounded-full px-3 py-1.5">
+                    <span className="w-3 h-3 rounded-full border-2 border-blue-600 border-t-transparent animate-spin" />
+                    <span className="text-[11px] font-semibold text-slate-600">Cargando cartografía…</span>
+                </div>
+            )}
+        </div>
+
+            {/* ── Panel de capas, acoplado al lado del mapa ── */}
             {panelAbierto && (
-                <div className="absolute top-3 right-16 z-[500] w-[19rem] max-h-[calc(100%-1.5rem)] overflow-y-auto rounded-2xl bg-white/97 backdrop-blur shadow-2xl border border-slate-200">
-                    <div className="sticky top-0 bg-white/97 backdrop-blur px-4 py-3 border-b border-slate-100 flex items-center justify-between">
+                <div className="overflow-y-auto rounded-2xl bg-white shadow-sm border border-slate-200 flex-shrink-0 w-[19rem]
+                    max-lg:fixed max-lg:inset-y-0 max-lg:right-0 max-lg:z-[1210] max-lg:w-[85vw] max-lg:max-w-sm max-lg:rounded-none max-lg:shadow-2xl">
+                    <div className="sticky top-0 bg-white px-4 py-3 border-b border-slate-100 flex items-center justify-between">
                         <div className="flex items-center gap-2">
                             <Layers size={15} className="text-blue-600" />
                             <h3 className="text-sm font-bold text-slate-800">Capas del mapa</h3>
@@ -306,14 +395,33 @@ export default function MapaCartografia({
                         </div>
                     </div>
 
-                    {/* Temáticas */}
+                    {/* Temáticas, agrupadas por sección plegable */}
                     <div className="px-3 pb-3">
                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Capas superpuestas</p>
-                        <div className="space-y-1">
-                            {capasTema.length === 0 && (
-                                <p className="text-xs text-slate-400 py-2">No hay capas temáticas todavía.</p>
-                            )}
-                            {capasTema.map(c => {
+                        {capasTema.length === 0 && (
+                            <p className="text-xs text-slate-400 py-2">No hay capas temáticas todavía.</p>
+                        )}
+                        {gruposOrdenados.map(([grupo, lista]) => {
+                            const abierto = gruposAbiertos.has(grupo)
+                            const encendidas = lista.filter(c => activas.has(c.id)).length
+                            return (
+                              <div key={grupo} className="mb-1.5">
+                                <button
+                                    onClick={() => setGruposAbiertos(prev => {
+                                        const s = new Set(prev); s.has(grupo) ? s.delete(grupo) : s.add(grupo); return s
+                                    })}
+                                    className="w-full flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-slate-50 transition-colors"
+                                >
+                                    <ChevronDown size={13} className={`text-slate-400 transition-transform ${abierto ? '' : '-rotate-90'}`} />
+                                    <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wide flex-1 text-left">{grupo}</span>
+                                    {encendidas > 0 && (
+                                        <span className="text-[9px] font-bold text-blue-700 bg-blue-100 rounded-full px-1.5">{encendidas}</span>
+                                    )}
+                                    <span className="text-[10px] text-slate-400">{lista.length}</span>
+                                </button>
+                                {abierto && (
+                                <div className="space-y-1 pl-1">
+                            {lista.map(c => {
                                 const on = activas.has(c.id)
                                 const Icono = iconoCapa(c.nombre)
                                 const falla = fallidas.has(c.id)
@@ -369,7 +477,11 @@ export default function MapaCartografia({
                                     </div>
                                 )
                             })}
-                        </div>
+                                </div>
+                                )}
+                              </div>
+                            )
+                        })}
                     </div>
 
                     {/* Emplazamientos */}
