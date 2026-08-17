@@ -3,9 +3,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
     Layers, Eye, EyeOff, Crosshair, Maximize2, Minimize2, AlertTriangle,
-    MapPin, ChevronDown, Image as ImageIcon, Mountain, Map as MapIcon, Waves,
+    MapPin, ChevronDown, Image as ImageIcon, Mountain, Map as MapIcon, Waves, Printer,
 } from 'lucide-react'
 import { BORMUJOS, TILES_CALLEJERO, ORDEN_GRUPOS } from '@/lib/cartografia'
+import LaminaPlano from './LaminaPlano'
 
 // OJO: el CSS de Leaflet NO se importa aquí, sino en la página que monta este
 // componente. Comprobado en el build: importado en este fichero su CSS acaba en
@@ -74,11 +75,13 @@ export default function MapaCartografia({
     puntos,
     alPulsarPunto,
     altura = '100%',
+    contexto,
 }: {
     capas: Capa[]
     puntos: PuntoPlan[]
     alPulsarPunto?: (id: string) => void
     altura?: string
+    contexto?: { nombre?: string; anexo?: string }
 }) {
     const capasBase = useMemo(() => capas.filter(c => c.categoria === 'base'), [capas])
     const capasTema = useMemo(() => capas.filter(c => c.categoria !== 'base'), [capas])
@@ -203,6 +206,28 @@ export default function MapaCartografia({
         })
 
     const centrar = () => mapRef.current?.setView(BORMUJOS.centro, BORMUJOS.zoom)
+
+    // Datos capturados para la lámina imprimible (encuadre + capas activas).
+    const [lamina, setLamina] = useState<any>(null)
+    const abrirLamina = async () => {
+        const m = mapRef.current
+        if (!m) return
+        const c = m.getCenter(), z = m.getZoom()
+        // El mapa de situación del cajetín necesita el límite municipal.
+        if (!geojsons['__termino']) {
+            try {
+                const g = await fetch('/cartografia/termino-bormujos.geojson').then(r => r.json())
+                setGeojsons(prev => ({ ...prev, __termino: g }))
+            } catch { /* el cajetín funciona igual sin el mini-mapa */ }
+        }
+        setLamina({
+            center: [c.lat, c.lng] as [number, number],
+            zoom: z,
+            baseActiva,
+            baseCapa: capasBase.find(x => x.id === baseActiva),
+            capasActivas: capasTema.filter(x => activas.has(x.id)),
+        })
+    }
 
     const encuadrarCapa = (c: Capa) => {
         if (!c.bbox || !mapRef.current) return
@@ -396,6 +421,13 @@ export default function MapaCartografia({
                 >
                     {pantallaCompleta ? <Minimize2 size={17} /> : <Maximize2 size={17} />}
                 </button>
+                <button
+                    onClick={abrirLamina}
+                    title="Crear plano para imprimir (PDF)"
+                    className="w-10 h-10 rounded-xl shadow-lg border border-emerald-200 bg-emerald-600 text-white hover:bg-emerald-500 flex items-center justify-center"
+                >
+                    <Printer size={17} />
+                </button>
             </div>
 
             {/* Aviso de carga: los servidores oficiales tardan, y sin esto parece
@@ -559,6 +591,20 @@ export default function MapaCartografia({
                         </div>
                     )}
                 </div>
+            )}
+
+            {lamina && (
+                <LaminaPlano
+                    center={lamina.center}
+                    zoom={lamina.zoom}
+                    baseActiva={lamina.baseActiva}
+                    baseCapa={lamina.baseCapa}
+                    capasActivas={lamina.capasActivas}
+                    opacidades={opacidades}
+                    geojsons={geojsons}
+                    contexto={contexto}
+                    onCerrar={() => setLamina(null)}
+                />
             )}
         </div>
     )
