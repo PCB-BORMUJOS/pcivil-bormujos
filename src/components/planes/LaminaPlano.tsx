@@ -111,8 +111,10 @@ export default function LaminaPlano({
         }} />
     })
 
-    // Lámina fija A3 apaisado (420×297 mm). 4/5 mapa · 1/5 cajetín.
-    const dim = { w: 420, h: 297 }
+    // Lámina A3 apaisado con margen de seguridad: se deja ~5 mm de guarda a cada
+    // lado (410×287 mm centrado en la hoja A3 de 420×297) para que las impresoras,
+    // que no imprimen a sangre, NO recorten el lateral derecho ni la parte inferior.
+    const dim = { w: 410, h: 287 }
 
     return (
         <div className="fixed inset-0 z-[1400] bg-slate-800/95 flex flex-col">
@@ -126,7 +128,7 @@ export default function LaminaPlano({
                     body { background:#fff !important; }
                     body * { visibility: hidden !important; }
                     .lamina-print, .lamina-print * { visibility: visible !important; }
-                    .lamina-print { position: fixed; inset: 0; margin:0; padding:0; background:#fff; }
+                    .lamina-print { position: fixed; inset: 0; margin:0; padding:0; background:#fff; display:flex; align-items:center; justify-content:center; }
                     .lamina-noprint { display: none !important; }
                     .lamina-hoja { box-shadow:none !important; }
                     .leaflet-control-container { display:none !important; }
