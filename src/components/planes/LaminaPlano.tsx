@@ -119,7 +119,7 @@ export default function LaminaPlano({
             {/* Estilos de impresión: al imprimir solo se ve la lámina, a tamaño de página. */}
             <style>{`
                 .lamina-hoja { width: ${dim.w}mm; height: ${dim.h}mm; background:#fff; padding:7mm; box-sizing:border-box; }
-                .lamina-marco { width:100%; height:100%; display:flex; border:1px solid #94a3b8; overflow:hidden; box-sizing:border-box; }
+                .lamina-marco { width:100%; height:100%; display:flex; gap:4mm; padding:3mm; border:1px solid #94a3b8; overflow:hidden; box-sizing:border-box; }
                 .lamina-contraste { filter: drop-shadow(0 0 1.5px #fff) drop-shadow(0 0 1px #fff); }
                 @media print {
                     @page { size: A3 landscape; margin: 0; }
@@ -209,7 +209,7 @@ export default function LaminaPlano({
                         <div className="lamina-hoja shadow-2xl">
                           <div className="lamina-marco">
                             {/* ── 4/5: MAPA ── */}
-                            <div ref={mapAreaRef} style={{ width: '80%', height: '100%', position: 'relative', borderRight: '1px solid #94a3b8' }}>
+                            <div ref={mapAreaRef} style={{ flex: '1 1 0', minWidth: 0, height: '100%', position: 'relative', border: '1px solid #cbd5e1', overflow: 'hidden' }}>
                                 <MapContainer center={center} zoom={zoom} ref={mapRef as any}
                                     scrollWheelZoom attributionControl={false} zoomSnap={0} zoomDelta={0.25} maxZoom={22}
                                     style={{ height: '100%', width: '100%' }}>
@@ -224,7 +224,7 @@ export default function LaminaPlano({
                             </div>
 
                             {/* ── 1/5: CAJETÍN ── */}
-                            <div style={{ width: '20%', height: '100%', display: 'flex', flexDirection: 'column', fontFamily: 'system-ui, sans-serif', color: '#0f172a' }}>
+                            <div style={{ width: '20%', height: '100%', display: 'flex', flexDirection: 'column', fontFamily: 'system-ui, sans-serif', color: '#0f172a', border: '1px solid #cbd5e1', overflow: 'hidden' }}>
                                 {/* Cabecera (doble de altura) */}
                                 <div style={{ background: VERDE, color: '#fff', padding: '18px 16px', minHeight: 78, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                                     <div style={{ fontSize: fs(19), fontWeight: 800, lineHeight: 1.12, letterSpacing: '0.01em' }}>{tituloPlan}</div>
@@ -345,18 +345,8 @@ function RosaVientos({ contenedorRef }: { contenedorRef: RefObject<HTMLDivElemen
     return (
         <div onPointerDown={onDown('mover')}
             style={{ position: 'absolute', left: pos.left, ...(pos.top != null ? { top: pos.top } : { bottom: 14 }), width: s, height: s, cursor: 'move', zIndex: 500, touchAction: 'none' }}>
-            <svg viewBox="0 0 100 100" width={s} height={s} style={{ display: 'block', background: 'rgba(255,255,255,0.85)', borderRadius: 10, boxShadow: '0 1px 4px rgba(0,0,0,.25)' }}>
-                <circle cx="50" cy="50" r="34" fill="none" stroke="#94a3b8" strokeWidth="1.5" />
-                {/* Aguja: norte oscuro, sur claro */}
-                <polygon points="50,14 58,50 50,44 42,50" fill="#b91c1c" />
-                <polygon points="50,86 42,50 50,56 58,50" fill="#64748b" />
-                <circle cx="50" cy="50" r="3.5" fill="#1f2937" />
-                {/* Puntos cardinales */}
-                <text x="50" y="12" textAnchor="middle" fontSize="12" fontWeight="800" fill="#b91c1c" fontFamily="system-ui">N</text>
-                <text x="50" y="96" textAnchor="middle" fontSize="9" fontWeight="700" fill="#475569" fontFamily="system-ui">S</text>
-                <text x="92" y="54" textAnchor="middle" fontSize="9" fontWeight="700" fill="#475569" fontFamily="system-ui">E</text>
-                <text x="8" y="54" textAnchor="middle" fontSize="9" fontWeight="700" fill="#475569" fontFamily="system-ui">O</text>
-            </svg>
+            <img src="/rosa-de-los-vientos.svg" alt="Norte" width={s} height={s}
+                style={{ display: 'block', width: s, height: s, pointerEvents: 'none', userSelect: 'none' }} draggable={false} />
             {/* Tirador de redimensión (no se imprime) */}
             <div className="lamina-noprint" onPointerDown={onDown('redim')}
                 style={{ position: 'absolute', right: -5, bottom: -5, width: 15, height: 15, background: '#0f172a', border: '2px solid #fff', borderRadius: 4, cursor: 'nwse-resize', boxShadow: '0 1px 2px rgba(0,0,0,.3)' }}
