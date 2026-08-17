@@ -75,6 +75,9 @@ export default function LaminaPlano({
     // Escala REAL del encuadre actual (se recalcula al mover el mapa).
     const [escalaNum, setEscalaNum] = useState(() => escalaDe(center[0], zoom))
     const [editando, setEditando] = useState(true)
+    // Factor de tamaño de la tipografía del cajetín (elegible en el editor).
+    const [factorFuente, setFactorFuente] = useState(1)
+    const fs = (n: number) => Math.round(n * factorFuente * 10) / 10
 
     const mapRef = useRef<any>(null)
     const insetRef = useRef<any>(null)
@@ -113,7 +116,8 @@ export default function LaminaPlano({
         <div className="fixed inset-0 z-[1400] bg-slate-800/95 flex flex-col">
             {/* Estilos de impresión: al imprimir solo se ve la lámina, a tamaño de página. */}
             <style>{`
-                .lamina-hoja { width: ${dim.w}mm; height: ${dim.h}mm; background:#fff; display:flex; }
+                .lamina-hoja { width: ${dim.w}mm; height: ${dim.h}mm; background:#fff; padding:7mm; box-sizing:border-box; }
+                .lamina-marco { width:100%; height:100%; display:flex; border:1px solid #94a3b8; overflow:hidden; box-sizing:border-box; }
                 .lamina-contraste { filter: drop-shadow(0 0 1.5px #fff) drop-shadow(0 0 1px #fff); }
                 @media print {
                     @page { size: A3 landscape; margin: 0; }
@@ -184,6 +188,13 @@ export default function LaminaPlano({
                             </div>
                             <p className="text-[11px] text-slate-400 mt-1">Pulsa una escala para encuadrar exacto, o mueve el mapa libremente.</p>
                         </div>
+                        <div>
+                            <label className="block text-xs font-semibold text-slate-500 mb-1">Tamaño de la tipografía del cajetín</label>
+                            <div className="flex items-center gap-2">
+                                <input type="range" min={0.8} max={1.5} step={0.05} value={factorFuente} onChange={e => setFactorFuente(parseFloat(e.target.value))} className="flex-1" />
+                                <span className="text-xs font-bold text-slate-700 w-10 text-right">{Math.round(factorFuente * 100)}%</span>
+                            </div>
+                        </div>
                         <div className="text-[11px] text-slate-500"><b>Proyección:</b> {PROYECCION}</div>
                         <p className="text-[11px] text-slate-400 leading-snug">La leyenda, las fuentes y la barra de escala se generan solas a partir de las capas activas.</p>
                     </div>
@@ -194,8 +205,9 @@ export default function LaminaPlano({
                 <div className="flex-1 min-w-0 flex items-start justify-center p-6 overflow-auto">
                     <div className="lamina-print">
                         <div className="lamina-hoja shadow-2xl">
+                          <div className="lamina-marco">
                             {/* ── 4/5: MAPA ── */}
-                            <div style={{ width: '80%', height: '100%', position: 'relative' }}>
+                            <div style={{ width: '80%', height: '100%', position: 'relative', borderRight: '1px solid #94a3b8' }}>
                                 <MapContainer center={center} zoom={zoom} ref={mapRef as any}
                                     scrollWheelZoom attributionControl={false} zoomSnap={0} zoomDelta={0.25} maxZoom={22}
                                     style={{ height: '100%', width: '100%' }}>
@@ -205,7 +217,7 @@ export default function LaminaPlano({
                                     <SyncEscala onCambio={(lat, z) => setEscalaNum(escalaDe(lat, z))} />
                                 </MapContainer>
                                 {/* Rosa de los vientos */}
-                                <svg width="46" height="46" viewBox="0 0 46 46" style={{ position: 'absolute', top: 10, right: 10, background: 'rgba(255,255,255,0.82)', borderRadius: 8, padding: 3 }}>
+                                <svg width="56" height="56" viewBox="0 0 46 46" style={{ position: 'absolute', top: 12, right: 12, background: 'rgba(255,255,255,0.85)', borderRadius: 9, padding: 4, boxShadow: '0 1px 3px rgba(0,0,0,.2)' }}>
                                     <polygon points="23,5 28,23 23,20 18,23" fill="#1f2937" />
                                     <polygon points="23,41 18,23 23,26 28,23" fill="#9ca3af" />
                                     <text x="23" y="14" textAnchor="middle" fontSize="8" fontWeight="700" fill="#1f2937">N</text>
@@ -213,61 +225,74 @@ export default function LaminaPlano({
                             </div>
 
                             {/* ── 1/5: CAJETÍN ── */}
-                            <div style={{ width: '20%', height: '100%', borderLeft: '1.5px solid #cbd5e1', display: 'flex', flexDirection: 'column', fontFamily: 'system-ui, sans-serif' }}>
-                                {/* Cabecera */}
-                                <div style={{ background: VERDE, color: '#fff', padding: '10px 12px' }}>
-                                    <div style={{ fontSize: 13, fontWeight: 800, lineHeight: 1.15 }}>{tituloPlan}</div>
-                                    <div style={{ fontSize: 10, opacity: 0.9, marginTop: 2 }}>{anexo}</div>
+                            <div style={{ width: '20%', height: '100%', display: 'flex', flexDirection: 'column', fontFamily: 'system-ui, sans-serif', color: '#0f172a' }}>
+                                {/* Cabecera (doble de altura) */}
+                                <div style={{ background: VERDE, color: '#fff', padding: '18px 16px', minHeight: 78, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                                    <div style={{ fontSize: fs(19), fontWeight: 800, lineHeight: 1.12, letterSpacing: '0.01em' }}>{tituloPlan}</div>
+                                    <div style={{ fontSize: fs(12), opacity: 0.92, marginTop: 4 }}>{anexo}</div>
                                 </div>
 
-                                {/* Mapa de situación */}
-                                <div style={{ height: 120, borderBottom: '1px solid #e2e8f0', position: 'relative' }}>
+                                {/* Mapa de situación (doble de tamaño) */}
+                                <div style={{ height: 240, borderBottom: '1px solid #cbd5e1', position: 'relative' }}>
                                     <MapContainer center={center} zoom={9} ref={insetRef as any}
                                         dragging={false} scrollWheelZoom={false} doubleClickZoom={false} zoomControl={false} attributionControl={false} keyboard={false} touchZoom={false}
                                         style={{ height: '100%', width: '100%' }}>
                                         <TileLayer url={TILES_CALLEJERO.url} maxZoom={19} />
-                                        {geojsons['__termino'] && <GeoJSONLayer data={geojsons['__termino']} style={() => ({ color: '#dc2626', weight: 2, fillOpacity: 0.12, fillColor: '#dc2626' })} />}
+                                        {geojsons['__termino'] && <GeoJSONLayer data={geojsons['__termino']} style={() => ({ color: '#dc2626', weight: 2.5, fillOpacity: 0.12, fillColor: '#dc2626' })} />}
                                     </MapContainer>
-                                    <div style={{ position: 'absolute', bottom: 2, left: 4, fontSize: 8, color: '#475569', background: 'rgba(255,255,255,.7)', padding: '0 3px', borderRadius: 3 }}>Situación en la comarca</div>
+                                    <div style={{ position: 'absolute', bottom: 3, left: 5, fontSize: fs(9), color: '#334155', background: 'rgba(255,255,255,.8)', padding: '1px 5px', borderRadius: 3 }}>Situación en la comarca</div>
                                 </div>
 
-                                <div style={{ padding: '10px 12px', flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                <div style={{ padding: '12px 14px', flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: 10 }}>
                                     {/* Leyenda */}
                                     <div>
-                                        <div style={{ fontSize: 11, fontWeight: 800, color: '#334155', marginBottom: 4 }}>Leyenda</div>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                                        <div style={{ fontSize: fs(14), fontWeight: 800, color: VERDE, marginBottom: 6 }}>Leyenda</div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                                             {baseActiva === 'callejero'
-                                                ? <FilaLeyenda color="#e5e7eb" nombre="Callejero (OpenStreetMap)" caja />
-                                                : baseCapa ? <FilaLeyenda color="#e5e7eb" nombre={baseCapa.nombre} caja /> : null}
-                                            {capasActivas.map(c => <FilaLeyenda key={c.id} color={c.color || '#2563eb'} nombre={c.nombre} caja={c.tipo !== 'archivo'} />)}
-                                            {capasActivas.length === 0 && <span style={{ fontSize: 9, color: '#94a3b8' }}>Sin capas temáticas activas</span>}
+                                                ? <FilaLeyenda color="#e5e7eb" nombre="Callejero (OpenStreetMap)" caja sz={fs(11)} />
+                                                : baseCapa ? <FilaLeyenda color="#e5e7eb" nombre={baseCapa.nombre} caja sz={fs(11)} /> : null}
+                                            {capasActivas.map(c => <FilaLeyenda key={c.id} color={c.color || '#2563eb'} nombre={c.nombre} caja={c.tipo !== 'archivo'} sz={fs(11)} />)}
+                                            {capasActivas.length === 0 && <span style={{ fontSize: fs(10), color: '#94a3b8' }}>Sin capas temáticas activas</span>}
                                         </div>
                                     </div>
 
                                     {/* Título del plano y descripción */}
-                                    <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: 6 }}>
-                                        <div style={{ fontSize: 9, fontWeight: 700, color: VERDE, textTransform: 'uppercase' }}>Título del plano</div>
-                                        <div style={{ fontSize: 11, fontWeight: 700, color: '#0f172a', lineHeight: 1.2, marginTop: 1 }}>{tituloPlano || '—'}</div>
-                                        {descripcion && <div style={{ fontSize: 8.5, color: '#475569', lineHeight: 1.3, marginTop: 4, textAlign: 'justify' }}>{descripcion}</div>}
+                                    <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: 8 }}>
+                                        <div style={{ fontSize: fs(11), fontWeight: 700, color: VERDE, textTransform: 'uppercase', letterSpacing: '0.03em' }}>Título del plano</div>
+                                        <div style={{ fontSize: fs(15), fontWeight: 800, color: '#0f172a', lineHeight: 1.2, marginTop: 3 }}>{tituloPlano || '—'}</div>
+                                        {descripcion && <div style={{ fontSize: fs(11), color: '#334155', lineHeight: 1.4, marginTop: 6, textAlign: 'justify', textJustify: 'inter-word' as any }}>{descripcion}</div>}
                                     </div>
 
-                                    {/* Datos técnicos */}
-                                    <div style={{ marginTop: 'auto', borderTop: '1px solid #e2e8f0', paddingTop: 6, fontSize: 9, color: '#334155', display: 'flex', flexDirection: 'column', gap: 3 }}>
-                                        <div><b>N.º de plano:</b> {numero} / {total} &nbsp;·&nbsp; <b>Fecha:</b> {fecha}</div>
-                                        <div><b>Escala:</b> 1:{fmtEscala(escalaNum)}</div>
-                                        {/* Barra de escala gráfica (según la escala real del encuadre) */}
-                                        <BarraEscala escala={escalaNum} />
-                                        <div><b>Proyección:</b> {PROYECCION}</div>
-                                        <div style={{ marginTop: 2 }}><b>Fuente:</b> {fuentes.join(', ') || '—'}</div>
+                                    {/* Datos técnicos (maquetados) */}
+                                    <div style={{ marginTop: 'auto', border: '1px solid #e2e8f0', borderRadius: 6, overflow: 'hidden' }}>
+                                        <FilaDato label="N.º de plano" valor={`${numero} / ${total}`} sz={fs(11)} />
+                                        <FilaDato label="Fecha" valor={fecha} sz={fs(11)} alt />
+                                        <FilaDato label="Escala" valor={`1 : ${fmtEscala(escalaNum)}`} sz={fs(11)} />
+                                        <div style={{ background: '#f8fafc', padding: '6px 8px', borderTop: '1px solid #f1f5f9' }}>
+                                            <BarraEscala escala={escalaNum} />
+                                        </div>
+                                        <FilaDato label="Proyección" valor={PROYECCION} sz={fs(10)} alt />
+                                        <FilaDato label="Fuentes" valor={fuentes.join(', ') || '—'} sz={fs(10)} />
                                     </div>
 
-                                    {/* Pie institucional */}
-                                    <div style={{ borderTop: `2px solid ${VERDE}`, marginTop: 6, paddingTop: 6, textAlign: 'center' }}>
-                                        <div style={{ fontSize: 9, fontWeight: 800, color: VERDE, lineHeight: 1.2 }}>Servicio de Protección Civil y Emergencias</div>
-                                        <div style={{ fontSize: 8.5, color: '#64748b' }}>Ayuntamiento de Bormujos</div>
+                                    {/* Logotipo del servicio, centrado y con aire */}
+                                    <div style={{ padding: '10px 18px 6px', textAlign: 'center' }}>
+                                        <img src="/images/logo-proteccion-civil-bormujos.png" alt="Protección Civil Bormujos"
+                                            style={{ width: '62%', maxWidth: '62%', height: 'auto', margin: '0 auto', display: 'block' }} />
+                                    </div>
+
+                                    {/* Pie institucional + firma */}
+                                    <div style={{ borderTop: `2px solid ${VERDE}`, paddingTop: 8, textAlign: 'center' }}>
+                                        <div style={{ fontSize: fs(11.5), fontWeight: 800, color: VERDE, lineHeight: 1.2 }}>Servicio de Protección Civil y Emergencias</div>
+                                        <div style={{ fontSize: fs(10.5), color: '#64748b' }}>Ayuntamiento de Bormujos</div>
+                                        <div style={{ marginTop: 6, fontSize: fs(9.5), color: '#334155', lineHeight: 1.3 }}>
+                                            <span style={{ color: '#64748b' }}>Elaborado por:</span> <b>Emilio Simón Gómez</b><br />
+                                            Jefe del Servicio de Protección Civil y Emergencias
+                                        </div>
                                     </div>
                                 </div>
                             </div>
+                          </div>
                         </div>
                     </div>
                 </div>
@@ -294,13 +319,23 @@ function Campo({ label, v, set, placeholder }: { label: string; v: string; set: 
     )
 }
 
-function FilaLeyenda({ color, nombre, caja }: { color: string; nombre: string; caja?: boolean }) {
+function FilaLeyenda({ color, nombre, caja, sz = 9 }: { color: string; nombre: string; caja?: boolean; sz?: number }) {
     return (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
             {caja
-                ? <span style={{ width: 14, height: 10, background: color, border: '1px solid #94a3b8', borderRadius: 2, flexShrink: 0 }} />
-                : <span style={{ width: 16, height: 0, borderTop: `3px solid ${color}`, flexShrink: 0 }} />}
-            <span style={{ fontSize: 9, color: '#334155', lineHeight: 1.15 }}>{nombre}</span>
+                ? <span style={{ width: sz * 1.7, height: sz * 1.15, background: color, border: '1px solid #94a3b8', borderRadius: 2, flexShrink: 0 }} />
+                : <span style={{ width: sz * 1.9, height: 0, borderTop: `${Math.max(3, sz * 0.32)}px solid ${color}`, flexShrink: 0 }} />}
+            <span style={{ fontSize: sz, color: '#334155', lineHeight: 1.2 }}>{nombre}</span>
+        </div>
+    )
+}
+
+// Fila etiqueta/valor del bloque técnico del cajetín (maquetación de tabla).
+function FilaDato({ label, valor, sz, alt }: { label: string; valor: string; sz: number; alt?: boolean }) {
+    return (
+        <div style={{ display: 'flex', gap: 8, padding: '5px 8px', background: alt ? '#f8fafc' : '#fff', borderTop: '1px solid #f1f5f9' }}>
+            <span style={{ fontSize: sz, color: '#64748b', fontWeight: 600, flex: '0 0 38%' }}>{label}</span>
+            <span style={{ fontSize: sz, color: '#0f172a', fontWeight: 700, flex: 1, wordBreak: 'break-word', lineHeight: 1.25 }}>{valor}</span>
         </div>
     )
 }
