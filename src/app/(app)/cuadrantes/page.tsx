@@ -262,7 +262,12 @@ export default function CuadrantesPage() {
           const dateStr = toDateStr(day)
           const diaNombre = DIAS[idx]
           const turnosDia: string[] = detalles[diaNombre] || []
-          TURNOS.forEach(({ key }) => {
+          // Se recorren TODOS los turnos posibles (incluida la noche), no solo los
+          // de la config: la config de una semana especial se carga de forma
+          // asíncrona y podría no estar lista aquí. Así no se pierde la noche de
+          // las semanas especiales (Feria). El render ya muestra solo los turnos
+          // del dispositivo de la semana.
+          TODOS_LOS_TURNOS.forEach((key) => {
             if (turnosDia.some(t => mismoTurno(t, key))) {
               const sk = slotKey(dateStr, key)
               if (!dispMap[sk]) dispMap[sk] = []
@@ -315,7 +320,7 @@ export default function CuadrantesPage() {
       const capMap: Record<string, number> = {}
       weekDays.forEach(day => {
         const dateStr = toDateStr(day)
-        TURNOS.forEach(({ key }) => { capMap[slotKey(dateStr, key)] = 4 })
+        TODOS_LOS_TURNOS.forEach((key) => { capMap[slotKey(dateStr, key)] = 4 })
       })
       setCapacidad(capMap)
       // Reconstruir horarios personalizados desde las guardias guardadas
