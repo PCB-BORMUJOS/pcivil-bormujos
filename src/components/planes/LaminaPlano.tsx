@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import type { RefObject, PointerEvent as ReactPointerEvent } from 'react'
 import { MapContainer, TileLayer, WMSTileLayer, GeoJSON as GeoJSONLayer, useMapEvents } from 'react-leaflet'
 import { X, Printer } from 'lucide-react'
 import { TILES_CALLEJERO, TIPOS_PLAN } from '@/lib/cartografia'
@@ -81,6 +82,7 @@ export default function LaminaPlano({
 
     const mapRef = useRef<any>(null)
     const insetRef = useRef<any>(null)
+    const mapAreaRef = useRef<HTMLDivElement>(null)
     useEffect(() => {
         const t = setTimeout(() => { mapRef.current?.invalidateSize(false); insetRef.current?.invalidateSize(false) }, 250)
         return () => clearTimeout(t)
@@ -207,7 +209,7 @@ export default function LaminaPlano({
                         <div className="lamina-hoja shadow-2xl">
                           <div className="lamina-marco">
                             {/* ── 4/5: MAPA ── */}
-                            <div style={{ width: '80%', height: '100%', position: 'relative', borderRight: '1px solid #94a3b8' }}>
+                            <div ref={mapAreaRef} style={{ width: '80%', height: '100%', position: 'relative', borderRight: '1px solid #94a3b8' }}>
                                 <MapContainer center={center} zoom={zoom} ref={mapRef as any}
                                     scrollWheelZoom attributionControl={false} zoomSnap={0} zoomDelta={0.25} maxZoom={22}
                                     style={{ height: '100%', width: '100%' }}>
@@ -216,12 +218,9 @@ export default function LaminaPlano({
                                     {renderCapas()}
                                     <SyncEscala onCambio={(lat, z) => setEscalaNum(escalaDe(lat, z))} />
                                 </MapContainer>
-                                {/* Rosa de los vientos */}
-                                <svg width="56" height="56" viewBox="0 0 46 46" style={{ position: 'absolute', top: 12, right: 12, background: 'rgba(255,255,255,0.85)', borderRadius: 9, padding: 4, boxShadow: '0 1px 3px rgba(0,0,0,.2)' }}>
-                                    <polygon points="23,5 28,23 23,20 18,23" fill="#1f2937" />
-                                    <polygon points="23,41 18,23 23,26 28,23" fill="#9ca3af" />
-                                    <text x="23" y="14" textAnchor="middle" fontSize="8" fontWeight="700" fill="#1f2937">N</text>
-                                </svg>
+                                {/* Rosa de los vientos: apunta siempre al norte; se puede
+                                    arrastrar y redimensionar. Por defecto, abajo a la izquierda. */}
+                                <RosaVientos contenedorRef={mapAreaRef} />
                             </div>
 
                             {/* ── 1/5: CAJETÍN ── */}
@@ -260,7 +259,8 @@ export default function LaminaPlano({
                                     <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: 8 }}>
                                         <div style={{ fontSize: fs(11), fontWeight: 700, color: VERDE, textTransform: 'uppercase', letterSpacing: '0.03em' }}>Título del plano</div>
                                         <div style={{ fontSize: fs(15), fontWeight: 800, color: '#0f172a', lineHeight: 1.2, marginTop: 3 }}>{tituloPlano || '—'}</div>
-                                        {descripcion && <div style={{ fontSize: fs(11), color: '#334155', lineHeight: 1.4, marginTop: 6, textAlign: 'justify', textJustify: 'inter-word' as any }}>{descripcion}</div>}
+                                        <div style={{ fontSize: fs(11), fontWeight: 700, color: VERDE, textTransform: 'uppercase', letterSpacing: '0.03em', marginTop: 8 }}>Descripción</div>
+                                        <div style={{ fontSize: fs(11), color: '#334155', lineHeight: 1.4, marginTop: 3, minHeight: fs(64), textAlign: 'justify', textJustify: 'inter-word' as any }}>{descripcion || '—'}</div>
                                     </div>
 
                                     {/* Datos técnicos (maquetados) */}
@@ -277,8 +277,8 @@ export default function LaminaPlano({
 
                                     {/* Logotipo del servicio, centrado y con aire */}
                                     <div style={{ padding: '10px 18px 6px', textAlign: 'center' }}>
-                                        <img src="/images/logo-proteccion-civil-bormujos.png" alt="Protección Civil Bormujos"
-                                            style={{ width: '62%', maxWidth: '62%', height: 'auto', margin: '0 auto', display: 'block' }} />
+                                        <img src="/logo-pcb-vertical.svg" alt="Protección Civil Bormujos"
+                                            style={{ width: '66%', maxWidth: '66%', height: 'auto', margin: '0 auto', display: 'block' }} />
                                     </div>
 
                                     {/* Pie institucional + firma */}
@@ -297,6 +297,70 @@ export default function LaminaPlano({
                     </div>
                 </div>
             </div>
+        </div>
+    )
+}
+
+// Rosa de los vientos sobre el mapa: apunta SIEMPRE al norte (el norte del mapa
+// es arriba). Se puede arrastrar para moverla y redimensionar con el tirador de
+// la esquina. Por defecto se coloca abajo a la izquierda. El tirador no se imprime.
+function RosaVientos({ contenedorRef }: { contenedorRef: RefObject<HTMLDivElement> }) {
+    const [size, setSize] = useState(78)
+    const [pos, setPos] = useState<{ left: number; top: number | null }>({ left: 14, top: null })
+    const arrastre = useRef<{ mode: 'mover' | 'redim'; px: number; py: number; left: number; top: number; size: number } | null>(null)
+
+    const mover = useCallback((e: PointerEvent) => {
+        const st = arrastre.current
+        if (!st) return
+        const cont = contenedorRef.current
+        const w = cont?.clientWidth ?? 800, h = cont?.clientHeight ?? 600
+        const dx = e.clientX - st.px, dy = e.clientY - st.py
+        if (st.mode === 'redim') {
+            setSize(Math.max(44, Math.min(240, st.size + dx)))
+        } else {
+            setPos({
+                left: Math.max(0, Math.min(w - st.size, st.left + dx)),
+                top: Math.max(0, Math.min(h - st.size, st.top + dy)),
+            })
+        }
+    }, [contenedorRef])
+    const soltar = useCallback(() => {
+        arrastre.current = null
+        window.removeEventListener('pointermove', mover)
+        window.removeEventListener('pointerup', soltar)
+    }, [mover])
+    useEffect(() => () => soltar(), [soltar])
+
+    const onDown = (mode: 'mover' | 'redim') => (e: ReactPointerEvent) => {
+        e.stopPropagation(); e.preventDefault()
+        const cont = contenedorRef.current
+        const h = cont?.clientHeight ?? 600
+        const top = pos.top ?? (h - size - 14)   // convertir "abajo" a coordenada top
+        arrastre.current = { mode, px: e.clientX, py: e.clientY, left: pos.left, top, size }
+        window.addEventListener('pointermove', mover)
+        window.addEventListener('pointerup', soltar)
+    }
+
+    const s = size
+    return (
+        <div onPointerDown={onDown('mover')}
+            style={{ position: 'absolute', left: pos.left, ...(pos.top != null ? { top: pos.top } : { bottom: 14 }), width: s, height: s, cursor: 'move', zIndex: 500, touchAction: 'none' }}>
+            <svg viewBox="0 0 100 100" width={s} height={s} style={{ display: 'block', background: 'rgba(255,255,255,0.85)', borderRadius: 10, boxShadow: '0 1px 4px rgba(0,0,0,.25)' }}>
+                <circle cx="50" cy="50" r="34" fill="none" stroke="#94a3b8" strokeWidth="1.5" />
+                {/* Aguja: norte oscuro, sur claro */}
+                <polygon points="50,14 58,50 50,44 42,50" fill="#b91c1c" />
+                <polygon points="50,86 42,50 50,56 58,50" fill="#64748b" />
+                <circle cx="50" cy="50" r="3.5" fill="#1f2937" />
+                {/* Puntos cardinales */}
+                <text x="50" y="12" textAnchor="middle" fontSize="12" fontWeight="800" fill="#b91c1c" fontFamily="system-ui">N</text>
+                <text x="50" y="96" textAnchor="middle" fontSize="9" fontWeight="700" fill="#475569" fontFamily="system-ui">S</text>
+                <text x="92" y="54" textAnchor="middle" fontSize="9" fontWeight="700" fill="#475569" fontFamily="system-ui">E</text>
+                <text x="8" y="54" textAnchor="middle" fontSize="9" fontWeight="700" fill="#475569" fontFamily="system-ui">O</text>
+            </svg>
+            {/* Tirador de redimensión (no se imprime) */}
+            <div className="lamina-noprint" onPointerDown={onDown('redim')}
+                style={{ position: 'absolute', right: -5, bottom: -5, width: 15, height: 15, background: '#0f172a', border: '2px solid #fff', borderRadius: 4, cursor: 'nwse-resize', boxShadow: '0 1px 2px rgba(0,0,0,.3)' }}
+                title="Arrastra para redimensionar" />
         </div>
     )
 }
