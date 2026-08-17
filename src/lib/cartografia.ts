@@ -26,6 +26,11 @@ export type CapaOficial = {
     opacidad: number
     visiblePorDefecto: boolean
     orden: number
+    /// Capas vectoriales locales (GeoJSON servido desde /public) en lugar de WMS.
+    /// Cuando está presente, la capa se pinta como GeoJSON, no como tesela WMS.
+    geojsonUrl?: string
+    /// Color del trazo para capas GeoJSON.
+    color?: string
 }
 
 /** Coordenadas y encuadre de Bormujos. */
@@ -477,6 +482,45 @@ export const CAPAS_TEMATICAS: CapaOficial[] = [
         atribucion: '© Instituto Geográfico Nacional',
         opacidad: 0.5, visiblePorDefecto: false, orden: 71,
     },
+
+    // ── Infraestructura energética (DERA g10, vectorial local recortado a la
+    //    zona de Bormujos). Riesgo tecnológico y recurso a la vez. ────────────
+    {
+        clave: 'lineas-electricas',
+        nombre: 'Líneas eléctricas',
+        descripcion: 'Tendido eléctrico de alta y media tensión. Riesgo por caída/contacto e infraestructura crítica a proteger.',
+        categoria: 'tematica', grupo: 'Infraestructura energética',
+        wmsUrl: '', wmsLayers: '', wmsVersion: '1.1.1', wmsFormat: 'image/png', transparente: true,
+        geojsonUrl: '/cartografia/energia-lineas-electricas.geojson', color: '#dc2626',
+        atribucion: '© IECA · DERA', opacidad: 0.9, visiblePorDefecto: false, orden: 62,
+    },
+    {
+        clave: 'subestaciones',
+        nombre: 'Subestaciones eléctricas',
+        descripcion: 'Subestaciones de transformación. Nudos críticos de la red eléctrica.',
+        categoria: 'tematica', grupo: 'Infraestructura energética',
+        wmsUrl: '', wmsLayers: '', wmsVersion: '1.1.1', wmsFormat: 'image/png', transparente: true,
+        geojsonUrl: '/cartografia/energia-subestaciones.geojson', color: '#b91c1c',
+        atribucion: '© IECA · DERA', opacidad: 1, visiblePorDefecto: false, orden: 63,
+    },
+    {
+        clave: 'gasoductos',
+        nombre: 'Gasoductos',
+        descripcion: 'Conducciones de gas. Riesgo tecnológico por fuga/explosión; condiciona intervención y evacuación.',
+        categoria: 'tematica', grupo: 'Infraestructura energética',
+        wmsUrl: '', wmsLayers: '', wmsVersion: '1.1.1', wmsFormat: 'image/png', transparente: true,
+        geojsonUrl: '/cartografia/energia-gasoductos.geojson', color: '#f59e0b',
+        atribucion: '© IECA · DERA', opacidad: 0.95, visiblePorDefecto: false, orden: 64,
+    },
+    {
+        clave: 'oleoductos',
+        nombre: 'Oleoductos',
+        descripcion: 'Conducciones de productos petrolíferos. Riesgo tecnológico por fuga/incendio.',
+        categoria: 'tematica', grupo: 'Infraestructura energética',
+        wmsUrl: '', wmsLayers: '', wmsVersion: '1.1.1', wmsFormat: 'image/png', transparente: true,
+        geojsonUrl: '/cartografia/energia-oleoductos.geojson', color: '#7c3aed',
+        atribucion: '© IECA · DERA', opacidad: 0.95, visiblePorDefecto: false, orden: 65,
+    },
 ]
 
 export const TODAS_LAS_CAPAS_OFICIALES = [...CAPAS_BASE, ...CAPAS_TEMATICAS]
@@ -485,7 +529,8 @@ export const TODAS_LAS_CAPAS_OFICIALES = [...CAPAS_BASE, ...CAPAS_TEMATICAS]
 export const ORDEN_GRUPOS = [
     'Territorio', 'Relieve', 'Hidrografía', 'Viario y accesos',
     'Usos del suelo', 'Población y vulnerables', 'Medios y equipamientos',
-    'Riesgo tecnológico e industrial', 'Geología y riesgos naturales', 'Otras',
+    'Riesgo tecnológico e industrial', 'Infraestructura energética',
+    'Geología y riesgos naturales', 'Otras',
 ]
 
 /** Teselas del callejero de fondo (no es WMS). */

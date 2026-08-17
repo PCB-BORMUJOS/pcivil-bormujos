@@ -18,7 +18,8 @@ function puedeEditar(session: any): boolean {
  */
 async function sembrarOficiales() {
     const existentes = new Set((await prisma.capaCartografica.findMany({ select: { nombre: true } })).map(c => c.nombre))
-    const aCrear = TODAS_LAS_CAPAS_OFICIALES.filter(c => c.wmsUrl && !existentes.has(c.nombre))
+    // Capas oficiales: WMS (servicio) o GeoJSON local (fichero en /public).
+    const aCrear = TODAS_LAS_CAPAS_OFICIALES.filter(c => (c.wmsUrl || c.geojsonUrl) && !existentes.has(c.nombre))
     if (aCrear.length === 0) return 0
 
     await prisma.capaCartografica.createMany({
@@ -27,11 +28,14 @@ async function sembrarOficiales() {
             descripcion: c.descripcion,
             categoria: c.categoria,
             grupo: c.grupo,
-            tipo: 'wms',
-            wmsUrl: c.wmsUrl,
-            wmsLayers: c.wmsLayers,
-            wmsVersion: c.wmsVersion,
-            wmsFormat: c.wmsFormat,
+            // Las que traen geojsonUrl se pintan como fichero vectorial, no como WMS.
+            tipo: c.geojsonUrl ? 'archivo' : 'wms',
+            wmsUrl: c.geojsonUrl ? null : c.wmsUrl,
+            wmsLayers: c.geojsonUrl ? null : c.wmsLayers,
+            wmsVersion: c.geojsonUrl ? null : c.wmsVersion,
+            wmsFormat: c.geojsonUrl ? null : c.wmsFormat,
+            geojsonUrl: c.geojsonUrl ?? null,
+            color: c.color ?? undefined,
             atribucion: c.atribucion,
             opacidad: c.opacidad,
             visiblePorDefecto: c.visiblePorDefecto,
