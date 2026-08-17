@@ -3,10 +3,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
     Layers, Eye, EyeOff, Crosshair, Maximize2, Minimize2, AlertTriangle,
-    MapPin, ChevronDown, Image as ImageIcon, Mountain, Map as MapIcon, Waves, Printer,
+    MapPin, ChevronDown, Image as ImageIcon, Mountain, Map as MapIcon, Waves, Printer, Route,
 } from 'lucide-react'
 import { BORMUJOS, TILES_CALLEJERO, ORDEN_GRUPOS } from '@/lib/cartografia'
 import LaminaPlano from './LaminaPlano'
+import EditorAnotaciones from './EditorAnotaciones'
 
 // OJO: el CSS de Leaflet NO se importa aquí, sino en la página que monta este
 // componente. Comprobado en el build: importado en este fichero su CSS acaba en
@@ -208,6 +209,9 @@ export default function MapaCartografia({
         })
 
     const centrar = () => mapRef.current?.setView(BORMUJOS.centro, BORMUJOS.zoom)
+
+    // Editor de rutas e iconos (capas de anotación).
+    const [editorAbierto, setEditorAbierto] = useState(false)
 
     // Datos capturados para la lámina imprimible (encuadre + capas activas).
     const [lamina, setLamina] = useState<any>(null)
@@ -424,6 +428,13 @@ export default function MapaCartografia({
                     {pantallaCompleta ? <Minimize2 size={17} /> : <Maximize2 size={17} />}
                 </button>
                 <button
+                    onClick={() => setEditorAbierto(true)}
+                    title="Editor de rutas e iconos"
+                    className="w-10 h-10 rounded-xl shadow-lg border border-teal-200 bg-teal-600 text-white hover:bg-teal-500 flex items-center justify-center"
+                >
+                    <Route size={17} />
+                </button>
+                <button
                     onClick={abrirLamina}
                     title="Crear plano para imprimir (PDF)"
                     className="w-10 h-10 rounded-xl shadow-lg border border-emerald-200 bg-emerald-600 text-white hover:bg-emerald-500 flex items-center justify-center"
@@ -593,6 +604,14 @@ export default function MapaCartografia({
                         </div>
                     )}
                 </div>
+            )}
+
+            {editorAbierto && (
+                <EditorAnotaciones
+                    planes={planes}
+                    capasBase={capasBase}
+                    onCerrar={() => setEditorAbierto(false)}
+                />
             )}
 
             {lamina && (

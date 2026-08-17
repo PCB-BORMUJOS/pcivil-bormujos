@@ -2555,9 +2555,10 @@ model Plan {
   observaciones String? @db.Text
 
   activo     Boolean         @default(true)
-  documentos PlanDocumento[]
-  contactos  PlanContacto[]
-  recursos   PlanRecurso[]
+  documentos  PlanDocumento[]
+  contactos   PlanContacto[]
+  recursos    PlanRecurso[]
+  anotaciones MapaAnotacion[]
 
   creadoPorId String?  @map("creado_por_id")
   createdAt   DateTime @default(now()) @map("created_at")
@@ -2632,6 +2633,60 @@ model CapaCartografica {
 
   @@index([categoria])
   @@map("capas_cartograficas")
+}
+
+/// Capa de anotación dibujada sobre el mapa: rutas, áreas, marcadores con
+/// icono y textos. Cada registro es un "dibujo" con nombre reutilizable
+/// (p. ej. "Feria — recorridos", "Mercancías peligrosas — rutas"). Se activa
+/// en el visor como una capa más y puede incluirse en las láminas de impresión.
+model MapaAnotacion {
+  id          String  @id @default(cuid())
+  nombre      String
+  descripcion String? @db.Text
+  /// Etiqueta libre para clasificar: feria | mercancias_peligrosas | otro...
+  categoria   String  @default("otro")
+
+  /// FeatureCollection GeoJSON. Cada feature.properties lleva:
+  /// tipo ('ruta'|'area'|'marcador'|'texto'), color, grosor, relleno,
+  /// opacidad, iconoUrl, iconoTam, texto, tamTexto...
+  geojson Json
+
+  /// Vínculo opcional a un plan (la Feria, etc.). null = capa general.
+  planId String? @map("plan_id")
+  plan   Plan?   @relation(fields: [planId], references: [id], onDelete: SetNull)
+
+  color             String  @default("#dc2626")
+  visiblePorDefecto Boolean @default(false) @map("visible_por_defecto")
+  orden             Int     @default(0)
+  activo            Boolean @default(true)
+
+  creadoPorId     String?  @map("creado_por_id")
+  creadoPorNombre String?  @map("creado_por_nombre")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@index([planId])
+  @@index([categoria])
+  @@map("mapas_anotacion")
+}
+
+/// Librería de iconos para colocar como marcadores en los mapas. Incluye los
+/// predefinidos del servicio (esPredefinido) y los que suba el usuario a Blob.
+model IconoMapa {
+  id            String   @id @default(cuid())
+  nombre        String
+  categoria     String   @default("general")
+  /// URL del SVG/PNG (en /public para los predefinidos, en Blob para los subidos).
+  url           String
+  blobKey       String?  @map("blob_key")
+  esPredefinido Boolean  @default(false) @map("es_predefinido")
+  orden         Int      @default(0)
+  activo        Boolean  @default(true)
+  creadoPorId   String?  @map("creado_por_id")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@index([categoria])
+  @@map("iconos_mapa")
 }
 
 /// Directorio de contactos de un plan: quién hay que avisar y en qué orden.
