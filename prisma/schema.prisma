@@ -3,76 +3,76 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model Usuario {
-  id                     String                @id @default(cuid())
-  email                  String                @unique
-  password               String
-  nombre                 String
-  apellidos              String
-  telefono               String?
-  dni                    String?               @unique
-  numeroVoluntario       String?               @unique @map("numero_voluntario")
-  avatar                 String?
-  responsableTurno       Boolean               @default(false) @map("responsable_turno")
-  carnetConducir         Boolean               @default(false) @map("carnet_conducir")
-  esOperativo            Boolean               @default(true) @map("es_operativo")
-  esJefeServicio         Boolean               @default(false) @map("es_jefe_servicio")
-  experiencia            String                @default("MEDIA")
-  nivelCompromiso        String                @default("MEDIO") @map("nivel_compromiso")
-  activo                 Boolean               @default(true)
-  permisosExtra          Json                  @default("[]") @map("permisos_extra")
-  permisosPersonalizados Boolean               @default(false) @map("permisos_personalizados")
-  rolId                  String                @map("rol_id")
-  servicioId             String                @map("servicio_id")
-  createdAt              DateTime              @default(now()) @map("created_at")
-  updatedAt              DateTime              @updatedAt @map("updated_at")
-  lastLogin              DateTime?             @map("last_login")
-  asignacionesVestuario  AsignacionVestuario[]
-  dietas                 Dieta[]
-  disponibilidades       Disponibilidad[]
-  eventosCreados         Evento[]              @relation("EventoCreador")
-  eventosAsignados       EventoParticipante[]
-  fichaVoluntario        FichaVoluntario?
-  guardias               Guardia[]
-  historialPeticiones    HistorialPeticion[]
-  incidenciasAsignadas   Incidencia[]          @relation("IncidenciaAsignado")
-  incidenciasCreadas     Incidencia[]          @relation("IncidenciaCreador")
-  megacodeParticipaciones MegacodeParticipacion[]
-  registrosPracticaResponsable RegistroPractica[] @relation("RegistroResponsable")
-  mensajesRecibidos      Mensaje[]             @relation("MensajesRecibidos")
-  mensajesEnviados       Mensaje[]             @relation("MensajesEnviados")
-  mensajeEstados         MensajeEstado[]
-  movimientosStock       MovimientoStock[]
-  notificaciones         Notificacion[]
-  peticionesAprobadas    PeticionMaterial[]    @relation("PeticionesAprobadas")
-  peticionesRecibidas    PeticionMaterial[]    @relation("PeticionesRecibidas")
-  peticionesSolicitadas  PeticionMaterial[]    @relation("PeticionesSolicitadas")
-  revisionesRealizadas   RevisionBotiquin[]
-  solicitudesRespondidas SolicitudVestuario[]  @relation("SolicitudesRespondidas")
-  solicitudesVestuario   SolicitudVestuario[]
-  rol                    Rol                   @relation(fields: [rolId], references: [id])
-  servicio               Servicio              @relation(fields: [servicioId], references: [id])
-  vehiculosAsignados     VehiculoAsignacion[]
-  documentosVehiculo    DocumentoVehiculo[]
-  mantenimientosVehiculo MantenimientoVehiculo[]
-  siniestrosVehiculo     SiniestroVehiculo[]
-  fluidosVehiculo        RegistroFluidoVehiculo[]
-  conversacionesAgente   ConversacionAgente[]
-  revisionesAgente       RevisionAgente[]
-  propuestasAgenteResueltas PropuestaAgente[]
-  auditoriasPractica     AuditoriaPractica[]
+  id                           String                   @id @default(cuid())
+  email                        String                   @unique
+  password                     String
+  nombre                       String
+  apellidos                    String
+  telefono                     String?
+  dni                          String?                  @unique
+  numeroVoluntario             String?                  @unique @map("numero_voluntario")
+  avatar                       String?
+  responsableTurno             Boolean                  @default(false) @map("responsable_turno")
+  carnetConducir               Boolean                  @default(false) @map("carnet_conducir")
+  esOperativo                  Boolean                  @default(true) @map("es_operativo")
+  esJefeServicio               Boolean                  @default(false) @map("es_jefe_servicio")
+  experiencia                  String                   @default("MEDIA")
+  nivelCompromiso              String                   @default("MEDIO") @map("nivel_compromiso")
+  activo                       Boolean                  @default(true)
+  permisosExtra                Json                     @default("[]") @map("permisos_extra")
+  permisosPersonalizados       Boolean                  @default(false) @map("permisos_personalizados")
+  rolId                        String                   @map("rol_id")
+  servicioId                   String                   @map("servicio_id")
+  createdAt                    DateTime                 @default(now()) @map("created_at")
+  updatedAt                    DateTime                 @updatedAt @map("updated_at")
+  lastLogin                    DateTime?                @map("last_login")
+  asignacionesVestuario        AsignacionVestuario[]
+  dietas                       Dieta[]
+  disponibilidades             Disponibilidad[]
+  eventosCreados               Evento[]                 @relation("EventoCreador")
+  eventosAsignados             EventoParticipante[]
+  fichaVoluntario              FichaVoluntario?
+  guardias                     Guardia[]
+  historialPeticiones          HistorialPeticion[]
+  incidenciasAsignadas         Incidencia[]             @relation("IncidenciaAsignado")
+  incidenciasCreadas           Incidencia[]             @relation("IncidenciaCreador")
+  megacodeParticipaciones      MegacodeParticipacion[]
+  registrosPracticaResponsable RegistroPractica[]       @relation("RegistroResponsable")
+  mensajesRecibidos            Mensaje[]                @relation("MensajesRecibidos")
+  mensajesEnviados             Mensaje[]                @relation("MensajesEnviados")
+  mensajeEstados               MensajeEstado[]
+  movimientosStock             MovimientoStock[]
+  notificaciones               Notificacion[]
+  peticionesAprobadas          PeticionMaterial[]       @relation("PeticionesAprobadas")
+  peticionesRecibidas          PeticionMaterial[]       @relation("PeticionesRecibidas")
+  peticionesSolicitadas        PeticionMaterial[]       @relation("PeticionesSolicitadas")
+  revisionesRealizadas         RevisionBotiquin[]
+  solicitudesRespondidas       SolicitudVestuario[]     @relation("SolicitudesRespondidas")
+  solicitudesVestuario         SolicitudVestuario[]
+  rol                          Rol                      @relation(fields: [rolId], references: [id])
+  servicio                     Servicio                 @relation(fields: [servicioId], references: [id])
+  vehiculosAsignados           VehiculoAsignacion[]
+  documentosVehiculo           DocumentoVehiculo[]
+  mantenimientosVehiculo       MantenimientoVehiculo[]
+  siniestrosVehiculo           SiniestroVehiculo[]
+  fluidosVehiculo              RegistroFluidoVehiculo[]
+  conversacionesAgente         ConversacionAgente[]
+  revisionesAgente             RevisionAgente[]
+  propuestasAgenteResueltas    PropuestaAgente[]
+  auditoriasPractica           AuditoriaPractica[]
 
-  manuales              Manual[]
-  partesPSI             PartePSI[]
-  partesPRVFSV          PartePRVFSV[]
-  incidenciasCecopal    IncidenciaCecopal[]
-  inscripciones         Inscripcion[]
-  firmasAsistencia      RegistroFirma[]        @relation("FirmasUsuario")
-  certificaciones        Certificacion[]
+  manuales           Manual[]
+  partesPSI          PartePSI[]
+  partesPRVFSV       PartePRVFSV[]
+  incidenciasCecopal IncidenciaCecopal[]
+  inscripciones      Inscripcion[]
+  firmasAsistencia   RegistroFirma[]     @relation("FirmasUsuario")
+  certificaciones    Certificacion[]
 
   @@map("usuarios")
 }
@@ -112,35 +112,35 @@ model Servicio {
 }
 
 model Evento {
-  id                  String               @id @default(cuid())
-  titulo              String
-  descripcion         String?
-  tipo                String
-  fecha               DateTime             @db.Date
-  horaInicio          String               @map("hora_inicio")
-  horaFin             String?              @map("hora_fin")
-  todoElDia           Boolean              @default(false) @map("todo_el_dia")
-  ubicacion           String?
-  direccion           String?
-  coordenadas         Json?
-  estado              String               @default("programado")
-  visible             Boolean              @default(true)
-  privado             Boolean              @default(false)
-  voluntariosMin      Int?                 @map("voluntarios_min")
-  voluntariosMax      Int?                 @map("voluntarios_max")
-  vehiculosNecesarios String?              @map("vehiculos_necesarios")
-  color               String?
-  modalidadFormacion  String?              @map("modalidad_formacion")
-  formadoresIds       String?              @map("formadores_ids")
-  destinatariosExternos String?            @map("destinatarios_externos")
-  numAsistentesExternos Int?               @map("num_asistentes_externos")
-  creadorId           String               @map("creador_id")
-  servicioId          String               @map("servicio_id")
-  createdAt           DateTime             @default(now()) @map("created_at")
-  updatedAt           DateTime             @updatedAt @map("updated_at")
-  creador             Usuario              @relation("EventoCreador", fields: [creadorId], references: [id])
-  servicio            Servicio             @relation(fields: [servicioId], references: [id])
-  participantes       EventoParticipante[]
+  id                    String               @id @default(cuid())
+  titulo                String
+  descripcion           String?
+  tipo                  String
+  fecha                 DateTime             @db.Date
+  horaInicio            String               @map("hora_inicio")
+  horaFin               String?              @map("hora_fin")
+  todoElDia             Boolean              @default(false) @map("todo_el_dia")
+  ubicacion             String?
+  direccion             String?
+  coordenadas           Json?
+  estado                String               @default("programado")
+  visible               Boolean              @default(true)
+  privado               Boolean              @default(false)
+  voluntariosMin        Int?                 @map("voluntarios_min")
+  voluntariosMax        Int?                 @map("voluntarios_max")
+  vehiculosNecesarios   String?              @map("vehiculos_necesarios")
+  color                 String?
+  modalidadFormacion    String?              @map("modalidad_formacion")
+  formadoresIds         String?              @map("formadores_ids")
+  destinatariosExternos String?              @map("destinatarios_externos")
+  numAsistentesExternos Int?                 @map("num_asistentes_externos")
+  creadorId             String               @map("creador_id")
+  servicioId            String               @map("servicio_id")
+  createdAt             DateTime             @default(now()) @map("created_at")
+  updatedAt             DateTime             @updatedAt @map("updated_at")
+  creador               Usuario              @relation("EventoCreador", fields: [creadorId], references: [id])
+  servicio              Servicio             @relation(fields: [servicioId], references: [id])
+  participantes         EventoParticipante[]
 
   @@map("eventos")
 }
@@ -277,39 +277,40 @@ model MovimientoStock {
 }
 
 model Vehiculo {
-  id           String               @id @default(cuid())
-  matricula    String               @unique
-  indicativo   String?
-  tipo         String
-  marca        String?
-  modelo       String?
-  anio                Int?     @map("anio")
-  color               String?
-  numeroChasis        String?  @map("numero_chasis")
-  bastidor            String?
-  potencia            Int?
-  cilindrada          Int?
-  plazas              Int?
-  capacidadCombustible Float?  @map("capacidad_combustible")
-  capacidadCarga      Float?   @map("capacidad_carga")
-  observaciones       String?
-  estado              String   @default("disponible")
-  kmActual     Int?                 @map("km_actual")
-  fechaItv     DateTime?            @map("fecha_itv")
-  fechaSeguro  DateTime?            @map("fecha_seguro")
-  servicioId   String               @map("servicio_id")
-  createdAt    DateTime             @default(now()) @map("created_at")
-  updatedAt    DateTime             @updatedAt @map("updated_at")
-  botiquines   Botiquin[]
-  servicio     Servicio             @relation(fields: [servicioId], references: [id])
-  asignaciones VehiculoAsignacion[]
-  documentos      DocumentoVehiculo[]
-  mantenimientos  MantenimientoVehiculo[]
-  repostajes      RepostajeVehiculo[]
-  fluidos         RegistroFluidoVehiculo[]
-  siniestros      SiniestroVehiculo[]
+  id                   String                   @id @default(cuid())
+  matricula            String                   @unique
+  indicativo           String?
+  tipo                 String
+  marca                String?
+  modelo               String?
+  anio                 Int?                     @map("anio")
+  color                String?
+  numeroChasis         String?                  @map("numero_chasis")
+  bastidor             String?
+  potencia             Int?
+  cilindrada           Int?
+  plazas               Int?
+  capacidadCombustible Float?                   @map("capacidad_combustible")
+  capacidadCarga       Float?                   @map("capacidad_carga")
+  observaciones        String?
+  estado               String                   @default("disponible")
+  kmActual             Int?                     @map("km_actual")
+  fechaItv             DateTime?                @map("fecha_itv")
+  fechaSeguro          DateTime?                @map("fecha_seguro")
+  servicioId           String                   @map("servicio_id")
+  createdAt            DateTime                 @default(now()) @map("created_at")
+  updatedAt            DateTime                 @updatedAt @map("updated_at")
+  botiquines           Botiquin[]
+  servicio             Servicio                 @relation(fields: [servicioId], references: [id])
+  asignaciones         VehiculoAsignacion[]
+  documentos           DocumentoVehiculo[]
+  mantenimientos       MantenimientoVehiculo[]
+  repostajes           RepostajeVehiculo[]
+  fluidos              RegistroFluidoVehiculo[]
+  siniestros           SiniestroVehiculo[]
 
-  ubicaciones     UbicacionVehiculo[]
+  ubicaciones UbicacionVehiculo[]
+
   @@map("vehiculos")
 }
 
@@ -330,24 +331,24 @@ model VehiculoAsignacion {
 }
 
 model Guardia {
-  id         String   @id @default(cuid())
-  fecha      DateTime @db.Date
-  turno      String
-  rol        String?  // Rol del voluntario: Conductor, Responsable, Interviniente, Apoyo/Cecopal, Cecopal
-  tipo       String
-  notas      String?
-  usuarioId  String   @map("usuario_id")
-  servicioId String   @map("servicio_id")
-  estado     String   @default("programada")
+  id               String   @id @default(cuid())
+  fecha            DateTime @db.Date
+  turno            String
+  rol              String? // Rol del voluntario: Conductor, Responsable, Interviniente, Apoyo/Cecopal, Cecopal
+  tipo             String
+  notas            String?
+  usuarioId        String   @map("usuario_id")
+  servicioId       String   @map("servicio_id")
+  estado           String   @default("programada")
   horasTurno       Float?   @map("horas_turno")
   horaInicio       String?  @map("hora_inicio")
   horaFin          String?  @map("hora_fin")
   descripcionExtra String?  @map("descripcion_extra")
-  walkie           String?  // Walkie asignado al indicativo al inicio del turno
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @updatedAt @map("updated_at")
-  servicio   Servicio @relation(fields: [servicioId], references: [id])
-  usuario    Usuario  @relation(fields: [usuarioId], references: [id])
+  walkie           String? // Walkie asignado al indicativo al inicio del turno
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+  servicio         Servicio @relation(fields: [servicioId], references: [id])
+  usuario          Usuario  @relation(fields: [usuarioId], references: [id])
 
   @@unique([usuarioId, fecha, turno])
   @@map("guardias")
@@ -388,53 +389,53 @@ model Configuracion {
 }
 
 model FichaVoluntario {
-  id                     String    @id @default(cuid())
-  usuarioId              String    @unique @map("usuario_id")
-  indicativo2            String?   @map("indicativo_2")
-  fechaAlta              DateTime? @map("fecha_alta") @db.Date
-  fechaBaja              DateTime? @map("fecha_baja") @db.Date
-  fechaNacimiento        DateTime? @map("fecha_nacimiento") @db.Date
-  edad                   Int?
-  sexo                   String?
-  domicilio              String?
-  numero                 String?
-  bloque                 String?
-  piso                   String?
-  puerta                 String?
-  letra                  String?
-  codigoPostal           String?   @map("codigo_postal")
-  localidad              String?
-  kmDesplazamiento       Decimal?  @default(0) @map("km_desplazamiento") @db.Decimal(6, 2)
-  provincia              String?
-  telefonoFijo           String?   @map("telefono_fijo")
-  dniNie                 String?   @map("dni_nie")
-  areaAsignada           String?   @map("area_asignada")
-  areaSecundaria         String?   @map("area_secundaria")
-  categoria              String?
-  permisoConducir        String?   @map("permiso_conducir")
-  fechaExpedicion        DateTime? @map("fecha_expedicion") @db.Date
-  fechaValidez           DateTime? @map("fecha_validez") @db.Date
-  formacionProfesional   String?   @map("formacion_profesional")
-  ocupacionActual        String?   @map("ocupacion_actual")
-  minusvaliaReconocida   String?   @map("minusvalia_reconocida")
-  datosAlergias          String?   @map("datos_alergias")
-  enPracticas            Boolean   @default(false) @map("en_practicas")
-  turnosPracticasRealizados Int     @default(0) @map("turnos_practicas_realizados")
-  fechaInicioPracticas   DateTime? @map("fecha_inicio_practicas") @db.Date
-  grupoSanguineo         String?   @map("grupo_sanguineo")
-  contactoEmergencia     String?   @map("contacto_emergencia")
-  telefonoEmergencia     String?   @map("telefono_emergencia")
-  formacionPC            Json?     @default("[]") @map("formacion_pc")
-  otrasTitulaciones      String?   @map("otras_titulaciones")
-  acuerdoIndividual      Boolean   @default(false) @map("acuerdo_individual")
-  acuerdoAdjunto         String?   @map("acuerdo_adjunto")
-  certificadoTitularidad Boolean   @default(false) @map("certificado_titularidad")
-  certificadoAdjunto     String?   @map("certificado_adjunto")
-  modelo145              Boolean   @default(false) @map("modelo_145")
-  modelo145Adjunto       String?   @map("modelo_145_adjunto")
-  createdAt              DateTime  @default(now()) @map("created_at")
-  updatedAt              DateTime  @updatedAt @map("updated_at")
-  usuario                Usuario   @relation(fields: [usuarioId], references: [id])
+  id                        String    @id @default(cuid())
+  usuarioId                 String    @unique @map("usuario_id")
+  indicativo2               String?   @map("indicativo_2")
+  fechaAlta                 DateTime? @map("fecha_alta") @db.Date
+  fechaBaja                 DateTime? @map("fecha_baja") @db.Date
+  fechaNacimiento           DateTime? @map("fecha_nacimiento") @db.Date
+  edad                      Int?
+  sexo                      String?
+  domicilio                 String?
+  numero                    String?
+  bloque                    String?
+  piso                      String?
+  puerta                    String?
+  letra                     String?
+  codigoPostal              String?   @map("codigo_postal")
+  localidad                 String?
+  kmDesplazamiento          Decimal?  @default(0) @map("km_desplazamiento") @db.Decimal(6, 2)
+  provincia                 String?
+  telefonoFijo              String?   @map("telefono_fijo")
+  dniNie                    String?   @map("dni_nie")
+  areaAsignada              String?   @map("area_asignada")
+  areaSecundaria            String?   @map("area_secundaria")
+  categoria                 String?
+  permisoConducir           String?   @map("permiso_conducir")
+  fechaExpedicion           DateTime? @map("fecha_expedicion") @db.Date
+  fechaValidez              DateTime? @map("fecha_validez") @db.Date
+  formacionProfesional      String?   @map("formacion_profesional")
+  ocupacionActual           String?   @map("ocupacion_actual")
+  minusvaliaReconocida      String?   @map("minusvalia_reconocida")
+  datosAlergias             String?   @map("datos_alergias")
+  enPracticas               Boolean   @default(false) @map("en_practicas")
+  turnosPracticasRealizados Int       @default(0) @map("turnos_practicas_realizados")
+  fechaInicioPracticas      DateTime? @map("fecha_inicio_practicas") @db.Date
+  grupoSanguineo            String?   @map("grupo_sanguineo")
+  contactoEmergencia        String?   @map("contacto_emergencia")
+  telefonoEmergencia        String?   @map("telefono_emergencia")
+  formacionPC               Json?     @default("[]") @map("formacion_pc")
+  otrasTitulaciones         String?   @map("otras_titulaciones")
+  acuerdoIndividual         Boolean   @default(false) @map("acuerdo_individual")
+  acuerdoAdjunto            String?   @map("acuerdo_adjunto")
+  certificadoTitularidad    Boolean   @default(false) @map("certificado_titularidad")
+  certificadoAdjunto        String?   @map("certificado_adjunto")
+  modelo145                 Boolean   @default(false) @map("modelo_145")
+  modelo145Adjunto          String?   @map("modelo_145_adjunto")
+  createdAt                 DateTime  @default(now()) @map("created_at")
+  updatedAt                 DateTime  @updatedAt @map("updated_at")
+  usuario                   Usuario   @relation(fields: [usuarioId], references: [id])
 
   @@map("fichas_voluntario")
 }
@@ -527,67 +528,67 @@ model Poliza {
 }
 
 model PeticionMaterial {
-  id              String              @id @default(cuid())
-  numero          String              @unique
-  solicitanteId   String              @map("solicitante_id")
-  areaOrigen      String              @map("area_origen")
+  id               String              @id @default(cuid())
+  numero           String              @unique
+  solicitanteId    String              @map("solicitante_id")
+  areaOrigen       String              @map("area_origen")
   // Legacy single-article fields (kept for backward compat, null when usando items)
-  articuloId      String?             @map("articulo_id")
-  nombreArticulo  String?             @map("nombre_articulo")
-  cantidad        Int?
-  unidad          String?
-  motivo          String
-  prioridad       String              @default("normal")
-  descripcion     String?
-  estado          String              @default("pendiente")
-  fechaSolicitud  DateTime            @default(now()) @map("fecha_solicitud")
-  fechaAprobacion DateTime?           @map("fecha_aprobacion")
-  fechaCompra     DateTime?           @map("fecha_compra")
-  fechaRecepcion  DateTime?           @map("fecha_recepcion")
-  aprobadoPorId   String?             @map("aprobado_por_id")
-  recibidoPorId   String?             @map("recibido_por_id")
-  notasAprobacion String?             @map("notas_aprobacion")
-  notasCompra     String?             @map("notas_compra")
-  notasRecepcion  String?             @map("notas_recepcion")
-  motivoRechazo   String?             @map("motivo_rechazo")
-  proveedor       String?
-  numeroRc        String?             @map("numero_rc")
-  numeroAlbaran   String?             @map("numero_albaran")
-  numeroFactura   String?             @map("numero_factura")
-  costeEstimado   Decimal?            @map("coste_estimado") @db.Decimal(10, 2)
-  costeFinal      Decimal?            @map("coste_final") @db.Decimal(10, 2)
-  urlRc           String?             @map("url_rc")
-  urlAlbaran      String?             @map("url_albaran")
+  articuloId       String?             @map("articulo_id")
+  nombreArticulo   String?             @map("nombre_articulo")
+  cantidad         Int?
+  unidad           String?
+  motivo           String
+  prioridad        String              @default("normal")
+  descripcion      String?
+  estado           String              @default("pendiente")
+  fechaSolicitud   DateTime            @default(now()) @map("fecha_solicitud")
+  fechaAprobacion  DateTime?           @map("fecha_aprobacion")
+  fechaCompra      DateTime?           @map("fecha_compra")
+  fechaRecepcion   DateTime?           @map("fecha_recepcion")
+  aprobadoPorId    String?             @map("aprobado_por_id")
+  recibidoPorId    String?             @map("recibido_por_id")
+  notasAprobacion  String?             @map("notas_aprobacion")
+  notasCompra      String?             @map("notas_compra")
+  notasRecepcion   String?             @map("notas_recepcion")
+  motivoRechazo    String?             @map("motivo_rechazo")
+  proveedor        String?
+  numeroRc         String?             @map("numero_rc")
+  numeroAlbaran    String?             @map("numero_albaran")
+  numeroFactura    String?             @map("numero_factura")
+  costeEstimado    Decimal?            @map("coste_estimado") @db.Decimal(10, 2)
+  costeFinal       Decimal?            @map("coste_final") @db.Decimal(10, 2)
+  urlRc            String?             @map("url_rc")
+  urlAlbaran       String?             @map("url_albaran")
   // Lista de albaranes (el material puede llegar en varias entregas):
   // [{ url, numero, fecha }]. urlAlbaran/numeroAlbaran conservan el último por compatibilidad.
-  albaranes       Json?               @default("[]")
-  createdAt       DateTime            @default(now()) @map("created_at")
-  updatedAt       DateTime            @updatedAt @map("updated_at")
-  items           PeticionItem[]
-  historial       HistorialPeticion[]
-  expedienteCompra  ExpedienteCompra?  @relation("PeticionExpediente")
-  notificaciones  Notificacion[]
-  aprobadoPor     Usuario?            @relation("PeticionesAprobadas", fields: [aprobadoPorId], references: [id])
-  articulo        Articulo?           @relation(fields: [articuloId], references: [id])
-  recibidoPor     Usuario?            @relation("PeticionesRecibidas", fields: [recibidoPorId], references: [id])
-  solicitante     Usuario             @relation("PeticionesSolicitadas", fields: [solicitanteId], references: [id])
+  albaranes        Json?               @default("[]")
+  createdAt        DateTime            @default(now()) @map("created_at")
+  updatedAt        DateTime            @updatedAt @map("updated_at")
+  items            PeticionItem[]
+  historial        HistorialPeticion[]
+  expedienteCompra ExpedienteCompra?   @relation("PeticionExpediente")
+  notificaciones   Notificacion[]
+  aprobadoPor      Usuario?            @relation("PeticionesAprobadas", fields: [aprobadoPorId], references: [id])
+  articulo         Articulo?           @relation(fields: [articuloId], references: [id])
+  recibidoPor      Usuario?            @relation("PeticionesRecibidas", fields: [recibidoPorId], references: [id])
+  solicitante      Usuario             @relation("PeticionesSolicitadas", fields: [solicitanteId], references: [id])
 
   @@map("peticiones_material")
 }
 
 model PeticionItem {
-  id              String            @id @default(cuid())
-  peticionId      String            @map("peticion_id")
-  articuloId      String?           @map("articulo_id")
-  nombreArticulo  String            @map("nombre_articulo")
-  cantidad        Int
+  id               String           @id @default(cuid())
+  peticionId       String           @map("peticion_id")
+  articuloId       String?          @map("articulo_id")
+  nombreArticulo   String           @map("nombre_articulo")
+  cantidad         Int
   cantidadRecibida Int?             @map("cantidad_recibida")
-  unidad          String            @default("unidad")
-  costeUnitario   Decimal?          @map("coste_unitario") @db.Decimal(10, 2)
-  notas           String?
-  createdAt       DateTime          @default(now()) @map("created_at")
-  articulo        Articulo?         @relation(fields: [articuloId], references: [id])
-  peticion        PeticionMaterial  @relation(fields: [peticionId], references: [id], onDelete: Cascade)
+  unidad           String           @default("unidad")
+  costeUnitario    Decimal?         @map("coste_unitario") @db.Decimal(10, 2)
+  notas            String?
+  createdAt        DateTime         @default(now()) @map("created_at")
+  articulo         Articulo?        @relation(fields: [articuloId], references: [id])
+  peticion         PeticionMaterial @relation(fields: [peticionId], references: [id], onDelete: Cascade)
 
   @@map("peticion_items")
 }
@@ -624,20 +625,20 @@ model Notificacion {
 }
 
 model Mensaje {
-  id                String    @id @default(cuid())
+  id                String          @id @default(cuid())
   asunto            String
   contenido         String
-  tipo              String    @default("mensaje")
-  prioridad         String    @default("normal")
-  leido             Boolean   @default(false)
-  leidoEn           DateTime? @map("leido_en")
-  archivado         Boolean   @default(false)
-  remitenteId       String    @map("remitente_id")
-  destinatarioId    String?   @map("destinatario_id")
-  destinatarioGrupo String?   @map("destinatario_grupo")
-  mensajePadreId    String?   @map("mensaje_padre_id")
-  createdAt         DateTime  @default(now()) @map("created_at")
-  updatedAt         DateTime  @updatedAt @map("updated_at")
+  tipo              String          @default("mensaje")
+  prioridad         String          @default("normal")
+  leido             Boolean         @default(false)
+  leidoEn           DateTime?       @map("leido_en")
+  archivado         Boolean         @default(false)
+  remitenteId       String          @map("remitente_id")
+  destinatarioId    String?         @map("destinatario_id")
+  destinatarioGrupo String?         @map("destinatario_grupo")
+  mensajePadreId    String?         @map("mensaje_padre_id")
+  createdAt         DateTime        @default(now()) @map("created_at")
+  updatedAt         DateTime        @updatedAt @map("updated_at")
   destinatario      Usuario?        @relation("MensajesRecibidos", fields: [destinatarioId], references: [id])
   mensajePadre      Mensaje?        @relation("HiloMensajes", fields: [mensajePadreId], references: [id])
   respuestas        Mensaje[]       @relation("HiloMensajes")
@@ -658,8 +659,8 @@ model MensajeEstado {
   archivado Boolean   @default(false)
   createdAt DateTime  @default(now()) @map("created_at")
 
-  mensaje   Mensaje   @relation(fields: [mensajeId], references: [id])
-  usuario   Usuario   @relation(fields: [usuarioId], references: [id])
+  mensaje Mensaje @relation(fields: [mensajeId], references: [id])
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
 
   @@unique([mensajeId, usuarioId])
   @@index([usuarioId])
@@ -667,19 +668,19 @@ model MensajeEstado {
 }
 
 model Edificio {
-  id          String      @id @default(cuid())
-  nombre      String      @unique
-  direccion   String?
-  responsable String?
-  telefono    String?
-  createdAt   DateTime    @default(now()) @map("created_at")
-  updatedAt   DateTime    @updatedAt @map("updated_at")
-  planoUrl    String?
-  planoNombre String?
-  codigoCliente String?  @unique @map("codigo_cliente")
-  alias         String?
-  contratoPci   String?  @map("contrato_pci")
-  deas        DEA[]
+  id              String                @id @default(cuid())
+  nombre          String                @unique
+  direccion       String?
+  responsable     String?
+  telefono        String?
+  createdAt       DateTime              @default(now()) @map("created_at")
+  updatedAt       DateTime              @updatedAt @map("updated_at")
+  planoUrl        String?
+  planoNombre     String?
+  codigoCliente   String?               @unique @map("codigo_cliente")
+  alias           String?
+  contratoPci     String?               @map("contrato_pci")
+  deas            DEA[]
   equiposECI      EquipoECI[]
   planoMarcadores PlanoMarcador[]
   planos          PlanoEdificio[]
@@ -692,24 +693,24 @@ model Edificio {
 }
 
 model EquipoECI {
-  id               String    @id @default(cuid())
-  edificioId       String    @map("edificio_id")
+  id               String          @id @default(cuid())
+  edificioId       String          @map("edificio_id")
   tipo             String
   subtipo          String?
   ubicacion        String
-  numeroSerie      String?   @map("numero_serie")
-  estado           String    @default("operativo")
-  fechaInstalacion DateTime? @map("fecha_instalacion")
-  ultimaRevision   DateTime? @map("ultima_revision")
-  proximaRevision  DateTime? @map("proxima_revision")
+  numeroSerie      String?         @map("numero_serie")
+  estado           String          @default("operativo")
+  fechaInstalacion DateTime?       @map("fecha_instalacion")
+  ultimaRevision   DateTime?       @map("ultima_revision")
+  proximaRevision  DateTime?       @map("proxima_revision")
   observaciones    String?
-  createdAt        DateTime  @default(now()) @map("created_at")
-  updatedAt        DateTime  @updatedAt @map("updated_at")
-  edificio         Edificio  @relation(fields: [edificioId], references: [id], onDelete: Cascade)
+  createdAt        DateTime        @default(now()) @map("created_at")
+  updatedAt        DateTime        @updatedAt @map("updated_at")
+  edificio         Edificio        @relation(fields: [edificioId], references: [id], onDelete: Cascade)
+  planoMarcadores  PlanoMarcador[]
 
   @@index([edificioId])
   @@index([estado])
-  planoMarcadores PlanoMarcador[]
   @@index([proximaRevision])
   @@map("equipos_eci")
 }
@@ -722,9 +723,9 @@ model Hidrante {
   latitud          Float?
   longitud         Float?
   presion          Float?
-  caudal           Float?   // m³/h
-  fotoUbicacion    String?  @map("foto_ubicacion")
-  fotoDetalle      String?  @map("foto_detalle")
+  caudal           Float? // m³/h
+  fotoUbicacion    String?   @map("foto_ubicacion")
+  fotoDetalle      String?   @map("foto_detalle")
   estado           String    @default("operativo")
   fechaInstalacion DateTime? @map("fecha_instalacion")
   ultimaRevision   DateTime? @map("ultima_revision")
@@ -787,29 +788,29 @@ model SolicitudVestuario {
 }
 
 model DEA {
-  id               String    @id @default(cuid())
-  codigo           String    @unique
-  tipo             String
-  marca            String?
-  modelo           String?
-  numeroSerie      String?   @map("numero_serie")
-  ubicacion        String
-  edificioId       String?   @map("edificio_id")
-  latitud          Float?
-  longitud         Float?
-  fechaInstalacion DateTime? @map("fecha_instalacion") @db.Date
-  fechaRevision    DateTime? @map("fecha_revision") @db.Date
-  proximaRevision  DateTime? @map("proxima_revision") @db.Date
-  estado           String    @default("operativo")
-  accesible24h     Boolean   @default(true) @map("accesible_24h")
-  observaciones    String?
-  createdAt        DateTime  @default(now()) @map("created_at")
-  updatedAt        DateTime  @updatedAt @map("updated_at")
-  caducidadBateria DateTime?
-  caducidadParches          DateTime?
+  id                         String    @id @default(cuid())
+  codigo                     String    @unique
+  tipo                       String
+  marca                      String?
+  modelo                     String?
+  numeroSerie                String?   @map("numero_serie")
+  ubicacion                  String
+  edificioId                 String?   @map("edificio_id")
+  latitud                    Float?
+  longitud                   Float?
+  fechaInstalacion           DateTime? @map("fecha_instalacion") @db.Date
+  fechaRevision              DateTime? @map("fecha_revision") @db.Date
+  proximaRevision            DateTime? @map("proxima_revision") @db.Date
+  estado                     String    @default("operativo")
+  accesible24h               Boolean   @default(true) @map("accesible_24h")
+  observaciones              String?
+  createdAt                  DateTime  @default(now()) @map("created_at")
+  updatedAt                  DateTime  @updatedAt @map("updated_at")
+  caducidadBateria           DateTime?
+  caducidadParches           DateTime?
   caducidadParchesInfantiles DateTime? @map("caducidad_parches_infantiles")
   caducidadPilas             DateTime?
-  edificio         Edificio? @relation(fields: [edificioId], references: [id])
+  edificio                   Edificio? @relation(fields: [edificioId], references: [id])
 
   @@map("deas")
 }
@@ -931,17 +932,17 @@ enum EstadoSolicitud {
 }
 
 model DocumentoVehiculo {
-  id           String   @id @default(cuid())
-  vehiculoId   String
-  vehiculo     Vehiculo @relation(fields: [vehiculoId], references: [id], onDelete: Cascade)
-  tipo         String   // 'itv', 'seguro', 'permiso_circulacion', 'otros'
-  nombre       String
-  url          String   // URL del archivo en Vercel Blob
-  blobKey      String   // Key para eliminar de Vercel Blob
-  fechaSubida  DateTime @default(now())
-  usuarioId    String
-  usuario      Usuario  @relation(fields: [usuarioId], references: [id])
-  
+  id          String   @id @default(cuid())
+  vehiculoId  String
+  vehiculo    Vehiculo @relation(fields: [vehiculoId], references: [id], onDelete: Cascade)
+  tipo        String // 'itv', 'seguro', 'permiso_circulacion', 'otros'
+  nombre      String
+  url         String // URL del archivo en Vercel Blob
+  blobKey     String // Key para eliminar de Vercel Blob
+  fechaSubida DateTime @default(now())
+  usuarioId   String
+  usuario     Usuario  @relation(fields: [usuarioId], references: [id])
+
   @@index([vehiculoId])
   @@index([usuarioId])
   @@map("documentos_vehiculo")
@@ -952,18 +953,18 @@ model MantenimientoVehiculo {
   vehiculoId      String
   vehiculo        Vehiculo  @relation(fields: [vehiculoId], references: [id], onDelete: Cascade)
   fecha           DateTime
-  tipo            String    // 'revision', 'reparacion', 'cambio_aceite', 'neumaticos', 'itv', 'otros'
+  tipo            String // 'revision', 'reparacion', 'cambio_aceite', 'neumaticos', 'itv', 'otros'
   descripcion     String
   kilometraje     Int?
   coste           Float?
   proximaRevision DateTime?
-  realizadoPor    String?   // Taller o persona
+  realizadoPor    String? // Taller o persona
   observaciones   String?
   usuarioId       String
   usuario         Usuario   @relation(fields: [usuarioId], references: [id])
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
-  
+
   @@index([vehiculoId])
   @@index([usuarioId])
   @@index([fecha])
@@ -971,33 +972,33 @@ model MantenimientoVehiculo {
 }
 
 model SiniestroVehiculo {
-  id              String    @id @default(cuid())
-  vehiculoId      String    @map("vehiculo_id")
-  vehiculo        Vehiculo  @relation(fields: [vehiculoId], references: [id], onDelete: Cascade)
-  fecha           DateTime
-  hora            String?
-  tipo            String    // colision, alcance, salida_via, atropello, vandalismo, robo, incendio, granizo, otros
-  gravedad        String    @default("leve") // leve, moderado, grave
-  lugar           String?
-  descripcion     String
-  kilometraje     Int?
-  conductor       String?
+  id               String   @id @default(cuid())
+  vehiculoId       String   @map("vehiculo_id")
+  vehiculo         Vehiculo @relation(fields: [vehiculoId], references: [id], onDelete: Cascade)
+  fecha            DateTime
+  hora             String?
+  tipo             String // colision, alcance, salida_via, atropello, vandalismo, robo, incendio, granizo, otros
+  gravedad         String   @default("leve") // leve, moderado, grave
+  lugar            String?
+  descripcion      String
+  kilometraje      Int?
+  conductor        String?
   terceroImplicado String?  @map("tercero_implicado")
   matriculaTercero String?  @map("matricula_tercero")
-  aseguradora     String?
-  numeroSiniestro String?   @map("numero_siniestro")
-  atestado        String?   // Cuerpo que instruye atestado (Policía Local, Guardia Civil...)
-  heridos         Boolean   @default(false)
-  costeReparacion Float?    @map("coste_reparacion")
-  estado          String    @default("abierto") // abierto, en_tramite, reparado, cerrado
-  observaciones   String?
-  parteUrl        String?   @map("parte_url")
-  parteNombre     String?   @map("parte_nombre")
-  parteBlobKey    String?   @map("parte_blob_key")
-  usuarioId       String    @map("usuario_id")
-  usuario         Usuario   @relation(fields: [usuarioId], references: [id])
-  createdAt       DateTime  @default(now()) @map("created_at")
-  updatedAt       DateTime  @updatedAt @map("updated_at")
+  aseguradora      String?
+  numeroSiniestro  String?  @map("numero_siniestro")
+  atestado         String? // Cuerpo que instruye atestado (Policía Local, Guardia Civil...)
+  heridos          Boolean  @default(false)
+  costeReparacion  Float?   @map("coste_reparacion")
+  estado           String   @default("abierto") // abierto, en_tramite, reparado, cerrado
+  observaciones    String?
+  parteUrl         String?  @map("parte_url")
+  parteNombre      String?  @map("parte_nombre")
+  parteBlobKey     String?  @map("parte_blob_key")
+  usuarioId        String   @map("usuario_id")
+  usuario          Usuario  @relation(fields: [usuarioId], references: [id])
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
 
   @@index([vehiculoId])
   @@index([fecha])
@@ -1005,186 +1006,184 @@ model SiniestroVehiculo {
 }
 
 model EquipoRadio {
-  id                    String    @id @default(cuid())
-  codigo                String    @unique // TR-01, TR-02, etc.
-  tipo                  String    // portatil, movil, base, repetidor
-  marca                 String
-  modelo                String
-  numeroSerie           String?
-  configuracion         String    // analogico, dmr, tetra
-  estado                String    @default("disponible") // disponible, en_carga, averiado, mantenimiento
-  
+  id            String  @id @default(cuid())
+  codigo        String  @unique // TR-01, TR-02, etc.
+  tipo          String // portatil, movil, base, repetidor
+  marca         String
+  modelo        String
+  numeroSerie   String?
+  configuracion String // analogico, dmr, tetra
+  estado        String  @default("disponible") // disponible, en_carga, averiado, mantenimiento
+
   // Batería
-  estadoBateria         Int?      // Porcentaje de salud (0-100)
-  fechaInstalacionBat   DateTime?
-  ciclosCarga           Int       @default(0)
-  
+  estadoBateria       Int? // Porcentaje de salud (0-100)
+  fechaInstalacionBat DateTime?
+  ciclosCarga         Int       @default(0)
+
   // Configuración RF - Modo Analógico
-  freqTxAnalogico       Float?    // MHz
-  freqRxAnalogico       Float?    // MHz
-  subtonoTx             String?   // CTCSS Hz (ej: "67.0", "71.9")
-  subtonoRx             String?   // CTCSS Hz
-  potenciaAnalogico     Float?    // Watts
+  freqTxAnalogico   Float? // MHz
+  freqRxAnalogico   Float? // MHz
+  subtonoTx         String? // CTCSS Hz (ej: "67.0", "71.9")
+  subtonoRx         String? // CTCSS Hz
+  potenciaAnalogico Float? // Watts
 
   // Configuración RF - Modo Digital (DMR/Repetidor)
-  freqTxDigital         Float?    // MHz
-  freqRxDigital         Float?    // MHz
-  colorCode             Int?
-  timeslot              Int?      // 1 o 2
-  potenciaDigital       Float?    // Watts
+  freqTxDigital   Float? // MHz
+  freqRxDigital   Float? // MHz
+  colorCode       Int?
+  timeslot        Int? // 1 o 2
+  potenciaDigital Float? // Watts
 
   // General RF
-  potenciaMaxima        Float?    // Watts máx del equipo
-  bandaFrecuencia       String?   // VHF, UHF
-  canalAnalogico        String?   // Nombre del canal
-  canalDigital          String?   // Nombre del canal digital
-  
+  potenciaMaxima  Float? // Watts máx del equipo
+  bandaFrecuencia String? // VHF, UHF
+  canalAnalogico  String? // Nombre del canal
+  canalDigital    String? // Nombre del canal digital
+
   // Coordenadas (para base, repetidor)
-  latitud               Float?
-  longitud              Float?
-  alturaAntena          Float?    // metros
-  
+  latitud      Float?
+  longitud     Float?
+  alturaAntena Float? // metros
+
   // Cobertura estimada
-  radioCobertura        Float?    // km estimados
+  radioCobertura Float? // km estimados
 
   // Canales configurados (JSON array de CanalRF)
-  canales               Json?     // [{numero,nombre,modo,freqTx,freqRx,...}]
+  canales Json? // [{numero,nombre,modo,freqTx,freqRx,...}]
 
   // Ubicación y notas
-  ubicacion             String?
-  observaciones         String?
-  
+  ubicacion     String?
+  observaciones String?
+
   // Timestamps
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
-  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   // Relaciones
-  mantenimientos        MantenimientoEquipo[]
-  ciclosCargaHistorial  CicloCarga[]
+  mantenimientos       MantenimientoEquipo[]
+  ciclosCargaHistorial CicloCarga[]
 }
 
 model MantenimientoEquipo {
-  id                String    @id @default(cuid())
-  equipoId          String
-  tipo              String    // revision, reparacion, cambio_bateria, actualizacion_firmware
-  descripcion       String
-  fecha             DateTime  @default(now())
-  realizadoPor      String?
-  coste             Float?
-  observaciones     String?
-  
-  equipo            EquipoRadio @relation(fields: [equipoId], references: [id], onDelete: Cascade)
-  
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  id            String   @id @default(cuid())
+  equipoId      String
+  tipo          String // revision, reparacion, cambio_bateria, actualizacion_firmware
+  descripcion   String
+  fecha         DateTime @default(now())
+  realizadoPor  String?
+  coste         Float?
+  observaciones String?
+
+  equipo EquipoRadio @relation(fields: [equipoId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model CicloCarga {
-  id                String    @id @default(cuid())
-  equipoId          String
-  fechaInicio       DateTime  @default(now())
-  fechaFin          DateTime?
-  duracionHoras     Float?
-  nivelInicial      Int?      // % batería al conectar
-  nivelFinal        Int?      // % batería al desconectar
-  observaciones     String?
-  
-  equipo            EquipoRadio @relation(fields: [equipoId], references: [id], onDelete: Cascade)
-  
-  createdAt         DateTime  @default(now())
+  id            String    @id @default(cuid())
+  equipoId      String
+  fechaInicio   DateTime  @default(now())
+  fechaFin      DateTime?
+  duracionHoras Float?
+  nivelInicial  Int? // % batería al conectar
+  nivelFinal    Int? // % batería al desconectar
+  observaciones String?
+
+  equipo EquipoRadio @relation(fields: [equipoId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
 }
+
 model Manual {
-  id          String   @id @default(cuid())
-  titulo      String
-  descripcion String?
-  categoria   String   // incendios, socorrismo, vehiculos, transmisiones, pma, general
-  tipo        String?  // manual_usuario, ficha_tecnica, procedimiento, guia_rapida
-  fabricante  String?
-  modelo      String?
-  url         String   // URL del blob
-  blobKey     String   // Key para eliminar de blob
-  nombreArchivo String @map("nombre_archivo")
-  tamano      Int      // Tamaño en bytes
-  usuarioId   String   @map("usuario_id")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-  
-  usuario     Usuario  @relation(fields: [usuarioId], references: [id])
-  
+  id            String   @id @default(cuid())
+  titulo        String
+  descripcion   String?
+  categoria     String // incendios, socorrismo, vehiculos, transmisiones, pma, general
+  tipo          String? // manual_usuario, ficha_tecnica, procedimiento, guia_rapida
+  fabricante    String?
+  modelo        String?
+  url           String // URL del blob
+  blobKey       String // Key para eliminar de blob
+  nombreArchivo String   @map("nombre_archivo")
+  tamano        Int // Tamaño en bytes
+  usuarioId     String   @map("usuario_id")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
+
   @@map("manuales")
 }
 
-
-
-
 model PartePSI {
-  id                        String    @id @default(cuid())
-  numeroParte               String    @unique // 20260211-001
-  fecha                     DateTime  @default(now())
-  estado                    String    @default("pendiente_vb") // "pendiente_vb" | "completo"
-  archivado                 Boolean   @default(false)
-  
+  id          String   @id @default(cuid())
+  numeroParte String   @unique // 20260211-001
+  fecha       DateTime @default(now())
+  estado      String   @default("pendiente_vb") // "pendiente_vb" | "completo"
+  archivado   Boolean  @default(false)
+
   // Pautas de tiempo (formato HH:mm como String)
-  horaLlamada               String?
-  horaSalida                String?
-  horaLlegada               String?
-  horaTerminado             String?
-  horaDisponible            String?
-  
+  horaLlamada    String?
+  horaSalida     String?
+  horaLlegada    String?
+  horaTerminado  String?
+  horaDisponible String?
+
   // Datos principales
-  lugar                     String
-  motivo                    String?
-  alertante                 String?
-  circulacion               String? // "prevencion" | "intervencion" | "otros"
-  matriculasImplicados      String?
-  
+  lugar                String
+  motivo               String?
+  alertante            String?
+  circulacion          String? // "prevencion" | "intervencion" | "otros"
+  matriculasImplicados String?
+
   // Arrays JSON
-  vehiculosIds              Json // ["vehiculoId1", "vehiculoId2"]
-  equipoWalkies             Json // [{equipo: "B-13", walkie: "W-01"}, {equipo: "B-15", walkie: "W-02"}]
-  tipologias                Json // ["mantenimiento", "soporte_vital", "otros_grupo1"]
-  tipologiasOtrosTexto      Json // {grupo1: "Texto otros grupo 1", grupo2: "", grupo3: ""}
-  
+  vehiculosIds         Json // ["vehiculoId1", "vehiculoId2"]
+  equipoWalkies        Json // [{equipo: "B-13", walkie: "W-01"}, {equipo: "B-15", walkie: "W-02"}]
+  tipologias           Json // ["mantenimiento", "soporte_vital", "otros_grupo1"]
+  tipologiasOtrosTexto Json // {grupo1: "Texto otros grupo 1", grupo2: "", grupo3: ""}
+
   // Autoridades
-  policiaLocal              String? // Texto del campo "Policía Local de..."
-  guardiaCivil              String? // Texto del campo "Guardia Civil de..."
-  
+  policiaLocal String? // Texto del campo "Policía Local de..."
+  guardiaCivil String? // Texto del campo "Guardia Civil de..."
+
   // Accidente
-  posiblesCausas            String?
-  tieneHeridos              Boolean   @default(false)
-  numeroHeridos             Int?
-  tieneFallecidos           Boolean   @default(false)
-  numeroFallecidos          Int?
-  indicativosInforman       String?
-  descripcionAccidente      String?
-  
+  posiblesCausas       String?
+  tieneHeridos         Boolean @default(false)
+  numeroHeridos        Int?
+  tieneFallecidos      Boolean @default(false)
+  numeroFallecidos     Int?
+  indicativosInforman  String?
+  descripcionAccidente String?
+
   // Contenido
-  observaciones             String @db.Text // Página 1 - Resumen
-  desarrolloDetallado       String @db.Text // Página 2 - Detalle completo
-  fotosUrls                 Json // ["https://blob.vercel.com/foto1.jpg", "..."] - Página 3
-  informacionExtra          Json? // Estado completo del formulario (PsiFormState) para restauración exacta
-  
+  observaciones       String @db.Text // Página 1 - Resumen
+  desarrolloDetallado String @db.Text // Página 2 - Detalle completo
+  fotosUrls           Json // ["https://blob.vercel.com/foto1.jpg", "..."] - Página 3
+  informacionExtra    Json? // Estado completo del formulario (PsiFormState) para restauración exacta
+
   // Firmas (base64 PNG dataURL)
-  indicativoCumplimenta     String? // Indicativo seleccionado (ej: "B-13")
+  indicativoCumplimenta      String? // Indicativo seleccionado (ej: "B-13")
   firmaIndicativoCumplimenta String? @db.Text // "data:image/png;base64,iVBORw0KG..."
-  responsableTurno          String? // Indicativo seleccionado (ej: "B-15")
-  firmaResponsableTurno     String? @db.Text // "data:image/png;base64,iVBORw0KG..."
-  firmaJefeServicio         String? @db.Text // "data:image/png;base64,iVBORw0KG..." o certificado digital
-  tipoFirmaJefe             String? // "biometrica" | "certificado_digital"
-  
+  responsableTurno           String? // Indicativo seleccionado (ej: "B-15")
+  firmaResponsableTurno      String? @db.Text // "data:image/png;base64,iVBORw0KG..."
+  firmaJefeServicio          String? @db.Text // "data:image/png;base64,iVBORw0KG..." o certificado digital
+  tipoFirmaJefe              String? // "biometrica" | "certificado_digital"
+
   // PDF generado
-  pdfUrl                    String? // URL del PDF en Vercel Blob
-  pdfGenerado               Boolean   @default(false)
+  pdfUrl      String? // URL del PDF en Vercel Blob
+  pdfGenerado Boolean @default(false)
 
   // Google Drive Backup
-  googleDriveId             String?   // ID del archivo en Google Drive
-  googleDriveUrl            String?   // URL pública en Google Drive
-  
+  googleDriveId  String? // ID del archivo en Google Drive
+  googleDriveUrl String? // URL pública en Google Drive
+
   // Auditoría
-  creadoPorId               String
-  creadoPor                 Usuario   @relation(fields: [creadoPorId], references: [id])
-  createdAt                 DateTime  @default(now())
-  updatedAt                 DateTime  @updatedAt
-  
+  creadoPorId String
+  creadoPor   Usuario  @relation(fields: [creadoPorId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
   @@index([numeroParte])
   @@index([fecha])
   @@index([estado])
@@ -1201,20 +1200,20 @@ model PartePRVFSV {
   km               Int?
 
   // Todos los campos del formulario PDF (checkboxes, texto, niveles, firma...)
-  camposFormulario Json     @default("{}")
+  camposFormulario Json @default("{}")
 
   // Fotos vehículo (Vercel Blob URLs — manejo especial fuera del PDF)
-  fotoFrontal      String?
-  fotoTrasera      String?
-  fotoLateralIzq   String?
-  fotoLateralDer   String?
+  fotoFrontal    String?
+  fotoTrasera    String?
+  fotoLateralIzq String?
+  fotoLateralDer String?
 
   // Estado y auditoría
-  estado           String   @default("borrador")
-  creadoPorId      String
-  creadoPor        Usuario  @relation(fields: [creadoPorId], references: [id])
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  estado      String   @default("borrador")
+  creadoPorId String
+  creadoPor   Usuario  @relation(fields: [creadoPorId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   @@index([numeroReferencia])
   @@index([fecha])
@@ -1224,34 +1223,34 @@ model PartePRVFSV {
 }
 
 model IncidenciaCecopal {
-  id             String   @id @default(cuid())
-  numero         String   @unique
-  estado         String   @default("activa")
-  tipoIncidencia String   @map("tipo_incidencia")
-  origenAviso    String   @map("origen_aviso")
-  origenDetalle  String?  @map("origen_detalle")
+  id             String    @id @default(cuid())
+  numero         String    @unique
+  estado         String    @default("activa")
+  tipoIncidencia String    @map("tipo_incidencia")
+  origenAviso    String    @map("origen_aviso")
+  origenDetalle  String?   @map("origen_detalle")
   direccion      String
-  descripcion    String?  @db.Text
-  horaLlamada    String?  @map("hora_llamada")
-  horaSalida     String?  @map("hora_salida")
-  horaLlegada    String?  @map("hora_llegada")
-  horaTerminado  String?  @map("hora_terminado")
-  horaDisponible String?  @map("hora_disponible")
-  vehiculosIds   Json     @default("[]") @map("vehiculos_ids")
-  voluntariosIds Json     @default("[]") @map("voluntarios_ids")
+  descripcion    String?   @db.Text
+  horaLlamada    String?   @map("hora_llamada")
+  horaSalida     String?   @map("hora_salida")
+  horaLlegada    String?   @map("hora_llegada")
+  horaTerminado  String?   @map("hora_terminado")
+  horaDisponible String?   @map("hora_disponible")
+  vehiculosIds   Json      @default("[]") @map("vehiculos_ids")
+  voluntariosIds Json      @default("[]") @map("voluntarios_ids")
   latitud        Float?
   longitud       Float?
-  observaciones  String?  @db.Text
-  desarrollo     String?  @db.Text
+  observaciones  String?   @db.Text
+  desarrollo     String?   @db.Text
   titulo         String?
-  leida          Boolean  @default(false)
-  leidaPor       String?  @map("leida_por")
+  leida          Boolean   @default(false)
+  leidaPor       String?   @map("leida_por")
   leidaEn        DateTime? @map("leida_en")
-  parteId        String?  @map("parte_id")
-  operadorId     String   @map("operador_id")
-  operador       Usuario  @relation(fields: [operadorId], references: [id])
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
+  parteId        String?   @map("parte_id")
+  operadorId     String    @map("operador_id")
+  operador       Usuario   @relation(fields: [operadorId], references: [id])
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
 
   @@index([estado])
   @@index([createdAt])
@@ -1259,31 +1258,31 @@ model IncidenciaCecopal {
 }
 
 model Aspirante {
-  id                      String    @id @default(cuid())
-  fecha                   DateTime  @default(now())
-  nombre                  String
-  apellidos               String
-  dni                     String    @unique
-  telefono                String?
-  email                   String?
-  estado                  String    @default("pendiente")
-  
-  fechaEntrevista         DateTime? @map("fecha_entrevista")
-  confirmacionAsistencia  Boolean   @default(false) @map("confirmacion_asistencia")
-  asistioEntrevista       Boolean   @default(false) @map("asistio_entrevista")
-  evaluacionEntrevista    String?   @db.Text @map("evaluacion_entrevista")
-  
-  carneConducir           String?   @map("carne_conducir")
-  formacion               String?   @db.Text
-  ocupacionActual         String?   @map("ocupacion_actual")
-  tiempoLibre             String?   @db.Text @map("tiempo_libre")
-  interesServicio         String?   @db.Text @map("interes_servicio")
-  
-  observaciones           String?   @db.Text
-  
-  createdAt               DateTime  @default(now()) @map("created_at")
-  updatedAt               DateTime  @updatedAt @map("updated_at")
-  
+  id        String   @id @default(cuid())
+  fecha     DateTime @default(now())
+  nombre    String
+  apellidos String
+  dni       String   @unique
+  telefono  String?
+  email     String?
+  estado    String   @default("pendiente")
+
+  fechaEntrevista        DateTime? @map("fecha_entrevista")
+  confirmacionAsistencia Boolean   @default(false) @map("confirmacion_asistencia")
+  asistioEntrevista      Boolean   @default(false) @map("asistio_entrevista")
+  evaluacionEntrevista   String?   @map("evaluacion_entrevista") @db.Text
+
+  carneConducir   String? @map("carne_conducir")
+  formacion       String? @db.Text
+  ocupacionActual String? @map("ocupacion_actual")
+  tiempoLibre     String? @map("tiempo_libre") @db.Text
+  interesServicio String? @map("interes_servicio") @db.Text
+
+  observaciones String? @db.Text
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
   @@index([estado])
   @@index([fecha])
   @@map("aspirantes")
@@ -1294,170 +1293,170 @@ model Aspirante {
 // ============================================
 
 model Curso {
-  id                String   @id @default(cuid())
-  codigo            String   @unique
-  nombre            String
-  descripcion       String?  @db.Text
-  tipo              String
-  duracionHoras     Int      @map("duracion_horas")
-  validezMeses      Int?     @map("validez_meses")
-  
-  objetivos         String?  @db.Text
-  temario           String?  @db.Text
-  requisitosAcceso  String?  @db.Text @map("requisitos_acceso")
-  documentacion     String?  @db.Text
-  
-  entidadOrganiza   String?  @map("entidad_organiza")
-  entidadCertifica  String?  @map("entidad_certifica")
-  costoPorAlumno    Float?   @default(0) @map("costo_por_alumno")
-  plazasMaximas     Int?     @map("plazas_maximas")
-  
+  id            String  @id @default(cuid())
+  codigo        String  @unique
+  nombre        String
+  descripcion   String? @db.Text
+  tipo          String
+  duracionHoras Int     @map("duracion_horas")
+  validezMeses  Int?    @map("validez_meses")
+
+  objetivos        String? @db.Text
+  temario          String? @db.Text
+  requisitosAcceso String? @map("requisitos_acceso") @db.Text
+  documentacion    String? @db.Text
+
+  entidadOrganiza  String? @map("entidad_organiza")
+  entidadCertifica String? @map("entidad_certifica")
+  costoPorAlumno   Float?  @default(0) @map("costo_por_alumno")
+  plazasMaximas    Int?    @map("plazas_maximas")
+
   // Nuevos campos
-  areaVinculada     String?  @map("area_vinculada") // socorrismo, incendios, transmisiones, etc.
-  formadorPrincipal String?  @map("formador_principal") // Nombre del formador/ponente habitual
-  nivelFormacion    String?  @default("basico") @map("nivel_formacion") // basico, intermedio, avanzado
-  modalidad         String?  @default("presencial") // presencial, online, mixto
-  
-  activo            Boolean  @default(true)
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @updatedAt @map("updated_at")
-  
-  convocatorias     Convocatoria[]
-  certificaciones   Certificacion[]
-  necesidades       NecesidadFormativa[]
-  
+  areaVinculada     String? @map("area_vinculada") // socorrismo, incendios, transmisiones, etc.
+  formadorPrincipal String? @map("formador_principal") // Nombre del formador/ponente habitual
+  nivelFormacion    String? @default("basico") @map("nivel_formacion") // basico, intermedio, avanzado
+  modalidad         String? @default("presencial") // presencial, online, mixto
+
+  activo    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  convocatorias   Convocatoria[]
+  certificaciones Certificacion[]
+  necesidades     NecesidadFormativa[]
+
   @@map("cursos")
 }
 
 model Convocatoria {
-  id                String   @id @default(cuid())
-  cursoId           String   @map("curso_id")
-  curso             Curso    @relation(fields: [cursoId], references: [id], onDelete: Cascade)
-  
-  codigo            String   @unique
-  fechaInicio       DateTime @map("fecha_inicio")
-  fechaFin          DateTime @map("fecha_fin")
-  
-  lugar             String?
-  direccion         String?
-  horario           String?  @db.Text
-  instructores      String?  @db.Text
-  
-  plazasDisponibles Int      @map("plazas_disponibles")
-  plazasOcupadas    Int      @default(0) @map("plazas_ocupadas")
-  
-  estado            String   @default("planificada")
-  
+  id      String @id @default(cuid())
+  cursoId String @map("curso_id")
+  curso   Curso  @relation(fields: [cursoId], references: [id], onDelete: Cascade)
+
+  codigo      String   @unique
+  fechaInicio DateTime @map("fecha_inicio")
+  fechaFin    DateTime @map("fecha_fin")
+
+  lugar        String?
+  direccion    String?
+  horario      String? @db.Text
+  instructores String? @db.Text
+
+  plazasDisponibles Int @map("plazas_disponibles")
+  plazasOcupadas    Int @default(0) @map("plazas_ocupadas")
+
+  estado String @default("planificada")
+
   evaluacionRequerida Boolean @default(true) @map("evaluacion_requerida")
-  notaMinima        Float?   @default(5) @map("nota_minima")
-  
-  actaFormacion     String?  @map("acta_formacion")
-  listadoAsistencia String?  @map("listado_asistencia")
-  
+  notaMinima          Float?  @default(5) @map("nota_minima")
+
+  actaFormacion     String? @map("acta_formacion")
+  listadoAsistencia String? @map("listado_asistencia")
+
   // Nuevos campos de fechas y gestión
   fechaProgramacion DateTime? @map("fecha_programacion") // Cuando se planifica
-  fechaPublicacion  DateTime? @map("fecha_publicacion")  // Cuando se abre al público
-  formadorNombre    String?   @map("formador_nombre")    // Formador específico de esta edición
+  fechaPublicacion  DateTime? @map("fecha_publicacion") // Cuando se abre al público
+  formadorNombre    String?   @map("formador_nombre") // Formador específico de esta edición
   formadorExterno   Boolean   @default(false) @map("formador_externo")
-  edicion           String?   // "1ª Edición", "2ª Edición", etc.
+  edicion           String? // "1ª Edición", "2ª Edición", etc.
   actaGenerada      Boolean   @default(false) @map("acta_generada")
   actaUrl           String?   @map("acta_url")
-  
-  observaciones     String?  @db.Text
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @updatedAt @map("updated_at")
-  
-  inscripciones     Inscripcion[]
-  jornadas          JornadaAsistencia[]
-  
+
+  observaciones String?  @db.Text
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  inscripciones Inscripcion[]
+  jornadas      JornadaAsistencia[]
+
   @@map("convocatorias")
 }
 
 model Inscripcion {
-  id                String   @id @default(cuid())
-  convocatoriaId    String   @map("convocatoria_id")
-  convocatoria      Convocatoria @relation(fields: [convocatoriaId], references: [id], onDelete: Cascade)
-  
-  usuarioId         String   @map("usuario_id")
-  usuario           Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
-  
-  fechaInscripcion  DateTime @default(now()) @map("fecha_inscripcion")
-  estado            String   @default("pendiente")
-  
-  porcentajeAsistencia Float? @map("porcentaje_asistencia")
-  notaFinal         Float?   @map("nota_final")
-  apto              Boolean?
-  
+  id             String       @id @default(cuid())
+  convocatoriaId String       @map("convocatoria_id")
+  convocatoria   Convocatoria @relation(fields: [convocatoriaId], references: [id], onDelete: Cascade)
+
+  usuarioId String  @map("usuario_id")
+  usuario   Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  fechaInscripcion DateTime @default(now()) @map("fecha_inscripcion")
+  estado           String   @default("pendiente")
+
+  porcentajeAsistencia Float?   @map("porcentaje_asistencia")
+  notaFinal            Float?   @map("nota_final")
+  apto                 Boolean?
+
   // Campos de firma biométrica
-  firmaBiometrica   String?  @map("firma_biometrica") // Datos de firma (base64 o hash)
-  fechaFirma        DateTime? @map("fecha_firma") // Fecha y hora de la firma
-  dispositivoFirma  String?  @map("dispositivo_firma") // Dispositivo donde se firmó (iPad, etc.)
-  ipFirma           String?  @map("ip_firma") // IP del dispositivo
-  
+  firmaBiometrica  String?   @map("firma_biometrica") // Datos de firma (base64 o hash)
+  fechaFirma       DateTime? @map("fecha_firma") // Fecha y hora de la firma
+  dispositivoFirma String?   @map("dispositivo_firma") // Dispositivo donde se firmó (iPad, etc.)
+  ipFirma          String?   @map("ip_firma") // IP del dispositivo
+
   fechaCertificacion DateTime? @map("fecha_certificacion")
-  certificadoUrl    String?  @map("certificado_url")
-  
-  observaciones     String?  @db.Text
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @updatedAt @map("updated_at")
-  
+  certificadoUrl     String?   @map("certificado_url")
+
+  observaciones String?  @db.Text
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
   @@unique([convocatoriaId, usuarioId])
   @@map("inscripciones")
 }
 
 model Certificacion {
-  id                String   @id @default(cuid())
-  usuarioId         String   @map("usuario_id")
-  usuario           Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
-  
-  cursoId           String   @map("curso_id")
-  curso             Curso    @relation(fields: [cursoId], references: [id], onDelete: Cascade)
-  
-  numeroCertificado String?  @unique @map("numero_certificado")
-  fechaObtencion    DateTime @map("fecha_obtencion")
+  id        String  @id @default(cuid())
+  usuarioId String  @map("usuario_id")
+  usuario   Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  cursoId String @map("curso_id")
+  curso   Curso  @relation(fields: [cursoId], references: [id], onDelete: Cascade)
+
+  numeroCertificado String?   @unique @map("numero_certificado")
+  fechaObtencion    DateTime  @map("fecha_obtencion")
   fechaExpiracion   DateTime? @map("fecha_expiracion")
-  
-  entidadEmisora    String   @map("entidad_emisora")
-  vigente           Boolean  @default(true)
-  renovada          Boolean  @default(false)
+
+  entidadEmisora            String  @map("entidad_emisora")
+  vigente                   Boolean @default(true)
+  renovada                  Boolean @default(false)
   certificacionRenovacionId String? @map("certificacion_renovacion_id")
-  
-  certificadoUrl    String?  @map("certificado_url")
-  observaciones     String?  @db.Text
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @updatedAt @map("updated_at")
-  
+
+  certificadoUrl String?  @map("certificado_url")
+  observaciones  String?  @db.Text
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
   @@map("certificaciones")
 }
 
 model NecesidadFormativa {
-  id                String   @id @default(cuid())
-  
-  cursoId           String?  @map("curso_id")
-  curso             Curso?   @relation(fields: [cursoId], references: [id], onDelete: SetNull)
-  descripcion       String   @db.Text
-  
-  areaAfectada      String   @map("area_afectada")
-  numeroPersonas    Int      @map("numero_personas")
-  
-  motivo            String   @db.Text
-  impacto           String   @default("medio")
-  urgencia          String   @default("normal")
-  prioridad         Int      @default(3)
-  
-  fechaLimite       DateTime? @map("fecha_limite")
-  estado            String   @default("identificada")
-  
-  convocatoriaPlanificada String? @map("convocatoria_planificada")
-  fechaResolucion   DateTime? @map("fecha_resolucion")
-  
-  detectadaPor      String   @map("detectada_por")
-  fechaDeteccion    DateTime @default(now()) @map("fecha_deteccion")
-  
-  observaciones     String?  @db.Text
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @updatedAt @map("updated_at")
-  
+  id String @id @default(cuid())
+
+  cursoId     String? @map("curso_id")
+  curso       Curso?  @relation(fields: [cursoId], references: [id], onDelete: SetNull)
+  descripcion String  @db.Text
+
+  areaAfectada   String @map("area_afectada")
+  numeroPersonas Int    @map("numero_personas")
+
+  motivo    String @db.Text
+  impacto   String @default("medio")
+  urgencia  String @default("normal")
+  prioridad Int    @default(3)
+
+  fechaLimite DateTime? @map("fecha_limite")
+  estado      String    @default("identificada")
+
+  convocatoriaPlanificada String?   @map("convocatoria_planificada")
+  fechaResolucion         DateTime? @map("fecha_resolucion")
+
+  detectadaPor   String   @map("detectada_por")
+  fechaDeteccion DateTime @default(now()) @map("fecha_deteccion")
+
+  observaciones String?  @db.Text
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
   @@map("necesidades_formativas")
 }
 
@@ -1466,71 +1465,71 @@ model NecesidadFormativa {
 // ============================================
 
 model JornadaAsistencia {
-  id                String   @id @default(cuid())
-  convocatoriaId    String   @map("convocatoria_id")
-  convocatoria      Convocatoria @relation(fields: [convocatoriaId], references: [id], onDelete: Cascade)
+  id             String       @id @default(cuid())
+  convocatoriaId String       @map("convocatoria_id")
+  convocatoria   Convocatoria @relation(fields: [convocatoriaId], references: [id], onDelete: Cascade)
 
-  fecha             DateTime
-  numeroJornada     Int      @map("numero_jornada")
-  titulo            String?
-  horaInicio        String?  @map("hora_inicio")
-  horaFin           String?  @map("hora_fin")
-  bloqueada         Boolean  @default(false)
-  observaciones     String?  @db.Text
+  fecha         DateTime
+  numeroJornada Int      @map("numero_jornada")
+  titulo        String?
+  horaInicio    String?  @map("hora_inicio")
+  horaFin       String?  @map("hora_fin")
+  bloqueada     Boolean  @default(false)
+  observaciones String?  @db.Text
 
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
-  firmas            RegistroFirma[]
+  firmas RegistroFirma[]
 
   @@map("jornadas_asistencia")
 }
 
 model RegistroFirma {
-  id                      String   @id @default(cuid())
-  jornadaId               String   @map("jornada_id")
-  jornada                 JornadaAsistencia @relation(fields: [jornadaId], references: [id], onDelete: Cascade)
+  id        String            @id @default(cuid())
+  jornadaId String            @map("jornada_id")
+  jornada   JornadaAsistencia @relation(fields: [jornadaId], references: [id], onDelete: Cascade)
 
-  usuarioId               String?  @map("usuario_id")
-  usuario                 Usuario? @relation("FirmasUsuario", fields: [usuarioId], references: [id], onDelete: SetNull)
+  usuarioId String?  @map("usuario_id")
+  usuario   Usuario? @relation("FirmasUsuario", fields: [usuarioId], references: [id], onDelete: SetNull)
 
-  participanteExternoId   String?  @map("participante_externo_id")
-  participanteExterno     ParticipanteExterno? @relation(fields: [participanteExternoId], references: [id], onDelete: SetNull)
+  participanteExternoId String?              @map("participante_externo_id")
+  participanteExterno   ParticipanteExterno? @relation(fields: [participanteExternoId], references: [id], onDelete: SetNull)
 
-  asistio                 Boolean  @default(false)
-  firmaBase64             String?  @map("firma_base64") @db.Text
-  fechaFirma              DateTime? @map("fecha_firma")
+  asistio     Boolean   @default(false)
+  firmaBase64 String?   @map("firma_base64") @db.Text
+  fechaFirma  DateTime? @map("fecha_firma")
 
-  valoracionFormador      String?  @map("valoracion_formador")
-  notaFormador            Float?   @map("nota_formador")
-  comentarioFormador      String?  @db.Text @map("comentario_formador")
+  valoracionFormador String? @map("valoracion_formador")
+  notaFormador       Float?  @map("nota_formador")
+  comentarioFormador String? @map("comentario_formador") @db.Text
 
-  createdAt               DateTime @default(now()) @map("created_at")
-  updatedAt               DateTime @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@unique([jornadaId, usuarioId])
   @@map("registros_firma")
 }
 
 model ParticipanteExterno {
-  id                String   @id @default(cuid())
-  convocatoriaId    String   @map("convocatoria_id")
+  id             String @id @default(cuid())
+  convocatoriaId String @map("convocatoria_id")
 
-  nombre            String
-  apellidos         String
-  dni               String?
-  email             String?
-  telefono          String?
-  organizacion      String?
-  cargo             String?
+  nombre       String
+  apellidos    String
+  dni          String?
+  email        String?
+  telefono     String?
+  organizacion String?
+  cargo        String?
 
   certificadoGenerado Boolean @default(false) @map("certificado_generado")
-  certificadoUrl    String?  @map("certificado_url")
+  certificadoUrl      String? @map("certificado_url")
 
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
-  firmas            RegistroFirma[]
+  firmas RegistroFirma[]
 
   @@map("participantes_externos")
 }
@@ -1540,33 +1539,33 @@ model ParticipanteExterno {
 // ============================================
 
 model AuditLog {
-  id              String   @id @default(cuid())
-  
+  id String @id @default(cuid())
+
   // Información de la acción
-  accion          String   @db.Text // CREATE, UPDATE, DELETE, LOGIN, LOGOUT, EXPORT, etc.
-  entidad         String   // Nombre del modelo: Usuario, Voluntario, Evento, Caja, etc.
-  entidadId       String?  @map("entidad_id") // ID del registro afectado
-  
+  accion    String  @db.Text // CREATE, UPDATE, DELETE, LOGIN, LOGOUT, EXPORT, etc.
+  entidad   String // Nombre del modelo: Usuario, Voluntario, Evento, Caja, etc.
+  entidadId String? @map("entidad_id") // ID del registro afectado
+
   // Datos anteriores y nuevos (JSON)
-  datosAnteriores Json?   @map("datos_anteriores") // Estado anterior
-  datosNuevos     Json?   @map("datos_nuevos") // Estado nuevo
-  
+  datosAnteriores Json? @map("datos_anteriores") // Estado anterior
+  datosNuevos     Json? @map("datos_nuevos") // Estado nuevo
+
   // Información del usuario
-  usuarioId       String?  @map("usuario_id")
-  usuarioEmail   String?  @map("usuario_email")
-  usuarioNombre  String?  @map("usuario_nombre")
-  
+  usuarioId     String? @map("usuario_id")
+  usuarioEmail  String? @map("usuario_email")
+  usuarioNombre String? @map("usuario_nombre")
+
   // Contexto adicional
-  ip             String?  @map("ip_address")
-  userAgent      String?  @map("user_agent")
-  
+  ip        String? @map("ip_address")
+  userAgent String? @map("user_agent")
+
   // Metadatos
-  descripcion    String?  @db.Text // Descripción legible de la acción
-  modulo         String?  // Módulo del sistema: Administracion, Personal, Incendios, etc.
-  
+  descripcion String? @db.Text // Descripción legible de la acción
+  modulo      String? // Módulo del sistema: Administracion, Personal, Incendios, etc.
+
   // Timestamps
-  createdAt      DateTime @default(now()) @map("created_at")
-  
+  createdAt DateTime @default(now()) @map("created_at")
+
   @@index([createdAt])
   @@index([entidad, entidadId])
   @@index([usuarioId])
@@ -1578,7 +1577,7 @@ model AuditLog {
 model EspacioAcogida {
   id             String   @id @default(cuid())
   nombre         String
-  tipo           String   // hotel, hostal, apartamento, pension, albergue, otro
+  tipo           String // hotel, hostal, apartamento, pension, albergue, otro
   direccion      String
   telefono       String?
   email          String?
@@ -1596,7 +1595,7 @@ model EspacioAcogida {
 model CentroEmergencia {
   id          String   @id @default(cuid())
   nombre      String
-  tipo        String   // pabellon, centro_multifuncional, ceu, otro
+  tipo        String // pabellon, centro_multifuncional, ceu, otro
   direccion   String
   telefono    String?
   responsable String?
@@ -1613,13 +1612,13 @@ model ContactoDirectorio {
   id             String   @id @default(cuid())
   nombre         String
   entidad        String?
-  categoria      String   // servicios_sociales, policia, sanidad, juzgado, vivienda, otro
+  categoria      String // servicios_sociales, policia, sanidad, juzgado, vivienda, otro
   cargo          String?
   telefono       String
   telefonoAlt    String?
   email          String?
   extension3cx   String?  @map("extension_3cx")
-  disponibilidad String?  // 24h, horario_oficina, guardia
+  disponibilidad String? // 24h, horario_oficina, guardia
   notas          String?
   ambito         String   @default("accion_social") // legacy: se mantiene por compatibilidad
   ambitos        String[] @default([]) // ["accion_social", "cecopal"] — un contacto puede estar en varios
@@ -1639,58 +1638,59 @@ model CategoriaDirectorio {
 }
 
 model CasoViogen {
-  id                 String   @id @default(cuid())
-  numeroCaso         String   @unique
-  fechaIntervencion  DateTime
-  victimaNombre      String
-  victimaDni         String?
-  victimaTelefono    String?
-  victimaDireccion   String
-  victimaEdad        Int?
-  tieneHijos         Boolean  @default(false)
-  numeroHijos        Int?
-  edadesHijos        String?
-  agresorNombre      String?
-  agresorDni         String?
-  motivoIntervencion String
-  recursosActivados  String?
-  derivadoA          String?
-  observaciones      String?
-  estado             String   @default("activo")
-  nivelRiesgo        String?
-  policiaSolicitante String?
+  id                   String    @id @default(cuid())
+  numeroCaso           String    @unique
+  fechaIntervencion    DateTime
+  victimaNombre        String
+  victimaDni           String?
+  victimaTelefono      String?
+  victimaDireccion     String
+  victimaEdad          Int?
+  tieneHijos           Boolean   @default(false)
+  numeroHijos          Int?
+  edadesHijos          String?
+  agresorNombre        String?
+  agresorDni           String?
+  motivoIntervencion   String
+  recursosActivados    String?
+  derivadoA            String?
+  observaciones        String?
+  estado               String    @default("activo")
+  nivelRiesgo          String?
+  policiaSolicitante   String?
   // Isócronas operativas
-  horaActivacion        DateTime?
-  horaLlegada           DateTime?
-  horaFinIntervencion   DateTime?
+  horaActivacion       DateTime?
+  horaLlegada          DateTime?
+  horaFinIntervencion  DateTime?
   // Traslados
-  trasladoCentroSalud   Boolean  @default(false)
-  horaTrasladoSalud     DateTime?
-  centroSaludDestino    String?
-  trasladoGuardiaCivil  Boolean  @default(false)
-  horaEntregaGC         DateTime?
-  trasladoJuzgado       Boolean  @default(false)
-  horaLlegadaJuzgado    DateTime?
-  trasladoPradoSS       Boolean  @default(false)
-  horaLlegadaPrado      DateTime?
-  registradoPorId    String?
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  trasladoCentroSalud  Boolean   @default(false)
+  horaTrasladoSalud    DateTime?
+  centroSaludDestino   String?
+  trasladoGuardiaCivil Boolean   @default(false)
+  horaEntregaGC        DateTime?
+  trasladoJuzgado      Boolean   @default(false)
+  horaLlegadaJuzgado   DateTime?
+  trasladoPradoSS      Boolean   @default(false)
+  horaLlegadaPrado     DateTime?
+  registradoPorId      String?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 }
 
 model RepostajeVehiculo {
-  id            String   @id @default(cuid())
-  vehiculoId    String   @map("vehiculo_id")
-  fecha         DateTime @db.Date
-  litros        Decimal  @db.Decimal(8, 2)
-  precioLitro   Decimal? @map("precio_litro") @db.Decimal(6, 4)
-  costeTotal    Decimal? @map("coste_total") @db.Decimal(8, 2)
-  kilometraje   Int?
-  tipoCarburante String? @map("tipo_carburante")
-  gasolinera    String?
-  observaciones String?
-  createdAt     DateTime @default(now()) @map("created_at")
-  vehiculo      Vehiculo @relation(fields: [vehiculoId], references: [id])
+  id             String   @id @default(cuid())
+  vehiculoId     String   @map("vehiculo_id")
+  fecha          DateTime @db.Date
+  litros         Decimal  @db.Decimal(8, 2)
+  precioLitro    Decimal? @map("precio_litro") @db.Decimal(6, 4)
+  costeTotal     Decimal? @map("coste_total") @db.Decimal(8, 2)
+  kilometraje    Int?
+  tipoCarburante String?  @map("tipo_carburante")
+  gasolinera     String?
+  observaciones  String?
+  createdAt      DateTime @default(now()) @map("created_at")
+  vehiculo       Vehiculo @relation(fields: [vehiculoId], references: [id])
+
   @@map("repostajes_vehiculo")
 }
 
@@ -1708,59 +1708,63 @@ model RegistroFluidoVehiculo {
   usuario       Usuario? @relation(fields: [usuarioId], references: [id])
   createdAt     DateTime @default(now()) @map("created_at")
   vehiculo      Vehiculo @relation(fields: [vehiculoId], references: [id])
+
   @@map("registros_fluido_vehiculo")
 }
 
 model PresupuestoAnual {
-  id               String                  @id @default(cuid())
-  ejercicio        Int
-  denominacion     String
-  tipo             String   @default("ordinario") // ordinario | extraordinario | remanente
-  totalAprobado    Decimal                 @db.Decimal(12, 2)
-  totalModificado  Decimal?                @db.Decimal(12, 2)
-  estado           String                  @default("borrador")
-  notas            String?
-  partidas         PartidaPresupuestaria[]
-  createdAt        DateTime                @default(now()) @map("created_at")
-  updatedAt        DateTime                @updatedAt @map("updated_at")
+  id              String                  @id @default(cuid())
+  ejercicio       Int
+  denominacion    String
+  tipo            String                  @default("ordinario") // ordinario | extraordinario | remanente
+  totalAprobado   Decimal                 @db.Decimal(12, 2)
+  totalModificado Decimal?                @db.Decimal(12, 2)
+  estado          String                  @default("borrador")
+  notas           String?
+  partidas        PartidaPresupuestaria[]
+  createdAt       DateTime                @default(now()) @map("created_at")
+  updatedAt       DateTime                @updatedAt @map("updated_at")
+
   @@map("presupuestos_anuales")
 }
 
 model PartidaPresupuestaria {
-  id                  String           @id @default(cuid())
-  presupuestoId       String           @map("presupuesto_id")
-  presupuesto         PresupuestoAnual @relation(fields: [presupuestoId], references: [id])
+  id                  String             @id @default(cuid())
+  presupuestoId       String             @map("presupuesto_id")
+  presupuesto         PresupuestoAnual   @relation(fields: [presupuestoId], references: [id])
   codigo              String
   denominacion        String
   capitulo            String
-  importeAsignado     Decimal          @db.Decimal(12, 2)
-  importeModificado   Decimal?         @db.Decimal(12, 2)
-  motivoModificacion  String?          @map("motivo_modificacion")
-  fechaModificacion   DateTime?        @map("fecha_modificacion")
-  importeComprometido Decimal          @default(0) @db.Decimal(12, 2)
-  importeEjecutado    Decimal          @default(0) @db.Decimal(12, 2)
+  importeAsignado     Decimal            @db.Decimal(12, 2)
+  importeModificado   Decimal?           @db.Decimal(12, 2)
+  motivoModificacion  String?            @map("motivo_modificacion")
+  fechaModificacion   DateTime?          @map("fecha_modificacion")
+  importeComprometido Decimal            @default(0) @db.Decimal(12, 2)
+  importeEjecutado    Decimal            @default(0) @db.Decimal(12, 2)
   expedientes         ExpedienteCompra[]
   informesDietas      InformeDietas[]
-  createdAt           DateTime         @default(now()) @map("created_at")
-  updatedAt           DateTime         @updatedAt @map("updated_at")
+  createdAt           DateTime           @default(now()) @map("created_at")
+  updatedAt           DateTime           @updatedAt @map("updated_at")
+
   @@map("partidas_presupuestarias")
 }
 
 model Proveedor {
-  id            String                 @id @default(cuid())
-  nombre        String
-  cif           String?
-  direccion     String?
-  telefono      String?
-  email         String?
-  web           String?
-  contacto      String?
-  activo        Boolean                @default(true)
-  notas         String?
-  expedientes   ExpedienteCompra[]
-  presupuestos  PresupuestoProveedor[]
-  createdAt     DateTime               @default(now()) @map("created_at")
-  updatedAt     DateTime               @updatedAt @map("updated_at")
+  id           String                 @id @default(cuid())
+  nombre       String
+  cif          String?
+  direccion    String?
+  telefono     String?
+  email        String?
+  web          String?
+  contacto     String?
+  activo       Boolean                @default(true)
+  notas        String?
+  expedientes  ExpedienteCompra[]
+  presupuestos PresupuestoProveedor[]
+  createdAt    DateTime               @default(now()) @map("created_at")
+  updatedAt    DateTime               @updatedAt @map("updated_at")
+
   @@map("proveedores")
 }
 
@@ -1810,6 +1814,7 @@ model ExpedienteCompra {
   historial         HistorialExpediente[]
   createdAt         DateTime               @default(now()) @map("created_at")
   updatedAt         DateTime               @updatedAt @map("updated_at")
+
   @@map("expedientes_compra")
 }
 
@@ -1824,25 +1829,27 @@ model LineaExpediente {
   importeTotal   Decimal?         @db.Decimal(12, 2)
   iva            Decimal          @default(21) @db.Decimal(5, 2)
   createdAt      DateTime         @default(now()) @map("created_at")
+
   @@map("lineas_expediente")
 }
 
 model PresupuestoProveedor {
-  id            String           @id @default(cuid())
-  expedienteId  String           @map("expediente_id")
-  expediente    ExpedienteCompra @relation(fields: [expedienteId], references: [id], onDelete: Cascade)
-  proveedorId   String           @map("proveedor_id")
-  proveedor     Proveedor        @relation(fields: [proveedorId], references: [id])
-  importe       Decimal          @db.Decimal(12, 2)
-  iva           Decimal          @default(21) @db.Decimal(5, 2)
-  importeTotal  Decimal          @db.Decimal(12, 2)
-  estado        String           @default("pendiente")
-  fechaEmision  DateTime?        @map("fecha_emision")
-  fechaValidez  DateTime?        @map("fecha_validez")
-  documentoUrl  String?          @map("documento_url")
-  notas         String?
-  createdAt     DateTime         @default(now()) @map("created_at")
-  updatedAt     DateTime         @updatedAt @map("updated_at")
+  id           String           @id @default(cuid())
+  expedienteId String           @map("expediente_id")
+  expediente   ExpedienteCompra @relation(fields: [expedienteId], references: [id], onDelete: Cascade)
+  proveedorId  String           @map("proveedor_id")
+  proveedor    Proveedor        @relation(fields: [proveedorId], references: [id])
+  importe      Decimal          @db.Decimal(12, 2)
+  iva          Decimal          @default(21) @db.Decimal(5, 2)
+  importeTotal Decimal          @db.Decimal(12, 2)
+  estado       String           @default("pendiente")
+  fechaEmision DateTime?        @map("fecha_emision")
+  fechaValidez DateTime?        @map("fecha_validez")
+  documentoUrl String?          @map("documento_url")
+  notas        String?
+  createdAt    DateTime         @default(now()) @map("created_at")
+  updatedAt    DateTime         @updatedAt @map("updated_at")
+
   @@map("presupuestos_proveedor")
 }
 
@@ -1852,7 +1859,7 @@ model FacturaExpediente {
   expediente     ExpedienteCompra @relation(fields: [expedienteId], references: [id], onDelete: Cascade)
   numeroFactura  String           @map("numero_factura")
   proveedor      String
-  fechaFactura   DateTime         @db.Date @map("fecha_factura")
+  fechaFactura   DateTime         @map("fecha_factura") @db.Date
   fechaRecepcion DateTime?        @map("fecha_recepcion")
   importeBase    Decimal          @db.Decimal(12, 2)
   iva            Decimal          @default(21) @db.Decimal(5, 2)
@@ -1864,6 +1871,7 @@ model FacturaExpediente {
   notas          String?
   createdAt      DateTime         @default(now()) @map("created_at")
   updatedAt      DateTime         @updatedAt @map("updated_at")
+
   @@map("facturas_expediente")
 }
 
@@ -1877,49 +1885,52 @@ model HistorialExpediente {
   usuarioId      String?          @map("usuario_id")
   usuarioNombre  String?          @map("usuario_nombre")
   createdAt      DateTime         @default(now()) @map("created_at")
+
   @@map("historial_expedientes")
 }
 
 model InformeDietas {
-  id                String    @id @default(cuid())
-  mes               String    // formato: 2026-03
-  fechaPresentacion DateTime  @map("fecha_presentacion") @db.Date
-  totalDietas       Decimal   @map("total_dietas") @db.Decimal(10, 2)
-  subtotalDietas    Decimal   @map("subtotal_dietas") @db.Decimal(10, 2)
-  subtotalKm        Decimal   @map("subtotal_km") @db.Decimal(10, 2)
-  numVoluntarios    Int       @default(0) @map("num_voluntarios")
-  numDias           Int       @default(0) @map("num_dias")
-  partidaId         String?   @map("partida_id")
-  estado            String    @default("presentado") // presentado | pagado | anulado
+  id                String                 @id @default(cuid())
+  mes               String // formato: 2026-03
+  fechaPresentacion DateTime               @map("fecha_presentacion") @db.Date
+  totalDietas       Decimal                @map("total_dietas") @db.Decimal(10, 2)
+  subtotalDietas    Decimal                @map("subtotal_dietas") @db.Decimal(10, 2)
+  subtotalKm        Decimal                @map("subtotal_km") @db.Decimal(10, 2)
+  numVoluntarios    Int                    @default(0) @map("num_voluntarios")
+  numDias           Int                    @default(0) @map("num_dias")
+  partidaId         String?                @map("partida_id")
+  estado            String                 @default("presentado") // presentado | pagado | anulado
   notas             String?
-  firmadoPor        String?   @map("firmado_por")
-  fechaPago         DateTime? @map("fecha_pago") @db.Date
-  createdAt         DateTime  @default(now()) @map("created_at")
+  firmadoPor        String?                @map("firmado_por")
+  fechaPago         DateTime?              @map("fecha_pago") @db.Date
+  createdAt         DateTime               @default(now()) @map("created_at")
   partida           PartidaPresupuestaria? @relation(fields: [partidaId], references: [id])
+
   @@map("informes_dietas")
 }
 
 model Drone {
-  id             String              @id @default(cuid())
-  codigo         String              @unique
+  id             String               @id @default(cuid())
+  codigo         String               @unique
   nombre         String?
   marca          String
   modelo         String
   numeroSerie    String?
   matriculaAESA  String?
-  categoria      String              @default("A1")
+  categoria      String               @default("A1")
   pesoGramos     Int?
-  estado         String              @default("operativo")
-  horasVuelo     Float               @default(0)
-  totalVuelos    Int                 @default(0)
+  estado         String               @default("operativo")
+  horasVuelo     Float                @default(0)
+  totalVuelos    Int                  @default(0)
   notas          String?
   fechaCompra    DateTime?
   observaciones  String?
-  createdAt      DateTime            @default(now())
-  updatedAt      DateTime            @updatedAt
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
   baterias       BateriaDrone[]
   vuelos         Vuelo[]
   mantenimientos MantenimientoDrone[]
+
   @@map("drones")
 }
 
@@ -1938,11 +1949,12 @@ model BateriaDrone {
   estado         String   @default("operativa")
   observaciones  String?
   createdAt      DateTime @default(now())
+
   @@map("baterias_drone")
 }
 
 model PilotoDrone {
-  id                String      @id @default(cuid())
+  id                String    @id @default(cuid())
   nombre            String
   apellidos         String
   email             String?
@@ -1954,80 +1966,84 @@ model PilotoDrone {
   seguroRCVigencia  DateTime?
   seguroVencimiento DateTime?
   observaciones     String?
-  esExterno         Boolean     @default(false)
-  activo            Boolean     @default(true)
-  createdAt         DateTime    @default(now())
+  esExterno         Boolean   @default(false)
+  activo            Boolean   @default(true)
+  createdAt         DateTime  @default(now())
   vuelos            Vuelo[]
+
   @@map("pilotos_drone")
 }
 
 model Vuelo {
-  id              String          @id @default(cuid())
-  numero          String          @unique
-  droneId         String          @default("")
-  drone           Drone           @relation(fields: [droneId], references: [id])
-  pilotoId        String          @default("")
-  piloto          PilotoDrone     @relation(fields: [pilotoId], references: [id])
-  fecha           DateTime
-  horaInicio      String?
-  horaFin         String?
-  duracionMinutos Int?
-  tipoOperacion   String          @default("reconocimiento")
-  municipio       String          @default("Bormujos")
-  descripcionZona String?
-  latitudInicio   Float?
-  longitudInicio  Float?
-  alturaMaxima    Float?
-  condicionesMeteo Json?
-  notamConsultado Boolean         @default(false)
-  notamReferencia    String?
-  incidencias        String?
-  observaciones      String?
-  estado             String   @default("completado")
-  categoriaAESA      String?
-  lugarDespegue      String?
-  lugarAterrizaje    String?
-  alturaMedia        Float?
-  bateriaId          String?
-  objetivoMision     String?
-  resultadoMision    String?
-  personalApoyo      String?
-  numeroVccOperador  String?
-  zonaAerea          String?
-  condicionesVuelo   String?
-  bateriasUsadas     Json?    @map("baterias_usadas")
-  createdAt       DateTime        @default(now())
-  checklist       ChecklistVuelo?
+  id                String          @id @default(cuid())
+  numero            String          @unique
+  droneId           String          @default("")
+  drone             Drone           @relation(fields: [droneId], references: [id])
+  pilotoId          String          @default("")
+  piloto            PilotoDrone     @relation(fields: [pilotoId], references: [id])
+  fecha             DateTime
+  horaInicio        String?
+  horaFin           String?
+  duracionMinutos   Int?
+  tipoOperacion     String          @default("reconocimiento")
+  municipio         String          @default("Bormujos")
+  descripcionZona   String?
+  latitudInicio     Float?
+  longitudInicio    Float?
+  alturaMaxima      Float?
+  condicionesMeteo  Json?
+  notamConsultado   Boolean         @default(false)
+  notamReferencia   String?
+  incidencias       String?
+  observaciones     String?
+  estado            String          @default("completado")
+  categoriaAESA     String?
+  lugarDespegue     String?
+  lugarAterrizaje   String?
+  alturaMedia       Float?
+  bateriaId         String?
+  objetivoMision    String?
+  resultadoMision   String?
+  personalApoyo     String?
+  numeroVccOperador String?
+  zonaAerea         String?
+  condicionesVuelo  String?
+  bateriasUsadas    Json?           @map("baterias_usadas")
+  createdAt         DateTime        @default(now())
+  checklist         ChecklistVuelo?
+
   @@map("vuelos")
 }
 
 model ChecklistVuelo {
-  id         String   @id @default(cuid())
-  vueloId    String   @unique
-  vuelo      Vuelo    @relation(fields: [vueloId], references: [id])
-  items      Json
-  completado Boolean  @default(false)
-  firmadoPor String?
+  id            String   @id @default(cuid())
+  vueloId       String   @unique
+  vuelo         Vuelo    @relation(fields: [vueloId], references: [id])
+  items         Json
+  completado    Boolean  @default(false)
+  firmadoPor    String?
   observaciones String?
-  createdAt  DateTime @default(now())
+  createdAt     DateTime @default(now())
+
   @@map("checklists_vuelo")
 }
 
 model MantenimientoDrone {
-  id              String    @id @default(cuid())
-  droneId         String    @default("")
-  drone           Drone     @relation(fields: [droneId], references: [id])
-  tipo            String
-  descripcion     String
-  fecha           DateTime
-  proximaRevision DateTime?
-  realizadoPor        String?
-  coste               Float?
-  horasEnElMomento    Float?
-  piezasSustituidas   String?
+  id                   String    @id @default(cuid())
+  droneId              String    @default("")
+  drone                Drone     @relation(fields: [droneId], references: [id])
+  tipo                 String
+  descripcion          String
+  fecha                DateTime
+  proximaRevision      DateTime?
+  realizadoPor         String?
+  coste                Float?
+  horasEnElMomento     Float?
+  piezasSustituidas    String?
   proximoMantenimiento DateTime?
-  observaciones       String?
-  createdAt           DateTime  @default(now())
+  observaciones        String?
+  createdAt            DateTime  @default(now())
+
   @@map("mantenimientos_drone")
 }
 
@@ -2060,12 +2076,13 @@ model NotamRegistro {
   activo          Boolean   @default(true)
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
+
   @@map("notams_registro")
 }
 
 model Practica {
-  id                  String   @id @default(cuid())
-  numero              String   @unique
+  id                  String              @id @default(cuid())
+  numero              String              @unique
   titulo              String
   familia             String
   subfamilia          String?
@@ -2073,25 +2090,26 @@ model Practica {
   descripcion         String?
   desarrollo          String?
   conclusiones        String?
-  personalMinimo      Int      @default(2)
+  personalMinimo      Int                 @default(2)
   materialNecesario   String?
-  riesgoPractica      String   @default("bajo")
+  riesgoPractica      String              @default("bajo")
   riesgoIntervencion  String?
   riesgoObservaciones String?
-  duracionEstimada    Int      @default(30)
-  nivel               String   @default("basico")
+  duracionEstimada    Int                 @default(30)
+  nivel               String              @default("basico")
   prerequisitos       String?
   grupo               String?
   definicion          String?
   lugarDesarrollo     String?
   youtubeUrl          String?
   imagenes            Json?
-  activa              Boolean  @default(true)
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  activa              Boolean             @default(true)
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
   megacodePracticas   MegacodePractica[]
   registros           RegistroPractica[]
   auditorias          AuditoriaPractica[]
+
   @@map("practicas")
 }
 
@@ -2110,67 +2128,70 @@ model FamiliaPractica {
 }
 
 model Megacode {
-  id                 String   @id @default(cuid())
-  numero             String   @unique
-  titulo             String?
-  tipo               String   @default("auto")
-  fecha              DateTime
-  turno              String
-  estado             String   @default("pendiente")
-  generadoAuto       Boolean  @default(false)
-  responsableId      String?
-  observaciones      String?
-  escenario          String?
-  objetivos          String?
-  recursos           String?
+  id                  String                  @id @default(cuid())
+  numero              String                  @unique
+  titulo              String?
+  tipo                String                  @default("auto")
+  fecha               DateTime
+  turno               String
+  estado              String                  @default("pendiente")
+  generadoAuto        Boolean                 @default(false)
+  responsableId       String?
+  observaciones       String?
+  escenario           String?
+  objetivos           String?
+  recursos            String?
   leccionesAprendidas String?
-  nivelDificultad    String?
-  incidenteOrigen    String?
-  fechaIncidente     DateTime?
-  imagenes           Json?
-  duracionTotal      Int?
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
-  practicas          MegacodePractica[]
-  participaciones    MegacodeParticipacion[]
+  nivelDificultad     String?
+  incidenteOrigen     String?
+  fechaIncidente      DateTime?
+  imagenes            Json?
+  duracionTotal       Int?
+  createdAt           DateTime                @default(now())
+  updatedAt           DateTime                @updatedAt
+  practicas           MegacodePractica[]
+  participaciones     MegacodeParticipacion[]
+
   @@map("megacodes")
 }
 
 model MegacodePractica {
-  id          String   @id @default(cuid())
-  megacodeId  String
-  practicaId  String
-  orden       Int
-  completada  Boolean  @default(false)
-  tiempoReal  Int?
+  id            String   @id @default(cuid())
+  megacodeId    String
+  practicaId    String
+  orden         Int
+  completada    Boolean  @default(false)
+  tiempoReal    Int?
   observaciones String?
-  megacode    Megacode  @relation(fields: [megacodeId], references: [id])
-  practica    Practica  @relation(fields: [practicaId], references: [id])
+  megacode      Megacode @relation(fields: [megacodeId], references: [id])
+  practica      Practica @relation(fields: [practicaId], references: [id])
+
   @@map("megacode_practicas")
 }
 
 model MegacodeParticipacion {
-  id          String   @id @default(cuid())
-  megacodeId  String
-  usuarioId   String
-  resultado   String   @default("pendiente")
+  id            String   @id @default(cuid())
+  megacodeId    String
+  usuarioId     String
+  resultado     String   @default("pendiente")
   observaciones String?
-  megacode    Megacode @relation(fields: [megacodeId], references: [id])
-  usuario     Usuario  @relation(fields: [usuarioId], references: [id])
+  megacode      Megacode @relation(fields: [megacodeId], references: [id])
+  usuario       Usuario  @relation(fields: [usuarioId], references: [id])
+
   @@map("megacode_participaciones")
 }
 
 model RegistroPractica {
-  id                       String   @id @default(cuid())
+  id                       String    @id @default(cuid())
   practicaId               String
   megacodeId               String?
-  fecha                    DateTime @default(now())
+  fecha                    DateTime  @default(now())
   turno                    String
   duracionReal             Int?
   responsableId            String
-  participantes            Json     @default("[]")
+  participantes            Json      @default("[]")
   observaciones            String?
-  resultado                String   @default("completado")
+  resultado                String    @default("completado")
   firmaResponsable         String?
   firmaJefe                String?
   firmadoResponsableNombre String?
@@ -2178,26 +2199,27 @@ model RegistroPractica {
   firmaJefeTimestamp       DateTime?
   firmaJefeIp              String?
   firmaJefeUserId          String?
-  createdAt                DateTime @default(now())
-  practica                 Practica @relation(fields: [practicaId], references: [id])
-  responsable              Usuario  @relation("RegistroResponsable", fields: [responsableId], references: [id])
+  createdAt                DateTime  @default(now())
+  practica                 Practica  @relation(fields: [practicaId], references: [id])
+  responsable              Usuario   @relation("RegistroResponsable", fields: [responsableId], references: [id])
+
   @@map("registros_practica")
 }
 
 model PlanoMarcador {
-  id          String     @id @default(cuid())
-  edificioId  String     @map("edificio_id")
-  planoId     String?    @map("plano_id")
+  id          String         @id @default(cuid())
+  edificioId  String         @map("edificio_id")
+  planoId     String?        @map("plano_id")
   plano       PlanoEdificio? @relation(fields: [planoId], references: [id], onDelete: Cascade)
-  equipoECIId String?    @map("equipo_eci_id")
+  equipoECIId String?        @map("equipo_eci_id")
   tipo        String
   etiqueta    String?
   x           Float
   y           Float
-  createdAt   DateTime   @default(now()) @map("created_at")
-  updatedAt   DateTime   @updatedAt @map("updated_at")
-  edificio    Edificio   @relation(fields: [edificioId], references: [id], onDelete: Cascade)
-  equipoECI   EquipoECI? @relation(fields: [equipoECIId], references: [id], onDelete: SetNull)
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
+  edificio    Edificio       @relation(fields: [edificioId], references: [id], onDelete: Cascade)
+  equipoECI   EquipoECI?     @relation(fields: [equipoECIId], references: [id], onDelete: SetNull)
 
   @@index([edificioId])
   @@map("plano_marcadores")
@@ -2221,7 +2243,7 @@ model PlanoEdificio {
 
 model SemanaPublicada {
   id        String   @id @default(cuid())
-  semana    String   @unique  // YYYY-MM-DD (lunes de la semana)
+  semana    String   @unique // YYYY-MM-DD (lunes de la semana)
   publicado Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -2234,8 +2256,8 @@ model SemanaPublicada {
 /// mañana y tarde: nada del funcionamiento normal depende de este modelo.
 model SemanaEspecial {
   id           String   @id @default(cuid())
-  semana       String   @unique  // YYYY-MM-DD (lunes de la semana)
-  nombre       String            // "Feria de Bormujos"
+  semana       String   @unique // YYYY-MM-DD (lunes de la semana)
+  nombre       String // "Feria de Bormujos"
   /// { lunes: ["mañana","tarde"], miercoles: ["mañana","tarde","noche"], ... }
   /// Los días ausentes usan el reparto habitual.
   turnosPorDia Json     @map("turnos_por_dia")
@@ -2249,15 +2271,15 @@ model SemanaEspecial {
 }
 
 model UbicacionVehiculo {
-  id         String   @id @default(cuid())
-  vehiculoId String
-  vehiculo   Vehiculo @relation(fields: [vehiculoId], references: [id], onDelete: Cascade)
-  latitud    Float
-  longitud   Float
-  velocidad  Float?
-  precision  Float?
-  activo     Boolean  @default(true)
-  createdAt  DateTime @default(now())
+  id           String    @id @default(cuid())
+  vehiculoId   String
+  vehiculo     Vehiculo  @relation(fields: [vehiculoId], references: [id], onDelete: Cascade)
+  latitud      Float
+  longitud     Float
+  velocidad    Float?
+  precision    Float?
+  activo       Boolean   @default(true)
+  createdAt    DateTime  @default(now())
   // Hora REAL de captura del GPS en el dispositivo (para ordenar el recorrido y
   // detectar cortes; createdAt es la hora de recepción en el servidor).
   timestampGps DateTime? @map("timestamp_gps")
@@ -2272,66 +2294,66 @@ model UbicacionVehiculo {
 // ─────────────────────────────────────────────────────────────────────────────
 
 model ConversacionAgente {
-  id         String   @id @default(cuid())
-  area       String
-  titulo     String
-  usuarioId  String   @map("usuario_id")
-  usuario    Usuario  @relation(fields: [usuarioId], references: [id])
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @updatedAt @map("updated_at")
+  id        String   @id @default(cuid())
+  area      String
+  titulo    String
+  usuarioId String   @map("usuario_id")
+  usuario   Usuario  @relation(fields: [usuarioId], references: [id])
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
-  mensajes   MensajeAgente[]
+  mensajes MensajeAgente[]
 
   @@index([usuarioId, area])
   @@map("conversaciones_agente")
 }
 
 model MensajeAgente {
-  id              String             @id @default(cuid())
-  conversacionId  String             @map("conversacion_id")
-  conversacion    ConversacionAgente @relation(fields: [conversacionId], references: [id], onDelete: Cascade)
-  rol             String // user | assistant
-  contenido       String
-  createdAt       DateTime           @default(now()) @map("created_at")
+  id             String             @id @default(cuid())
+  conversacionId String             @map("conversacion_id")
+  conversacion   ConversacionAgente @relation(fields: [conversacionId], references: [id], onDelete: Cascade)
+  rol            String // user | assistant
+  contenido      String
+  createdAt      DateTime           @default(now()) @map("created_at")
 
   @@index([conversacionId])
   @@map("mensajes_agente")
 }
 
 model RevisionAgente {
-  id            String    @id @default(cuid())
-  area          String
-  resumen       String
-  estadoDatos   Json?     @map("estado_datos")
-  usuarioId     String    @map("usuario_id")
-  usuario       Usuario   @relation(fields: [usuarioId], references: [id])
-  createdAt     DateTime  @default(now()) @map("created_at")
+  id          String   @id @default(cuid())
+  area        String
+  resumen     String
+  estadoDatos Json?    @map("estado_datos")
+  usuarioId   String   @map("usuario_id")
+  usuario     Usuario  @relation(fields: [usuarioId], references: [id])
+  createdAt   DateTime @default(now()) @map("created_at")
 
-  propuestas    PropuestaAgente[]
+  propuestas PropuestaAgente[]
 
   @@index([area])
   @@map("revisiones_agente")
 }
 
 model PropuestaAgente {
-  id            String          @id @default(cuid())
-  revisionId    String          @map("revision_id")
-  revision      RevisionAgente  @relation(fields: [revisionId], references: [id], onDelete: Cascade)
-  area          String
-  titulo        String
-  descripcion   String
-  justificacion String?
-  categoria     String          @default("mejora") // dato_incompleto, incoherencia, caducidad, seguridad, procedimiento, mejora
-  prioridad     String          @default("media")  // baja, media, alta, critica
-  modulo        String?
-  referencia    String? // id o identificador del registro afectado
-  estado        String          @default("pendiente") // pendiente, aceptada, aplicada, descartada
+  id             String         @id @default(cuid())
+  revisionId     String         @map("revision_id")
+  revision       RevisionAgente @relation(fields: [revisionId], references: [id], onDelete: Cascade)
+  area           String
+  titulo         String
+  descripcion    String
+  justificacion  String?
+  categoria      String         @default("mejora") // dato_incompleto, incoherencia, caducidad, seguridad, procedimiento, mejora
+  prioridad      String         @default("media") // baja, media, alta, critica
+  modulo         String?
+  referencia     String? // id o identificador del registro afectado
+  estado         String         @default("pendiente") // pendiente, aceptada, aplicada, descartada
   respuestaAdmin String?        @map("respuesta_admin")
-  resueltaPorId String?         @map("resuelta_por_id")
-  resueltaPor   Usuario?        @relation(fields: [resueltaPorId], references: [id])
-  resueltaEn    DateTime?       @map("resuelta_en")
-  createdAt     DateTime        @default(now()) @map("created_at")
-  updatedAt     DateTime        @updatedAt @map("updated_at")
+  resueltaPorId  String?        @map("resuelta_por_id")
+  resueltaPor    Usuario?       @relation(fields: [resueltaPorId], references: [id])
+  resueltaEn     DateTime?      @map("resuelta_en")
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
 
   @@index([area, estado])
   @@index([revisionId])
@@ -2344,24 +2366,24 @@ model PropuestaAgente {
 // ─────────────────────────────────────────────────────────────────────────────
 
 model RevisionPCI {
-  id             String    @id @default(cuid())
-  numeroTrabajo  String?   @map("numero_trabajo")
-  documento      String?   // Documento_NNNNN.pdf de la mantenedora
-  edificioId     String    @map("edificio_id")
-  edificio       Edificio  @relation(fields: [edificioId], references: [id], onDelete: Cascade)
-  tipo           String    @default("TRIMESTRAL") // TRIMESTRAL | ANUAL | CORRECTIVO
-  campana        String    // "sep-2025", "dic-2025", "mar-2026", "jul-2026"
+  id             String   @id @default(cuid())
+  numeroTrabajo  String?  @map("numero_trabajo")
+  documento      String? // Documento_NNNNN.pdf de la mantenedora
+  edificioId     String   @map("edificio_id")
+  edificio       Edificio @relation(fields: [edificioId], references: [id], onDelete: Cascade)
+  tipo           String   @default("TRIMESTRAL") // TRIMESTRAL | ANUAL | CORRECTIVO
+  campana        String // "sep-2025", "dic-2025", "mar-2026", "jul-2026"
   fecha          DateTime
-  resultado      String    @default("con_defectos") // favorable | con_defectos | desfavorable
+  resultado      String   @default("con_defectos") // favorable | con_defectos | desfavorable
   tecnico        String?
-  equiposResumen String?   @map("equipos_resumen")
+  equiposResumen String?  @map("equipos_resumen")
   observaciones  String?
-  createdAt      DateTime  @default(now()) @map("created_at")
-  updatedAt      DateTime  @updatedAt @map("updated_at")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
 
-  hallazgos      HallazgoPCI[]
-  presupuestos   PresupuestoPCI[]
-  acciones       AccionCorrectivaPCI[]
+  hallazgos    HallazgoPCI[]
+  presupuestos PresupuestoPCI[]
+  acciones     AccionCorrectivaPCI[]
 
   @@unique([edificioId, campana])
   @@index([edificioId])
@@ -2370,17 +2392,17 @@ model RevisionPCI {
 }
 
 model HallazgoPCI {
-  id            String      @id @default(cuid())
-  revisionId    String      @map("revision_id")
-  revision      RevisionPCI @relation(fields: [revisionId], references: [id], onDelete: Cascade)
-  elemento      String
-  ubicacion     String?
-  estado        String      @default("DEFECTO") // OK | DEFECTO | CADUCADO | NO_FUNCIONA | DESAPARECIDO
-  descripcion   String?
-  requiereIntervencion Boolean @default(true) @map("requiere_intervencion")
-  accionId      String?     @map("accion_id")
-  accion        AccionCorrectivaPCI? @relation(fields: [accionId], references: [id])
-  createdAt     DateTime    @default(now()) @map("created_at")
+  id                   String               @id @default(cuid())
+  revisionId           String               @map("revision_id")
+  revision             RevisionPCI          @relation(fields: [revisionId], references: [id], onDelete: Cascade)
+  elemento             String
+  ubicacion            String?
+  estado               String               @default("DEFECTO") // OK | DEFECTO | CADUCADO | NO_FUNCIONA | DESAPARECIDO
+  descripcion          String?
+  requiereIntervencion Boolean              @default(true) @map("requiere_intervencion")
+  accionId             String?              @map("accion_id")
+  accion               AccionCorrectivaPCI? @relation(fields: [accionId], references: [id])
+  createdAt            DateTime             @default(now()) @map("created_at")
 
   @@index([revisionId])
   @@index([estado])
@@ -2388,25 +2410,25 @@ model HallazgoPCI {
 }
 
 model PresupuestoPCI {
-  id          String       @id @default(cuid())
-  numero      String       @unique
-  edificioId  String       @map("edificio_id")
-  edificio    Edificio     @relation(fields: [edificioId], references: [id], onDelete: Cascade)
-  revisionId  String?      @map("revision_id")
-  revision    RevisionPCI? @relation(fields: [revisionId], references: [id])
-  fecha       DateTime
-  campana     String?
-  concepto    String
-  base        Float?
-  iva         Float?
-  total       Float
-  categoria   String       @default("PCI") // PCI | CCTV
-  estado      String       @default("PRESENTADO") // PRESENTADO | ACEPTADO | EJECUTADO | FACTURADO | RECHAZADO
-  notas       String?
-  createdAt   DateTime     @default(now()) @map("created_at")
-  updatedAt   DateTime     @updatedAt @map("updated_at")
+  id         String       @id @default(cuid())
+  numero     String       @unique
+  edificioId String       @map("edificio_id")
+  edificio   Edificio     @relation(fields: [edificioId], references: [id], onDelete: Cascade)
+  revisionId String?      @map("revision_id")
+  revision   RevisionPCI? @relation(fields: [revisionId], references: [id])
+  fecha      DateTime
+  campana    String?
+  concepto   String
+  base       Float?
+  iva        Float?
+  total      Float
+  categoria  String       @default("PCI") // PCI | CCTV
+  estado     String       @default("PRESENTADO") // PRESENTADO | ACEPTADO | EJECUTADO | FACTURADO | RECHAZADO
+  notas      String?
+  createdAt  DateTime     @default(now()) @map("created_at")
+  updatedAt  DateTime     @updatedAt @map("updated_at")
 
-  acciones    AccionCorrectivaPCI[]
+  acciones AccionCorrectivaPCI[]
 
   @@index([edificioId])
   @@index([estado])
@@ -2415,32 +2437,32 @@ model PresupuestoPCI {
 }
 
 model AccionCorrectivaPCI {
-  id               String          @id @default(cuid())
-  edificioId       String          @map("edificio_id")
-  edificio         Edificio        @relation(fields: [edificioId], references: [id], onDelete: Cascade)
-  descripcion      String
-  detalle          String?
-  origenRevisionId String?         @map("origen_revision_id")
-  origenRevision   RevisionPCI?    @relation(fields: [origenRevisionId], references: [id])
-  presupuestoId    String?         @map("presupuesto_id")
-  presupuesto      PresupuestoPCI? @relation(fields: [presupuestoId], references: [id])
-  estado           String          @default("DETECTADO") // DETECTADO|PRESUPUESTADO|APROBADO|EN_EJECUCION|EJECUTADO|VERIFICADO|FACTURADO
-  prioridad        String          @default("media")     // baja | media | alta
-  categoria        String          @default("PCI")       // PCI | CCTV
-  importe          Float?
-  recurrente       Boolean         @default(false)
-  vecesDetectada   Int             @default(1) @map("veces_detectada")
-  primeraDeteccion DateTime?       @map("primera_deteccion")
-  ultimaDeteccion  DateTime?       @map("ultima_deteccion")
-  fechaAprobacion  DateTime?       @map("fecha_aprobacion")
-  fechaEjecucion   DateTime?       @map("fecha_ejecucion")
-  fechaVerificacion DateTime?      @map("fecha_verificacion")
-  responsable      String?
-  notas            String?
-  createdAt        DateTime        @default(now()) @map("created_at")
-  updatedAt        DateTime        @updatedAt @map("updated_at")
+  id                String          @id @default(cuid())
+  edificioId        String          @map("edificio_id")
+  edificio          Edificio        @relation(fields: [edificioId], references: [id], onDelete: Cascade)
+  descripcion       String
+  detalle           String?
+  origenRevisionId  String?         @map("origen_revision_id")
+  origenRevision    RevisionPCI?    @relation(fields: [origenRevisionId], references: [id])
+  presupuestoId     String?         @map("presupuesto_id")
+  presupuesto       PresupuestoPCI? @relation(fields: [presupuestoId], references: [id])
+  estado            String          @default("DETECTADO") // DETECTADO|PRESUPUESTADO|APROBADO|EN_EJECUCION|EJECUTADO|VERIFICADO|FACTURADO
+  prioridad         String          @default("media") // baja | media | alta
+  categoria         String          @default("PCI") // PCI | CCTV
+  importe           Float?
+  recurrente        Boolean         @default(false)
+  vecesDetectada    Int             @default(1) @map("veces_detectada")
+  primeraDeteccion  DateTime?       @map("primera_deteccion")
+  ultimaDeteccion   DateTime?       @map("ultima_deteccion")
+  fechaAprobacion   DateTime?       @map("fecha_aprobacion")
+  fechaEjecucion    DateTime?       @map("fecha_ejecucion")
+  fechaVerificacion DateTime?       @map("fecha_verificacion")
+  responsable       String?
+  notas             String?
+  createdAt         DateTime        @default(now()) @map("created_at")
+  updatedAt         DateTime        @updatedAt @map("updated_at")
 
-  hallazgos        HallazgoPCI[]
+  hallazgos HallazgoPCI[]
 
   @@index([edificioId])
   @@index([estado])
@@ -2449,17 +2471,17 @@ model AccionCorrectivaPCI {
 }
 
 model FacturaPCI {
-  id          String    @id @default(cuid())
-  numero      String    @unique
-  edificioId  String?   @map("edificio_id")
-  edificio    Edificio? @relation(fields: [edificioId], references: [id])
-  fecha       DateTime
-  concepto    String
-  importe     Float?
-  conformada  Boolean   @default(false)
-  notas       String?
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
+  id         String    @id @default(cuid())
+  numero     String    @unique
+  edificioId String?   @map("edificio_id")
+  edificio   Edificio? @relation(fields: [edificioId], references: [id])
+  fecha      DateTime
+  concepto   String
+  importe    Float?
+  conformada Boolean   @default(false)
+  notas      String?
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
 
   @@index([edificioId])
   @@map("facturas_pci")
@@ -2470,26 +2492,139 @@ model FacturaPCI {
 // ─────────────────────────────────────────────────────────────────────────────
 
 model AuditoriaPractica {
-  id          String   @id @default(cuid())
-  practicaId  String   @map("practica_id")
-  practica    Practica @relation(fields: [practicaId], references: [id], onDelete: Cascade)
+  id          String    @id @default(cuid())
+  practicaId  String    @map("practica_id")
+  practica    Practica  @relation(fields: [practicaId], references: [id], onDelete: Cascade)
   numero      String
   titulo      String
   familia     String
-  agente      String   // slug del agente que la audita
-  puntuacion  Int      @default(0) // 0-100
+  agente      String // slug del agente que la audita
+  puntuacion  Int       @default(0) // 0-100
   resumen     String
-  dimensiones Json     // [{ nombre, puntuacion, comentario }]
-  carencias   Json     // [{ campo, gravedad, descripcion }]
-  propuesta   Json     // contenido mejorado de la ficha, campo a campo
-  estado      String   @default("pendiente") // pendiente | aplicada | descartada
-  usuarioId   String   @map("usuario_id")
-  usuario     Usuario  @relation(fields: [usuarioId], references: [id])
+  dimensiones Json // [{ nombre, puntuacion, comentario }]
+  carencias   Json // [{ campo, gravedad, descripcion }]
+  propuesta   Json // contenido mejorado de la ficha, campo a campo
+  estado      String    @default("pendiente") // pendiente | aplicada | descartada
+  usuarioId   String    @map("usuario_id")
+  usuario     Usuario   @relation(fields: [usuarioId], references: [id])
   aplicadaEn  DateTime? @map("aplicada_en")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
 
   @@index([practicaId])
   @@index([familia, estado])
   @@map("auditorias_practica")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  PLANES DE EMERGENCIA Y AUTOPROTECCIÓN
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Plan de emergencia o de autoprotección. Cubre los tres casos del servicio:
+/// el PTEL del municipio, los planes de autoprotección de edificios públicos y
+/// los de eventos puntuales (Feria, Cabalgata...).
+model Plan {
+  id          String  @id @default(cuid())
+  tipo        String // "ptel" | "edificio" | "evento"
+  nombre      String
+  descripcion String? @db.Text
+  referencia  String? // Código o expediente del plan
+
+  // Emplazamiento (edificios y eventos)
+  direccion String?
+  latitud   Float?
+  longitud  Float?
+
+  // Vigencia. fechaRevision es la fecha LÍMITE de la próxima revisión: de ahí
+  // salen los avisos de caducidad.
+  fechaAprobacion  DateTime? @map("fecha_aprobacion") @db.Date
+  fechaRevision    DateTime? @map("fecha_revision") @db.Date
+  organoAprobacion String?   @map("organo_aprobacion")
+
+  // Responsable / director del plan
+  responsableNombre   String? @map("responsable_nombre")
+  responsableCargo    String? @map("responsable_cargo")
+  responsableTelefono String? @map("responsable_telefono")
+  responsableEmail    String? @map("responsable_email")
+
+  // Datos de autoprotección
+  aforo         Int?
+  ocupacion     String? // Uso del edificio: docente, deportivo, cultural...
+  nivelRiesgo   String? @map("nivel_riesgo") // bajo | medio | alto
+  mediosPropios String? @map("medios_propios") @db.Text
+  observaciones String? @db.Text
+
+  activo     Boolean         @default(true)
+  documentos PlanDocumento[]
+
+  creadoPorId String?  @map("creado_por_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([tipo])
+  @@index([fechaRevision])
+  @@map("planes")
+}
+
+/// Documentos adjuntos a un plan (el plan en PDF, anexos, planos, certificados).
+model PlanDocumento {
+  id            String   @id @default(cuid())
+  planId        String   @map("plan_id")
+  plan          Plan     @relation(fields: [planId], references: [id], onDelete: Cascade)
+  titulo        String
+  tipo          String   @default("plan") // plan | anexo | plano | certificado | otro
+  url           String
+  blobKey       String   @map("blob_key")
+  nombreArchivo String   @map("nombre_archivo")
+  tamano        Int
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@index([planId])
+  @@map("plan_documentos")
+}
+
+/// Capa cartográfica del visor. Puede ser un servicio WMS oficial (IGN,
+/// Catastro, IDEAndalucía) o un fichero propio subido por el servicio
+/// (shapefile, KML o GeoJSON), que se guarda ya convertido a GeoJSON.
+model CapaCartografica {
+  id          String  @id @default(cuid())
+  nombre      String
+  descripcion String?
+  /// "base" pinta el fondo (excluyentes entre sí); "tematica" se superpone.
+  categoria   String  @default("tematica")
+  /// "wms" | "archivo"
+  tipo        String
+
+  // WMS
+  wmsUrl     String? @map("wms_url")
+  wmsLayers  String? @map("wms_layers")
+  wmsVersion String? @default("1.1.1") @map("wms_version")
+  wmsFormat  String? @default("image/png") @map("wms_format")
+  atribucion String?
+
+  // Fichero propio, ya convertido a GeoJSON y guardado en Blob
+  geojsonUrl    String? @map("geojson_url")
+  blobKey       String? @map("blob_key")
+  nombreArchivo String? @map("nombre_archivo")
+  numElementos  Int?    @map("num_elementos")
+  bbox          Json? // [minLon, minLat, maxLon, maxLat]
+
+  // Presentación
+  color    String  @default("#2563eb")
+  opacidad Float   @default(0.7)
+  relleno  Boolean @default(true)
+  grosor   Int     @default(2)
+
+  visiblePorDefecto Boolean @default(false) @map("visible_por_defecto")
+  orden             Int     @default(0)
+  activa            Boolean @default(true)
+  /// Las capas oficiales precargadas no se pueden borrar desde la interfaz.
+  esOficial         Boolean @default(false) @map("es_oficial")
+
+  creadoPorId String?  @map("creado_por_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([categoria])
+  @@map("capas_cartograficas")
 }

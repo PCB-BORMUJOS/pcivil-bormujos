@@ -35,6 +35,7 @@ export const MODULOS_APP: ModuloApp[] = [
   { key: 'practicas', label: 'Prácticas', path: '/practicas', api: ['/api/practicas'] },
   { key: 'megacode', label: 'Megacode', path: '/megacode', api: ['/api/megacode'] },
   { key: 'manuales', label: 'Manuales', path: '/manuales', api: ['/api/manuales'] },
+  { key: 'planes', label: 'Planes de Emergencia', path: '/planes', api: ['/api/planes', '/api/cartografia'] },
   { key: 'partes', label: 'Partes de Servicio', path: '/partes', api: ['/api/partes'] },
   { key: 'cuadrantes', label: 'Cuadrantes', path: '/cuadrantes', api: ['/api/cuadrantes'] },
   { key: 'estadisticas', label: 'Estadísticas', path: '/estadisticas', api: ['/api/estadisticas'] },
