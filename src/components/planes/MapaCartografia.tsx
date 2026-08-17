@@ -76,12 +76,14 @@ export default function MapaCartografia({
     alPulsarPunto,
     altura = '100%',
     contexto,
+    planes,
 }: {
     capas: Capa[]
     puntos: PuntoPlan[]
     alPulsarPunto?: (id: string) => void
     altura?: string
     contexto?: { nombre?: string; anexo?: string }
+    planes?: Array<{ id: string; nombre: string; tipo: string }>
 }) {
     const capasBase = useMemo(() => capas.filter(c => c.categoria === 'base'), [capas])
     const capasTema = useMemo(() => capas.filter(c => c.categoria !== 'base'), [capas])
@@ -603,6 +605,7 @@ export default function MapaCartografia({
                     opacidades={opacidades}
                     geojsons={geojsons}
                     contexto={contexto}
+                    planes={planes}
                     onCerrar={() => setLamina(null)}
                 />
             )}

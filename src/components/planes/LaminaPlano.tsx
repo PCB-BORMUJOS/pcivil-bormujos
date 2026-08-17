@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { MapContainer, TileLayer, WMSTileLayer, GeoJSON as GeoJSONLayer, useMapEvents } from 'react-leaflet'
 import { X, Printer } from 'lucide-react'
-import { TILES_CALLEJERO } from '@/lib/cartografia'
+import { TILES_CALLEJERO, TIPOS_PLAN } from '@/lib/cartografia'
 import type { Capa } from './MapaCartografia'
 
 // ── Lámina imprimible de un plano (formato 4/5 mapa + 1/5 cajetín) ─────────────
@@ -20,27 +20,33 @@ type Props = {
     opacidades: Record<string, number>
     geojsons: Record<string, any>
     contexto?: { nombre?: string; anexo?: string }
+    planes?: Array<{ id: string; nombre: string; tipo: string }>
     onCerrar: () => void
 }
 
-// Denominador de escala aproximado para impresión a 96 ppp (1 px CSS = 0,2646 mm).
-function escalaAprox(lat: number, zoom: number): number {
+// La hoja se define en mm (A3), así que la escala es FÍSICA e independiente del
+// ppp de impresión (el ppp solo afecta a la nitidez del ráster, no a la escala).
+// 1 px CSS = 1/96 pulgada = 0,26458 mm  →  3779,5276 px por metro de papel.
+const PX_POR_METRO_PAPEL = 96 / 0.0254
+// Denominador de escala real para el encuadre actual.
+function escalaDe(lat: number, zoom: number): number {
     const mppx = (156543.03392 * Math.cos((lat * Math.PI) / 180)) / Math.pow(2, zoom)
-    const metrosPorMetroPapel = mppx / 0.0002645833
-    return Math.round(metrosPorMetroPapel)
+    return Math.round(mppx * PX_POR_METRO_PAPEL)
 }
-// Redondea a una escala "de plano" habitual.
-function escalaBonita(n: number): number {
-    const escalas = [500, 1000, 2000, 2500, 5000, 10000, 15000, 20000, 25000, 50000, 100000, 200000]
-    let best = escalas[0]
-    for (const e of escalas) if (Math.abs(e - n) < Math.abs(best - n)) best = e
-    return best
+// Zoom (fraccional) necesario para representar una escala 1:N exacta sobre la hoja.
+function zoomParaEscala(lat: number, N: number): number {
+    const mppx = N / PX_POR_METRO_PAPEL
+    return Math.log2((156543.03392 * Math.cos((lat * Math.PI) / 180)) / mppx)
 }
+// Escalas de plano habituales para los botones de encuadre.
+const ESCALAS = [1000, 2000, 5000, 10000, 15000, 25000, 50000]
+// Formatea 1:N con separador de miles.
+const fmtEscala = (n: number) => n.toLocaleString('es-ES')
 
 const VERDE = '#2f5233'  // verde institucional del cajetín
 
 export default function LaminaPlano({
-    center, zoom, baseActiva, baseCapa, capasActivas, opacidades, geojsons, contexto, onCerrar,
+    center, zoom, baseActiva, baseCapa, capasActivas, opacidades, geojsons, contexto, planes, onCerrar,
 }: Props) {
     const hoy = new Date()
     const mmAaaa = `${String(hoy.getMonth() + 1).padStart(2, '0')} / ${hoy.getFullYear()}`
@@ -55,6 +61,9 @@ export default function LaminaPlano({
         return Array.from(set)
     }, [baseCapa, baseActiva, capasActivas])
 
+    // Proyección: fija y profesional (la cartografía oficial andaluza).
+    const PROYECCION = 'ETRS89 / UTM 30N (EPSG:25830)'
+
     // Cajetín editable (el usuario ajusta lo específico de cada plano).
     const [tituloPlan, setTituloPlan] = useState(contexto?.nombre || 'PLAN DE EMERGENCIA')
     const [anexo, setAnexo] = useState(contexto?.anexo || 'Anexo · Planos')
@@ -63,9 +72,8 @@ export default function LaminaPlano({
     const [numero, setNumero] = useState('00')
     const [total, setTotal] = useState('00')
     const [fecha, setFecha] = useState(mmAaaa)
-    const [escalaTxt, setEscalaTxt] = useState(String(escalaBonita(escalaAprox(center[0], zoom))))
-    const [proyeccion, setProyeccion] = useState('ETRS89 / UTM 30N (EPSG:25830)')
-    const [pagina, setPagina] = useState<'A3' | 'A4'>('A3')
+    // Escala REAL del encuadre actual (se recalcula al mover el mapa).
+    const [escalaNum, setEscalaNum] = useState(() => escalaDe(center[0], zoom))
     const [editando, setEditando] = useState(true)
 
     const mapRef = useRef<any>(null)
@@ -73,14 +81,21 @@ export default function LaminaPlano({
     useEffect(() => {
         const t = setTimeout(() => { mapRef.current?.invalidateSize(false); insetRef.current?.invalidateSize(false) }, 250)
         return () => clearTimeout(t)
-    }, [pagina])
+    }, [])
+
+    // Encuadra el mapa a una escala 1:N exacta (zoom fraccional).
+    const fijarEscala = (N: number) => {
+        const m = mapRef.current
+        if (!m) return
+        m.setZoom(zoomParaEscala(m.getCenter().lat, N))
+    }
 
     // Render de las capas (idéntico al visor) para el mapa de la lámina.
     const renderCapas = () => capasActivas.map(c => {
         if (c.tipo === 'wms' && c.wmsUrl) {
             return <WMSTileLayer key={c.id} url={c.wmsUrl} opacity={opacidades[c.id] ?? c.opacidad}
                 params={{ layers: c.wmsLayers || '', format: (c.wmsFormat || 'image/png') as any, transparent: true, version: (c.wmsVersion || '1.1.1') as any }}
-                tileSize={512} detectRetina={false} />
+                tileSize={512} detectRetina />
         }
         const geo = geojsons[c.id]
         if (!geo) return null
@@ -91,8 +106,8 @@ export default function LaminaPlano({
         }} />
     })
 
-    // Dimensiones de la lámina en mm (apaisado). 4/5 mapa · 1/5 cajetín.
-    const dim = pagina === 'A3' ? { w: 420, h: 297 } : { w: 297, h: 210 }
+    // Lámina fija A3 apaisado (420×297 mm). 4/5 mapa · 1/5 cajetín.
+    const dim = { w: 420, h: 297 }
 
     return (
         <div className="fixed inset-0 z-[1400] bg-slate-800/95 flex flex-col">
@@ -101,7 +116,7 @@ export default function LaminaPlano({
                 .lamina-hoja { width: ${dim.w}mm; height: ${dim.h}mm; background:#fff; display:flex; }
                 .lamina-contraste { filter: drop-shadow(0 0 1.5px #fff) drop-shadow(0 0 1px #fff); }
                 @media print {
-                    @page { size: ${pagina} landscape; margin: 0; }
+                    @page { size: A3 landscape; margin: 0; }
                     body { background:#fff !important; }
                     body * { visibility: hidden !important; }
                     .lamina-print, .lamina-print * { visibility: visible !important; }
@@ -114,12 +129,8 @@ export default function LaminaPlano({
 
             {/* Barra superior (no se imprime) */}
             <div className="lamina-noprint flex items-center justify-between gap-3 px-4 py-2.5 bg-slate-900 text-white shrink-0">
-                <div className="flex items-center gap-2 text-sm font-semibold"><Printer size={16} /> Crear plano para imprimir</div>
+                <div className="flex items-center gap-2 text-sm font-semibold"><Printer size={16} /> Crear plano para imprimir · A3 apaisado</div>
                 <div className="flex items-center gap-2">
-                    <select value={pagina} onChange={e => setPagina(e.target.value as any)} className="bg-slate-800 border border-slate-600 rounded-lg px-2 py-1.5 text-xs">
-                        <option value="A3">A3 apaisado</option>
-                        <option value="A4">A4 apaisado</option>
-                    </select>
                     <button onClick={() => setEditando(v => !v)} className="px-3 py-1.5 text-xs font-medium rounded-lg bg-slate-700 hover:bg-slate-600">{editando ? 'Ocultar edición' : 'Editar cajetín'}</button>
                     <button onClick={() => window.print()} className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-bold rounded-lg bg-emerald-600 hover:bg-emerald-500"><Printer size={14} /> Imprimir / Guardar PDF</button>
                     <button onClick={onCerrar} className="p-1.5 rounded-lg hover:bg-white/10"><X size={18} /></button>
@@ -132,6 +143,21 @@ export default function LaminaPlano({
                 {editando && (
                     <div className="lamina-noprint w-72 shrink-0 bg-slate-100 border-r border-slate-300 p-4 space-y-3 overflow-y-auto text-sm">
                         <p className="text-xs font-bold text-slate-500 uppercase">Datos del plano</p>
+                        {planes && planes.length > 0 && (
+                            <div>
+                                <label className="block text-xs font-semibold text-slate-500 mb-1">Rellenar cabecera desde un plan</label>
+                                <select onChange={e => {
+                                    const p = planes.find(x => x.id === e.target.value)
+                                    if (!p) return
+                                    setTituloPlan(p.nombre.toUpperCase())
+                                    const sig = (TIPOS_PLAN as any)[p.tipo]?.sigla || ''
+                                    setAnexo(`${sig ? sig + ' · ' : ''}Anexo de planos`)
+                                }} defaultValue="" className="w-full border border-slate-300 rounded-lg p-1.5 text-xs bg-white">
+                                    <option value="">— Elegir plan —</option>
+                                    {planes.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+                                </select>
+                            </div>
+                        )}
                         <Campo label="Plan (cabecera)" v={tituloPlan} set={setTituloPlan} />
                         <Campo label="Anexo / subtítulo" v={anexo} set={setAnexo} />
                         <Campo label="Título del plano" v={tituloPlano} set={setTituloPlano} placeholder="Ej: Localización y encuadre territorial" />
@@ -143,11 +169,22 @@ export default function LaminaPlano({
                             <Campo label="Nº plano" v={numero} set={setNumero} />
                             <Campo label="De (total)" v={total} set={setTotal} />
                         </div>
-                        <div className="grid grid-cols-2 gap-2">
-                            <Campo label="Fecha" v={fecha} set={setFecha} />
-                            <Campo label="Escala 1:" v={escalaTxt} set={setEscalaTxt} />
+                        <Campo label="Fecha" v={fecha} set={setFecha} />
+                        {/* Escala: se fija con un botón (encuadre exacto) o sale del zoom libre */}
+                        <div>
+                            <label className="block text-xs font-semibold text-slate-500 mb-1">Escala del plano</label>
+                            <div className="text-sm font-bold text-slate-800 mb-1.5">1 : {fmtEscala(escalaNum)}</div>
+                            <div className="flex flex-wrap gap-1">
+                                {ESCALAS.map(N => (
+                                    <button key={N} onClick={() => fijarEscala(N)}
+                                        className={`px-2 py-1 rounded-md text-[11px] font-semibold border ${Math.abs(escalaNum - N) / N < 0.02 ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-600 border-slate-300 hover:border-emerald-400'}`}>
+                                        1:{fmtEscala(N)}
+                                    </button>
+                                ))}
+                            </div>
+                            <p className="text-[11px] text-slate-400 mt-1">Pulsa una escala para encuadrar exacto, o mueve el mapa libremente.</p>
                         </div>
-                        <Campo label="Proyección" v={proyeccion} set={setProyeccion} />
+                        <div className="text-[11px] text-slate-500"><b>Proyección:</b> {PROYECCION}</div>
                         <p className="text-[11px] text-slate-400 leading-snug">La leyenda, las fuentes y la barra de escala se generan solas a partir de las capas activas.</p>
                     </div>
                 )}
@@ -160,12 +197,12 @@ export default function LaminaPlano({
                             {/* ── 4/5: MAPA ── */}
                             <div style={{ width: '80%', height: '100%', position: 'relative' }}>
                                 <MapContainer center={center} zoom={zoom} ref={mapRef as any}
-                                    scrollWheelZoom attributionControl={false}
+                                    scrollWheelZoom attributionControl={false} zoomSnap={0} zoomDelta={0.25} maxZoom={22}
                                     style={{ height: '100%', width: '100%' }}>
-                                    {baseActiva === 'callejero' && <TileLayer url={TILES_CALLEJERO.url} maxZoom={19} />}
-                                    {baseCapa?.wmsUrl && <WMSTileLayer url={baseCapa.wmsUrl} params={{ layers: baseCapa.wmsLayers || '', format: (baseCapa.wmsFormat || 'image/png') as any, transparent: false, version: (baseCapa.wmsVersion || '1.1.1') as any }} tileSize={512} detectRetina={false} />}
+                                    {baseActiva === 'callejero' && <TileLayer url={TILES_CALLEJERO.url} maxZoom={19} detectRetina />}
+                                    {baseCapa?.wmsUrl && <WMSTileLayer url={baseCapa.wmsUrl} params={{ layers: baseCapa.wmsLayers || '', format: (baseCapa.wmsFormat || 'image/png') as any, transparent: false, version: (baseCapa.wmsVersion || '1.1.1') as any }} tileSize={512} detectRetina />}
                                     {renderCapas()}
-                                    <SyncEscala onCambio={(lat, z) => setEscalaTxt(String(escalaBonita(escalaAprox(lat, z))))} />
+                                    <SyncEscala onCambio={(lat, z) => setEscalaNum(escalaDe(lat, z))} />
                                 </MapContainer>
                                 {/* Rosa de los vientos */}
                                 <svg width="46" height="46" viewBox="0 0 46 46" style={{ position: 'absolute', top: 10, right: 10, background: 'rgba(255,255,255,0.82)', borderRadius: 8, padding: 3 }}>
@@ -217,10 +254,10 @@ export default function LaminaPlano({
                                     {/* Datos técnicos */}
                                     <div style={{ marginTop: 'auto', borderTop: '1px solid #e2e8f0', paddingTop: 6, fontSize: 9, color: '#334155', display: 'flex', flexDirection: 'column', gap: 3 }}>
                                         <div><b>N.º de plano:</b> {numero} / {total} &nbsp;·&nbsp; <b>Fecha:</b> {fecha}</div>
-                                        <div><b>Escala:</b> 1:{escalaTxt}</div>
-                                        {/* Barra de escala gráfica (según la escala indicada) */}
-                                        <BarraEscala escala={parseFloat(escalaTxt) || escalaAprox(center[0], zoom)} />
-                                        <div><b>Proyección:</b> {proyeccion}</div>
+                                        <div><b>Escala:</b> 1:{fmtEscala(escalaNum)}</div>
+                                        {/* Barra de escala gráfica (según la escala real del encuadre) */}
+                                        <BarraEscala escala={escalaNum} />
+                                        <div><b>Proyección:</b> {PROYECCION}</div>
                                         <div style={{ marginTop: 2 }}><b>Fuente:</b> {fuentes.join(', ') || '—'}</div>
                                     </div>
 

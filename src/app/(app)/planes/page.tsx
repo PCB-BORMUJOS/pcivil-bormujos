@@ -195,7 +195,7 @@ export default function PlanesPage() {
                 </div>
             ) : pestana === 'cartografia' ? (
                 <PestanaCartografia
-                    capas={capas} puntos={puntos} isAdmin={isAdmin}
+                    capas={capas} puntos={puntos} isAdmin={isAdmin} planes={planes}
                     alPulsarPunto={id => { const p = planes.find(x => x.id === id); if (p) setDetalle(p) }}
                     alBorrarCapa={async (capa) => {
                         if (!confirm(`¿Eliminar la capa "${capa.nombre}"?`)) return
@@ -367,8 +367,9 @@ function VacioPlanes({ tipo, hayFiltro, isAdmin, alCrear }: {
     )
 }
 
-function PestanaCartografia({ capas, puntos, isAdmin, alPulsarPunto, alBorrarCapa }: {
+function PestanaCartografia({ capas, puntos, isAdmin, planes, alPulsarPunto, alBorrarCapa }: {
     capas: Capa[]; puntos: PuntoPlan[]; isAdmin: boolean
+    planes: PlanCompleto[]
     alPulsarPunto: (id: string) => void
     alBorrarCapa: (capa: Capa) => void
 }) {
@@ -389,7 +390,8 @@ function PestanaCartografia({ capas, puntos, isAdmin, alPulsarPunto, alBorrarCap
             {/* Alto generoso: con el panel acoplado al lado, el mapa necesita
                 espacio real para poder trabajar sobre él. */}
             <div style={{ height: 'clamp(600px, 78vh, 1100px)' }}>
-                <MapaCartografia capas={capas} puntos={puntos} alPulsarPunto={alPulsarPunto} />
+                <MapaCartografia capas={capas} puntos={puntos} alPulsarPunto={alPulsarPunto}
+                    planes={planes.map(p => ({ id: p.id, nombre: p.nombre, tipo: p.tipo }))} />
             </div>
 
             {isAdmin && propias.length > 0 && (
