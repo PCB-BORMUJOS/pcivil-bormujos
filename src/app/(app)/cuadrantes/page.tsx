@@ -1281,8 +1281,8 @@ export default function CuadrantesPage() {
         return (
           <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
             <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
-              <h3 className="text-sm font-bold text-slate-700">Resumen por voluntario</h3>
-              <span className="text-xs text-slate-400">{filas.length} voluntarios activos</span>
+              <h3 className="text-sm font-bold text-slate-700">Resumen por indicativos</h3>
+              <span className="text-xs text-slate-400">{filas.length} indicativos activos</span>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-xs">
