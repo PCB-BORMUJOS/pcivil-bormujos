@@ -33,7 +33,11 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 
         const plan = await prisma.plan.findUnique({
             where: { id: params.id },
-            include: { documentos: { orderBy: { createdAt: 'desc' } } },
+            include: {
+                documentos: { orderBy: { createdAt: 'desc' } },
+                contactos:  { orderBy: [{ prioritario: 'desc' }, { orden: 'asc' }] },
+                recursos:   { orderBy: { orden: 'asc' } },
+            },
         })
         if (!plan) return NextResponse.json({ error: 'Plan no encontrado' }, { status: 404 })
 
@@ -84,7 +88,11 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         const plan = await prisma.plan.update({
             where: { id: params.id },
             data,
-            include: { documentos: { orderBy: { createdAt: 'desc' } } },
+            include: {
+                documentos: { orderBy: { createdAt: 'desc' } },
+                contactos:  { orderBy: [{ prioritario: 'desc' }, { orden: 'asc' }] },
+                recursos:   { orderBy: { orden: 'asc' } },
+            },
         })
 
         const { usuarioId, usuarioNombre } = getUsuarioAudit(session)

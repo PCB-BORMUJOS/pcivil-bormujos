@@ -60,7 +60,9 @@ export async function GET(request: NextRequest) {
             where,
             include: {
                 documentos: { orderBy: { createdAt: 'desc' } },
-                _count: { select: { documentos: true } },
+                contactos:  { orderBy: [{ prioritario: 'desc' }, { orden: 'asc' }] },
+                recursos:   { orderBy: { orden: 'asc' } },
+                _count: { select: { documentos: true, contactos: true, recursos: true } },
             },
             orderBy: [{ tipo: 'asc' }, { nombre: 'asc' }],
         })
@@ -116,7 +118,10 @@ export async function POST(request: NextRequest) {
                 observaciones: textoONull(body.observaciones),
                 creadoPorId: usuarioId ?? null,
             },
-            include: { documentos: true, _count: { select: { documentos: true } } },
+            include: {
+                documentos: true, contactos: true, recursos: true,
+                _count: { select: { documentos: true, contactos: true, recursos: true } },
+            },
         })
 
         await registrarAudit({

@@ -10,7 +10,7 @@ import 'leaflet/dist/leaflet.css'
 import {
     ShieldCheck, Plus, Search, Loader2, MapPin, FileText, CalendarClock,
     Building2, PartyPopper, Landmark, Layers, AlertTriangle, CheckCircle2,
-    Clock, Upload, Trash2, Globe, X, Info,
+    Clock, Upload, Trash2, Globe, X, Info, BookUser, Boxes,
 } from 'lucide-react'
 import { usePermisos } from '@/lib/permisos'
 import {
@@ -31,11 +31,11 @@ const MapaCartografia = dynamic(() => import('@/components/planes/MapaCartografi
 
 type Pestana = TipoPlan | 'cartografia'
 
-const PESTANAS: Array<{ id: Pestana; label: string; icono: any }> = [
-    { id: 'ptel',        label: 'PTEL',              icono: Landmark },
-    { id: 'edificio',    label: 'Edificios públicos', icono: Building2 },
-    { id: 'evento',      label: 'Eventos',            icono: PartyPopper },
-    { id: 'cartografia', label: 'Cartografía',        icono: Layers },
+const PESTANAS: Array<{ id: Pestana; label: string; titulo: string; icono: any }> = [
+    { id: 'ptel',        label: 'PTEL', titulo: 'Plan Territorial de Emergencias Local',       icono: Landmark },
+    { id: 'edificio',    label: 'PA',   titulo: 'Planes de Autoprotección',                    icono: Building2 },
+    { id: 'evento',      label: 'PAE',  titulo: 'Planes de Autoprotección Específicos',        icono: PartyPopper },
+    { id: 'cartografia', label: 'Cartografía', titulo: 'Cartografía del término municipal',    icono: Layers },
 ]
 
 const COLOR_PUNTO: Record<string, string> = {
@@ -168,6 +168,7 @@ export default function PlanesPage() {
                             <button
                                 key={p.id} role="tab" aria-selected={activa}
                                 onClick={() => setPestana(p.id)}
+                                title={p.titulo}
                                 className={`flex items-center gap-2 px-4 py-3 text-sm font-semibold border-b-2 -mb-px whitespace-nowrap transition-colors ${activa
                                     ? 'border-blue-600 text-blue-700'
                                     : 'border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300'}`}
@@ -181,6 +182,11 @@ export default function PlanesPage() {
                     })}
                 </nav>
             </div>
+
+            {/* Nombre completo del apartado: las siglas solas no se entienden de entrada */}
+            <p className="text-xs text-slate-500 -mt-2">
+                {PESTANAS.find(p => p.id === pestana)?.titulo}
+            </p>
 
             {cargando ? (
                 <div className="flex flex-col items-center justify-center py-24 gap-3">
@@ -252,7 +258,7 @@ export default function PlanesPage() {
                 <PlanFormulario
                     inicial={formulario}
                     alCerrar={() => setFormulario(null)}
-                    alGuardar={plan => { tras({ ...plan, documentos: plan.documentos || [] }); setFormulario(null) }}
+                    alGuardar={plan => { tras({ ...plan, documentos: plan.documentos || [], contactos: plan.contactos || [], recursos: plan.recursos || [] }); setFormulario(null) }}
                 />
             )}
             {modalCapa && (
@@ -323,6 +329,14 @@ function TarjetaPlan({ plan, alAbrir }: { plan: PlanCompleto; alAbrir: () => voi
                 <span className="inline-flex items-center gap-1">
                     <FileText size={11} className="text-slate-400" />
                     {plan.documentos.length} doc.
+                </span>
+                <span className="inline-flex items-center gap-1">
+                    <BookUser size={11} className="text-slate-400" />
+                    {plan.contactos?.length ?? 0} cont.
+                </span>
+                <span className="inline-flex items-center gap-1">
+                    <Boxes size={11} className="text-slate-400" />
+                    {plan.recursos?.length ?? 0} medios
                 </span>
                 {plan.aforo ? <span className="inline-flex items-center gap-1"><Building2 size={11} className="text-slate-400" />{plan.aforo} pax</span> : null}
             </div>

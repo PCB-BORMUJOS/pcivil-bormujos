@@ -4,8 +4,12 @@ import { useRef, useState } from 'react'
 import {
     X, FileText, Download, Trash2, Upload, Loader2, Pencil, MapPin, Phone, Mail,
     CalendarClock, Building2, ShieldAlert, UserRound, FileArchive, ExternalLink,
+    Eye, BookUser, Boxes, Info,
 } from 'lucide-react'
-import { ESTADOS_VIGENCIA, TIPOS_DOCUMENTO, estadoVigencia, textoPlazo } from '@/lib/cartografia'
+import { ESTADOS_VIGENCIA, TIPOS_DOCUMENTO, TIPOS_PLAN, estadoVigencia, textoPlazo } from '@/lib/cartografia'
+import PlanDirectorio, { type Contacto } from './PlanDirectorio'
+import PlanRecursos, { type Recurso } from './PlanRecursos'
+import VisorPdf from './VisorPdf'
 
 export type Documento = {
     id: string
@@ -39,6 +43,8 @@ export type PlanCompleto = {
     mediosPropios: string | null
     observaciones: string | null
     documentos: Documento[]
+    contactos: Contacto[]
+    recursos: Recurso[]
 }
 
 const NIVEL_CLASES: Record<string, string> = {
@@ -72,6 +78,8 @@ export default function PlanDetalle({
     const [error, setError] = useState<string | null>(null)
     const [tipoDoc, setTipoDoc] = useState('plan')
     const inputRef = useRef<HTMLInputElement>(null)
+    const [pestana, setPestana] = useState<'ficha' | 'documentos' | 'directorio' | 'recursos'>('ficha')
+    const [viendo, setViendo] = useState<Documento | null>(null)
 
     const estado = estadoVigencia(plan.fechaRevision)
     const info = ESTADOS_VIGENCIA[estado]
@@ -142,8 +150,49 @@ export default function PlanDetalle({
                     </div>
                 </header>
 
+                {/* Pestañas: la ficha, el documento, a quién llamar y con qué se cuenta */}
+                <nav className="bg-white border-b border-slate-200 px-4 flex gap-1 overflow-x-auto flex-shrink-0" role="tablist">
+                    {([
+                        ['ficha',      'Ficha',              Info,      null],
+                        ['documentos', 'Documentos',         FileText,  plan.documentos.length],
+                        ['directorio', 'Directorio',         BookUser,  plan.contactos.length],
+                        ['recursos',   'Medios y recursos',  Boxes,     plan.recursos.length],
+                    ] as const).map(([id, txt, Ic, n]) => {
+                        const activa = pestana === id
+                        return (
+                            <button
+                                key={id} role="tab" aria-selected={activa}
+                                onClick={() => setPestana(id as any)}
+                                className={`flex items-center gap-1.5 px-3 py-2.5 text-xs font-semibold border-b-2 -mb-px whitespace-nowrap transition-colors ${activa
+                                    ? 'border-blue-600 text-blue-700'
+                                    : 'border-transparent text-slate-500 hover:text-slate-800'}`}
+                            >
+                                <Ic size={13} /> {txt}
+                                {typeof n === 'number' && n > 0 && (
+                                    <span className={`text-[9px] font-bold rounded-full px-1.5 ${activa ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-500'}`}>{n}</span>
+                                )}
+                            </button>
+                        )
+                    })}
+                </nav>
+
                 <div className="flex-1 overflow-y-auto p-6 space-y-5">
                     {error && <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm">{error}</div>}
+
+                    {pestana === 'directorio' && (
+                        <PlanDirectorio
+                            planId={plan.id} contactos={plan.contactos} puedeEditar={puedeEditar}
+                            alCambiar={contactos => alCambiar({ ...plan, contactos })}
+                        />
+                    )}
+                    {pestana === 'recursos' && (
+                        <PlanRecursos
+                            planId={plan.id} recursos={plan.recursos} puedeEditar={puedeEditar}
+                            alCambiar={recursos => alCambiar({ ...plan, recursos })}
+                        />
+                    )}
+
+                    {pestana === 'ficha' && <>
 
                     {plan.descripcion && (
                         <p className="text-sm text-slate-600 leading-relaxed bg-white rounded-xl border border-slate-200 p-4">
@@ -214,7 +263,9 @@ export default function PlanDetalle({
                         </Bloque>
                     )}
 
-                    {/* Documentos */}
+                    </>}
+
+                    {pestana === 'documentos' && <>
                     <Bloque icono={FileArchive} color="text-blue-600" titulo={`Documentos (${plan.documentos.length})`}>
                         {plan.documentos.length === 0 ? (
                             <p className="text-sm text-slate-400 py-2">Todavía no hay ningún documento adjunto.</p>
@@ -225,14 +276,18 @@ export default function PlanDetalle({
                                         <span className="w-9 h-9 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0">
                                             <FileText size={15} />
                                         </span>
-                                        <div className="flex-1 min-w-0">
+                                        <button onClick={() => setViendo(doc)} className="flex-1 min-w-0 text-left">
                                             <p className="text-sm font-semibold text-slate-800 truncate">{doc.titulo}</p>
                                             <p className="text-[11px] text-slate-500">
                                                 {TIPOS_DOCUMENTO.find(t => t.valor === doc.tipo)?.label || doc.tipo} · {pesoLegible(doc.tamano)}
                                             </p>
-                                        </div>
+                                        </button>
                                         <div className="flex items-center gap-1 flex-shrink-0">
-                                            <a href={doc.url} target="_blank" rel="noopener noreferrer" title="Abrir"
+                                            <button onClick={() => setViendo(doc)} title="Ver el documento aquí"
+                                                    className="p-2 rounded-lg text-blue-600 hover:bg-blue-50">
+                                                <Eye size={14} />
+                                            </button>
+                                            <a href={doc.url} target="_blank" rel="noopener noreferrer" title="Abrir en otra pestaña"
                                                className="p-2 rounded-lg text-slate-400 hover:bg-blue-50 hover:text-blue-600">
                                                 <ExternalLink size={14} />
                                             </a>
@@ -276,6 +331,9 @@ export default function PlanDetalle({
                         )}
                     </Bloque>
 
+                    </>}
+
+                    {pestana === 'ficha' && <>
                     {plan.observaciones && (
                         <Bloque icono={FileText} color="text-slate-500" titulo="Observaciones">
                             <p className="text-sm text-slate-600 whitespace-pre-wrap leading-relaxed">{plan.observaciones}</p>
@@ -290,8 +348,19 @@ export default function PlanDetalle({
                             <Trash2 size={14} /> Eliminar este plan y sus documentos
                         </button>
                     )}
+                    </>}
                 </div>
             </aside>
+
+            {viendo && (
+                <VisorPdf
+                    url={viendo.url}
+                    titulo={viendo.titulo}
+                    nombreArchivo={viendo.nombreArchivo}
+                    esImagen={/\.(png|jpe?g|webp)$/i.test(viendo.nombreArchivo)}
+                    alCerrar={() => setViendo(null)}
+                />
+            )}
         </div>
     )
 }

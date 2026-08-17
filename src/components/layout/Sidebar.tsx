@@ -32,7 +32,7 @@ import {
   FlaskConical, Zap,
   BarChart2,
   Wallet,
-  ClipboardList,
+  Map as MapaIcon,
 } from 'lucide-react'
 import { getNivel, ROLES_LABEL } from '@/lib/permisos'
 import { MODULOS_APP, moduloDePath } from '@/lib/modulos-permisos'
@@ -66,7 +66,7 @@ const navigation: NavItem[] = [
   { name: 'Prácticas',         href: '/practicas',      icon: FlaskConical,    minNivel: 1 },
   { name: 'Megacode',          href: '/megacode',       icon: Zap,             minNivel: 1 },
   { name: 'Manuales',          href: '/manuales',       icon: BookOpen,        minNivel: 1 },
-  { name: 'Planes',            href: '/planes',         icon: ClipboardList,   minNivel: 1 },
+  { name: 'Planes',            href: '/planes',         icon: MapaIcon,        minNivel: 1 },
   {
     name: 'Partes',
     href: '/partes',

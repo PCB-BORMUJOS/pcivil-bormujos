@@ -2556,6 +2556,8 @@ model Plan {
 
   activo     Boolean         @default(true)
   documentos PlanDocumento[]
+  contactos  PlanContacto[]
+  recursos   PlanRecurso[]
 
   creadoPorId String?  @map("creado_por_id")
   createdAt   DateTime @default(now()) @map("created_at")
@@ -2630,4 +2632,56 @@ model CapaCartografica {
 
   @@index([categoria])
   @@map("capas_cartograficas")
+}
+
+/// Directorio de contactos de un plan: quién hay que avisar y en qué orden.
+/// Cada plan (PTEL, PA o PAE) tiene el suyo.
+model PlanContacto {
+  id             String   @id @default(cuid())
+  planId         String   @map("plan_id")
+  plan           Plan     @relation(fields: [planId], references: [id], onDelete: Cascade)
+  nombre         String
+  cargo          String?
+  entidad        String?
+  /// Agrupación en el listado: Dirección del plan, Servicios operativos,
+  /// Servicios sanitarios, Suministros, Otros.
+  categoria      String   @default("otros")
+  telefono       String?
+  telefonoAlt    String?  @map("telefono_alt")
+  email          String?
+  disponibilidad String?
+  notas          String?
+  /// Contacto de aviso inmediato al activar el plan.
+  prioritario    Boolean  @default(false)
+  orden          Int      @default(0)
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@index([planId])
+  @@map("plan_contactos")
+}
+
+/// Catálogo de medios y recursos adscritos a un plan: qué hay disponible,
+/// cuánto, de quién es y dónde está.
+model PlanRecurso {
+  id             String   @id @default(cuid())
+  planId         String   @map("plan_id")
+  plan           Plan     @relation(fields: [planId], references: [id], onDelete: Cascade)
+  /// humano | vehiculo | material | instalacion | otro
+  tipo           String   @default("material")
+  denominacion   String
+  titular        String?
+  ubicacion      String?
+  cantidad       Int?
+  unidad         String?
+  contacto       String?
+  telefono       String?
+  disponibilidad String?
+  observaciones  String?
+  orden          Int      @default(0)
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@index([planId])
+  @@map("plan_recursos")
 }

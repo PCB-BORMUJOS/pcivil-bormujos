@@ -358,22 +358,63 @@ export const TILES_CALLEJERO = {
 
 export type TipoPlan = 'ptel' | 'edificio' | 'evento'
 
-export const TIPOS_PLAN: Record<TipoPlan, { label: string; singular: string; descripcion: string }> = {
+export const TIPOS_PLAN: Record<TipoPlan, {
+    label: string; sigla: string; singular: string; descripcion: string
+}> = {
     ptel: {
         label: 'PTEL',
+        sigla: 'PTEL',
         singular: 'Plan Territorial',
         descripcion: 'Plan Territorial de Emergencias Local: el marco general de respuesta del municipio.',
     },
     edificio: {
-        label: 'Edificios públicos',
-        singular: 'Plan de autoprotección',
-        descripcion: 'Planes de autoprotección de colegios, polideportivos, centros culturales y demás edificios municipales.',
+        label: 'Planes de Autoprotección',
+        sigla: 'PA',
+        singular: 'Plan de Autoprotección',
+        descripcion: 'Autoprotección de colegios, polideportivos, centros culturales y demás edificios municipales.',
     },
     evento: {
-        label: 'Eventos',
-        singular: 'Plan específico',
-        descripcion: 'Planes para eventos puntuales: Feria, Cabalgata, romerías y actos multitudinarios.',
+        label: 'Planes de Autoprotección Específicos',
+        sigla: 'PAE',
+        singular: 'Plan de Autoprotección Específico',
+        descripcion: 'Dispositivos para eventos puntuales: Feria, Cabalgata, romerías y actos multitudinarios.',
     },
+}
+
+// ── Directorio y catálogo de medios ─────────────────────────────────────────
+
+/** Agrupación del directorio de contactos de un plan. */
+export const CATEGORIAS_CONTACTO = [
+    { valor: 'direccion',  label: 'Dirección del plan', color: 'violet' },
+    { valor: 'operativos', label: 'Servicios operativos', color: 'blue' },
+    { valor: 'sanitarios', label: 'Servicios sanitarios', color: 'red' },
+    { valor: 'suministros', label: 'Suministros y servicios', color: 'amber' },
+    { valor: 'otros',      label: 'Otros contactos', color: 'slate' },
+] as const
+
+export const CLASES_CATEGORIA: Record<string, string> = {
+    direccion:   'bg-violet-50 text-violet-700 border-violet-200',
+    operativos:  'bg-blue-50 text-blue-700 border-blue-200',
+    sanitarios:  'bg-red-50 text-red-700 border-red-200',
+    suministros: 'bg-amber-50 text-amber-700 border-amber-200',
+    otros:       'bg-slate-100 text-slate-600 border-slate-200',
+}
+
+/** Tipos de medio del catálogo de recursos. */
+export const TIPOS_RECURSO = [
+    { valor: 'humano',      label: 'Personal',      icono: 'Users' },
+    { valor: 'vehiculo',    label: 'Vehículos',     icono: 'Truck' },
+    { valor: 'material',    label: 'Material',      icono: 'Package' },
+    { valor: 'instalacion', label: 'Instalaciones', icono: 'Building2' },
+    { valor: 'otro',        label: 'Otros',         icono: 'Boxes' },
+] as const
+
+export const CLASES_RECURSO: Record<string, string> = {
+    humano:      'bg-blue-50 text-blue-700 border-blue-200',
+    vehiculo:    'bg-emerald-50 text-emerald-700 border-emerald-200',
+    material:    'bg-amber-50 text-amber-700 border-amber-200',
+    instalacion: 'bg-violet-50 text-violet-700 border-violet-200',
+    otro:        'bg-slate-100 text-slate-600 border-slate-200',
 }
 
 export type EstadoVigencia = 'vigente' | 'proxima' | 'caducado' | 'sin_fecha'
