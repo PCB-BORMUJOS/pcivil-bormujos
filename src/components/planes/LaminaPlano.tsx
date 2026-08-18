@@ -114,13 +114,13 @@ export default function LaminaPlano({
     // Lámina A3 apaisado con margen de seguridad: se deja ~5 mm de guarda a cada
     // lado (410×287 mm centrado en la hoja A3 de 420×297) para que las impresoras,
     // que no imprimen a sangre, NO recorten el lateral derecho ni la parte inferior.
-    const dim = { w: 410, h: 287 }
+    const dim = { w: 415, h: 292 }
 
     return (
         <div className="fixed inset-0 z-[1400] bg-slate-800/95 flex flex-col">
             {/* Estilos de impresión: al imprimir solo se ve la lámina, a tamaño de página. */}
             <style>{`
-                .lamina-hoja { width: ${dim.w}mm; height: ${dim.h}mm; background:#fff; padding:7mm; box-sizing:border-box; }
+                .lamina-hoja { width: ${dim.w}mm; height: ${dim.h}mm; background:#fff; padding:3.5mm; box-sizing:border-box; }
                 .lamina-marco { width:100%; height:100%; display:flex; gap:4mm; padding:3mm; border:1px solid #94a3b8; overflow:hidden; box-sizing:border-box; }
                 .lamina-contraste { filter: drop-shadow(0 0 1.5px #fff) drop-shadow(0 0 1px #fff); }
                 @media print {
