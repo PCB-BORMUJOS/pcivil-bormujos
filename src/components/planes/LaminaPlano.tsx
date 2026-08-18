@@ -22,6 +22,9 @@ type Props = {
     geojsons: Record<string, any>
     contexto?: { nombre?: string; anexo?: string }
     planes?: Array<{ id: string; nombre: string; tipo: string }>
+    /** Si se pasa, la lámina usa esta imagen/SVG como plano principal en vez del
+        mapa interactivo (mismo cajetín y marco). Para planos de diseño (Feria…). */
+    imagenPrincipal?: string
     onCerrar: () => void
 }
 
@@ -47,8 +50,10 @@ const fmtEscala = (n: number) => n.toLocaleString('es-ES')
 const VERDE = '#2f5233'  // verde institucional del cajetín
 
 export default function LaminaPlano({
-    center, zoom, baseActiva, baseCapa, capasActivas, opacidades, geojsons, contexto, planes, onCerrar,
+    center, zoom, baseActiva, baseCapa, capasActivas, opacidades, geojsons, contexto, planes, imagenPrincipal, onCerrar,
 }: Props) {
+    // Modo imagen: el plano principal es un SVG/imagen de diseño, no el mapa.
+    const modoImagen = !!imagenPrincipal
     const hoy = new Date()
     const mmAaaa = `${String(hoy.getMonth() + 1).padStart(2, '0')} / ${hoy.getFullYear()}`
 
@@ -75,6 +80,8 @@ export default function LaminaPlano({
     const [fecha, setFecha] = useState(mmAaaa)
     // Escala REAL del encuadre actual (se recalcula al mover el mapa).
     const [escalaNum, setEscalaNum] = useState(() => escalaDe(center[0], zoom))
+    // Escala manual (texto libre) para el modo imagen, donde no hay escala geográfica.
+    const [escalaTexto, setEscalaTexto] = useState('Sin escala')
     const [editando, setEditando] = useState(true)
     // Factor de tamaño de la tipografía del cajetín (elegible en el editor).
     const [factorFuente, setFactorFuente] = useState(1)
@@ -180,7 +187,10 @@ export default function LaminaPlano({
                             <Campo label="De (total)" v={total} set={setTotal} />
                         </div>
                         <Campo label="Fecha" v={fecha} set={setFecha} />
-                        {/* Escala: se fija con un botón (encuadre exacto) o sale del zoom libre */}
+                        {/* Escala: en modo imagen es texto libre; en modo mapa, presets */}
+                        {modoImagen ? (
+                            <Campo label="Escala del plano" v={escalaTexto} set={setEscalaTexto} placeholder="Ej: 1:500 o Sin escala" />
+                        ) : (
                         <div>
                             <label className="block text-xs font-semibold text-slate-500 mb-1">Escala del plano</label>
                             <div className="text-sm font-bold text-slate-800 mb-1.5">1 : {fmtEscala(escalaNum)}</div>
@@ -194,6 +204,7 @@ export default function LaminaPlano({
                             </div>
                             <p className="text-[11px] text-slate-400 mt-1">Pulsa una escala para encuadrar exacto, o mueve el mapa libremente.</p>
                         </div>
+                        )}
                         <div>
                             <label className="block text-xs font-semibold text-slate-500 mb-1">Tamaño de la tipografía del cajetín</label>
                             <div className="flex items-center gap-2">
@@ -212,19 +223,26 @@ export default function LaminaPlano({
                     <div className="lamina-print">
                         <div className="lamina-hoja shadow-2xl">
                           <div className="lamina-marco">
-                            {/* ── 4/5: MAPA ── */}
-                            <div ref={mapAreaRef} style={{ flex: '1 1 0', minWidth: 0, height: '100%', position: 'relative', border: '1px solid #cbd5e1', overflow: 'hidden' }}>
-                                <MapContainer center={center} zoom={zoom} ref={mapRef as any}
-                                    scrollWheelZoom attributionControl={false} zoomSnap={0} zoomDelta={0.25} maxZoom={22}
-                                    style={{ height: '100%', width: '100%' }}>
-                                    {baseActiva === 'callejero' && <TileLayer url={TILES_CALLEJERO.url} maxZoom={19} detectRetina />}
-                                    {baseCapa?.wmsUrl && <WMSTileLayer url={baseCapa.wmsUrl} params={{ layers: baseCapa.wmsLayers || '', format: (baseCapa.wmsFormat || 'image/png') as any, transparent: false, version: (baseCapa.wmsVersion || '1.1.1') as any }} tileSize={512} detectRetina />}
-                                    {renderCapas()}
-                                    <SyncEscala onCambio={(lat, z) => setEscalaNum(escalaDe(lat, z))} />
-                                </MapContainer>
-                                {/* Rosa de los vientos: apunta siempre al norte; se puede
-                                    arrastrar y redimensionar. Por defecto, abajo a la izquierda. */}
-                                <RosaVientos contenedorRef={mapAreaRef} />
+                            {/* ── 4/5: MAPA o IMAGEN ── */}
+                            <div ref={mapAreaRef} style={{ flex: '1 1 0', minWidth: 0, height: '100%', position: 'relative', border: '1px solid #cbd5e1', overflow: 'hidden', background: '#fff' }}>
+                                {modoImagen ? (
+                                    <img src={imagenPrincipal} alt={tituloPlano || 'Plano'}
+                                        style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }} />
+                                ) : (
+                                  <>
+                                    <MapContainer center={center} zoom={zoom} ref={mapRef as any}
+                                        scrollWheelZoom attributionControl={false} zoomSnap={0} zoomDelta={0.25} maxZoom={22}
+                                        style={{ height: '100%', width: '100%' }}>
+                                        {baseActiva === 'callejero' && <TileLayer url={TILES_CALLEJERO.url} maxZoom={19} detectRetina />}
+                                        {baseCapa?.wmsUrl && <WMSTileLayer url={baseCapa.wmsUrl} params={{ layers: baseCapa.wmsLayers || '', format: (baseCapa.wmsFormat || 'image/png') as any, transparent: false, version: (baseCapa.wmsVersion || '1.1.1') as any }} tileSize={512} detectRetina />}
+                                        {renderCapas()}
+                                        <SyncEscala onCambio={(lat, z) => setEscalaNum(escalaDe(lat, z))} />
+                                    </MapContainer>
+                                    {/* Rosa de los vientos: apunta siempre al norte; se puede
+                                        arrastrar y redimensionar. Por defecto, abajo a la izquierda. */}
+                                    <RosaVientos contenedorRef={mapAreaRef} />
+                                  </>
+                                )}
                             </div>
 
                             {/* ── 1/5: CAJETÍN ── */}
@@ -271,11 +289,13 @@ export default function LaminaPlano({
                                     <div style={{ marginTop: 'auto', border: '1px solid #e2e8f0', borderRadius: 6, overflow: 'hidden' }}>
                                         <FilaDato label="N.º de plano" valor={`${numero} / ${total}`} sz={fs(11)} />
                                         <FilaDato label="Fecha" valor={fecha} sz={fs(11)} alt />
-                                        <FilaDato label="Escala" valor={`1 : ${fmtEscala(escalaNum)}`} sz={fs(11)} />
-                                        <div style={{ background: '#f8fafc', padding: '6px 8px', borderTop: '1px solid #f1f5f9' }}>
-                                            <BarraEscala escala={escalaNum} />
-                                        </div>
-                                        <FilaDato label="Proyección" valor={PROYECCION} sz={fs(10)} alt />
+                                        <FilaDato label="Escala" valor={modoImagen ? escalaTexto : `1 : ${fmtEscala(escalaNum)}`} sz={fs(11)} />
+                                        {!modoImagen && (
+                                            <div style={{ background: '#f8fafc', padding: '6px 8px', borderTop: '1px solid #f1f5f9' }}>
+                                                <BarraEscala escala={escalaNum} />
+                                            </div>
+                                        )}
+                                        <FilaDato label="Proyección" valor={modoImagen ? 'Plano de diseño (sin proyección)' : PROYECCION} sz={fs(10)} alt />
                                         <FilaDato label="Fuentes" valor={fuentes.join(', ') || '—'} sz={fs(10)} />
                                     </div>
 

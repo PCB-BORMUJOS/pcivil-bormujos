@@ -215,6 +215,20 @@ export default function MapaCartografia({
 
     // Datos capturados para la lámina imprimible (encuadre + capas activas).
     const [lamina, setLamina] = useState<any>(null)
+
+    // Lámina desde una imagen/SVG de diseño (p. ej. plano de la Feria).
+    const [laminaImg, setLaminaImg] = useState<string | null>(null)
+    const fileImagen = useRef<HTMLInputElement>(null)
+    const abrirLaminaImagen = async (file: File) => {
+        if (!geojsons['__termino']) {
+            try {
+                const g = await fetch('/cartografia/termino-bormujos.geojson').then(r => r.json())
+                setGeojsons(prev => ({ ...prev, __termino: g }))
+            } catch { /* el mini-mapa de situación funciona igual sin el término */ }
+        }
+        setLaminaImg(URL.createObjectURL(file))
+    }
+
     const abrirLamina = async () => {
         const m = mapRef.current
         if (!m) return
@@ -441,6 +455,20 @@ export default function MapaCartografia({
                 >
                     <Printer size={17} />
                 </button>
+                <button
+                    onClick={() => fileImagen.current?.click()}
+                    title="Lámina desde imagen/SVG (plano de diseño)"
+                    className="w-10 h-10 rounded-xl shadow-lg border border-indigo-200 bg-indigo-600 text-white hover:bg-indigo-500 flex items-center justify-center"
+                >
+                    <ImageIcon size={17} />
+                </button>
+                <input
+                    ref={fileImagen}
+                    type="file"
+                    accept="image/svg+xml,image/png,image/jpeg,image/webp,.svg"
+                    className="hidden"
+                    onChange={e => { const f = e.target.files?.[0]; if (f) abrirLaminaImagen(f); e.target.value = '' }}
+                />
             </div>
 
             {/* Aviso de carga: los servidores oficiales tardan, y sin esto parece
@@ -626,6 +654,22 @@ export default function MapaCartografia({
                     contexto={contexto}
                     planes={planes}
                     onCerrar={() => setLamina(null)}
+                />
+            )}
+
+            {laminaImg && (
+                <LaminaPlano
+                    center={BORMUJOS.centro}
+                    zoom={BORMUJOS.zoom}
+                    baseActiva="callejero"
+                    baseCapa={undefined}
+                    capasActivas={[]}
+                    opacidades={opacidades}
+                    geojsons={geojsons}
+                    contexto={contexto}
+                    planes={planes}
+                    imagenPrincipal={laminaImg}
+                    onCerrar={() => { if (laminaImg) URL.revokeObjectURL(laminaImg); setLaminaImg(null) }}
                 />
             )}
         </div>
