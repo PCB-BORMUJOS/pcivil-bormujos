@@ -196,9 +196,13 @@ export default function LaminaPlano({
                     html, body { width: 420mm !important; height: 297mm !important; margin:0 !important; padding:0 !important; overflow: hidden !important; background:#fff !important; }
                     body * { visibility: hidden !important; }
                     .lamina-print, .lamina-print * { visibility: visible !important; }
-                    .lamina-print { position: absolute !important; top:0 !important; left:0 !important; width:420mm !important; height:297mm !important; margin:0; padding:0; background:#fff; display:flex; align-items:center; justify-content:center; overflow:hidden !important; }
+                    /* fixed + inset:0 ancla la lámina DIRECTAMENTE a la página (no a
+                       un ancestro posicionado), evitando que se desplace en vertical. */
+                    .lamina-print { position: fixed !important; inset: 0 !important; width:420mm !important; height:297mm !important; margin:0 !important; padding:0 !important; background:#fff; overflow:hidden !important; }
                     .lamina-noprint { display: none !important; }
-                    .lamina-hoja { box-shadow:none !important; page-break-inside: avoid; break-inside: avoid; }
+                    /* La hoja se centra en la página con posicionamiento absoluto y
+                       translate: es determinista y no depende de cajas flex. */
+                    .lamina-hoja { position:absolute !important; top:50% !important; left:50% !important; transform:translate(-50%,-50%) !important; box-shadow:none !important; page-break-inside: avoid; break-inside: avoid; }
                     .leaflet-control-container { display:none !important; }
                 }
             `}</style>
