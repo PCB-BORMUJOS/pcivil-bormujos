@@ -21,6 +21,7 @@ interface Elem {
     id: string
     tipo: Tipo
     coords: LatLng[]      // ruta/area: vértices; marcador/texto: [punto]
+    nombre?: string       // rótulo para la leyenda del plano
     color: string
     grosor: number
     relleno: boolean
@@ -44,6 +45,7 @@ const nid = () => `e${Date.now().toString(36)}${Math.floor(Math.random() * 1e6).
 // ── Conversión GeoJSON ↔ elementos ──────────────────────────────────────────
 function elemAFeature(e: Elem): any {
     const props: any = { tipo: e.tipo, color: e.color, grosor: e.grosor, relleno: e.relleno, iconoTam: e.iconoTam, tamTexto: e.tamTexto }
+    if (e.nombre) props.nombre = e.nombre
     if (e.iconoUrl) props.iconoUrl = e.iconoUrl
     if (e.texto) props.texto = e.texto
     if (e.tipo === 'ruta') {
@@ -64,6 +66,7 @@ function featureAElem(f: any): Elem | null {
     if (!g) return null
     const base = {
         id: nid(),
+        nombre: p.nombre,
         color: p.color || '#dc2626',
         grosor: p.grosor ?? 4,
         relleno: p.relleno ?? true,
@@ -479,9 +482,12 @@ export default function EditorAnotaciones({
                                 <span className="text-xs font-bold text-slate-700 capitalize">{elemSel.tipo}</span>
                                 <button onClick={borrarSel} className="text-red-600 hover:text-red-800"><Trash2 size={15} /></button>
                             </div>
-                            {elemSel.tipo === 'texto' && (
+                            {elemSel.tipo === 'texto' ? (
                                 <input value={elemSel.texto || ''} onChange={e => actualizar(elemSel.id, { texto: e.target.value })}
                                     className="w-full px-2 py-1 text-xs rounded border border-slate-300 mb-2" placeholder="Texto" />
+                            ) : (
+                                <input value={elemSel.nombre || ''} onChange={e => actualizar(elemSel.id, { nombre: e.target.value })}
+                                    className="w-full px-2 py-1 text-xs rounded border border-slate-300 mb-2" placeholder="Nombre / reseña (para la leyenda)" />
                             )}
                             {(elemSel.tipo === 'marcador' || elemSel.tipo === 'texto') && (
                                 <div className="flex items-center gap-2">

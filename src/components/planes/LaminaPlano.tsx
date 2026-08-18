@@ -61,6 +61,20 @@ export default function LaminaPlano({
     const mmAaaa = `${String(hoy.getMonth() + 1).padStart(2, '0')} / ${hoy.getFullYear()}`
 
     // Fuentes: atribuciones de las capas activas + base, limpias y sin repetir.
+    // Elementos con nombre de las capas de anotación, para la leyenda del plano.
+    const leyendaAnot = useMemo(() => {
+        const filas: Array<{ color: string; nombre: string; icono?: string; tipo: string }> = []
+        for (const a of anotaciones || []) {
+            for (const f of (a?.geojson?.features || [])) {
+                const p = f?.properties || {}
+                const nombre = (p.nombre || (p.tipo === 'texto' ? p.texto : '') || '').trim()
+                if (!nombre) continue
+                filas.push({ color: p.color || '#dc2626', nombre, icono: p.iconoUrl, tipo: p.tipo || 'area' })
+            }
+        }
+        return filas
+    }, [anotaciones])
+
     const fuentes = useMemo(() => {
         const set = new Set<string>()
         const limpia = (s?: string | null) => (s || '').replace(/^©\s*/, '').trim()
@@ -321,7 +335,16 @@ export default function LaminaPlano({
                                                 ? <FilaLeyenda color="#e5e7eb" nombre="Callejero (OpenStreetMap)" caja sz={fs(11)} />
                                                 : baseCapa ? <FilaLeyenda color="#e5e7eb" nombre={baseCapa.nombre} caja sz={fs(11)} /> : null}
                                             {capasActivas.map(c => <FilaLeyenda key={c.id} color={c.color || '#2563eb'} nombre={c.nombre} caja={c.tipo !== 'archivo'} sz={fs(11)} />)}
-                                            {capasActivas.length === 0 && <span style={{ fontSize: fs(10), color: '#94a3b8' }}>Sin capas temáticas activas</span>}
+                                            {/* Elementos con nombre de las capas de anotación */}
+                                            {leyendaAnot.map((f, i) => (
+                                                <div key={`an${i}`} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                    {f.icono
+                                                        ? <img src={f.icono} alt="" style={{ width: fs(13), height: fs(13), flexShrink: 0, objectFit: 'contain' }} />
+                                                        : <span style={{ width: fs(13), height: f.tipo === 'ruta' ? Math.max(2, fs(3)) : fs(13), background: f.tipo === 'ruta' ? f.color : `${f.color}40`, border: `1.5px solid ${f.color}`, borderRadius: f.tipo === 'ruta' ? 2 : 3, flexShrink: 0, display: 'inline-block' }} />}
+                                                    <span style={{ fontSize: fs(11), color: '#0f172a' }}>{f.nombre}</span>
+                                                </div>
+                                            ))}
+                                            {capasActivas.length === 0 && leyendaAnot.length === 0 && <span style={{ fontSize: fs(10), color: '#94a3b8' }}>Sin capas temáticas activas</span>}
                                         </div>
                                     </div>
 
