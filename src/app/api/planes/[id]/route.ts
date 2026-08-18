@@ -2,12 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
-import { getNivel } from '@/lib/permisos'
+import { puedeEditarModulo } from '@/lib/permisos'
 import { registrarAudit, getUsuarioAudit } from '@/lib/audit'
 import { del } from '@vercel/blob'
 
 function puedeEditar(session: any): boolean {
-    return getNivel((session?.user as any)?.rol ?? '') >= 4
+    return puedeEditarModulo(session, 'planes')
 }
 
 function fechaONull(v: unknown): Date | null {

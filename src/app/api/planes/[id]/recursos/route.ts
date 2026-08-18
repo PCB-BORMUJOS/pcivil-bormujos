@@ -2,11 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
-import { getNivel } from '@/lib/permisos'
+import { puedeEditarModulo } from '@/lib/permisos'
 import { registrarAudit, getUsuarioAudit } from '@/lib/audit'
 
 function puedeEditar(session: any): boolean {
-    return getNivel((session?.user as any)?.rol ?? '') >= 4
+    return puedeEditarModulo(session, 'planes')
 }
 
 function txt(v: unknown): string | null {

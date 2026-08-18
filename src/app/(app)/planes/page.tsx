@@ -43,7 +43,8 @@ const COLOR_PUNTO: Record<string, string> = {
 }
 
 export default function PlanesPage() {
-    const { isAdmin } = usePermisos()
+    // Edición de planes: nivel coordinador+ o permiso individual editar:planes.
+    const { canEditPlanes: isAdmin } = usePermisos()
     const [pestana, setPestana] = useState<Pestana>('ptel')
     const [planes, setPlanes] = useState<PlanCompleto[]>([])
     const [capas, setCapas] = useState<Capa[]>([])

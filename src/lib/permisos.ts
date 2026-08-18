@@ -47,6 +47,18 @@ export function getNivel(rol: string): number {
   return NIVEL[rol] ?? 1
 }
 
+/**
+ * Comprueba, en el SERVIDOR (rutas API), si la sesión puede editar un módulo.
+ * Vale tanto por nivel de rol como por permiso individual `editar:<modulo>`
+ * (los usuarios con permisos personalizados a los que se les ha dado edición).
+ */
+export function puedeEditarModulo(session: any, modulo: string, nivelMinimo = 4): boolean {
+  const rol = (session?.user as any)?.rol ?? ''
+  if (getNivel(rol) >= nivelMinimo) return true
+  const extra: string[] = (session?.user as any)?.permisosExtra ?? []
+  return extra.includes('editar:' + modulo)
+}
+
 export function usePermisos() {
   const { data: session } = useSession()
   const rol = ((session?.user as any)?.rol ?? 'voluntario') as string
@@ -82,6 +94,7 @@ export function usePermisos() {
     canVerViogen:        nivel >= 4 || tienePermiso('viogen.ver'),
     canViewEstadisticas: nivel >= 4,
     canEditVehiculos:    nivel >= 3 || tienePermiso('vehiculos.editar'),
+    canEditPlanes:       nivel >= 4 || tienePermiso('editar:planes'),
     tienePermiso,
     todosPermisos,
   }
