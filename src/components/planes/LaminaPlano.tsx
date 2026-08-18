@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { RefObject, PointerEvent as ReactPointerEvent } from 'react'
 import { MapContainer, TileLayer, WMSTileLayer, GeoJSON as GeoJSONLayer, useMapEvents } from 'react-leaflet'
+import L from 'leaflet'
 import { X, Printer } from 'lucide-react'
 import { TILES_CALLEJERO, TIPOS_PLAN } from '@/lib/cartografia'
 import type { Capa } from './MapaCartografia'
@@ -51,6 +52,17 @@ const ESCALAS = [1000, 2000, 5000, 10000, 15000, 25000, 50000]
 const fmtEscala = (n: number) => n.toLocaleString('es-ES')
 
 const VERDE = '#2f5233'  // verde institucional del cajetín
+
+/** Marcador de punto para capas de fichero: icono temático (riesgo eléctrico…)
+    o círculo con halo, nunca el marcador roto por defecto de Leaflet. */
+function puntoDeCapa(latlng: any, nombre: string, color: string) {
+    const n = nombre.toLowerCase()
+    const url = (n.includes('subestaci') || n.includes('eléctric') || n.includes('electric')) ? '/iconos-mapa/riesgo-electrico.svg' : null
+    if (url) {
+        return L.marker(latlng, { icon: L.divIcon({ className: '', html: `<img src="${url}" style="width:30px;height:30px;filter:drop-shadow(0 0 1.5px #fff)"/>`, iconSize: [30, 30], iconAnchor: [15, 27] }) })
+    }
+    return L.circleMarker(latlng, { radius: 5, color: '#fff', weight: 1.5, fillColor: color, fillOpacity: 0.95, className: 'capa-contraste' })
+}
 
 export default function LaminaPlano({
     center, zoom, baseActiva, baseCapa, capasActivas, anotaciones, opacidades, geojsons, contexto, planes, imagenPrincipal, onCerrar,
@@ -158,7 +170,7 @@ export default function LaminaPlano({
         }
         const geo = geojsons[c.id]
         if (!geo) return null
-        return <GeoJSONLayer key={c.id} data={geo} style={(f: any) => {
+        return <GeoJSONLayer key={c.id} data={geo} pointToLayer={(_f: any, latlng: any) => puntoDeCapa(latlng, c.nombre, c.color)} style={(f: any) => {
             const op = opacidades[c.id] ?? c.opacidad
             const esLinea = String(f?.geometry?.type || '').includes('LineString')
             return { color: c.color, weight: esLinea ? 3.5 : 2.5, opacity: op, fillColor: c.color, fillOpacity: esLinea ? 0 : op * 0.25, className: 'capa-contraste' }

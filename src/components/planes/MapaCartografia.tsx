@@ -39,6 +39,31 @@ import {
     Popup,
     ScaleControl,
 } from 'react-leaflet'
+import L from 'leaflet'
+
+/** Icono de punto según la temática de la capa (riesgo eléctrico, etc.). Devuelve
+    la URL del SVG o null para usar un marcador circular limpio por defecto. */
+function iconoPuntoCapa(nombre: string): string | null {
+    const n = nombre.toLowerCase()
+    if (n.includes('subestaci') || n.includes('eléctric') || n.includes('electric')) return '/iconos-mapa/riesgo-electrico.svg'
+    return null
+}
+
+/** Marcador para geometrías de punto de las capas de fichero: icono temático si
+    lo hay, o un círculo con halo (nunca el marcador roto por defecto de Leaflet). */
+function puntoDeCapa(latlng: any, nombre: string, color: string) {
+    const url = iconoPuntoCapa(nombre)
+    if (url) {
+        return L.marker(latlng, {
+            icon: L.divIcon({
+                className: '',
+                html: `<img src="${url}" style="width:30px;height:30px;filter:drop-shadow(0 0 1.5px #fff)"/>`,
+                iconSize: [30, 30], iconAnchor: [15, 27],
+            }),
+        })
+    }
+    return L.circleMarker(latlng, { radius: 5, color: '#fff', weight: 1.5, fillColor: color, fillOpacity: 0.95, className: 'capa-contraste' })
+}
 
 export type Capa = {
     id: string
@@ -386,6 +411,7 @@ export default function MapaCartografia({
                         <GeoJSONLayer
                             key={c.id}
                             data={geo}
+                            pointToLayer={(_f: any, latlng: any) => puntoDeCapa(latlng, c.nombre, c.color)}
                             style={(feature: any) => {
                                 const op = opacidades[c.id] ?? c.opacidad
                                 // Las líneas (límites, curvas) más gruesas y sin relleno;
