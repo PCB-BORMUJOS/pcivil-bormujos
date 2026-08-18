@@ -82,6 +82,10 @@ export default function LaminaPlano({
     const [escalaNum, setEscalaNum] = useState(() => escalaDe(center[0], zoom))
     // Escala manual (texto libre) para el modo imagen, donde no hay escala geográfica.
     const [escalaTexto, setEscalaTexto] = useState('Sin escala')
+    // Rotación del plano de diseño (grados) y factor para que siga encajando.
+    const [rotacion, setRotacion] = useState(0)
+    const [imgScale, setImgScale] = useState(1)
+    const imgRef = useRef<HTMLImageElement>(null)
     const [editando, setEditando] = useState(true)
     // Factor de tamaño de la tipografía del cajetín (elegible en el editor).
     const [factorFuente, setFactorFuente] = useState(1)
@@ -94,6 +98,32 @@ export default function LaminaPlano({
         const t = setTimeout(() => { mapRef.current?.invalidateSize(false); insetRef.current?.invalidateSize(false) }, 250)
         return () => clearTimeout(t)
     }, [])
+
+    // Recalcula cuánto agrandar/encoger la imagen para que, girada, siga cabiendo
+    // dentro del recuadro (4/5). Al rotar 90° una imagen apaisada, por ejemplo,
+    // hay que reescalarla para que su nuevo alto no se salga.
+    const recalcularEncaje = useCallback(() => {
+        const cont = mapAreaRef.current, img = imgRef.current
+        if (!cont || !img || !img.naturalWidth) { setImgScale(1); return }
+        const CW = cont.clientWidth, CH = cont.clientHeight
+        // Tamaño con el que se pinta la imagen (object-fit: contain, sin rotar).
+        const escContain = Math.min(CW / img.naturalWidth, CH / img.naturalHeight)
+        const w = img.naturalWidth * escContain, h = img.naturalHeight * escContain
+        const r = (rotacion * Math.PI) / 180
+        const bw = Math.abs(w * Math.cos(r)) + Math.abs(h * Math.sin(r))
+        const bh = Math.abs(w * Math.sin(r)) + Math.abs(h * Math.cos(r))
+        setImgScale(Math.min(CW / bw, CH / bh))
+    }, [rotacion])
+
+    useEffect(() => {
+        if (!modoImagen) return
+        recalcularEncaje()
+        const cont = mapAreaRef.current
+        if (!cont) return
+        const ro = new ResizeObserver(() => recalcularEncaje())
+        ro.observe(cont)
+        return () => ro.disconnect()
+    }, [modoImagen, recalcularEncaje])
 
     // Encuadra el mapa a una escala 1:N exacta (zoom fraccional).
     const fijarEscala = (N: number) => {
@@ -188,6 +218,19 @@ export default function LaminaPlano({
                         </div>
                         <Campo label="Fecha" v={fecha} set={setFecha} />
                         {/* Escala: en modo imagen es texto libre; en modo mapa, presets */}
+                        {modoImagen && (
+                            <div>
+                                <label className="block text-xs font-semibold text-slate-500 mb-1">Rotación del plano</label>
+                                <div className="flex items-center gap-1.5 mb-1.5">
+                                    <button onClick={() => setRotacion(r => (r - 90 + 360) % 360)} className="px-2 py-1 rounded-md text-[11px] font-semibold border bg-white text-slate-600 border-slate-300 hover:border-emerald-400">⟲ 90°</button>
+                                    <button onClick={() => setRotacion(r => (r + 90) % 360)} className="px-2 py-1 rounded-md text-[11px] font-semibold border bg-white text-slate-600 border-slate-300 hover:border-emerald-400">⟳ 90°</button>
+                                    <button onClick={() => setRotacion(0)} className="px-2 py-1 rounded-md text-[11px] font-semibold border bg-white text-slate-600 border-slate-300 hover:border-emerald-400">Reiniciar</button>
+                                    <span className="ml-auto text-xs font-bold text-slate-700 w-10 text-right">{Math.round(rotacion)}°</span>
+                                </div>
+                                <input type="range" min={0} max={359} step={1} value={rotacion} onChange={e => setRotacion(Number(e.target.value))} className="w-full accent-emerald-600" />
+                                <p className="text-[11px] text-slate-400 mt-1">Gira el plano para que encaje; se reajusta solo para caber en la hoja.</p>
+                            </div>
+                        )}
                         {modoImagen ? (
                             <Campo label="Escala del plano" v={escalaTexto} set={setEscalaTexto} placeholder="Ej: 1:500 o Sin escala" />
                         ) : (
@@ -226,8 +269,9 @@ export default function LaminaPlano({
                             {/* ── 4/5: MAPA o IMAGEN ── */}
                             <div ref={mapAreaRef} style={{ flex: '1 1 0', minWidth: 0, height: '100%', position: 'relative', border: '1px solid #cbd5e1', overflow: 'hidden', background: '#fff' }}>
                                 {modoImagen ? (
-                                    <img src={imagenPrincipal} alt={tituloPlano || 'Plano'}
-                                        style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }} />
+                                    <img ref={imgRef} src={imagenPrincipal} alt={tituloPlano || 'Plano'}
+                                        onLoad={recalcularEncaje}
+                                        style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block', transform: `rotate(${rotacion}deg) scale(${imgScale})`, transformOrigin: 'center center' }} />
                                 ) : (
                                   <>
                                     <MapContainer center={center} zoom={zoom} ref={mapRef as any}
