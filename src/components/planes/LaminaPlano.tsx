@@ -6,6 +6,7 @@ import { MapContainer, TileLayer, WMSTileLayer, GeoJSON as GeoJSONLayer, useMapE
 import { X, Printer } from 'lucide-react'
 import { TILES_CALLEJERO, TIPOS_PLAN } from '@/lib/cartografia'
 import type { Capa } from './MapaCartografia'
+import AnotacionCapa from './AnotacionCapa'
 
 // ── Lámina imprimible de un plano (formato 4/5 mapa + 1/5 cajetín) ─────────────
 // Compone una lámina profesional lista para imprimir/guardar como PDF a partir
@@ -18,6 +19,8 @@ type Props = {
     baseActiva: string
     baseCapa: Capa | undefined
     capasActivas: Capa[]
+    /** Capas de anotación (rutas, áreas, iconos, textos) a dibujar sobre el mapa. */
+    anotaciones?: Array<{ id: string; geojson: any }>
     opacidades: Record<string, number>
     geojsons: Record<string, any>
     contexto?: { nombre?: string; anexo?: string }
@@ -50,7 +53,7 @@ const fmtEscala = (n: number) => n.toLocaleString('es-ES')
 const VERDE = '#2f5233'  // verde institucional del cajetín
 
 export default function LaminaPlano({
-    center, zoom, baseActiva, baseCapa, capasActivas, opacidades, geojsons, contexto, planes, imagenPrincipal, onCerrar,
+    center, zoom, baseActiva, baseCapa, capasActivas, anotaciones, opacidades, geojsons, contexto, planes, imagenPrincipal, onCerrar,
 }: Props) {
     // Modo imagen: el plano principal es un SVG/imagen de diseño, no el mapa.
     const modoImagen = !!imagenPrincipal
@@ -280,6 +283,7 @@ export default function LaminaPlano({
                                         {baseActiva === 'callejero' && <TileLayer url={TILES_CALLEJERO.url} maxZoom={19} detectRetina />}
                                         {baseCapa?.wmsUrl && <WMSTileLayer url={baseCapa.wmsUrl} params={{ layers: baseCapa.wmsLayers || '', format: (baseCapa.wmsFormat || 'image/png') as any, transparent: false, version: (baseCapa.wmsVersion || '1.1.1') as any }} tileSize={512} detectRetina />}
                                         {renderCapas()}
+                                        {(anotaciones || []).map(a => <AnotacionCapa key={a.id} geojson={a.geojson} />)}
                                         <SyncEscala onCambio={(lat, z) => setEscalaNum(escalaDe(lat, z))} />
                                     </MapContainer>
                                     {/* Rosa de los vientos: apunta siempre al norte; se puede

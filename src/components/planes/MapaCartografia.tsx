@@ -8,6 +8,17 @@ import {
 import { BORMUJOS, TILES_CALLEJERO, ORDEN_GRUPOS } from '@/lib/cartografia'
 import LaminaPlano from './LaminaPlano'
 import EditorAnotaciones from './EditorAnotaciones'
+import AnotacionCapa from './AnotacionCapa'
+
+export type Anotacion = {
+    id: string
+    nombre: string
+    descripcion: string | null
+    categoria: string
+    geojson: any
+    planId: string | null
+    color: string
+}
 
 // OJO: el CSS de Leaflet NO se importa aquí, sino en la página que monta este
 // componente. Comprobado en el build: importado en este fichero su CSS acaba en
@@ -212,6 +223,23 @@ export default function MapaCartografia({
 
     // Editor de rutas e iconos (capas de anotación).
     const [editorAbierto, setEditorAbierto] = useState(false)
+    const [anotaciones, setAnotaciones] = useState<Anotacion[]>([])
+    const [anotActivas, setAnotActivas] = useState<Set<string>>(new Set())
+    const cargarAnotaciones = () => {
+        fetch('/api/mapas-anotacion')
+            .then(r => r.ok ? r.json() : Promise.reject())
+            .then(d => {
+                const lista: Anotacion[] = d.anotaciones || []
+                setAnotaciones(lista)
+                // Se muestran por defecto las marcadas como visibles.
+                setAnotActivas(prev => prev.size > 0 ? prev : new Set(lista.filter((a: any) => a.visiblePorDefecto).map(a => a.id)))
+            })
+            .catch(() => {})
+    }
+    useEffect(() => { cargarAnotaciones() }, [])
+    const alternarAnot = (id: string) => setAnotActivas(prev => {
+        const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s
+    })
 
     // Datos capturados para la lámina imprimible (encuadre + capas activas).
     const [lamina, setLamina] = useState<any>(null)
@@ -246,6 +274,7 @@ export default function MapaCartografia({
             baseActiva,
             baseCapa: capasBase.find(x => x.id === baseActiva),
             capasActivas: capasTema.filter(x => activas.has(x.id)),
+            anotaciones: anotaciones.filter(x => anotActivas.has(x.id)),
         })
     }
 
@@ -388,6 +417,11 @@ export default function MapaCartografia({
                         />
                     )
                 })}
+
+                {/* ── Capas de anotación activas (rutas, áreas, iconos, textos) ── */}
+                {anotaciones.filter(a => anotActivas.has(a.id)).map(a => (
+                    <AnotacionCapa key={a.id} geojson={a.geojson} />
+                ))}
 
                 {/* ── Emplazamientos de los planes ── */}
                 {mostrarPuntos && puntos.map(p => (
@@ -609,6 +643,33 @@ export default function MapaCartografia({
                         })}
                     </div>
 
+                    {/* Anotaciones propias (rutas, áreas, iconos, textos) */}
+                    {anotaciones.length > 0 && (
+                        <div className="px-3 pb-3 border-t border-slate-100 pt-3">
+                            <div className="flex items-center justify-between mb-2">
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Anotaciones (rutas e iconos)</p>
+                                <button onClick={() => setEditorAbierto(true)} className="text-[10px] font-semibold text-teal-700 hover:text-teal-900">Editar</button>
+                            </div>
+                            <div className="space-y-1">
+                                {anotaciones.map(a => {
+                                    const on = anotActivas.has(a.id)
+                                    const n = a.geojson?.features?.length ?? 0
+                                    return (
+                                        <button key={a.id} onClick={() => alternarAnot(a.id)}
+                                            className={`w-full flex items-center gap-2.5 p-2.5 rounded-xl border transition-colors ${on ? 'border-teal-200 bg-teal-50/60' : 'border-transparent hover:bg-slate-50'}`}>
+                                            <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: a.color }} />
+                                            <span className="flex-1 min-w-0 text-left">
+                                                <span className={`block text-xs font-semibold truncate ${on ? 'text-teal-900' : 'text-slate-700'}`}>{a.nombre}</span>
+                                                <span className="block text-[10px] text-slate-500">{a.categoria} · {n} elemento{n !== 1 ? 's' : ''}</span>
+                                            </span>
+                                            <span className={on ? 'text-teal-600' : 'text-slate-300'}>{on ? <Eye size={15} /> : <EyeOff size={15} />}</span>
+                                        </button>
+                                    )
+                                })}
+                            </div>
+                        </div>
+                    )}
+
                     {/* Emplazamientos */}
                     {puntos.length > 0 && (
                         <div className="px-3 pb-3 border-t border-slate-100 pt-3">
@@ -639,6 +700,7 @@ export default function MapaCartografia({
                     planes={planes}
                     capasBase={capasBase}
                     onCerrar={() => setEditorAbierto(false)}
+                    onGuardado={cargarAnotaciones}
                 />
             )}
 
@@ -649,6 +711,7 @@ export default function MapaCartografia({
                     baseActiva={lamina.baseActiva}
                     baseCapa={lamina.baseCapa}
                     capasActivas={lamina.capasActivas}
+                    anotaciones={lamina.anotaciones}
                     opacidades={opacidades}
                     geojsons={geojsons}
                     contexto={contexto}
