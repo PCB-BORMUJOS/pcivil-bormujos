@@ -115,26 +115,26 @@ export default function LaminaPlano({
     const [rotacion, setRotacion] = useState(0)
     const [imgScale, setImgScale] = useState(1)
     const imgRef = useRef<HTMLImageElement>(null)
-    // Ref a la hoja imprimible: al imprimir se saca a hijo directo de <body> para
-    // que su posición NO dependa de ancestros (transform/filter rompen fixed).
+    // Ref a la hoja imprimible. Para imprimir se CLONA (foto estática, con las
+    // teselas ya pintadas) y el clon se cuelga de <body>: así su posición depende
+    // solo de la página, y React —que "posee" el original— no interfiere moviéndolo.
     const printRef = useRef<HTMLDivElement>(null)
     const imprimir = () => {
         const node = printRef.current
         if (!node) { window.print(); return }
-        const padre = node.parentElement
-        const hermano = node.nextSibling
-        document.body.appendChild(node)
+        const clon = node.cloneNode(true) as HTMLElement
+        clon.classList.add('lamina-print-clon')
+        document.body.appendChild(clon)
         document.body.classList.add('lamina-imprimiendo')
-        // Leaflet necesita recomputar su tamaño tras el cambio de contenedor.
-        mapRef.current?.invalidateSize(false); insetRef.current?.invalidateSize(false)
-        const restaurar = () => {
-            if (padre) padre.insertBefore(node, hermano)
+        const limpiar = () => {
+            clon.remove()
             document.body.classList.remove('lamina-imprimiendo')
-            window.removeEventListener('afterprint', restaurar)
-            mapRef.current?.invalidateSize(false); insetRef.current?.invalidateSize(false)
+            window.removeEventListener('afterprint', limpiar)
         }
-        window.addEventListener('afterprint', restaurar)
-        setTimeout(() => window.print(), 60)
+        window.addEventListener('afterprint', limpiar)
+        // Salvaguarda por si 'afterprint' no llega a dispararse en algún navegador.
+        setTimeout(() => { if (document.body.contains(clon)) limpiar() }, 60000)
+        setTimeout(() => window.print(), 80)
     }
     const [editando, setEditando] = useState(true)
     // Factor de tamaño de la tipografía del cajetín (elegible en el editor).
@@ -210,21 +210,21 @@ export default function LaminaPlano({
                 .lamina-hoja { width: ${dim.w}mm; height: ${dim.h}mm; background:#fff; padding:3.5mm; box-sizing:border-box; }
                 .lamina-marco { width:100%; height:100%; display:flex; gap:4mm; padding:3mm; border:1px solid #94a3b8; overflow:hidden; box-sizing:border-box; }
                 .lamina-contraste { filter: drop-shadow(0 0 1.5px #fff) drop-shadow(0 0 1px #fff); }
-                /* Mientras se prepara la impresión, la hoja (ya movida a body) cubre
-                   la pantalla centrada, para no mostrar un salto antes del diálogo. */
-                body.lamina-imprimiendo > .lamina-print { position: fixed; inset: 0; z-index: 2147483647; background:#fff; display:flex; align-items:center; justify-content:center; overflow:hidden; }
-                body.lamina-imprimiendo > *:not(.lamina-print) { display: none; }
+                /* Mientras se prepara la impresión, el clon (colgado de body) cubre
+                   la pantalla centrado, para no mostrar un salto antes del diálogo. */
+                body.lamina-imprimiendo > .lamina-print-clon { position: fixed; inset: 0; z-index: 2147483647; background:#fff; display:flex; align-items:center; justify-content:center; overflow:hidden; }
+                body.lamina-imprimiendo > *:not(.lamina-print-clon) { display: none; }
                 /* Al imprimir, la hoja se mueve a hijo directo de <body> (clase
                    lamina-imprimiendo). Así su posición depende SOLO de la página,
                    nunca de ancestros con transform/filter que romperían fixed. */
                 @media print {
                     @page { size: A3 landscape; margin: 0; }
                     html, body { margin:0 !important; padding:0 !important; background:#fff !important; }
-                    /* Se oculta TODO lo que cuelga de body salvo la hoja imprimible. */
-                    body.lamina-imprimiendo > *:not(.lamina-print) { display: none !important; }
-                    .lamina-print { position: absolute !important; top:0 !important; left:0 !important; width:420mm !important; height:297mm !important; margin:0 !important; padding:0 !important; background:#fff; display:flex !important; align-items:center !important; justify-content:center !important; overflow:hidden !important; }
+                    /* Solo se imprime el CLON (hijo directo de body); el resto se oculta. */
+                    body.lamina-imprimiendo > *:not(.lamina-print-clon) { display: none !important; }
+                    .lamina-print-clon { position: absolute !important; top:0 !important; left:0 !important; width:420mm !important; height:297mm !important; margin:0 !important; padding:0 !important; background:#fff; display:flex !important; align-items:center !important; justify-content:center !important; overflow:hidden !important; }
                     .lamina-noprint { display: none !important; }
-                    .lamina-hoja { position:static !important; transform:none !important; box-shadow:none !important; page-break-inside: avoid; break-inside: avoid; }
+                    .lamina-print-clon .lamina-hoja { position:static !important; transform:none !important; box-shadow:none !important; page-break-inside: avoid; break-inside: avoid; }
                     .leaflet-control-container { display:none !important; }
                 }
             `}</style>
