@@ -115,6 +115,27 @@ export default function LaminaPlano({
     const [rotacion, setRotacion] = useState(0)
     const [imgScale, setImgScale] = useState(1)
     const imgRef = useRef<HTMLImageElement>(null)
+    // Ref a la hoja imprimible: al imprimir se saca a hijo directo de <body> para
+    // que su posición NO dependa de ancestros (transform/filter rompen fixed).
+    const printRef = useRef<HTMLDivElement>(null)
+    const imprimir = () => {
+        const node = printRef.current
+        if (!node) { window.print(); return }
+        const padre = node.parentElement
+        const hermano = node.nextSibling
+        document.body.appendChild(node)
+        document.body.classList.add('lamina-imprimiendo')
+        // Leaflet necesita recomputar su tamaño tras el cambio de contenedor.
+        mapRef.current?.invalidateSize(false); insetRef.current?.invalidateSize(false)
+        const restaurar = () => {
+            if (padre) padre.insertBefore(node, hermano)
+            document.body.classList.remove('lamina-imprimiendo')
+            window.removeEventListener('afterprint', restaurar)
+            mapRef.current?.invalidateSize(false); insetRef.current?.invalidateSize(false)
+        }
+        window.addEventListener('afterprint', restaurar)
+        setTimeout(() => window.print(), 60)
+    }
     const [editando, setEditando] = useState(true)
     // Factor de tamaño de la tipografía del cajetín (elegible en el editor).
     const [factorFuente, setFactorFuente] = useState(1)
@@ -189,20 +210,21 @@ export default function LaminaPlano({
                 .lamina-hoja { width: ${dim.w}mm; height: ${dim.h}mm; background:#fff; padding:3.5mm; box-sizing:border-box; }
                 .lamina-marco { width:100%; height:100%; display:flex; gap:4mm; padding:3mm; border:1px solid #94a3b8; overflow:hidden; box-sizing:border-box; }
                 .lamina-contraste { filter: drop-shadow(0 0 1.5px #fff) drop-shadow(0 0 1px #fff); }
+                /* Mientras se prepara la impresión, la hoja (ya movida a body) cubre
+                   la pantalla centrada, para no mostrar un salto antes del diálogo. */
+                body.lamina-imprimiendo > .lamina-print { position: fixed; inset: 0; z-index: 2147483647; background:#fff; display:flex; align-items:center; justify-content:center; overflow:hidden; }
+                body.lamina-imprimiendo > *:not(.lamina-print) { display: none; }
+                /* Al imprimir, la hoja se mueve a hijo directo de <body> (clase
+                   lamina-imprimiendo). Así su posición depende SOLO de la página,
+                   nunca de ancestros con transform/filter que romperían fixed. */
                 @media print {
                     @page { size: A3 landscape; margin: 0; }
-                    /* La hoja completa se colapsa a EXACTAMENTE una página A3 apaisada:
-                       así no se genera una segunda hoja por el resto del documento. */
-                    html, body { width: 420mm !important; height: 297mm !important; margin:0 !important; padding:0 !important; overflow: hidden !important; background:#fff !important; }
-                    body * { visibility: hidden !important; }
-                    .lamina-print, .lamina-print * { visibility: visible !important; }
-                    /* fixed + inset:0 ancla la lámina DIRECTAMENTE a la página (no a
-                       un ancestro posicionado), evitando que se desplace en vertical. */
-                    .lamina-print { position: fixed !important; inset: 0 !important; width:420mm !important; height:297mm !important; margin:0 !important; padding:0 !important; background:#fff; overflow:hidden !important; }
+                    html, body { margin:0 !important; padding:0 !important; background:#fff !important; }
+                    /* Se oculta TODO lo que cuelga de body salvo la hoja imprimible. */
+                    body.lamina-imprimiendo > *:not(.lamina-print) { display: none !important; }
+                    .lamina-print { position: absolute !important; top:0 !important; left:0 !important; width:420mm !important; height:297mm !important; margin:0 !important; padding:0 !important; background:#fff; display:flex !important; align-items:center !important; justify-content:center !important; overflow:hidden !important; }
                     .lamina-noprint { display: none !important; }
-                    /* La hoja se centra en la página con posicionamiento absoluto y
-                       translate: es determinista y no depende de cajas flex. */
-                    .lamina-hoja { position:absolute !important; top:50% !important; left:50% !important; transform:translate(-50%,-50%) !important; box-shadow:none !important; page-break-inside: avoid; break-inside: avoid; }
+                    .lamina-hoja { position:static !important; transform:none !important; box-shadow:none !important; page-break-inside: avoid; break-inside: avoid; }
                     .leaflet-control-container { display:none !important; }
                 }
             `}</style>
@@ -212,7 +234,7 @@ export default function LaminaPlano({
                 <div className="flex items-center gap-2 text-sm font-semibold"><Printer size={16} /> Crear plano para imprimir · A3 apaisado</div>
                 <div className="flex items-center gap-2">
                     <button onClick={() => setEditando(v => !v)} className="px-3 py-1.5 text-xs font-medium rounded-lg bg-slate-700 hover:bg-slate-600">{editando ? 'Ocultar edición' : 'Editar cajetín'}</button>
-                    <button onClick={() => window.print()} className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-bold rounded-lg bg-emerald-600 hover:bg-emerald-500"><Printer size={14} /> Imprimir / Guardar PDF</button>
+                    <button onClick={imprimir} className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-bold rounded-lg bg-emerald-600 hover:bg-emerald-500"><Printer size={14} /> Imprimir / Guardar PDF</button>
                     <button onClick={onCerrar} className="p-1.5 rounded-lg hover:bg-white/10"><X size={18} /></button>
                 </div>
             </div>
@@ -296,7 +318,7 @@ export default function LaminaPlano({
                 {/* La lámina se muestra a TAMAÑO REAL: lo que se ve es exactamente lo
                     que se imprime. El mapa es interactivo → encuadras aquí mismo. */}
                 <div className="flex-1 min-w-0 flex items-start justify-center p-6 overflow-auto">
-                    <div className="lamina-print">
+                    <div className="lamina-print" ref={printRef}>
                         <div className="lamina-hoja shadow-2xl">
                           <div className="lamina-marco">
                             {/* ── 4/5: MAPA o IMAGEN ── */}
