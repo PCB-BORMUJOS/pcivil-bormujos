@@ -55,6 +55,8 @@ export default function ConfiguracionPage() {
   const [reportData, setReportData] = useState<any[]>([]);
   const [reportJ44, setReportJ44] = useState<any | null>(null);
   const [detalleJ44, setDetalleJ44] = useState<any[]>([]);
+  // Definición de tramos (+4h/+8h/+12h) para el desglose de días por franja.
+  const [tramosDef, setTramosDef] = useState<{ min: number; amount: number }[]>([]);
   const [firmanteJ44, setFirmanteJ44] = useState<'emilio' | 'diego'>('emilio');
 
   // Estados para usuarios
@@ -131,11 +133,13 @@ export default function ConfiguracionPage() {
         indicativo: r.indicativo || '—',
         nombre: `${r.nombre || ''} ${r.apellidos || ''}`.trim(),
         dias: r.dias || 0,
+        tramos: r.tramos || {},
         subtotalDietas: Number(r.subtotalDietas || 0),
         subtotalKm: Number(r.subtotalKm || 0),
         total: Number(r.totalDietas || 0),
       }));
       setReportData(filas);
+      setTramosDef(Array.isArray(data.tramos) ? data.tramos : []);
       const j44 = (data.resumenJ44 || [])[0] || null;
       setReportJ44(j44 ? { ...j44, subtotalDietas: Number(j44.subtotalDietas || 0), subtotalKm: Number(j44.subtotalKm || 0), total: Number(j44.totalDietas || 0) } : null);
       setDetalleJ44(data.detalleJ44 || []);
@@ -144,37 +148,48 @@ export default function ConfiguracionPage() {
 
   const nombreMes = (m: string) => new Date(m + '-01T12:00:00').toLocaleDateString('es-ES', { month: 'long', year: 'numeric', timeZone: 'Europe/Madrid' });
 
-  const exportarPDF = async () => {
+  const exportarPDF = async (soloTabla = false) => {
     if (reportData.length === 0) return;
     const totalImporte = reportData.reduce((acc, r) => acc + r.total, 0);
     const totalDietas = reportData.reduce((acc, r) => acc + r.subtotalDietas, 0);
     const totalKm = reportData.reduce((acc, r) => acc + r.subtotalKm, 0);
     const totalDias = reportData.reduce((acc, r) => acc + r.dias, 0);
+    // Tramos a mostrar (por defecto +4h/+8h/+12h). Se cuentan por franja horaria.
+    const tramos = tramosDef.length ? tramosDef : [{ min: 4, amount: 29.45 }, { min: 8, amount: 49.15 }, { min: 12, amount: 72.37 }];
+    const totalTramo = (min: number) => reportData.reduce((acc, r) => acc + (Number(r.tramos?.[min]) || 0), 0);
+
+    // Columnas: con los tramos, se estrecha "Nombre" para que quepa todo en A4.
+    const columnas = [
+      { label: 'Indicativo', align: 'left' as const, width: 20 },
+      { label: 'Nombre', align: 'left' as const, width: 44 },
+      { label: 'Dias', align: 'center' as const, width: 12 },
+      ...tramos.map(t => ({ label: `+${t.min}h`, align: 'center' as const, width: 12 })),
+      { label: 'Dietas', align: 'right' as const, width: 26 },
+      { label: 'Km', align: 'right' as const, width: 18 },
+      { label: 'Total', align: 'right' as const, width: 22 },
+    ];
+
     await generarInformeDietasPDF({
-      titulo: 'Informe de liquidacion de dietas',
+      titulo: soloTabla ? 'Tabla detallada de importes de dietas' : 'Informe de liquidacion de dietas',
       periodoTexto: nombreMes(selectedMonth),
       mesAnio: selectedMonth,
-      intro: [
-        'Se relaciona a continuacion la liquidacion de dietas del personal voluntario del Servicio de Proteccion Civil de Bormujos correspondiente al periodo indicado, con el numero de dias de servicio, el importe de dietas, el kilometraje y el total por efectivo.',
+      intro: soloTabla ? [] : [
+        'Se relaciona a continuacion la liquidacion de dietas del personal voluntario del Servicio de Proteccion Civil de Bormujos correspondiente al periodo indicado, con el numero de dias de servicio desglosados por franja horaria (+4h/+8h/+12h), el importe de dietas, el kilometraje y el total por efectivo.',
       ],
-      columnas: [
-        { label: 'Indicativo', align: 'left', width: 24 },
-        { label: 'Nombre', align: 'left', width: 66 },
-        { label: 'Dias', align: 'center', width: 18 },
-        { label: 'Dietas', align: 'right', width: 28 },
-        { label: 'Km', align: 'right', width: 22 },
-        { label: 'Total', align: 'right', width: 24 },
-      ],
+      columnas,
       filas: reportData.map(r => [
         r.indicativo, r.nombre, String(r.dias),
+        ...tramos.map(t => String(Number(r.tramos?.[t.min]) || 0)),
         `${r.subtotalDietas.toFixed(2)} EUR`, `${r.subtotalKm.toFixed(2)} EUR`, `${r.total.toFixed(2)} EUR`,
       ]),
-      totales: ['TOTALES', '', String(totalDias), `${totalDietas.toFixed(2)} EUR`, `${totalKm.toFixed(2)} EUR`, `${totalImporte.toFixed(2)} EUR`],
+      totales: ['TOTALES', '', String(totalDias),
+        ...tramos.map(t => String(totalTramo(t.min))),
+        `${totalDietas.toFixed(2)} EUR`, `${totalKm.toFixed(2)} EUR`, `${totalImporte.toFixed(2)} EUR`],
       resumenImporte: `${totalImporte.toFixed(2)} EUR`,
       resumenMeta: `${reportData.length} efectivo(s) · ${totalDias} dieta(s) registrada(s)`,
       firmanteNombre: 'Emilio Simon Gomez',
       firmanteCargo: 'Jefe de Proteccion Civil y Emergencias',
-      nombreArchivo: `Informe-dietas-${selectedMonth}.pdf`,
+      nombreArchivo: `${soloTabla ? 'Tabla-importes-dietas' : 'Informe-dietas'}-${selectedMonth}.pdf`,
     });
   };
 
@@ -677,8 +692,11 @@ export default function ConfiguracionPage() {
                 <button onClick={generateReport} disabled={loading} className="bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 disabled:opacity-50">
                   {loading ? <Loader2 size={16} className="animate-spin" /> : null} Generar
                 </button>
-                <button onClick={exportarPDF} disabled={reportData.length === 0} className="bg-slate-800 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 disabled:opacity-50 hover:bg-slate-900">
-                  <Download size={16} /> PDF
+                <button onClick={() => exportarPDF(false)} disabled={reportData.length === 0} title="Informe completo (con texto y firma)" className="bg-slate-800 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 disabled:opacity-50 hover:bg-slate-900">
+                  <Download size={16} /> Informe completo
+                </button>
+                <button onClick={() => exportarPDF(true)} disabled={reportData.length === 0} title="Solo la tabla detallada de importes" className="bg-white border border-slate-300 text-slate-700 px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 disabled:opacity-50 hover:bg-slate-50">
+                  <Download size={16} /> Solo tabla
                 </button>
               </div>
             </div>
@@ -690,7 +708,7 @@ export default function ConfiguracionPage() {
                     <tr>
                       <th className="p-4 text-xs font-bold text-slate-400 uppercase">Indicativo</th>
                       <th className="p-4 text-xs font-bold text-slate-400 uppercase">Nombre</th>
-                      <th className="p-4 text-xs font-bold text-slate-400 uppercase text-center">Días</th>
+                      <th className="p-4 text-xs font-bold text-slate-400 uppercase text-center">Días<br /><span className="text-[9px] normal-case font-semibold text-slate-300">{(tramosDef.length ? tramosDef : [{min:4},{min:8},{min:12}]).map(t => `+${t.min}h`).join(' · ')}</span></th>
                       <th className="p-4 text-xs font-bold text-slate-400 uppercase text-right">Dietas</th>
                       <th className="p-4 text-xs font-bold text-slate-400 uppercase text-right">Km</th>
                       <th className="p-4 text-xs font-bold text-slate-400 uppercase text-right">Total</th>
@@ -701,7 +719,16 @@ export default function ConfiguracionPage() {
                       <tr key={i} className="hover:bg-slate-50">
                         <td className="p-4 font-mono font-bold text-slate-700">{row.indicativo}</td>
                         <td className="p-4 font-medium text-slate-800">{row.nombre}</td>
-                        <td className="p-4 text-center text-slate-600">{row.dias}</td>
+                        <td className="p-4 text-center text-slate-600">
+                          <div className="font-bold text-slate-800">{row.dias}</div>
+                          <div className="flex justify-center gap-1.5 mt-1 text-[10px] font-semibold">
+                            {(tramosDef.length ? tramosDef : [{min:4},{min:8},{min:12}]).map(t => (
+                              <span key={t.min} className={`px-1.5 py-0.5 rounded ${Number(row.tramos?.[t.min]) ? 'bg-orange-100 text-orange-700' : 'bg-slate-100 text-slate-400'}`}>
+                                +{t.min}h: {Number(row.tramos?.[t.min]) || 0}
+                              </span>
+                            ))}
+                          </div>
+                        </td>
                         <td className="p-4 text-right text-slate-600">{row.subtotalDietas.toFixed(2)} €</td>
                         <td className="p-4 text-right text-slate-600">{row.subtotalKm.toFixed(2)} €</td>
                         <td className="p-4 text-right">
@@ -726,7 +753,10 @@ export default function ConfiguracionPage() {
                   <p className="text-3xl font-bold">{reportData.reduce((acc, r) => acc + r.total, 0).toFixed(2)} €</p>
                   <p className="text-xs text-slate-400 mt-1">{reportData.length} efectivo(s) · {reportData.reduce((acc, r) => acc + r.dias, 0)} días de servicio · el Jefe de Servicio (J-44) se liquida aparte</p>
                 </div>
-                <button onClick={exportarPDF} className="bg-white text-slate-900 px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-slate-100 transition-colors"><Download size={18} /> Exportar PDF</button>
+                <div className="flex gap-3">
+                  <button onClick={() => exportarPDF(false)} className="bg-white text-slate-900 px-5 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-slate-100 transition-colors"><Download size={18} /> Informe completo</button>
+                  <button onClick={() => exportarPDF(true)} className="bg-transparent border border-white/40 text-white px-5 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-white/10 transition-colors"><Download size={18} /> Solo tabla</button>
+                </div>
               </div>
             )}
           </div>

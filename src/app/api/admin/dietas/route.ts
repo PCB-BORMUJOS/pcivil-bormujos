@@ -61,7 +61,35 @@ export async function GET(request: NextRequest) {
     const dietasResto = dietasRaw.filter(d => !esJefeServicio(d))
     const dietasJ44 = rol === 'superadmin' ? dietasRaw.filter(esJefeServicio) : []
 
+    // Baremo por tramos (+4h/+8h/+12h) para desglosar los días por franja horaria
+    // y así justificar por qué, a igualdad de días y sin km, los importes difieren.
+    const baremoCfg = await prisma.configuracion.findUnique({ where: { clave: 'baremo_dietas' } })
+    let rawBaremo: any = baremoCfg?.valor
+    if (typeof rawBaremo === 'string') { try { rawBaremo = JSON.parse(rawBaremo) } catch { rawBaremo = null } }
+    const arrBaremo: any[] = Array.isArray(rawBaremo)
+      ? rawBaremo
+      : (rawBaremo && Array.isArray(rawBaremo.tramos) ? rawBaremo.tramos : null)
+        || [{ minHours: 4, amount: 29.45 }, { minHours: 8, amount: 49.15 }, { minHours: 12, amount: 72.37 }]
+    const TRAMOS = arrBaremo
+      .map((t: any) => ({ min: Number(t.horasMin ?? t.minHours ?? 0), amount: Number(t.importe ?? t.amount ?? 0) }))
+      .sort((a, b) => a.min - b.min)
+    // Tramo (por su hora mínima) más cercano a un importe dado.
+    const tramoDeImporte = (amount: number) => {
+      let best = TRAMOS[0], bd = Infinity
+      for (const t of TRAMOS) { const dd = Math.abs(amount - t.amount); if (dd < bd) { bd = dd; best = t } }
+      return best?.min ?? 0
+    }
+    const claveDia = (d: any) => `${d.usuarioId}|${new Date(d.fecha).toISOString().slice(0, 10)}`
+
     const construirResumen = (lista: any[]) => {
+      // Importe "que paga" cada día (máximo del día): los turnos consolidados a 0
+      // se atribuyen al tramo de su día para que el desglose sume el total de turnos.
+      const maxImpDia = new Map<string, number>()
+      lista.forEach(d => {
+        const k = claveDia(d), imp = Number(d.subtotalDietas)
+        maxImpDia.set(k, Math.max(maxImpDia.get(k) ?? 0, imp))
+      })
+
       const map = new Map<string, any>()
       lista.forEach(d => {
         const key = d.usuarioId
@@ -71,6 +99,7 @@ export async function GET(request: NextRequest) {
             nombre: d.usuario.nombre,
             apellidos: d.usuario.apellidos,
             dias: 0, subtotalDietas: 0, subtotalKm: 0, totalDietas: 0,
+            tramos: {} as Record<string, number>,
           })
         }
         const r = map.get(key)
@@ -78,6 +107,9 @@ export async function GET(request: NextRequest) {
         r.subtotalDietas += Number(d.subtotalDietas)
         r.subtotalKm += Number(d.subtotalKm)
         r.totalDietas += Number(d.totalDieta)
+        const imp = Number(d.subtotalDietas)
+        const tramo = tramoDeImporte(imp > 0 ? imp : (maxImpDia.get(claveDia(d)) ?? 0))
+        r.tramos[tramo] = (r.tramos[tramo] || 0) + 1
       })
       return Array.from(map.values()).sort((a, b) => (a.indicativo || '').localeCompare(b.indicativo || ''))
     }
@@ -118,6 +150,7 @@ export async function GET(request: NextRequest) {
       resumen: construirResumen(dietasResto),
       resumenJ44: construirResumen(dietasJ44),
       detalleJ44,
+      tramos: TRAMOS, // [{ min, amount }] para etiquetar el desglose +4h/+8h/+12h
     })
   } catch (error) {
     console.error('Error al obtener dietas:', error)
