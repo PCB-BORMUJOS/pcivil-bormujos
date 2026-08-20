@@ -69,7 +69,11 @@ export const authOptions: AuthOptions = {
   },
   pages: {
     signIn: '/login',
-    error: '/login'
+    error: '/login',
+    // Evita la página de confirmación por defecto de NextAuth (en inglés): si algo
+    // llega por GET a /api/auth/signout, se redirige a nuestro /login en español.
+    // El cierre automático por inactividad usa signOut() (POST) y no pasa por aquí.
+    signOut: '/login',
   },
   callbacks: {
     async jwt({ token, user }) {
