@@ -76,9 +76,18 @@ export async function GET(request: NextRequest) {
     })
     const idsQueRespondieron = Array.from(new Set(todosRespondieron.map(r => r.usuarioId)))
     const todosUsuariosActivos = await prisma.usuario.findMany({
-      // Solo miembros OPERATIVOS del servicio: fuera los no operativos (admin/B-12)
-      // y los visores (indicativos que solo consultan la app, p. ej. J0/J1).
-      where: { activo: true, esOperativo: { not: false }, NOT: { rol: { nombre: 'visor' } } },
+      // Miembros del servicio en el cuadrante: los operativos MÁS B-12 (personal
+      // de administración, que aunque no es operativo sí debe figurar). Fuera solo
+      // los visores (indicativos que solo consultan la app, p. ej. J0/J1) y el resto
+      // de no operativos.
+      where: {
+        activo: true,
+        NOT: { rol: { nombre: 'visor' } },
+        OR: [
+          { esOperativo: { not: false } },
+          { fichaVoluntario: { indicativo2: 'B-12' } },
+        ],
+      },
       select: {
         id: true, nombre: true, apellidos: true, numeroVoluntario: true,
         responsableTurno: true, carnetConducir: true, experiencia: true,
