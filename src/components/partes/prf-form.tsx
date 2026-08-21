@@ -9,6 +9,7 @@ import {
     EXTINTOR_ABC_CHECKS, EXTINTOR_CO2_CHECKS, GAS_IZQ, GAS_DER, DOC_IZQ, DOC_DER,
     ELECTRICA, EVACUACION, RESULTADOS,
 } from '@/lib/prf-campos'
+import { CASETAS_FERIA } from '@/lib/prf-casetas'
 
 const AZUL = '#283666'
 
@@ -35,11 +36,11 @@ function Seccion({ n, titulo, extra }: { n: string; titulo: string; extra?: stri
     )
 }
 
-function Campo({ label, value, onChange, className = '', placeholder }: { label: string; value: string; onChange: (v: string) => void; className?: string; placeholder?: string }) {
+function Campo({ label, value, onChange, className = '', placeholder, type = 'text' }: { label: string; value: string; onChange: (v: string) => void; className?: string; placeholder?: string; type?: string }) {
     return (
         <label className={`block ${className}`}>
             <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1">{label}</span>
-            <input value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}
+            <input type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}
                 className="w-full border-b border-slate-300 focus:border-blue-600 outline-none text-sm py-1 bg-transparent" />
         </label>
     )
@@ -162,11 +163,11 @@ export function PrfForm() {
 
     return (
         <div className="max-w-4xl mx-auto p-4 pb-24">
-            {/* Cabecera */}
-            <div className="flex items-center justify-between rounded-lg px-4 py-3 text-white sticky top-0 z-20" style={{ background: AZUL }}>
-                <div>
-                    <div className="flex items-baseline gap-2"><span className="text-2xl font-black">PRF</span><span className="text-xs font-semibold opacity-80 uppercase leading-tight">Parte de<br />Revisión Feria</span></div>
-                    {numeroParte && <span className="text-[11px] opacity-70">Nº {numeroParte}</span>}
+            {/* Cabecera — PRF con protagonismo */}
+            <div className="flex items-center justify-between rounded-lg px-5 py-4 text-white sticky top-0 z-20 shadow" style={{ background: AZUL }}>
+                <div className="flex items-baseline gap-3">
+                    <span className="text-4xl font-black tracking-tight leading-none">PRF</span>
+                    <span className="text-[11px] font-bold opacity-80 uppercase leading-tight border-l border-white/25 pl-3">Parte de<br />Revisión Feria</span>
                 </div>
                 <div className="flex items-center gap-2">
                     <button onClick={() => guardar('borrador')} disabled={guardando} className="flex items-center gap-1.5 bg-white/15 hover:bg-white/25 px-3 py-1.5 rounded-lg text-xs font-bold disabled:opacity-50">
@@ -178,14 +179,21 @@ export function PrfForm() {
                 </div>
             </div>
 
-            <p className="text-sm font-bold text-slate-700 mt-4 uppercase">Acta de inspección de seguridad y prevención de incendios en caseta de feria</p>
+            {/* Título del acta + Expediente Nº en su sitio (derecha) */}
+            <div className="flex items-end justify-between gap-4 mt-4 border-b-2 border-orange-500 pb-2">
+                <p className="text-sm font-bold text-slate-700 uppercase">Acta de inspección de seguridad y prevención de incendios en caseta de feria</p>
+                <label className="flex items-baseline gap-2 shrink-0">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase whitespace-nowrap">Expediente Nº</span>
+                    <input value={datos.expediente} onChange={e => set('expediente', e.target.value)} className="w-32 border-b border-slate-400 outline-none text-sm font-semibold py-0.5" />
+                </label>
+            </div>
+            {numeroParte && <p className="text-[11px] text-slate-400 mt-1">Parte interno Nº {numeroParte}</p>}
 
             {/* Cabecera de datos */}
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mt-3">
-                <Campo label="Expediente Nº" value={datos.expediente} onChange={v => set('expediente', v)} />
-                <Campo label="Fecha" value={datos.fecha} onChange={v => set('fecha', v)} placeholder="dd/mm/aaaa" />
-                <Campo label="Hora de inicio" value={datos.horaInicio} onChange={v => set('horaInicio', v)} />
-                <Campo label="Hora de fin" value={datos.horaFin} onChange={v => set('horaFin', v)} />
+                <Campo label="Fecha" value={datos.fecha} onChange={v => set('fecha', v)} type="date" />
+                <Campo label="Hora de inicio" value={datos.horaInicio} onChange={v => set('horaInicio', v)} type="time" />
+                <Campo label="Hora de fin" value={datos.horaFin} onChange={v => set('horaFin', v)} type="time" />
                 <Campo label="Indicativo que informa" value={datos.indicativoInforma} onChange={v => set('indicativoInforma', v)} />
                 <Campo label="Equipo" value={datos.equipo} onChange={v => set('equipo', v)} />
                 <Campo label="Policía Local · TIP Nº 1" value={datos.policiaTip1} onChange={v => set('policiaTip1', v)} />
@@ -206,6 +214,17 @@ export function PrfForm() {
             {/* 01 Datos de la caseta */}
             <Seccion n="01" titulo="Datos de la caseta" />
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3 border border-t-0 border-slate-200 rounded-b-md p-3">
+                <label className="block col-span-2 md:col-span-3 bg-blue-50/60 border border-blue-200 rounded-lg p-2">
+                    <span className="block text-[10px] font-bold text-blue-700 uppercase tracking-wide mb-1">Caseta de la feria (autocompletar desde el Plan)</span>
+                    <select value={datos.numeroCaseta} onChange={e => {
+                        const cs = CASETAS_FERIA.find(c => c.id === e.target.value)
+                        if (!cs) return
+                        setDatos(p => ({ ...p, numeroCaseta: cs.id, nombreCaseta: cs.nombre, calleSector: cs.calle, aforo: String(cs.aforo), modulos: (['1', '2', '3'].includes(String(cs.modulos)) ? String(cs.modulos) : 'otros') as any, modulosOtros: ['1', '2', '3'].includes(String(cs.modulos)) ? '' : `${cs.superficie}`, localidad: 'Bormujos' }))
+                    }} className="w-full bg-white border border-slate-300 rounded p-1.5 text-sm">
+                        <option value="">— Elegir caseta —</option>
+                        {CASETAS_FERIA.map(c => <option key={c.id} value={c.id}>{c.id} · {c.nombre} ({c.calle}) · {c.modulos} mód · aforo {c.aforo}</option>)}
+                    </select>
+                </label>
                 <Campo label="Nombre de la caseta" value={datos.nombreCaseta} onChange={v => set('nombreCaseta', v)} className="col-span-2" />
                 <Campo label="Nº de caseta" value={datos.numeroCaseta} onChange={v => set('numeroCaseta', v)} />
                 <div className="col-span-2">
@@ -243,7 +262,7 @@ export function PrfForm() {
                     <div className="grid grid-cols-2 gap-3 border border-t-0 border-slate-200 rounded-b-md p-3">
                         <Campo label="Compañía" value={datos.polizaCompania} onChange={v => set('polizaCompania', v)} />
                         <Campo label="Nº de póliza" value={datos.polizaNumero} onChange={v => set('polizaNumero', v)} />
-                        <Campo label="Vigencia hasta" value={datos.polizaVigencia} onChange={v => set('polizaVigencia', v)} />
+                        <Campo label="Vigencia hasta" value={datos.polizaVigencia} onChange={v => set('polizaVigencia', v)} type="date" />
                         <div>
                             <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1">Recibo en vigor</span>
                             <div className="flex gap-2">

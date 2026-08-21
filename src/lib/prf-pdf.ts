@@ -74,11 +74,11 @@ export async function generarPrfPDF(input: PrfPdfInput): Promise<jsPDF> {
         try { doc.addImage(LOGO_BASE64, 'PNG', W - 20, H - 16, 11, 11) } catch { /* opcional */ }
     }
     // Cabecera de sección (barra azul con número)
-    const seccion = (n: string, titulo: string, y: number, extra?: string, color = AZUL): number => {
-        rect(M, y, CW, 6, color)
-        if (n) txt(n, M + 2, y + 4, { size: 7, bold: true, color: [180, 190, 215] })
-        txt(titulo.toUpperCase(), M + (n ? 9 : 3), y + 4, { size: 8, bold: true, color: [255, 255, 255] })
-        if (extra) txt(extra.toUpperCase(), W - M - 2, y + 4, { size: 6.5, bold: true, color: [200, 208, 228], align: 'right' })
+    const seccion = (n: string, titulo: string, y: number, extra?: string, color = AZUL, x = M, w = CW): number => {
+        rect(x, y, w, 6, color)
+        if (n) txt(n, x + 2, y + 4, { size: 7, bold: true, color: [180, 190, 215] })
+        txt(titulo.toUpperCase(), x + (n ? 9 : 3), y + 4, { size: 8, bold: true, color: [255, 255, 255] })
+        if (extra) txt(extra.toUpperCase(), x + w - 2, y + 4, { size: 6.5, bold: true, color: [200, 208, 228], align: 'right' })
         return y + 6
     }
     // Fila de check con casillas SÍ/NO/N.A.
@@ -114,8 +114,8 @@ export async function generarPrfPDF(input: PrfPdfInput): Promise<jsPDF> {
     // ══════════════ PÁGINA 1 ══════════════
     cabecera()
     let y = 30
-    txt('ACTA DE INSPECCIÓN DE SEGURIDAD Y PREVENCIÓN DE INCENDIOS EN CASETA DE FERIA', M, y, { size: 8, bold: true, color: AZUL })
-    campo('Expediente Nº', datos.expediente, W - M - 55, y - 4, 55)
+    txt('ACTA DE INSPECCIÓN DE SEGURIDAD Y PREVENCIÓN DE INCENDIOS EN CASETA DE FERIA', M, y, { size: 6.8, bold: true, color: AZUL })
+    campo('Expediente Nº', datos.expediente, W - M - 42, y - 3, 42)
     doc.setDrawColor(...NARANJA); doc.setLineWidth(0.5); doc.line(M, y + 2, W - M, y + 2)
     y += 6
     const col5 = (CW - 8) / 5
@@ -148,9 +148,11 @@ export async function generarPrfPDF(input: PrfPdfInput): Promise<jsPDF> {
     campo('Aforo autorizado', datos.aforo, M + 148, y + 12, CW - 151)
     y += 23
 
-    // 02 + 03
+    // 02 + 03 (lado a lado, media anchura cada una)
     const half = (CW - 4) / 2
-    const y02 = seccion('02', 'Datos del tomador o responsable', y)
+    const x03 = M + half + 4
+    const y02 = seccion('02', 'Datos del tomador o responsable', y, undefined, AZUL, M, half)
+    seccion('03', 'Póliza de seguro', y, undefined, AZUL, x03, half)
     rect(M, y02, half, 27, [255, 255, 255], GRIS_BORDE)
     campo('Nombre y apellidos', datos.tomadorNombre, M + 3, y02 + 3, half - 40)
     campo('DNI o NIE', datos.tomadorDni, M + half - 34, y02 + 3, 31)
@@ -158,8 +160,6 @@ export async function generarPrfPDF(input: PrfPdfInput): Promise<jsPDF> {
     campo('Localidad', datos.tomadorLocalidad, M + half - 34, y02 + 12, 31)
     campo('Teléfonos', datos.tomadorTelefonos, M + 3, y02 + 21, (half - 6) / 2)
     campo('Email', datos.tomadorEmail, M + 3 + (half - 6) / 2, y02 + 21, (half - 6) / 2)
-    const x03 = M + half + 4
-    seccion('03', 'Póliza de seguro', y)
     rect(x03, y02, half, 27, [255, 255, 255], GRIS_BORDE)
     campo('Compañía', datos.polizaCompania, x03 + 3, y02 + 3, half - 6)
     campo('Nº de póliza', datos.polizaNumero, x03 + 3, y02 + 12, half - 6)
@@ -170,7 +170,7 @@ export async function generarPrfPDF(input: PrfPdfInput): Promise<jsPDF> {
 
     // 04 Extintores
     y = seccion('04', 'Protección contra incendios · Extintores', y, 'RD 513/2017')
-    rect(M, y, CW, 40, [255, 255, 255], GRIS_BORDE)
+    rect(M, y, CW, 50, [255, 255, 255], GRIS_BORDE)
     // ABC (izq)
     txt('EXTINTOR DE POLVO ABC', M + 3, y + 4, { size: 7.5, bold: true, color: AZUL })
     txt('ZONA NOBLE', M + half - 3, y + 4, { size: 6, bold: true, color: NARANJA, align: 'right' })
@@ -187,7 +187,7 @@ export async function generarPrfPDF(input: PrfPdfInput): Promise<jsPDF> {
     campo('Revisión en vigor · fecha', datos.co2Revision, x03 + 3, y + 23, half - 40)
     cabeceraChecks(x03 + 3, y + 30, half - 3)
     let yc = y + 33; EXTINTOR_CO2_CHECKS.forEach(it => { yc = checkFila(it, c(it.key), x03 + 3, yc, half - 3) })
-    y += 43
+    y += 53
 
     // 05 Gas
     y = seccion('05', 'Instalación de gas y zona de cocina', y, 'RD 919/2006 · ITC-ICG')
