@@ -73,23 +73,13 @@ export async function GET(request: NextRequest) {
     const TRAMOS = arrBaremo
       .map((t: any) => ({ min: Number(t.horasMin ?? t.minHours ?? 0), amount: Number(t.importe ?? t.amount ?? 0) }))
       .sort((a, b) => a.min - b.min)
-    // Tramo (por su hora mínima) más cercano a un importe dado.
+    // Tramo del baremo que coincide con un importe (por su hora mínima), exacto.
     const tramoDeImporte = (amount: number) => {
-      let best = TRAMOS[0], bd = Infinity
-      for (const t of TRAMOS) { const dd = Math.abs(amount - t.amount); if (dd < bd) { bd = dd; best = t } }
-      return best?.min ?? 0
+      for (const t of TRAMOS) { if (Math.abs(amount - t.amount) < 0.02) return t.min }
+      return null
     }
-    const claveDia = (d: any) => `${d.usuarioId}|${new Date(d.fecha).toISOString().slice(0, 10)}`
 
     const construirResumen = (lista: any[]) => {
-      // Importe "que paga" cada día (máximo del día): los turnos consolidados a 0
-      // se atribuyen al tramo de su día para que el desglose sume el total de turnos.
-      const maxImpDia = new Map<string, number>()
-      lista.forEach(d => {
-        const k = claveDia(d), imp = Number(d.subtotalDietas)
-        maxImpDia.set(k, Math.max(maxImpDia.get(k) ?? 0, imp))
-      })
-
       const map = new Map<string, any>()
       lista.forEach(d => {
         const key = d.usuarioId
@@ -107,9 +97,14 @@ export async function GET(request: NextRequest) {
         r.subtotalDietas += Number(d.subtotalDietas)
         r.subtotalKm += Number(d.subtotalKm)
         r.totalDietas += Number(d.totalDieta)
+        // Solo se cuentan en el desglose las dietas que pagan (importe > 0); los
+        // turnos consolidados a 0 no suman tramo. Así +4h·29,45 + +8h·49,15 +
+        // +12h·72,37 cuadra EXACTAMENTE con el importe de dietas.
         const imp = Number(d.subtotalDietas)
-        const tramo = tramoDeImporte(imp > 0 ? imp : (maxImpDia.get(claveDia(d)) ?? 0))
-        r.tramos[tramo] = (r.tramos[tramo] || 0) + 1
+        if (imp > 0) {
+          const min = tramoDeImporte(imp)
+          if (min !== null) r.tramos[min] = (r.tramos[min] || 0) + 1
+        }
       })
       return Array.from(map.values()).sort((a, b) => (a.indicativo || '').localeCompare(b.indicativo || ''))
     }
