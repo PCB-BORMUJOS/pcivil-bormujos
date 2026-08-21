@@ -63,6 +63,29 @@ async function recopilar() {
     push('peticion', `${p.id}-albaran`, p.urlAlbaran)
     if (Array.isArray(p.albaranes)) p.albaranes.forEach((a, i) => push('peticion', `${p.id}-albaran${i + 1}`, a?.url))
   }
+  // Documentos adjuntos a los planes (PTEL, PA y PAE)
+  for (const d of await seguro(() => prisma.planDocumento.findMany({ select: { id: true, titulo: true, url: true } }))) {
+    push('plan-doc', d.titulo || d.id, d.url)
+  }
+  // Partes PRF: fotosUrls es un objeto con varias listas (reportaje, zonaNoble,
+  // zonaCocina, extintorAbc, extintorCo2...), así que se recorren todas.
+  for (const r of await seguro(() => prisma.partePRF.findMany({ select: { id: true, numeroParte: true, fotosUrls: true, pdfUrl: true } }))) {
+    const ref = r.numeroParte || r.id
+    const grupos = (r.fotosUrls && typeof r.fotosUrls === 'object' && !Array.isArray(r.fotosUrls)) ? r.fotosUrls : {}
+    for (const [bloque, lista] of Object.entries(grupos)) {
+      if (Array.isArray(lista)) lista.forEach((u, i) => push('partePRF', `${ref}-${bloque}${i + 1}`, u))
+    }
+    push('partePRF', `${ref}-pdf`, r.pdfUrl)
+  }
+  // Iconos de mapa subidos por el servicio. Los predefinidos viven en /public y
+  // ya viajan dentro del paquete de código, así que solo cuentan los de Blob.
+  for (const ic of await seguro(() => prisma.iconoMapa.findMany({ select: { id: true, nombre: true, url: true } }))) {
+    push('icono-mapa', ic.nombre || ic.id, ic.url)
+  }
+  // Capas cartográficas propias, guardadas como GeoJSON en Blob.
+  for (const c of await seguro(() => prisma.capaCartografica.findMany({ select: { id: true, nombre: true, geojsonUrl: true } }))) {
+    push('capa', c.nombre || c.id, c.geojsonUrl)
+  }
   return items
 }
 
