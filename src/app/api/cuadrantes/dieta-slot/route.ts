@@ -66,9 +66,10 @@ export async function POST(request: NextRequest) {
     // Total acumulado del día = horas anteriores + horas de este turno
     const horasTotalesDia = horasOtrosTurnos + horas
 
-    // El voluntariado acumula por día; el Jefe de Servicio (J-44) computa cada
-    // turno de forma independiente (mañana y tarde = dos dietas de "más de 4h").
-    const horasParaTramo = esJefeServicio ? horas : horasTotalesDia
+    // CADA TURNO se paga por SUS PROPIAS horas: mañana (5h) + tarde (5h) = dos
+    // dietas de "más de 4h" (2×29,45), no una de "más de 8h". No se consolida por
+    // el total del día. (Igual para el voluntariado y para el Jefe de Servicio.)
+    const horasParaTramo = horas
     const tramo = [...baremo].reverse().find(
       t => horasParaTramo >= (t.horasMin ?? t.minHours ?? 0)
     )
@@ -83,39 +84,8 @@ export async function POST(request: NextRequest) {
     const subtotalKm    = Math.round(kilometros * precioKm * 100) / 100
     const totalDieta    = Math.round((importeDia + subtotalKm) * 100) / 100
 
-    // Si hay otros turnos, recalcular su importeDia a 0 (el importe correcto está
-    // en este turno) porque el baremo se recalcula con el nuevo total. NO aplica
-    // a J-44: cada uno de sus turnos conserva su propia dieta independiente.
-    if (!esJefeServicio && dietasOtrosTurnos.length > 0) {
-      // Actualizar las dietas de otros turnos: importeDia = 0, totalDieta = solo km si aplica
-      // Primero eliminamos el importe del turno que ya tenía km
-      const dietaConKm = await prisma.dieta.findFirst({
-        where: {
-          usuarioId,
-          fecha: { gte: inicioDia, lte: finDia },
-          turno: { not: turno },
-          kilometros: { gt: 0 }
-        }
-      })
-      if (dietaConKm) {
-        // Recalcular la dieta con km con importeDia=0 (el baremo va en el turno actual)
-        const nuevoTotalAnterior = Math.round(Number(dietaConKm.subtotalKm) * 100) / 100
-        await prisma.dieta.update({
-          where: { id: dietaConKm.id },
-          data: { importeDia: 0, subtotalDietas: 0, totalDieta: nuevoTotalAnterior }
-        })
-      }
-      // Otros turnos sin km: importeDia = 0
-      await prisma.dieta.updateMany({
-        where: {
-          usuarioId,
-          fecha: { gte: inicioDia, lte: finDia },
-          turno: { not: turno },
-          kilometros: 0
-        },
-        data: { importeDia: 0, subtotalDietas: 0, totalDieta: 0 }
-      })
-    }
+    // Cada turno conserva su propio importe (ya no se consolida a 0). El único
+    // ajuste por día es el kilometraje, que se cuenta una sola vez (ver arriba).
 
     // Eliminar dieta de ESTE turno si existía (solo este turno, no el día entero)
     await prisma.dieta.deleteMany({
@@ -157,7 +127,7 @@ export async function POST(request: NextRequest) {
         totalDieta,
         mesAnio,
         estado: 'pendiente',
-        notas: `${horasTotalesDia}h día (${desglose}) - baremo ${importeDia}€`,
+        notas: `${horas}h (${turno}) - baremo ${importeDia}€ · día: ${horasTotalesDia}h (${desglose})`,
         motivoExtra: (horas >= 8 && typeof motivo === 'string' && motivo.trim()) ? motivo.trim() : null,
       }
     })
