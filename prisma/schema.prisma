@@ -1192,6 +1192,56 @@ model PartePSI {
   @@map("partes_psi")
 }
 
+/// Parte de Revisión de Feria (PRF): acta de inspección de seguridad y prevención
+/// de incendios en casetas de feria. Réplica del modelo oficial en 3 páginas.
+/// El grueso del formulario (checklists SÍ/NO/N.A. de las secciones 01-11) se
+/// guarda en `datos` (JSON) para no crear decenas de columnas; los campos de
+/// listado/búsqueda sí van sueltos.
+model PartePRF {
+  id          String   @id @default(cuid())
+  numeroParte String   @unique // 20260821-001
+  fecha       DateTime @default(now())
+  estado      String   @default("borrador") // "borrador" | "completo"
+  archivado   Boolean  @default(false)
+
+  // Campos para listados y búsqueda
+  expediente   String? // Nº de expediente
+  nombreCaseta String?
+  numeroCaseta String?
+  resultado    String? // "apto" | "apto_condiciones" | "no_apto"
+
+  // Contenido completo del formulario (secciones 01-11, checklists, tomador,
+  // póliza, gas, eléctrica, evacuación, observaciones, resultado...).
+  datos Json
+
+  // Reportaje fotográfico (sec. 10) + anexo gráfico (pág. 3).
+  fotosUrls Json // { reportaje: [url...], zonaNoble: [...], zonaCocina: [...], extintorAbc: [...], extintorCo2: [...] }
+
+  // Firmas (base64 PNG dataURL): informa1, informa2, jefeServicio, tomador.
+  firmas Json?
+
+  // PDF generado
+  pdfUrl      String?
+  pdfGenerado Boolean @default(false)
+
+  // Copia en Google Drive
+  googleDriveId  String?
+  googleDriveUrl String?
+
+  // Auditoría (sin relación FK, como el patrón de audit del proyecto)
+  creadoPorId     String
+  creadoPorNombre String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([numeroParte])
+  @@index([fecha])
+  @@index([estado])
+  @@index([archivado])
+  @@index([creadoPorId])
+  @@map("partes_prf")
+}
+
 model PartePRVFSV {
   id               String   @id @default(cuid())
   numeroReferencia String   @unique

@@ -74,6 +74,7 @@ const navigation: NavItem[] = [
     minNivel: 1,
     submenu: [
       { name: 'PSI - Servicio e Intervención', href: '/partes' },
+      { name: 'PRF - Revisión Feria',          href: '/partes/prf' },
       { name: 'PRV FSV - Revisión FSV',        href: '/partes/prv-fsv' },
       { name: 'PRV VIR - Revisión VIR',        href: '/partes/prv-vir' },
       { name: 'POT - Orden de Trabajo',         href: '/partes/pot' },
