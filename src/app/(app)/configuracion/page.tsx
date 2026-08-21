@@ -172,7 +172,9 @@ export default function ConfiguracionPage() {
     await generarInformeDietasPDF({
       titulo: soloTabla ? 'Tabla detallada de importes de dietas' : 'Informe de liquidacion de dietas',
       periodoTexto: nombreMes(selectedMonth),
-      mesAnio: selectedMonth,
+      // Solo si NO es "solo tabla": mesAnio antepone la memoria justificativa
+      // (varias páginas de texto). En modo tabla se genera únicamente la tabla.
+      mesAnio: soloTabla ? undefined : selectedMonth,
       intro: soloTabla ? [] : [
         'Se relaciona a continuacion la liquidacion de dietas del personal voluntario del Servicio de Proteccion Civil de Bormujos correspondiente al periodo indicado, con el numero de dias de servicio desglosados por franja horaria (+4h/+8h/+12h), el importe de dietas, el kilometraje y el total por efectivo.',
       ],
