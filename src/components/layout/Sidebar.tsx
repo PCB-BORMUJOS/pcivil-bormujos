@@ -79,7 +79,7 @@ const navigation: NavItem[] = [
       { name: 'PRV VIR - Revisión VIR',        href: '/partes/prv-vir' },
       { name: 'POT - Orden de Trabajo',         href: '/partes/pot' },
       { name: 'PRD - Revisión DEA',             href: '/partes/prd' },
-      { name: 'PAS SVB - Asistencia SVB',       href: '/partes/pas-svb' },
+      { name: 'PAS SVB - Asistencia SVB',       href: '/partes/pas' },
       { name: 'PRH - Revisión Hidrantes',       href: '/partes/prh' },
       { name: 'RPAS - Libro de Vuelo',          href: '/partes/rpas' },
       { name: 'PCR - Carga Remolque',           href: '/partes/pcr' },
