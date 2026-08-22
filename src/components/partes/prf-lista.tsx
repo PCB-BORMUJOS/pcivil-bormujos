@@ -30,6 +30,18 @@ interface ParteRow {
     creadoPorNombre: string | null
 }
 
+/**
+ * Nombre abreviado, como en el listado de partes PSI: nombre de pila y la
+ * inicial del primer apellido. Los nombres completos no caben en la columna y
+ * quedaban cortados a media palabra.
+ */
+function abreviarNombre(completo: string | null): string {
+    const partes = (completo || '').trim().split(/\s+/).filter(Boolean)
+    if (partes.length === 0) return '—'
+    if (partes.length === 1) return partes[0]
+    return `${partes[0]} ${partes[1][0].toUpperCase()}.`
+}
+
 /** El resultado de la revisión es propio del PRF y no existe en el PSI. */
 const RESULTADOS: Record<string, { label: string; clases: string }> = {
     apto: { label: 'Apto', clases: 'bg-emerald-100 text-emerald-700 border-emerald-300' },
@@ -151,15 +163,18 @@ export function PrfLista() {
 
             {/* TABLA */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-x-auto">
-                <table className="w-full min-w-[820px] table-fixed">
+                {/* El expediente («20260822-001-PSV-01») es el dato mas largo y de ancho
+                    conocido, asi que lleva columna propia holgada; la caseta, de largo
+                    variable, se queda con el sobrante. */}
+                <table className="w-full min-w-[960px] table-fixed">
                     <colgroup>
-                        <col className="w-[140px]" />
+                        <col className="w-[130px]" />
                         <col className="w-auto" />
-                        <col className="w-[130px]" />
-                        <col className="w-[110px]" />
+                        <col className="w-[185px]" />
+                        <col className="w-[95px]" />
                         <col className="w-[150px]" />
-                        <col className="w-[120px]" />
                         <col className="w-[130px]" />
+                        <col className="w-[140px]" />
                     </colgroup>
                     <thead className="bg-slate-50 border-b border-gray-200">
                         <tr>
@@ -208,13 +223,17 @@ export function PrfLista() {
                                             )}
                                         </td>
                                         <td className="px-4 py-3">
-                                            <span className="text-sm text-gray-600 block truncate">{parte.expediente || '—'}</span>
+                                            <span className="font-mono text-xs text-gray-600 whitespace-nowrap">
+                                                {parte.expediente || '—'}
+                                            </span>
                                         </td>
                                         <td className="px-4 py-3 whitespace-nowrap">
                                             <span className="text-sm text-gray-700">{format(fecha, 'dd/MM/yy', { locale: es })}</span>
                                         </td>
                                         <td className="px-4 py-3 whitespace-nowrap">
-                                            <span className="text-sm text-gray-600 block truncate">{parte.creadoPorNombre || '—'}</span>
+                                            <span className="text-sm text-gray-600" title={parte.creadoPorNombre || ''}>
+                                                {abreviarNombre(parte.creadoPorNombre)}
+                                            </span>
                                         </td>
                                         <td className="px-4 py-3 text-center">
                                             {resultado ? (
