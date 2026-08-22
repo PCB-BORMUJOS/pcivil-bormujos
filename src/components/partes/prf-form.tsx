@@ -89,6 +89,20 @@ function RanuraFoto({ etiqueta, url, subiendo, onSubir, onQuitar }: { etiqueta: 
     )
 }
 
+/**
+ * Orden del listado de indicativos que informan: primero J-44 (Jefe de
+ * Servicio), después los S- y por último los B-, cada grupo por su número.
+ * J0 y J1 no son indicativos de servicio y quedan fuera.
+ */
+function ordenarIndicativos(lista: unknown): string[] {
+    if (!Array.isArray(lista)) return []
+    const num = (i: string) => { const m = i.match(/(\d+)/); return m ? parseInt(m[1], 10) : 9999 }
+    const grupo = (i: string) => (i === 'J-44' ? 0 : i.startsWith('S-') ? 1 : i.startsWith('B-') ? 2 : 3)
+    return (lista as string[])
+        .filter(i => typeof i === 'string' && !/^J-?[01]$/i.test(i.trim()))
+        .sort((a, b) => grupo(a) - grupo(b) || num(a) - num(b) || a.localeCompare(b, 'es'))
+}
+
 export function PrfForm() {
     const params = useSearchParams()
     const router = useRouter()
@@ -111,7 +125,7 @@ export function PrfForm() {
     useEffect(() => {
         fetch('/api/indicativos')
             .then(r => r.ok ? r.json() : { indicativos: [] })
-            .then(d => setIndicativos(Array.isArray(d.indicativos) ? d.indicativos.sort() : []))
+            .then(d => setIndicativos(ordenarIndicativos(d.indicativos)))
             .catch(() => setIndicativos([]))
     }, [])
 

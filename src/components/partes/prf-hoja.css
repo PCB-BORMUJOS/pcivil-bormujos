@@ -76,9 +76,9 @@
   font-weight: 700; font-size: 12.5pt; color: #fff; letter-spacing: .3pt; text-transform: uppercase;
 }
 /* Logotipos reales. contain = nunca se deforman, se ajustan al alto de la banda. */
-.prf-cab-logo { margin-left: auto; height: 13mm; width: auto; object-fit: contain; }
+.prf-cab-logo { margin-left: auto; height: 11mm; width: auto; object-fit: contain; }
 .prf-pie-logo { height: 11mm; width: auto; object-fit: contain; }
-.prf-pie-logo.izq { max-width: 46mm; }
+.prf-pie-logo.izq { height: 13.5mm; max-width: 52mm; }
 .prf-pie-logo.der { max-width: 52mm; }
 
 /* Isotipo: cuatro cuadrados, dos naranjas y dos blancos */

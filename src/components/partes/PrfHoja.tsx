@@ -675,17 +675,24 @@ export default function PrfHoja({ datos, numeroParte, fotos = {}, editable = fal
                     </div>
                     <div className="prf-regla-naranja prf-en" style={{ ['--y' as any]: '31.2mm' }} />
 
-                    <div className="prf-en" style={{ ['--y' as any]: '34.5mm' }}>
+                    {/* Reparto de la página: a ancho completo, una foto 4:3 mide 72,3 mm
+                        de alto y los dos bloques de zona se comían la fila de extintores.
+                        Se reduce todo un 7 % por igual, manteniendo el 4:3 exacto: las
+                        apaisadas quedan en 89,7 x 67,3 mm y las verticales en 59,1 x 78,8,
+                        con lo que la última acaba en 274,1 mm y el pie empieza en 277,6. */}
                     {([
-                        { titulo: 'Zona noble', clave: 'zonaNoble', n: 2, alto: '70.5mm' },
-                        { titulo: 'Zona cocina', clave: 'zonaCocina', n: 2, alto: '70.5mm' },
+                        { titulo: 'Zona noble', clave: 'zonaNoble', y: '34.5mm' },
+                        { titulo: 'Zona cocina', clave: 'zonaCocina', y: '111.4mm' },
                     ] as const).map(b => (
-                        <div key={b.clave} style={{ marginTop: '2.6mm' }}>
+                        <div key={b.clave} className="prf-en" style={{ ['--y' as any]: b.y }}>
                             <div className="prf-sec" style={{ justifyContent: 'center' }}>
                                 <span className="tit">{b.titulo}</span>
                             </div>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2.4mm', marginTop: '2mm' }}>
-                                {Array.from({ length: b.n }, (_, i) => (
+                            <div style={{
+                                display: 'grid', gridTemplateColumns: 'repeat(2, 89.7mm)',
+                                gap: '2.4mm', marginTop: '2mm', justifyContent: 'center',
+                            }}>
+                                {[0, 1].map(i => (
                                     <RanuraFoto key={i} etiqueta={`${b.titulo} · Foto ${i + 1}`} url={fotos[b.clave]?.[i]}
                                                 proporcion="4 / 3" editable={editable}
                                                 onElegir={f => onFoto?.(b.clave, i, f)} />
@@ -693,9 +700,11 @@ export default function PrfHoja({ datos, numeroParte, fotos = {}, editable = fal
                             </div>
                         </div>
                     ))}
-                    </div>
 
-                    <div className="prf-en" style={{ ['--y' as any]: '186mm', display: 'grid', gridTemplateColumns: '129.2mm 63.5mm', gap: '0 2.4mm' }}>
+                    <div className="prf-en" style={{
+                        ['--y' as any]: '188.3mm', display: 'grid',
+                        gridTemplateColumns: '120.6mm 59.1mm', gap: '0 2.4mm', justifyContent: 'center',
+                    }}>
                         {([
                             { titulo: 'Extintores de polvo ABC', clave: 'extintorAbc', n: 2 },
                             { titulo: 'Extintores de CO2', clave: 'extintorCo2', n: 1 },
@@ -704,7 +713,7 @@ export default function PrfHoja({ datos, numeroParte, fotos = {}, editable = fal
                                 <div className="prf-sec" style={{ justifyContent: 'center' }}>
                                     <span className="tit">{b.titulo}</span>
                                 </div>
-                                <div style={{ display: 'grid', gridTemplateColumns: b.n === 2 ? '1fr 1fr' : '1fr', gap: '2.4mm', marginTop: '2mm' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: `repeat(${b.n}, 59.1mm)`, gap: '2.4mm', marginTop: '2mm' }}>
                                     {Array.from({ length: b.n }, (_, i) => (
                                         <RanuraFoto key={i} etiqueta={`${b.titulo.replace('Extintores de ', 'Extintor ')} · Foto ${i + 1}`}
                                                     url={fotos[b.clave]?.[i]} proporcion="3 / 4" editable={editable}
