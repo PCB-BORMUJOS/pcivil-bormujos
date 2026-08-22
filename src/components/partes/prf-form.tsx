@@ -92,14 +92,19 @@ function RanuraFoto({ etiqueta, url, subiendo, onSubir, onQuitar }: { etiqueta: 
 /**
  * Orden del listado de indicativos que informan: primero J-44 (Jefe de
  * Servicio), después los S- y por último los B-, cada grupo por su número.
- * J0 y J1 no son indicativos de servicio y quedan fuera.
+ *
+ * Quedan fuera J0 y J1, que no son indicativos de servicio, y los marcados
+ * como baja: quien está de baja no puede firmar una revisión. Ojo, se descarta
+ * "B-46 BAJA" pero no "B-46", que es un indicativo distinto y válido.
  */
 function ordenarIndicativos(lista: unknown): string[] {
     if (!Array.isArray(lista)) return []
     const num = (i: string) => { const m = i.match(/(\d+)/); return m ? parseInt(m[1], 10) : 9999 }
     const grupo = (i: string) => (i === 'J-44' ? 0 : i.startsWith('S-') ? 1 : i.startsWith('B-') ? 2 : 3)
     return (lista as string[])
-        .filter(i => typeof i === 'string' && !/^J-?[01]$/i.test(i.trim()))
+        .filter(i => typeof i === 'string')
+        .filter(i => !/^J-?[01]$/i.test(i.trim()))
+        .filter(i => !/\bbajas?\b/i.test(i))
         .sort((a, b) => grupo(a) - grupo(b) || num(a) - num(b) || a.localeCompare(b, 'es'))
 }
 
