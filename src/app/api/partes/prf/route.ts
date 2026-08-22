@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { registrarAudit, getUsuarioAudit } from '@/lib/audit'
+import { componerExpediente } from '@/lib/casetas-feria'
 
 /** Genera el número de parte del día: YYYYMMDD-NNN (correlativo diario). */
 async function generarNumeroParte(): Promise<string> {
@@ -73,7 +74,10 @@ export async function POST(request: NextRequest) {
             data: {
                 numeroParte,
                 estado: body.estado === 'completo' ? 'completo' : 'borrador',
-                expediente: body.expediente ? String(body.expediente) : (datos.expediente ? String(datos.expediente) : null),
+                // El expediente se compone aquí, no en el navegador: el número de
+                // parte se genera en este mismo punto, así que al crear el parte el
+                // cliente todavía no lo conoce y guardaría solo el ID de la caseta.
+                expediente: componerExpediente(numeroParte, datos.numeroCaseta) || null,
                 nombreCaseta: datos.nombreCaseta ? String(datos.nombreCaseta) : null,
                 numeroCaseta: datos.numeroCaseta ? String(datos.numeroCaseta) : null,
                 resultado: datos.resultado ? String(datos.resultado) : null,

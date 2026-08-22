@@ -82,3 +82,18 @@ export function datosDeCaseta(c: CasetaFeria) {
         modulosOtros: esEstandar ? '' : String(c.superficie),
     }
 }
+
+/**
+ * Número de expediente de una revisión.
+ *
+ * Se compone del número de parte y del identificador de la caseta, unidos por
+ * guion: 20260822-001 + TOR-01 → 20260822-001-TOR-01. No se teclea a mano, de
+ * modo que dos revisiones nunca comparten expediente y el del parte siempre
+ * concuerda con la caseta que se está revisando.
+ *
+ * Mientras falte alguna de las dos piezas —el número de parte no existe hasta
+ * el primer guardado— se devuelve lo que haya, para no mostrar guiones sueltos.
+ */
+export function componerExpediente(numeroParte?: string | null, idCaseta?: string | null): string {
+    return [numeroParte, idCaseta].map(v => (v || '').trim()).filter(Boolean).join('-')
+}

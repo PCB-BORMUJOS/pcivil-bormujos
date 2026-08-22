@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { registrarAudit, getUsuarioAudit } from '@/lib/audit'
+import { componerExpediente } from '@/lib/casetas-feria'
 
 /** GET /api/partes/prf/[id] — un parte. */
 export async function GET(_request: NextRequest, { params }: { params: { id: string } }) {
@@ -33,7 +34,9 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         if (typeof body.archivado === 'boolean') data.archivado = body.archivado
         if (body.datos && typeof body.datos === 'object') {
             data.datos = body.datos
-            data.expediente = body.datos.expediente ? String(body.datos.expediente) : null
+            // Se recompone por si se ha cambiado la caseta: el expediente debe
+            // seguir concordando con la que se está revisando.
+            data.expediente = componerExpediente(existente.numeroParte, body.datos.numeroCaseta) || null
             data.nombreCaseta = body.datos.nombreCaseta ? String(body.datos.nombreCaseta) : null
             data.numeroCaseta = body.datos.numeroCaseta ? String(body.datos.numeroCaseta) : null
             data.resultado = body.datos.resultado ? String(body.datos.resultado) : null

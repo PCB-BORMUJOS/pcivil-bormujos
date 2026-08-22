@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import PrfHoja from './PrfHoja'
+import { componerExpediente } from '@/lib/casetas-feria'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { Save, FileDown, Loader2, Upload, X, Check, ChevronLeft } from 'lucide-react'
 import SignatureCanvas from './SignatureCanvas'
@@ -139,6 +140,12 @@ export function PrfForm() {
      * imprime con Cmd+P desde el menú del navegador. Se mueve el nodo, no se
      * copia, para que lo escrito en los campos viaje con él.
      */
+    // Se guarda compuesto para que el listado y el PDF muestren lo mismo.
+    useEffect(() => {
+        const exp = componerExpediente(numeroParte, datos.numeroCaseta)
+        if (exp && exp !== datos.expediente) setDatos(p => ({ ...p, expediente: exp }))
+    }, [numeroParte, datos.numeroCaseta, datos.expediente])
+
     useEffect(() => {
         let hoja: HTMLElement | null = null
         let marca: Comment | null = null

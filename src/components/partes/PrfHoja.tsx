@@ -18,7 +18,7 @@ import {
     ELECTRICA, EVACUACION, EFICACIA_ABC, EFICACIA_CO2, EJEMPLARES, INDICATIVO_JEFE,
     type ItemCheck, type ValorCheck, type PrfDatos,
 } from '@/lib/prf-campos'
-import { CASETAS_FERIA, buscarCaseta, datosDeCaseta } from '@/lib/casetas-feria'
+import { CASETAS_FERIA, buscarCaseta, datosDeCaseta, componerExpediente } from '@/lib/casetas-feria'
 
 type Fotos = Record<string, string[]>
 
@@ -240,6 +240,8 @@ export default function PrfHoja({ datos, numeroParte, fotos = {}, editable = fal
     const d = datos
     const set = (k: keyof PrfDatos) => (v: string) => onCampo?.(k, v)
     const ch = d.checks || {}
+    // El expediente no se teclea: sale del nº de parte y del ID de la caseta.
+    const expediente = componerExpediente(numeroParte, d.numeroCaseta) || d.expediente || ''
 
     return (
         <div className="prf prf-lienzo">
@@ -252,8 +254,7 @@ export default function PrfHoja({ datos, numeroParte, fotos = {}, editable = fal
                         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'flex-end', gap: '2mm', minWidth: '58mm' }}>
                             <span className="prf-etq" style={{ marginBottom: 0, whiteSpace: 'nowrap' }}>Expediente nº</span>
                             <input className="prf-campo" style={{ height: '4.4mm' }}
-                                   value={d.expediente || numeroParte || ''} readOnly={!editable}
-                                   onChange={e => set('expediente')(e.target.value)} />
+                                   value={expediente} readOnly title="Se compone solo con el nº de parte y la caseta" />
                         </div>
                     </div>
                     <div className="prf-regla-naranja prf-en" style={{ ['--y' as any]: '31.2mm' }} />
@@ -531,7 +532,7 @@ export default function PrfHoja({ datos, numeroParte, fotos = {}, editable = fal
                         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'flex-end', gap: '2mm' }}>
                             <span className="prf-etq" style={{ marginBottom: 0, whiteSpace: 'nowrap' }}>Expediente nº</span>
                             <input className="prf-campo" style={{ width: '34mm', height: '4.4mm' }}
-                                   value={d.expediente || numeroParte || ''} readOnly />
+                                   value={expediente} readOnly />
                             <span className="prf-etq" style={{ marginBottom: 0 }}>Caseta</span>
                             <input className="prf-campo" style={{ width: '34mm', height: '4.4mm' }}
                                    value={d.nombreCaseta || ''} readOnly />
@@ -673,7 +674,7 @@ export default function PrfHoja({ datos, numeroParte, fotos = {}, editable = fal
                         <h2>Anexo · Material gráfico</h2>
                         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'flex-end', gap: '2mm' }}>
                             <span className="prf-etq" style={{ marginBottom: 0, whiteSpace: 'nowrap' }}>Expediente nº</span>
-                            <input className="prf-campo" style={{ width: '34mm', height: '4.4mm' }} value={d.expediente || numeroParte || ''} readOnly />
+                            <input className="prf-campo" style={{ width: '34mm', height: '4.4mm' }} value={expediente} readOnly />
                             <span className="prf-etq" style={{ marginBottom: 0 }}>Caseta</span>
                             <input className="prf-campo" style={{ width: '34mm', height: '4.4mm' }} value={d.nombreCaseta || ''} readOnly />
                         </div>
