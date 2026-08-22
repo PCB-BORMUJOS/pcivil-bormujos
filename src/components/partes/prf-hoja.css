@@ -182,12 +182,25 @@ input[type="datetime-local"].prf-campo { cursor: pointer; }
 .prf-checks tr:nth-child(even) td { background: var(--campo); }
 .prf-checks td:first-child { padding-left: 1.2mm; }
 /* Dato propio de un ítem (fecha del certificado, nº de botellas…) */
-.prf-extra {
-  display: inline-block; width: 22mm; height: 2.9mm; margin-left: 1.6mm;
-  /* Un número no necesita el ancho de una fecha; con 22 mm partía la fila. */
-  font-size: 6.7pt; padding: 0 .8mm; vertical-align: middle;
+/* Ítems que llevan un dato propio (fecha del certificado, nº de botellas…).
+   El dato no va pegado al texto: la etiqueta ocupa la izquierda y el campo se
+   centra en un hueco de ancho fijo, con lo que los de las distintas filas
+   quedan alineados entre sí. Sin línea inferior, como se pidió. */
+.prf-checks td.con-dato { display: flex; align-items: center; gap: 1.6mm; }
+.prf-checks td.con-dato .etq { flex: 1; }
+.prf-checks td.con-dato .hueco {
+  flex: 0 0 20mm; display: flex; justify-content: center; align-items: center;
 }
-.prf-extra[type="number"] { width: 11mm; }
+.prf-extra {
+  width: 100%; height: 3.2mm; border: 0; background: transparent;
+  font: inherit; font-size: 6.7pt; color: var(--texto); padding: 0;
+}
+/* El iconito del calendario ocupa 4 mm y aquí no hace falta: el campo sigue
+   abriendo el selector al pulsarlo. */
+.prf-extra::-webkit-calendar-picker-indicator { display: none; }
+.prf-extra[type="number"]::-webkit-inner-spin-button { display: none; }
+.prf-extra:disabled { opacity: 1; }
+.prf-extra::placeholder { color: #A8B2C1; }
 
 /* ── Avisos ──────────────────────────────────────────────────────────────── */
 .prf-nota {

@@ -24,7 +24,7 @@ export const GAS_IZQ: ItemCheck[] = [
     { key: 'gas_manguera', label: 'Fecha de caducidad de la manguera' },
     { key: 'gas_regulador', label: 'Regulador y abrazaderas en buen estado' },
     { key: 'gas_plancha', label: 'Plancha metálica de protección instalada' },
-    { key: 'gas_botellas', label: 'Botellas de GLP estables y ventiladas · nº' },
+    { key: 'gas_botellas', label: 'Botellas de GLP estables y ventiladas' },
 ]
 export const GAS_DER: ItemCheck[] = [
     { key: 'gas_llave', label: 'Válvula accesible' },

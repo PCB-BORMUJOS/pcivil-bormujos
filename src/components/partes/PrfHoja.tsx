@@ -203,15 +203,20 @@ function Checks({
             <tbody>
                 {items.map(it => (
                     <tr key={it.key}>
-                        <td>
-                            {it.label}
+                        <td className={extras?.[it.key] ? 'con-dato' : undefined}>
+                            <span className="etq">{it.label}</span>
                             {extras?.[it.key] && (
-                                <input
-                                    type={extras[it.key].tipo}
-                                    className="prf-campo prf-centrado prf-extra"
-                                    value={extras[it.key].valor || ''} disabled={!editable}
-                                    onChange={e => onCampo?.(extras[it.key].campo as keyof PrfDatos, e.target.value)}
-                                />
+                                <span className="hueco">
+                                    <input
+                                        type={extras[it.key].tipo}
+                                        /* Sin borde y vacío, un campo numérico no se ve;
+                                           el marcador indica que ahí se escribe. */
+                                        placeholder={extras[it.key].tipo === 'number' ? 'nº' : undefined}
+                                        className="prf-centrado prf-extra"
+                                        value={extras[it.key].valor || ''} disabled={!editable}
+                                        onChange={e => onCampo?.(extras[it.key].campo as keyof PrfDatos, e.target.value)}
+                                    />
+                                </span>
                             )}
                         </td>
                         {(['si', 'no', 'na'] as ValorCheck[]).map(v => (
