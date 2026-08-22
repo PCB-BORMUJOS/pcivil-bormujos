@@ -1,0 +1,145 @@
+'use client'
+
+import { useCallback, useEffect, useState } from 'react'
+import Link from 'next/link'
+import { useSearchParams, useRouter } from 'next/navigation'
+import { Save, FileDown, Loader2, ChevronLeft } from 'lucide-react'
+import PasHoja from './PasHoja'
+import { estadoInicialPAS, type PasDatos, type MarcaLesion } from '@/lib/pas-campos'
+import { getTodaySpain } from '@/lib/date-utils'
+
+export function PasForm() {
+    const params = useSearchParams()
+    const router = useRouter()
+    const idParam = params.get('id')
+
+    const [id, setId] = useState<string | null>(idParam)
+    const [datos, setDatos] = useState<PasDatos>(estadoInicialPAS())
+    const [marcas, setMarcas] = useState<MarcaLesion[]>([])
+    const [lesionActiva, setLesionActiva] = useState(1)
+    const [numeroParte, setNumeroParte] = useState('')
+    const [cargando, setCargando] = useState(!!idParam)
+    const [guardando, setGuardando] = useState(false)
+    const [exportando, setExportando] = useState(false)
+    const [aviso, setAviso] = useState<string | null>(null)
+
+    const set = <K extends keyof PasDatos>(k: K, v: PasDatos[K]) => setDatos(p => ({ ...p, [k]: v }))
+
+    // Un parte nuevo arranca con la fecha de hoy en hora española.
+    useEffect(() => {
+        if (!idParam) setDatos(p => ({ ...p, fecha: p.fecha || getTodaySpain() }))
+    }, [idParam])
+
+    const cargar = useCallback(async () => {
+        if (!idParam) return
+        setCargando(true)
+        try {
+            const d = await fetch(`/api/partes/pas/${idParam}`).then(r => r.json())
+            if (d.parte) {
+                setDatos({ ...estadoInicialPAS(), ...(d.parte.datos || {}) })
+                setMarcas(Array.isArray(d.parte.lesiones) ? d.parte.lesiones : [])
+                setNumeroParte(d.parte.numeroParte || '')
+            }
+        } catch { setAviso('No se ha podido cargar el parte') } finally { setCargando(false) }
+    }, [idParam])
+    useEffect(() => { cargar() }, [cargar])
+
+    const guardar = async (estado: 'borrador' | 'completo' = 'borrador') => {
+        setGuardando(true); setAviso(null)
+        try {
+            const cuerpo = JSON.stringify({ datos, lesiones: marcas, estado })
+            const url = id ? `/api/partes/pas/${id}` : '/api/partes/pas'
+            const r = await fetch(url, { method: id ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: cuerpo })
+            const d = await r.json()
+            if (!r.ok) throw new Error(d.error || 'No se ha podido guardar')
+            if (d.parte) {
+                setId(d.parte.id)
+                setNumeroParte(d.parte.numeroParte || '')
+                if (!id) router.replace(`/partes/pas?id=${d.parte.id}`)
+            }
+            setAviso('✓ Guardado')
+            return d.parte
+        } catch (e: any) { setAviso(e.message); return null } finally { setGuardando(false) }
+    }
+
+    const exportarPDF = async () => {
+        setExportando(true)
+        try {
+            await guardar('completo')
+            await new Promise(r => setTimeout(r, 350))
+            window.print()
+        } finally { setExportando(false) }
+    }
+
+    /**
+     * Mientras dura la impresión, la hoja se cuelga directamente de <body>.
+     * Sin esto, los contenedores de la aplicación le añaden su relleno, el
+     * navegador ve un documento más ancho que el A4 y lo encoge para que quepa.
+     * Va enganchado a beforeprint para que valga igual con Cmd+P.
+     */
+    useEffect(() => {
+        let hoja: HTMLElement | null = null
+        let marca: Comment | null = null
+        const alEmpezar = () => {
+            hoja = document.querySelector<HTMLElement>('.pas-lienzo')
+            if (!hoja || !hoja.parentElement || hoja.parentElement === document.body) return
+            marca = document.createComment('pas')
+            hoja.parentElement.insertBefore(marca, hoja)
+            document.body.appendChild(hoja)
+            document.documentElement.classList.add('pas-imprimiendo')
+        }
+        const alTerminar = () => {
+            document.documentElement.classList.remove('pas-imprimiendo')
+            if (hoja && marca?.parentNode) { marca.parentNode.insertBefore(hoja, marca); marca.remove() }
+            hoja = null; marca = null
+        }
+        window.addEventListener('beforeprint', alEmpezar)
+        window.addEventListener('afterprint', alTerminar)
+        return () => {
+            alTerminar()
+            window.removeEventListener('beforeprint', alEmpezar)
+            window.removeEventListener('afterprint', alTerminar)
+        }
+    }, [])
+
+    if (cargando) {
+        return <div className="flex justify-center items-center min-h-[50vh]"><Loader2 className="animate-spin w-8 h-8 text-orange-500" /></div>
+    }
+
+    return (
+        <div className="pb-16">
+            {/* Barra de acciones: misma píldora que en PSI y PRF. No se imprime. */}
+            <div className="pas-no-imprimir sticky top-4 z-50 bg-white/90 backdrop-blur shadow-lg rounded-full px-6 py-2 flex items-center gap-4 border border-gray-200 mb-6 transition-all hover:shadow-xl mx-auto w-fit">
+                <Link href="/partes/pas" className="p-1.5 hover:bg-gray-100 rounded-full transition-colors text-gray-500 hover:text-gray-700" title="Volver a la lista">
+                    <ChevronLeft className="w-5 h-5" />
+                </Link>
+                <div className="h-4 w-px bg-gray-300" />
+                <span className="text-sm font-semibold text-gray-600">
+                    {numeroParte ? `Ref: ${numeroParte}` : 'Nuevo parte'}
+                </span>
+                {aviso && <span className="text-xs text-gray-500">{aviso}</span>}
+                <div className="h-4 w-px bg-gray-300" />
+                <button type="button" onClick={() => guardar('borrador')} disabled={guardando}
+                        className="flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm transition-colors disabled:opacity-50">
+                    {guardando ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                    {guardando ? 'Guardando...' : 'Guardar'}
+                </button>
+                <button type="button" onClick={exportarPDF} disabled={exportando}
+                        className="flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 hover:text-indigo-600 transition-colors disabled:opacity-50">
+                    {exportando ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />}
+                    Exportar PDF
+                </button>
+            </div>
+
+            <PasHoja
+                datos={datos}
+                marcas={marcas}
+                lesionActiva={lesionActiva}
+                editable
+                onCampo={(k, v) => set(k as any, v)}
+                onMarcas={setMarcas}
+                onLesionActiva={setLesionActiva}
+            />
+        </div>
+    )
+}

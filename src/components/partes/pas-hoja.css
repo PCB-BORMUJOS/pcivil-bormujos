@@ -1,0 +1,158 @@
+/*
+ * Hoja del Parte de Soporte Vital Básico (PAS).
+ *
+ * Las medidas salen de medir el documento oficial, no están puestas a ojo:
+ * una sola página A4, márgenes de 6,4 mm (ancho útil 196,8), banda de cabecera
+ * de 25,5 mm y pie de 24,2, y el azul #2B3A92 tomado del propio PDF.
+ *
+ * Igual que en el PRF, esta misma hoja es el formulario en pantalla y el origen
+ * del PDF: al imprimir se ocultan las ayudas de edición y queda el documento,
+ * de modo que lo que se rellena y lo que se exporta no pueden divergir.
+ */
+
+.pas {
+  --azul: #2B3A92;
+  --campo: #F4F6FB;
+  --borde: #C3CBD4;
+  --regla: #D5DCE4;
+  --texto: #1F2937;
+  --etiqueta: #5A6678;
+
+  --margen: 6.4mm;
+  --util: 196.8mm;
+
+  font-family: var(--fuente-barlow-cond), 'Barlow Semi Condensed', system-ui, sans-serif;
+  color: var(--texto);
+  font-size: 7.1pt;
+  line-height: 1.2;
+}
+
+/* ── Hoja A4 ─────────────────────────────────────────────────────────────── */
+.pas-hoja {
+  position: relative;
+  width: 210mm;
+  height: 297mm;
+  background: #fff;
+  overflow: hidden;
+  margin: 0 auto;
+}
+@media screen {
+  .pas-hoja { box-shadow: 0 2px 14px rgba(15, 23, 42, .18); border-radius: 2px; }
+  .pas-lienzo { background: #F1F5F9; padding: 8mm 0; }
+}
+
+/* ── Cabecera y pie, a sangre ────────────────────────────────────────────── */
+.pas-cab {
+  position: absolute; left: 0; top: 0; width: 210mm; height: 25.5mm;
+  background: var(--azul); display: flex; align-items: center;
+  padding: 0 var(--margen); box-sizing: border-box;
+}
+.pas-cab-sigla {
+  font-family: var(--fuente-barlow), 'Barlow', sans-serif;
+  font-weight: 800; font-size: 30pt; color: #fff; line-height: 1;
+  letter-spacing: -0.5pt; margin-right: 4mm;
+}
+.pas-cab-titulo {
+  font-weight: 600; font-size: 12pt; color: #fff; line-height: 1.12;
+  text-transform: uppercase; letter-spacing: .2pt;
+}
+.pas-cab-logo { margin-left: auto; height: 11mm; width: auto; object-fit: contain; }
+
+.pas-pie {
+  position: absolute; left: 0; bottom: 0; width: 210mm; height: 24mm;
+  background: var(--azul); display: flex; align-items: center; justify-content: space-between;
+  padding: 0 var(--margen); box-sizing: border-box; color: #fff;
+}
+.pas-pie-centro { text-align: center; font-size: 6.3pt; line-height: 1.45; font-weight: 700; }
+.pas-pie-logo { height: 13.5mm; width: auto; object-fit: contain; max-width: 52mm; }
+.pas-pie-logo.der { height: 11mm; }
+
+/* ── Área de contenido ───────────────────────────────────────────────────── */
+.pas-cuerpo { position: absolute; left: var(--margen); top: 0; width: var(--util); height: 297mm; }
+
+/* Los bloques se clavan en su Y medida, no se dejan fluir. */
+.pas-en { position: absolute; left: 0; width: var(--util); top: var(--y); }
+.pas-en.col { left: var(--x); width: var(--w); }
+
+/* ── Barras de sección ───────────────────────────────────────────────────── */
+.pas-sec {
+  background: var(--azul); color: #fff; font-weight: 700; font-size: 6.3pt;
+  letter-spacing: .6pt; text-transform: uppercase;
+  padding: .8mm 1.4mm; box-sizing: border-box;
+}
+
+/* ── Campos ──────────────────────────────────────────────────────────────── */
+.pas-etq {
+  display: block; font-size: 6pt; color: var(--etiqueta); font-weight: 600;
+  letter-spacing: .4pt; text-transform: uppercase; margin-bottom: .5mm; white-space: nowrap;
+}
+.pas-campo {
+  width: 100%; box-sizing: border-box; background: var(--campo);
+  border: .25mm solid var(--borde); height: 4.6mm; padding: 0 1mm;
+  font: inherit; font-size: 7.1pt; color: var(--texto);
+}
+.pas-campo:focus { outline: 0; border-color: var(--azul); background: #EEF3FF; }
+.pas-centrado { text-align: center; text-align-last: center; }
+textarea.pas-campo { height: auto; padding: 1mm; resize: none; line-height: 1.35; }
+
+/* ── Casillas ────────────────────────────────────────────────────────────── */
+.pas-casilla {
+  width: 3mm; height: 3mm; border: .3mm solid var(--azul); background: #fff;
+  display: inline-flex; align-items: center; justify-content: center;
+  cursor: pointer; padding: 0; flex: 0 0 auto;
+}
+.pas-casilla[data-marcada="true"]::after {
+  content: ''; width: 1.7mm; height: 1.7mm; background: var(--azul); display: block;
+}
+.pas-opcion { display: inline-flex; align-items: center; gap: 1.1mm; font-size: 7.1pt; }
+
+/* ── Recuadros con título ────────────────────────────────────────────────── */
+.pas-caja { border: .25mm solid var(--regla); border-top: 0; padding: 1.2mm; }
+.pas-lista { width: 100%; border-collapse: collapse; }
+.pas-lista td { padding: .3mm 0; font-size: 6.3pt; vertical-align: middle; }
+.pas-lista td.marca { width: 4.2mm; text-align: center; }
+.pas-lista tr:nth-child(even) td { background: var(--campo); }
+
+/* ── Figuras anatómicas con marcas de lesión ─────────────────────────────── */
+.pas-figuras { position: relative; display: flex; gap: 2mm; }
+.pas-figura { position: relative; flex: 1; }
+.pas-figura img { width: 100%; height: auto; display: block; }
+.pas-figura.editable { cursor: crosshair; }
+.pas-marca {
+  position: absolute; transform: translate(-50%, -50%);
+  width: 4mm; height: 4mm; border-radius: 50%;
+  background: #D92D20; color: #fff; font-weight: 800; font-size: 6.5pt;
+  display: flex; align-items: center; justify-content: center; line-height: 1;
+}
+.pas-marca.quitar { cursor: pointer; }
+
+/* ── Impresión ───────────────────────────────────────────────────────────── */
+@page { size: A4 portrait; margin: 0; }
+
+@media print {
+  body * { visibility: hidden !important; }
+  .pas-lienzo, .pas-lienzo * { visibility: visible !important; }
+
+  /* Ocultar no basta: deja el hueco y el navegador encoge el documento. Con la
+     clase que se pone al imprimir, la hoja cuelga de <body> y lo demás se
+     retira de la maquetación. Mismo remedio que en el PRF. */
+  html, body {
+    width: 210mm !important; min-width: 0 !important; max-width: 210mm !important;
+    margin: 0 !important; padding: 0 !important; overflow: hidden !important;
+    background: #fff !important;
+  }
+  html.pas-imprimiendo body > *:not(.pas-lienzo) { display: none !important; }
+  .pas-lienzo {
+    position: static !important; width: 210mm !important;
+    background: #fff !important; padding: 0 !important; margin: 0 !important;
+  }
+  .pas-hoja {
+    box-shadow: none !important; border-radius: 0 !important; margin: 0 !important;
+    /* Dos décimas menos de 297: el A4 mide 296,9989 y el sobrante abría una
+       segunda página con una franja del pie. */
+    height: 296.8mm !important; break-inside: avoid;
+  }
+  .pas-campo { background: transparent !important; }
+  .pas-no-imprimir { display: none !important; }
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+}
