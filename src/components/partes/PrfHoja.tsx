@@ -18,6 +18,7 @@ import {
     ELECTRICA, EVACUACION, EFICACIA_ABC, EFICACIA_CO2, EJEMPLARES, INDICATIVO_JEFE,
     type ItemCheck, type ValorCheck, type PrfDatos,
 } from '@/lib/prf-campos'
+import { CASETAS_FERIA, buscarCaseta, datosDeCaseta } from '@/lib/casetas-feria'
 
 type Fotos = Record<string, string[]>
 
@@ -30,6 +31,8 @@ export type PrfHojaProps = {
     /** Indicativos del servicio para los desplegables. */
     indicativos?: string[]
     onCampo?: (campo: keyof PrfDatos, valor: any) => void
+    /** Aplica varios campos de golpe (al elegir una caseta del plan). */
+    onCampos?: (cambios: Partial<PrfDatos>) => void
     onCheck?: (key: string, valor: ValorCheck) => void
     /** Abre el panel de firma para el campo indicado. */
     onFirmar?: (campo: string) => void
@@ -228,7 +231,7 @@ function Checks({
 
 // ── Hoja ─────────────────────────────────────────────────────────────────────
 
-export default function PrfHoja({ datos, numeroParte, fotos = {}, editable = false, indicativos = [], onCampo, onCheck, onFirmar, onFoto }: PrfHojaProps) {
+export default function PrfHoja({ datos, numeroParte, fotos = {}, editable = false, indicativos = [], onCampo, onCampos, onCheck, onFirmar, onFoto }: PrfHojaProps) {
     const d = datos
     const set = (k: keyof PrfDatos) => (v: string) => onCampo?.(k, v)
     const ch = d.checks || {}
@@ -301,7 +304,27 @@ export default function PrfHoja({ datos, numeroParte, fotos = {}, editable = fal
                         <Seccion num="01" titulo="Datos de la caseta" />
                         <div className="prf-caja">
                             <div className="prf-fila" style={{ gridTemplateColumns: '86mm 38mm 1fr', marginTop: 0 }}>
-                                <Campo etq="Nombre de la caseta" valor={d.nombreCaseta} onChange={set('nombreCaseta')} editable={editable} />
+                                {/* Al elegir una caseta del plan se rellenan solos el nº, la
+                                    calle, la localidad y el aforo autorizado (el operativo del
+                                    PAE). Todo sigue siendo editable a mano. */}
+                                <div>
+                                    <label className="prf-etq">Nombre de la caseta</label>
+                                    <input
+                                        className="prf-campo" list="prf-casetas"
+                                        value={d.nombreCaseta || ''} readOnly={!editable}
+                                        onChange={e => {
+                                            const v = e.target.value
+                                            const c = buscarCaseta(v)
+                                            if (c) onCampos?.(datosDeCaseta(c))
+                                            else set('nombreCaseta')(v)
+                                        }}
+                                    />
+                                    <datalist id="prf-casetas">
+                                        {CASETAS_FERIA.map(c => (
+                                            <option key={c.id} value={c.nombre}>{`${c.id} · ${c.calle}`}</option>
+                                        ))}
+                                    </datalist>
+                                </div>
                                 <Campo etq="Nº de caseta" valor={d.numeroCaseta} onChange={set('numeroCaseta')} editable={editable} />
                                 <div>
                                     <label className="prf-etq">Superficie en módulos</label>
@@ -478,7 +501,10 @@ export default function PrfHoja({ datos, numeroParte, fotos = {}, editable = fal
                     </div>
 
                     {/* 06 */}
-                    <div className="prf-en" style={{ ['--y' as any]: '249.3mm' }}>
+                    {/* El modelo sitúa la 06 en 249,3 mm, pero allí sus filas de gas no
+                        llevaban fecha ni nº de botellas. Al incorporarlos, la 05 crece y la
+                        06 baja medio milímetro; sigue holgada respecto al pie. */}
+                    <div className="prf-en" style={{ ['--y' as any]: '249.8mm' }}>
                         <Seccion num="06" titulo="Documentación aportada por el titular" ref_="Original o copia cotejada" />
                         <div className="prf-caja">
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 4mm' }}>

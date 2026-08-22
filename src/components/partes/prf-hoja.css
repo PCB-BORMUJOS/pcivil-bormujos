@@ -174,12 +174,17 @@ input[type="datetime-local"].prf-campo { cursor: pointer; }
   font-size: 6.5pt; color: var(--etiqueta); font-weight: 500; letter-spacing: .5pt;
   text-transform: uppercase; padding: 0 0 .6mm; width: 6.2mm; text-align: center;
 }
-.prf-checks td { padding: .42mm 0; font-size: 8.2pt; vertical-align: middle; }
+.prf-checks td { padding: .25mm 0; font-size: 8.2pt; vertical-align: middle; }
 .prf-checks td.marca { text-align: center; width: 6.2mm; }
 .prf-checks tr:nth-child(even) td { background: var(--campo); }
 .prf-checks td:first-child { padding-left: 1.2mm; }
 /* Dato propio de un ítem (fecha del certificado, nº de botellas…) */
-.prf-extra { display: inline-block; width: 24mm; height: 4mm; margin-left: 2mm; font-size: 7.1pt; }
+.prf-extra {
+  display: inline-block; width: 22mm; height: 2.9mm; margin-left: 1.6mm;
+  /* Un número no necesita el ancho de una fecha; con 22 mm partía la fila. */
+  font-size: 6.7pt; padding: 0 .8mm; vertical-align: middle;
+}
+.prf-extra[type="number"] { width: 11mm; }
 
 /* ── Avisos ──────────────────────────────────────────────────────────────── */
 .prf-nota {
@@ -197,7 +202,7 @@ input[type="datetime-local"].prf-campo { cursor: pointer; }
 .prf-legal b { color: #6B7A90; }
 
 /* ── Recuadros ───────────────────────────────────────────────────────────── */
-.prf-caja { border: .25mm solid var(--regla); border-top: 0; padding: 2.2mm; }
+.prf-caja { border: .25mm solid var(--regla); border-top: 0; padding: 1.6mm; }
 .prf-zona-foto {
   border: .3mm dashed var(--borde); background: #F1F3F6;
   display: flex; flex-direction: column; align-items: center; justify-content: center;

@@ -225,6 +225,7 @@ export function PrfForm() {
                 numeroParte={numeroParte}
                 fotos={fotos}
                 indicativos={indicativos}
+                onCampos={cambios => setDatos(p => ({ ...p, ...cambios }))}
                 onFoto={(bloque, i, f) => subirFoto(bloque as any, i, f)}
                 onFirmar={campo => setFirmando(campo)}
                 editable
