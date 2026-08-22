@@ -18,7 +18,7 @@ import {
     ELECTRICA, EVACUACION, EFICACIA_ABC, EFICACIA_CO2, EJEMPLARES, INDICATIVO_JEFE,
     type ItemCheck, type ValorCheck, type PrfDatos,
 } from '@/lib/prf-campos'
-import { CASETAS_FERIA, buscarCaseta, datosDeCaseta, componerExpediente } from '@/lib/casetas-feria'
+import { CASETAS_FERIA, buscarCaseta, datosDeCaseta, componerExpediente, numerosDeCaseta } from '@/lib/casetas-feria'
 
 type Fotos = Record<string, string[]>
 
@@ -326,8 +326,12 @@ export default function PrfHoja({ datos, numeroParte, fotos = {}, editable = fal
                                         }}
                                     />
                                     <datalist id="prf-casetas">
+                                        {/* Se muestra la calle y los números que ocupa, que es como
+                                            se identifica la caseta sobre el terreno. */}
                                         {CASETAS_FERIA.map(c => (
-                                            <option key={c.id} value={c.nombre}>{`${c.id} · ${c.calle}`}</option>
+                                            <option key={c.id} value={c.nombre}>
+                                                {`${c.calle} · caseta ${numerosDeCaseta(c.id)} · ${c.id}`}
+                                            </option>
                                         ))}
                                     </datalist>
                                 </div>

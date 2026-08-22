@@ -88,6 +88,49 @@ export function datosDeCaseta(c: CasetaFeria) {
 }
 
 /**
+ * Números de caseta de cada módulo, calle por calle.
+ *
+ * El recinto tiene cuatro calles —Toro de El Rancho, Currillo de Bormujos,
+ * Bulerías y Sevillanas— y cada una lleva su propia numeración, que empieza en
+ * el 1. Los números son correlativos por módulo, de modo que una caseta de tres
+ * módulos ocupa tres: la Peña Sevillista, primera de Currillo de Bormujos y con
+ * tres módulos, es la 1, la 2 y la 3; el Coro Parroquial, con dos, la 4 y la 5.
+ *
+ * Se calcula del orden del catálogo y del número de módulos, en lugar de
+ * teclearlo, para que al cambiar una caseta de sitio o de tamaño el resto de la
+ * calle se renumere solo y no queden huecos ni repetidos.
+ */
+const NUMERACION: Record<string, { desde: number; hasta: number }> = (() => {
+    const mapa: Record<string, { desde: number; hasta: number }> = {}
+    const siguiente: Record<string, number> = {}
+    for (const c of CASETAS_FERIA) {
+        const desde = siguiente[c.calle] ?? 1
+        const hasta = desde + c.modulos - 1
+        mapa[c.id] = { desde, hasta }
+        siguiente[c.calle] = hasta + 1
+    }
+    return mapa
+})()
+
+/** Números que ocupa la caseta en su calle: «11» si es un módulo, «1–3» si son varios. */
+export function numerosDeCaseta(id: string): string {
+    const n = NUMERACION[id]
+    if (!n) return ''
+    return n.desde === n.hasta ? String(n.desde) : `${n.desde}–${n.hasta}`
+}
+
+/** Casetas agrupadas por calle, en el orden en que se recorren. */
+export function casetasPorCalle(): { calle: string; casetas: CasetaFeria[] }[] {
+    const orden: string[] = []
+    const grupos: Record<string, CasetaFeria[]> = {}
+    for (const c of CASETAS_FERIA) {
+        if (!grupos[c.calle]) { grupos[c.calle] = []; orden.push(c.calle) }
+        grupos[c.calle].push(c)
+    }
+    return orden.map(calle => ({ calle, casetas: grupos[calle] }))
+}
+
+/**
  * Número de expediente de una revisión.
  *
  * Se compone del número de parte y del identificador de la caseta, unidos por
