@@ -89,7 +89,10 @@
 .prf-iso .v { background: transparent; }
 
 .prf-pie {
-  position: absolute; left: 0; top: 277.6mm; width: 209.9mm; height: 19.6mm;
+  /* Anclado al borde inferior, no a una Y fija: con top:277,6 y 19,6 de alto
+     terminaba en 297,2 mm, dos décimas fuera del folio, y ese sobrante empujaba
+     el pie a la página siguiente. */
+  position: absolute; left: 0; bottom: 0; width: 209.9mm; height: 19.4mm;
   background: var(--azul); display: flex; align-items: center; justify-content: space-between;
   padding: 0 var(--margen); box-sizing: border-box; color: #fff;
 }
@@ -233,8 +236,35 @@ input[type="datetime-local"].prf-campo { cursor: pointer; }
   /* Solo la hoja: se oculta todo lo demás de la aplicación */
   body * { visibility: hidden !important; }
   .prf-lienzo, .prf-lienzo * { visibility: visible !important; }
+
+  /* Ocultar no basta tampoco en vertical: la cabecera de la aplicación seguía
+     ocupando su sitio y empujaba la primera hoja 19,3 mm hacia abajo, con lo
+     que sus últimos milímetros —el pie— se derramaban a la página siguiente y
+     salían cuatro páginas en vez de tres. Aquí se retira de la maquetación
+     todo lo que no sea la hoja, su contenido o alguno de los contenedores que
+     la envuelven. */
+  body *:not(:has(.prf-lienzo)):not(.prf-lienzo):not(.prf-lienzo *) {
+    display: none !important;
+  }
+
+  /* Ocultar no basta: visibility deja el hueco, y con la barra lateral y los
+     márgenes de la aplicación el documento medía 370 mm de ancho. El navegador
+     lo encogía para que cupiera en los 210 del A4, y al encogerlo las hojas
+     dejaban de medir 297 mm, con lo que los cortes de página ya no caían donde
+     acaba cada hoja. Por eso hay que estrechar de verdad la página y todo lo
+     que envuelve al documento. */
+  html, body {
+    width: 210mm !important; min-width: 0 !important; max-width: 210mm !important;
+    margin: 0 !important; padding: 0 !important; overflow: hidden !important;
+    background: #fff !important;
+  }
+  body :has(.prf-lienzo) {
+    display: block !important; position: static !important;
+    width: 210mm !important; min-width: 0 !important; max-width: 210mm !important;
+    margin: 0 !important; padding: 0 !important; overflow: visible !important;
+  }
   .prf-lienzo {
-    position: absolute !important; left: 0; top: 0; width: 210mm;
+    position: static !important; width: 210mm !important;
     background: #fff !important; padding: 0 !important; margin: 0 !important;
   }
   .prf-hoja {
