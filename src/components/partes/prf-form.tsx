@@ -104,6 +104,16 @@ export function PrfForm() {
     const [exportando, setExportando] = useState(false)
     const [subiendo, setSubiendo] = useState<string | null>(null)
     const [aviso, setAviso] = useState<string | null>(null)
+    const [indicativos, setIndicativos] = useState<string[]>([])
+    const [firmando, setFirmando] = useState<string | null>(null)
+
+    // Lista de indicativos del servicio para los desplegables de la hoja.
+    useEffect(() => {
+        fetch('/api/indicativos')
+            .then(r => r.ok ? r.json() : { indicativos: [] })
+            .then(d => setIndicativos(Array.isArray(d.indicativos) ? d.indicativos.sort() : []))
+            .catch(() => setIndicativos([]))
+    }, [])
 
     // Cargar parte existente
     useEffect(() => {
@@ -125,7 +135,12 @@ export function PrfForm() {
     const subirFoto = useCallback(async (categoria: keyof Fotos, index: number, file: File) => {
         setSubiendo(`${categoria}-${index}`); setAviso(null)
         try {
-            const fd = new FormData(); fd.append('archivo', file); fd.append('categoria', categoria)
+            // Se comprime en el navegador: una foto de iPad pasa de varios MB a
+            // unos cientos de KB sin pérdida apreciable al tamaño del documento.
+            const { comprimirImagen, pesoLegible } = await import('@/lib/comprimir-imagen')
+            const c = await comprimirImagen(file)
+            if (c.reduccion > 0) setAviso(`Foto comprimida ${pesoLegible(c.bytesOriginales)} → ${pesoLegible(c.bytesFinales)} (−${c.reduccion}%)`)
+            const fd = new FormData(); fd.append('archivo', c.archivo); fd.append('categoria', categoria)
             const r = await fetch('/api/partes/prf/imagen', { method: 'POST', body: fd })
             const d = await r.json()
             if (!r.ok) throw new Error(d.error || 'Error subiendo')
@@ -189,10 +204,29 @@ export function PrfForm() {
             </div>
 
             {/* El documento: se rellena aquí y esto mismo es lo que se imprime */}
+            {firmando && (
+                <div className="fixed inset-0 z-[1400] bg-slate-900/60 flex items-center justify-center p-4 prf-no-imprimir">
+                    <div className="bg-white rounded-xl p-4 w-full max-w-lg">
+                        <h3 className="text-sm font-bold text-slate-800 mb-3">Firma</h3>
+                        <SignatureCanvas
+                            label=""
+                            initialSignature={(datos as any)[firmando] || undefined}
+                            onSave={(val: string) => { set(firmando as any, val as any); setFirmando(null) }}
+                        />
+                        <div className="flex justify-end gap-2 mt-3">
+                            <button onClick={() => setFirmando(null)} className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg">Cerrar</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <PrfHoja
                 datos={datos}
                 numeroParte={numeroParte}
                 fotos={fotos}
+                indicativos={indicativos}
+                onFoto={(bloque, i, f) => subirFoto(bloque as any, i, f)}
+                onFirmar={campo => setFirmando(campo)}
                 editable
                 onCampo={(k, v) => set(k as any, v)}
                 onCheck={setCheck}

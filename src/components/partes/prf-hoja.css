@@ -58,12 +58,12 @@
 }
 .prf-cab-sigla {
   font-family: var(--fuente-barlow), 'Barlow', sans-serif;
-  font-weight: 800; font-size: 30pt; color: #fff; letter-spacing: -0.5pt;
+  font-weight: 800; font-size: 36pt; color: #fff; letter-spacing: -0.5pt;
   line-height: 1; margin-right: 4mm;
 }
 .prf-cab-titulo {
   font-family: var(--fuente-barlow-cond), 'Barlow Semi Condensed', sans-serif;
-  font-weight: 600; font-size: 11pt; color: #fff; line-height: 1.15;
+  font-weight: 600; font-size: 13pt; color: #fff; line-height: 1.12;
   text-transform: uppercase; letter-spacing: .2pt;
 }
 .prf-cab-marca { margin-left: auto; display: flex; align-items: center; gap: 3mm; }
@@ -75,6 +75,12 @@
 .prf-cab-marca-txt .l2 {
   font-weight: 700; font-size: 12.5pt; color: #fff; letter-spacing: .3pt; text-transform: uppercase;
 }
+/* Logotipos reales. contain = nunca se deforman, se ajustan al alto de la banda. */
+.prf-cab-logo { margin-left: auto; height: 13mm; width: auto; object-fit: contain; }
+.prf-pie-logo { height: 11mm; width: auto; object-fit: contain; }
+.prf-pie-logo.izq { max-width: 46mm; }
+.prf-pie-logo.der { max-width: 52mm; }
+
 /* Isotipo: cuatro cuadrados, dos naranjas y dos blancos */
 .prf-iso { display: grid; grid-template-columns: repeat(3, 3.1mm); grid-template-rows: repeat(2, 3.1mm); gap: .5mm; }
 .prf-iso i { display: block; }
@@ -139,6 +145,11 @@
 }
 .prf-campo:focus { outline: 0; border-bottom-color: var(--azul); background: #EEF3FF; }
 .prf-campo.azul  { border-bottom-color: var(--azul); }
+/* Fechas, horas y desplegables van centrados en su celda */
+.prf-centrado { text-align: center; text-align-last: center; }
+select.prf-campo { appearance: none; cursor: pointer; }
+input[type="date"].prf-campo, input[type="time"].prf-campo,
+input[type="datetime-local"].prf-campo { cursor: pointer; }
 .prf-campo.naranja { border-bottom-color: var(--naranja); }
 
 /* Rejilla de campos: se declara con --cols en el elemento */
@@ -167,6 +178,8 @@
 .prf-checks td.marca { text-align: center; width: 6.2mm; }
 .prf-checks tr:nth-child(even) td { background: var(--campo); }
 .prf-checks td:first-child { padding-left: 1.2mm; }
+/* Dato propio de un ítem (fecha del certificado, nº de botellas…) */
+.prf-extra { display: inline-block; width: 24mm; height: 4mm; margin-left: 2mm; font-size: 7.1pt; }
 
 /* ── Avisos ──────────────────────────────────────────────────────────────── */
 .prf-nota {
@@ -188,7 +201,7 @@
 .prf-zona-foto {
   border: .3mm dashed var(--borde); background: #F1F3F6;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 1.5mm; color: #8A94A6; font-size: 8.2pt;
+  gap: 1mm; color: #8A94A6; font-size: 8.2pt; text-align: center; padding: 2mm;
 }
 
 /* ── Firmas ──────────────────────────────────────────────────────────────── */
@@ -200,7 +213,15 @@
   letter-spacing: .85pt; text-transform: uppercase;
 }
 .prf-firma-sub { font-size: 6.5pt; color: var(--etiqueta); }
-.prf-firma-hueco { height: 18mm; }
+.prf-firma-hueco {
+  height: 18mm; display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+}
+.prf-firma-hueco.editable { cursor: pointer; border: .25mm dashed var(--borde); background: #FBFCFE; }
+.prf-firma-hueco.editable:hover { border-color: var(--azul); background: #F2F6FF; }
+.prf-firma-img { max-height: 100%; max-width: 100%; object-fit: contain; }
+.prf-firma-pista { font-size: 6.5pt; color: #A8B2C1; }
+@media print { .prf-firma-hueco.editable { border: 0; background: transparent; } }
 
 /* ── Impresión ───────────────────────────────────────────────────────────── */
 @page { size: A4 portrait; margin: 0; }

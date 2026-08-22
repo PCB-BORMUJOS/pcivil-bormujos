@@ -15,7 +15,8 @@
 import './prf-hoja.css'
 import {
     EXTINTOR_ABC_CHECKS, EXTINTOR_CO2_CHECKS, GAS_IZQ, GAS_DER, DOC_IZQ, DOC_DER,
-    ELECTRICA, EVACUACION, type ItemCheck, type ValorCheck, type PrfDatos,
+    ELECTRICA, EVACUACION, EFICACIA_ABC, EFICACIA_CO2, EJEMPLARES, INDICATIVO_JEFE,
+    type ItemCheck, type ValorCheck, type PrfDatos,
 } from '@/lib/prf-campos'
 
 type Fotos = Record<string, string[]>
@@ -26,8 +27,14 @@ export type PrfHojaProps = {
     fotos?: Fotos
     /** Sin editar, la hoja se comporta como documento (vista previa e impresión). */
     editable?: boolean
+    /** Indicativos del servicio para los desplegables. */
+    indicativos?: string[]
     onCampo?: (campo: keyof PrfDatos, valor: any) => void
     onCheck?: (key: string, valor: ValorCheck) => void
+    /** Abre el panel de firma para el campo indicado. */
+    onFirmar?: (campo: string) => void
+    /** Entrega la foto elegida ya lista para comprimir y subir. */
+    onFoto?: (bloque: string, indice: number, archivo: File) => void
 }
 
 // ── Piezas comunes ───────────────────────────────────────────────────────────
@@ -37,16 +44,10 @@ function Cabecera() {
         <header className="prf-cab">
             <span className="prf-cab-sigla">PRF</span>
             <span className="prf-cab-titulo">Parte de<br />Revisión Feria</span>
-            <div className="prf-cab-marca">
-                <div className="prf-iso" aria-hidden="true">
-                    <i className="v" /><i className="n" /><i className="v" />
-                    <i className="n" /><i className="n" /><i className="b" />
-                </div>
-                <div className="prf-cab-marca-txt">
-                    <div className="l1">Protección Civil</div>
-                    <div className="l2">Bormujos</div>
-                </div>
-            </div>
+            {/* Logotipo real del servicio. object-fit: contain para que no se
+                deforme nunca, sea cual sea el alto de la banda. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/images/logo-pc-blanco.png" alt="Protección Civil Bormujos" className="prf-cab-logo" />
         </header>
     )
 }
@@ -54,26 +55,16 @@ function Cabecera() {
 function Pie() {
     return (
         <footer className="prf-pie">
-            <div className="prf-iso" aria-hidden="true" style={{ opacity: .95 }}>
-                <i className="b" /><i className="v" /><i className="v" />
-                <i className="v" /><i className="b" /><i className="v" />
-            </div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/images/logo-ayuntamiento.png" alt="Ayuntamiento de Bormujos" className="prf-pie-logo izq" />
             <div className="prf-pie-centro">
                 <div>Servicio de Protección Civil</div>
                 <div>Ayuntamiento de Bormujos (Sevilla)</div>
                 <div className="fina">Calle Maestro Francisco Rodríguez | Avda Universidad de Salamanca</div>
                 <div className="fina">info.pcivil@bormujos.net | www.proteccioncivilbormujos.es</div>
             </div>
-            <div className="prf-cab-marca">
-                <div className="prf-iso" aria-hidden="true">
-                    <i className="b" /><i className="v" /><i className="b" />
-                    <i className="v" /><i className="b" /><i className="v" />
-                </div>
-                <div className="prf-cab-marca-txt">
-                    <div className="l1">Protección Civil</div>
-                    <div className="l2">Bormujos</div>
-                </div>
-            </div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/images/logo-pc-blanco.png" alt="Protección Civil Bormujos" className="prf-pie-logo der" />
         </footer>
     )
 }
@@ -106,6 +97,74 @@ function Campo({
     )
 }
 
+/** Campo de fecha u hora: abre el selector nativo y va centrado en la celda. */
+function CampoFechaHora({
+    etq, valor, onChange, editable, tipo = 'date', color,
+}: {
+    etq: string; valor: string; onChange?: (v: string) => void
+    editable?: boolean; tipo?: 'date' | 'time' | 'datetime-local'; color?: 'azul' | 'naranja'
+}) {
+    return (
+        <div>
+            <label className="prf-etq">{etq}</label>
+            <input
+                type={tipo} className={`prf-campo prf-centrado${color ? ' ' + color : ''}`}
+                value={valor || ''} readOnly={!editable} disabled={!editable}
+                onChange={e => onChange?.(e.target.value)}
+            />
+        </div>
+    )
+}
+
+/** Desplegable con la lista de indicativos del servicio. */
+function SelectorIndicativo({
+    etq, valor, opciones, onChange, editable,
+}: { etq: string; valor: string; opciones: string[]; onChange?: (v: string) => void; editable?: boolean }) {
+    return (
+        <div>
+            <label className="prf-etq">{etq}</label>
+            <select className="prf-campo prf-centrado naranja" value={valor || ''}
+                    disabled={!editable} onChange={e => onChange?.(e.target.value)}>
+                <option value="">—</option>
+                {opciones.map(i => <option key={i} value={i}>{i}</option>)}
+            </select>
+        </div>
+    )
+}
+
+/**
+ * Ranura de foto. En iPad y móvil, pulsar abre la hoja del sistema con
+ * "Hacer foto" y "Fototeca"; en ordenador, el explorador de archivos.
+ * La compresión se hace en el componente padre, al recibir el fichero.
+ */
+function RanuraFoto({
+    etiqueta, url, proporcion, editable, onElegir,
+}: {
+    etiqueta: string; url?: string; proporcion: string
+    editable?: boolean; onElegir?: (f: File) => void
+}) {
+    const id = `foto-${etiqueta.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}`
+    if (url) {
+        return (
+            <label htmlFor={editable ? id : undefined} style={{ display: 'block', cursor: editable ? 'pointer' : 'default' }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={url} alt={etiqueta} style={{ aspectRatio: proporcion, width: '100%', objectFit: 'cover', border: '.25mm solid var(--borde)' }} />
+                {editable && <input id={id} type="file" accept="image/*" capture="environment" hidden
+                                    onChange={e => { const f = e.target.files?.[0]; if (f) onElegir?.(f); e.target.value = '' }} />}
+            </label>
+        )
+    }
+    return (
+        <label htmlFor={editable ? id : undefined} className="prf-zona-foto"
+               style={{ aspectRatio: proporcion, cursor: editable ? 'pointer' : 'default' }}>
+            <span>{etiqueta}</span>
+            {editable && <span className="prf-no-imprimir" style={{ fontSize: '6.5pt' }}>Hacer foto o elegir de la galería</span>}
+            {editable && <input id={id} type="file" accept="image/*" capture="environment" hidden
+                                onChange={e => { const f = e.target.files?.[0]; if (f) onElegir?.(f); e.target.value = '' }} />}
+        </label>
+    )
+}
+
 function Casilla({
     marcada, onClick, editable, naranja,
 }: { marcada: boolean; onClick?: () => void; editable?: boolean; naranja?: boolean }) {
@@ -119,9 +178,17 @@ function Casilla({
 }
 
 /** Tabla de ítems con las tres columnas SÍ / NO / N.A. del modelo. */
+type Extra = { tipo: 'date' | 'number'; valor: string; campo: string }
+
 function Checks({
-    items, checks, onCheck, editable,
-}: { items: ItemCheck[]; checks: Record<string, ValorCheck>; onCheck?: (k: string, v: ValorCheck) => void; editable?: boolean }) {
+    items, checks, onCheck, editable, extras, onCampo,
+}: {
+    items: ItemCheck[]; checks: Record<string, ValorCheck>
+    onCheck?: (k: string, v: ValorCheck) => void; editable?: boolean
+    /** Algunos ítems llevan un dato propio (fecha, número) además del Sí/No/N.A. */
+    extras?: Record<string, Extra>
+    onCampo?: (campo: keyof PrfDatos, valor: any) => void
+}) {
     return (
         <table className="prf-checks">
             <thead>
@@ -133,7 +200,17 @@ function Checks({
             <tbody>
                 {items.map(it => (
                     <tr key={it.key}>
-                        <td>{it.label}</td>
+                        <td>
+                            {it.label}
+                            {extras?.[it.key] && (
+                                <input
+                                    type={extras[it.key].tipo}
+                                    className="prf-campo prf-centrado prf-extra"
+                                    value={extras[it.key].valor || ''} disabled={!editable}
+                                    onChange={e => onCampo?.(extras[it.key].campo as keyof PrfDatos, e.target.value)}
+                                />
+                            )}
+                        </td>
                         {(['si', 'no', 'na'] as ValorCheck[]).map(v => (
                             <td className="marca" key={v}>
                                 <Casilla
@@ -151,7 +228,7 @@ function Checks({
 
 // ── Hoja ─────────────────────────────────────────────────────────────────────
 
-export default function PrfHoja({ datos, numeroParte, fotos = {}, editable = false, onCampo, onCheck }: PrfHojaProps) {
+export default function PrfHoja({ datos, numeroParte, fotos = {}, editable = false, indicativos = [], onCampo, onCheck, onFirmar, onFoto }: PrfHojaProps) {
     const d = datos
     const set = (k: keyof PrfDatos) => (v: string) => onCampo?.(k, v)
     const ch = d.checks || {}
@@ -173,12 +250,17 @@ export default function PrfHoja({ datos, numeroParte, fotos = {}, editable = fal
                     </div>
                     <div className="prf-regla-naranja prf-en" style={{ ['--y' as any]: '31.2mm' }} />
 
-                    <div className="prf-fila prf-en" style={{ ['--y' as any]: '33.6mm', marginTop: 0, gridTemplateColumns: '37.2mm 37.2mm 37.2mm 30.4mm 47mm' }}>
-                        <Campo etq="Fecha" valor={d.fecha} onChange={set('fecha')} editable={editable} color="naranja" />
-                        <Campo etq="Hora de inicio" valor={d.horaInicio} onChange={set('horaInicio')} editable={editable} color="naranja" />
-                        <Campo etq="Hora de fin" valor={d.horaFin} onChange={set('horaFin')} editable={editable} color="naranja" />
-                        <Campo etq="Indicativo que informa" valor={d.indicativoInforma} onChange={set('indicativoInforma')} editable={editable} color="naranja" />
-                        <Campo etq="Equipo" valor={d.equipo} onChange={set('equipo')} editable={editable} color="naranja" />
+                    {/* Cinco huecos iguales que suman justo el ancho útil: 5×36,7 + 4×3,2 = 195,1 mm.
+                        "Indicativo que informa" y "Equipo" eran lo mismo, así que
+                        pasan a ser dos indicativos elegidos de la lista del servicio. */}
+                    <div className="prf-fila prf-en" style={{ ['--y' as any]: '33.6mm', marginTop: 0, gridTemplateColumns: 'repeat(5, 36.7mm)' }}>
+                        <CampoFechaHora etq="Fecha" valor={d.fecha} onChange={set('fecha')} editable={editable} tipo="date" color="naranja" />
+                        <CampoFechaHora etq="Hora de inicio" valor={d.horaInicio} onChange={set('horaInicio')} editable={editable} tipo="time" color="naranja" />
+                        <CampoFechaHora etq="Hora de fin" valor={d.horaFin} onChange={set('horaFin')} editable={editable} tipo="time" color="naranja" />
+                        <SelectorIndicativo etq="Indicativos que informan" valor={d.indicativos?.[0] || ''} opciones={indicativos} editable={editable}
+                            onChange={v => onCampo?.('indicativos', [v, d.indicativos?.[1] || ''])} />
+                        <SelectorIndicativo etq="Indicativos que informan" valor={d.indicativos?.[1] || ''} opciones={indicativos} editable={editable}
+                            onChange={v => onCampo?.('indicativos', [d.indicativos?.[0] || '', v])} />
                     </div>
 
                     <div className="prf-fila prf-en" style={{ ['--y' as any]: '44.6mm', marginTop: 0, gridTemplateColumns: '47mm 52.4mm 95.7mm', alignItems: 'end' }}>
@@ -187,13 +269,19 @@ export default function PrfHoja({ datos, numeroParte, fotos = {}, editable = fal
                         <div>
                             <label className="prf-etq">Ejemplar del acta</label>
                             <div style={{ display: 'flex', gap: '3.5mm', height: '5.2mm', alignItems: 'center' }}>
-                                {([['titular', 'Titular'], ['servicio', 'Servicio'], ['policia_local', 'Policía Local']] as const).map(([v, t]) => (
-                                    <span className="prf-opcion" key={v}>
-                                        <Casilla marcada={d.ejemplar === v} editable={editable}
-                                                 onClick={() => onCampo?.('ejemplar', d.ejemplar === v ? '' : v)} />
-                                        {t}
-                                    </span>
-                                ))}
+                                {/* Puede extenderse en varios ejemplares a la vez */}
+                                {EJEMPLARES.map(({ valor, label }) => {
+                                    const sel = (d.ejemplares || []).includes(valor)
+                                    return (
+                                        <span className="prf-opcion" key={valor}>
+                                            <Casilla marcada={sel} editable={editable}
+                                                     onClick={() => onCampo?.('ejemplares', sel
+                                                         ? (d.ejemplares || []).filter(x => x !== valor)
+                                                         : [...(d.ejemplares || []), valor])} />
+                                            {label}
+                                        </span>
+                                    )
+                                })}
                             </div>
                         </div>
                     </div>
@@ -266,7 +354,7 @@ export default function PrfHoja({ datos, numeroParte, fotos = {}, editable = fal
                                 <div className="prf-fila" style={{ gridTemplateColumns: '1fr 1fr', marginTop: 0 }}>
                                     <Campo etq="Compañía" valor={d.polizaCompania} onChange={set('polizaCompania')} editable={editable} />
                                     <Campo etq="Nº de póliza" valor={d.polizaNumero} onChange={set('polizaNumero')} editable={editable} />
-                                    <Campo etq="Vigencia hasta" valor={d.polizaVigencia} onChange={set('polizaVigencia')} editable={editable} />
+                                    <CampoFechaHora etq="Vigencia hasta" valor={d.polizaVigencia} onChange={set('polizaVigencia')} editable={editable} tipo="date" />
                                     <div>
                                         <label className="prf-etq">Recibo en vigor</label>
                                         <div style={{ display: 'flex', gap: '4mm', height: '5.2mm', alignItems: 'center' }}>
@@ -325,17 +413,26 @@ export default function PrfHoja({ datos, numeroParte, fotos = {}, editable = fal
                                                 </span>
                                             ))}
                                         </div>
-                                        {[
-                                            [c.ef, c.efv, c.ke],
-                                            ['Revisión en vigor · fecha', c.rev, c.kr],
-                                        ].map(([et, val, key], j) => (
-                                            <div key={`b${j}`} style={{ display: 'flex', alignItems: 'center', gap: '2mm', marginTop: '1.2mm' }}>
-                                                <span style={{ flex: 1, fontSize: '8.2pt' }}>{et as string}</span>
-                                                <input className="prf-campo" style={{ width: '38mm', height: '4.4mm' }}
-                                                       value={(val as string) || ''} readOnly={!editable}
-                                                       onChange={e => onCampo?.(key as keyof PrfDatos, e.target.value)} />
-                                            </div>
-                                        ))}
+                                        {/* Eficacia: etiqueta a la izquierda y desplegable con los
+                                            valores normalizados, en vez de texto libre */}
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '2mm', marginTop: '1.2mm' }}>
+                                            <span style={{ flex: 1, fontSize: '8.2pt' }}>Eficacia</span>
+                                            <select className="prf-campo prf-centrado" style={{ width: '38mm', height: '4.4mm' }}
+                                                    value={c.efv || ''} disabled={!editable}
+                                                    onChange={e => onCampo?.(c.ke as keyof PrfDatos, e.target.value)}>
+                                                <option value="">—</option>
+                                                {(i === 0 ? EFICACIA_ABC : EFICACIA_CO2).map(o => (
+                                                    <option key={o.valor} value={o.valor}>{o.label}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        {/* Fecha de la última revisión */}
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '2mm', marginTop: '1.2mm' }}>
+                                            <span style={{ flex: 1, fontSize: '8.2pt' }}>Revisión en vigor · última</span>
+                                            <input type="date" className="prf-campo prf-centrado" style={{ width: '38mm', height: '4.4mm' }}
+                                                   value={c.rev || ''} disabled={!editable}
+                                                   onChange={e => onCampo?.(c.kr as keyof PrfDatos, e.target.value)} />
+                                        </div>
                                         <div style={{ marginTop: '1.4mm' }}>
                                             <Checks items={c.items} checks={ch} onCheck={onCheck} editable={editable} />
                                         </div>
@@ -369,7 +466,12 @@ export default function PrfHoja({ datos, numeroParte, fotos = {}, editable = fal
                         <Seccion num="05" titulo="Instalación de gas y zona de cocina" ref_="RD 919/2006 · ITC-ICG" />
                         <div className="prf-caja">
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 4mm' }}>
-                                <Checks items={GAS_IZQ} checks={ch} onCheck={onCheck} editable={editable} />
+                                <Checks items={GAS_IZQ} checks={ch} onCheck={onCheck} editable={editable}
+                                        extras={{
+                                            gas_certificado: { tipo: 'date', valor: d.gasCertificadoFecha, campo: 'gasCertificadoFecha' },
+                                            gas_manguera:    { tipo: 'date', valor: d.gasMangueraCaducidad, campo: 'gasMangueraCaducidad' },
+                                            gas_botellas:    { tipo: 'number', valor: d.gasBotellasNum, campo: 'gasBotellasNum' },
+                                        }} onCampo={onCampo} />
                                 <Checks items={GAS_DER} checks={ch} onCheck={onCheck} editable={editable} />
                             </div>
                         </div>
@@ -468,8 +570,8 @@ export default function PrfHoja({ datos, numeroParte, fotos = {}, editable = fal
                                               value={d.requerimientos || ''} readOnly={!editable}
                                               onChange={e => set('requerimientos')(e.target.value)} />
                                 </div>
-                                <Campo etq="Plazo límite" valor={d.plazoLimite} onChange={set('plazoLimite')} editable={editable} />
-                                <Campo etq="Reinspección prevista" valor={d.reinspeccion} onChange={set('reinspeccion')} editable={editable} />
+                                <CampoFechaHora etq="Plazo límite" valor={d.plazoLimite} onChange={set('plazoLimite')} editable={editable} tipo="date" />
+                                <CampoFechaHora etq="Reinspección prevista" valor={d.reinspeccion} onChange={set('reinspeccion')} editable={editable} tipo="datetime-local" />
                             </div>
 
                             <p className="prf-aviso" style={{ marginTop: '2.6mm' }}>
@@ -488,19 +590,34 @@ export default function PrfHoja({ datos, numeroParte, fotos = {}, editable = fal
                     {/* Firmas: 4 columnas de 46,4 mm */}
                     <div className="prf-en" style={{ ['--y' as any]: '213mm' }}>
                         <div className="prf-firmas">
-                            {[
-                                ['Indicativo que informa 1', 'Indicativo y firma'],
-                                ['Indicativo que informa 2', 'Indicativo y firma'],
-                                ['Vº Bº Jefe de Servicio', 'Nombre y firma'],
-                                ['Tomador o representante', 'Firma de recepción, no implica conformidad'],
-                            ].map(([t, s]) => (
-                                <div key={t}>
-                                    <div className="prf-firma-hueco" />
-                                    <div className="prf-firma-linea" />
-                                    <div className="prf-firma-tit">{t}</div>
-                                    <div className="prf-firma-sub">{s}</div>
-                                </div>
-                            ))}
+                            {/* Los indicativos salen de lo elegido arriba; el Vº Bº es
+                                siempre J-44. El hueco sobre la línea azul es donde se firma. */}
+                            {([
+                                { tit: 'Indicativo que informa 1', sub: d.indicativos?.[0] || 'Indicativo y firma', campo: 'firmaInforma1' },
+                                { tit: 'Indicativo que informa 2', sub: d.indicativos?.[1] || 'Indicativo y firma', campo: 'firmaInforma2' },
+                                { tit: 'Vº Bº Jefe de Servicio', sub: INDICATIVO_JEFE, campo: 'firmaJefe' },
+                                { tit: 'Tomador o representante', sub: 'Firma de recepción, no implica conformidad', campo: 'firmaTomador' },
+                            ] as const).map(f => {
+                                const firma = (d as any)[f.campo] as string
+                                return (
+                                    <div key={f.campo}>
+                                        <div
+                                            className={`prf-firma-hueco${editable ? ' editable' : ''}`}
+                                            onClick={() => editable && onFirmar?.(f.campo)}
+                                            role={editable ? 'button' : undefined}
+                                            title={editable ? 'Pulsa para firmar' : undefined}
+                                        >
+                                            {firma
+                                                /* eslint-disable-next-line @next/next/no-img-element */
+                                                ? <img src={firma} alt={`Firma ${f.tit}`} className="prf-firma-img" />
+                                                : editable && <span className="prf-firma-pista prf-no-imprimir">Pulsa para firmar</span>}
+                                        </div>
+                                        <div className="prf-firma-linea" />
+                                        <div className="prf-firma-tit">{f.tit}</div>
+                                        <div className="prf-firma-sub">{f.sub}</div>
+                                    </div>
+                                )
+                            })}
                         </div>
                     </div>
 
@@ -534,21 +651,19 @@ export default function PrfHoja({ datos, numeroParte, fotos = {}, editable = fal
 
                     <div className="prf-en" style={{ ['--y' as any]: '34.5mm' }}>
                     {([
-                        { titulo: 'Zona noble', clave: 'zonaNoble', n: 2, alto: '52mm' },
-                        { titulo: 'Zona cocina', clave: 'zonaCocina', n: 2, alto: '52mm' },
+                        { titulo: 'Zona noble', clave: 'zonaNoble', n: 2, alto: '70.5mm' },
+                        { titulo: 'Zona cocina', clave: 'zonaCocina', n: 2, alto: '70.5mm' },
                     ] as const).map(b => (
                         <div key={b.clave} style={{ marginTop: '2.6mm' }}>
                             <div className="prf-sec" style={{ justifyContent: 'center' }}>
                                 <span className="tit">{b.titulo}</span>
                             </div>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2.4mm', marginTop: '2mm' }}>
-                                {Array.from({ length: b.n }, (_, i) => {
-                                    const url = fotos[b.clave]?.[i]
-                                    return url
-                                        ? <img key={i} src={url} alt={`${b.titulo} ${i + 1}`}
-                                               style={{ height: b.alto, width: '100%', objectFit: 'cover', border: '.25mm solid var(--borde)' }} />
-                                        : <div key={i} className="prf-zona-foto" style={{ height: b.alto }}>{b.titulo} · Foto {i + 1}</div>
-                                })}
+                                {Array.from({ length: b.n }, (_, i) => (
+                                    <RanuraFoto key={i} etiqueta={`${b.titulo} · Foto ${i + 1}`} url={fotos[b.clave]?.[i]}
+                                                proporcion="4 / 3" editable={editable}
+                                                onElegir={f => onFoto?.(b.clave, i, f)} />
+                                ))}
                             </div>
                         </div>
                     ))}
@@ -564,15 +679,11 @@ export default function PrfHoja({ datos, numeroParte, fotos = {}, editable = fal
                                     <span className="tit">{b.titulo}</span>
                                 </div>
                                 <div style={{ display: 'grid', gridTemplateColumns: b.n === 2 ? '1fr 1fr' : '1fr', gap: '2.4mm', marginTop: '2mm' }}>
-                                    {Array.from({ length: b.n }, (_, i) => {
-                                        const url = fotos[b.clave]?.[i]
-                                        return url
-                                            ? <img key={i} src={url} alt={`${b.titulo} ${i + 1}`}
-                                                   style={{ height: '38mm', width: '100%', objectFit: 'cover', border: '.25mm solid var(--borde)' }} />
-                                            : <div key={i} className="prf-zona-foto" style={{ height: '38mm', fontSize: '7.5pt' }}>
-                                                {b.titulo.replace('Extintores de ', 'Extintor ')} · Foto {i + 1}
-                                              </div>
-                                    })}
+                                    {Array.from({ length: b.n }, (_, i) => (
+                                        <RanuraFoto key={i} etiqueta={`${b.titulo.replace('Extintores de ', 'Extintor ')} · Foto ${i + 1}`}
+                                                    url={fotos[b.clave]?.[i]} proporcion="3 / 4" editable={editable}
+                                                    onElegir={f => onFoto?.(b.clave, i, f)} />
+                                    ))}
                                 </div>
                             </div>
                         ))}
