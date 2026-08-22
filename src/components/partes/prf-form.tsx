@@ -1,9 +1,10 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import Link from 'next/link'
 import PrfHoja from './PrfHoja'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { Save, FileDown, Loader2, Upload, X, Check } from 'lucide-react'
+import { Save, FileDown, Loader2, Upload, X, Check, ChevronLeft } from 'lucide-react'
 import SignatureCanvas from './SignatureCanvas'
 import {
     estadoInicialPRF, type PrfDatos, type ValorCheck, type ItemCheck,
@@ -242,29 +243,39 @@ export function PrfForm() {
 
     return (
         <div className="pb-16">
-            {/* Barra de acciones: no forma parte del documento, no se imprime */}
-            <div className="prf-no-imprimir flex items-center justify-between rounded-lg px-5 py-4 text-white sticky top-0 z-20 shadow" style={{ background: AZUL }}>
-                <div className="flex items-baseline gap-3">
-                    <span className="text-4xl font-black tracking-tight leading-none">PRF</span>
-                    <span className="text-[11px] font-bold opacity-80 uppercase leading-tight border-l border-white/25 pl-3">
-                        Parte de<br />Revisión Feria
-                    </span>
-                    {numeroParte && <span className="text-[11px] opacity-70 ml-2">Nº {numeroParte}</span>}
-                </div>
-                <div className="flex items-center gap-2">
-                    {aviso && <span className="text-[11px] opacity-90 mr-2">{aviso}</span>}
-                    <button onClick={() => guardar('borrador')} disabled={guardando}
-                            className="flex items-center gap-1.5 bg-white/15 hover:bg-white/25 px-3 py-1.5 rounded-lg text-xs font-bold disabled:opacity-50">
-                        {guardando ? <Loader2 className="animate-spin" size={14} /> : <Save size={14} />} Guardar
-                    </button>
-                    <button onClick={exportarPDF} disabled={exportando}
-                            className="flex items-center gap-1.5 bg-orange-500 hover:bg-orange-600 px-3 py-1.5 rounded-lg text-xs font-bold disabled:opacity-50">
-                        {exportando ? <Loader2 className="animate-spin" size={14} /> : <FileDown size={14} />} Exportar PDF
-                    </button>
-                </div>
+            {/* Barra de acciones. Misma píldora flotante que el parte PSI, para que
+                los dos módulos se manejen igual. No forma parte del documento: lleva
+                prf-no-imprimir y no sale en el PDF. */}
+            <div className="prf-no-imprimir sticky top-4 z-50 bg-white/90 backdrop-blur shadow-lg rounded-full px-6 py-2 flex items-center gap-4 border border-gray-200 mb-6 transition-all hover:shadow-xl mx-auto w-fit">
+                <Link href="/partes/prf" className="p-1.5 hover:bg-gray-100 rounded-full transition-colors text-gray-500 hover:text-gray-700" title="Volver a la lista">
+                    <ChevronLeft className="w-5 h-5" />
+                </Link>
+                <div className="h-4 w-px bg-gray-300" />
+                <span className="text-sm font-semibold text-gray-600">
+                    {numeroParte ? `Ref: ${numeroParte}` : 'Nuevo parte'}
+                </span>
+                {aviso && <span className="text-xs text-gray-500">{aviso}</span>}
+                <div className="h-4 w-px bg-gray-300" />
+                <button
+                    type="button"
+                    onClick={() => guardar('borrador')}
+                    disabled={guardando}
+                    className="flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm transition-colors disabled:opacity-50"
+                >
+                    {guardando ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                    {guardando ? 'Guardando...' : 'Guardar'}
+                </button>
+                <button
+                    type="button"
+                    onClick={exportarPDF}
+                    disabled={exportando}
+                    className="flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 hover:text-indigo-600 transition-colors disabled:opacity-50"
+                >
+                    {exportando ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />}
+                    Exportar PDF
+                </button>
             </div>
 
-            {/* El documento: se rellena aquí y esto mismo es lo que se imprime */}
             {firmando && (
                 <div className="fixed inset-0 z-[1400] bg-slate-900/60 flex items-center justify-center p-4 prf-no-imprimir">
                     <div className="bg-white rounded-xl p-4 w-full max-w-lg">

@@ -1,112 +1,303 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import Link from 'next/link'
-import { Plus, FileText, Trash2, Loader2, Search, ClipboardCheck } from 'lucide-react'
+/**
+ * Listado de partes PRF.
+ *
+ * Sigue el mismo patrón visual que el listado de partes PSI (cabecera clara con
+ * el título a la izquierda y el botón de alta a la derecha, tarjeta de filtros,
+ * tabla en tarjeta con badges de estado y acciones por iconos, y paginación al
+ * pie), para que los dos módulos de partes se vean y se manejen igual.
+ */
 
-const AZUL = '#283666'
+import { useCallback, useEffect, useState } from 'react'
+import Link from 'next/link'
+import { format } from 'date-fns'
+import { es } from 'date-fns/locale'
+import { Plus, FileText, Trash2, Loader2, Eye, Download, ClipboardCheck } from 'lucide-react'
+import { ESTADOS_PARTE } from '@/constants/partesPSI'
 
 interface ParteRow {
-    id: string; numeroParte: string; fecha: string; estado: string
-    expediente: string | null; nombreCaseta: string | null; numeroCaseta: string | null
-    resultado: string | null; pdfUrl: string | null; createdAt: string
+    id: string
+    numeroParte: string
+    fecha: string
+    estado: string
+    expediente: string | null
+    nombreCaseta: string | null
+    numeroCaseta: string | null
+    resultado: string | null
+    pdfUrl: string | null
+    createdAt: string
+    creadoPorNombre: string | null
 }
 
-const RES_BADGE: Record<string, { txt: string; cls: string }> = {
-    apto: { txt: 'Apto', cls: 'bg-emerald-100 text-emerald-700' },
-    apto_condiciones: { txt: 'Apto c/cond.', cls: 'bg-amber-100 text-amber-700' },
-    no_apto: { txt: 'No apto', cls: 'bg-red-100 text-red-700' },
+/** El resultado de la revisión es propio del PRF y no existe en el PSI. */
+const RESULTADOS: Record<string, { label: string; clases: string }> = {
+    apto: { label: 'Apto', clases: 'bg-emerald-100 text-emerald-700 border-emerald-300' },
+    apto_condiciones: { label: 'Apto c/cond.', clases: 'bg-amber-100 text-amber-800 border-amber-300' },
+    no_apto: { label: 'No apto', clases: 'bg-red-100 text-red-700 border-red-300' },
 }
 
 export function PrfLista() {
     const [partes, setPartes] = useState<ParteRow[]>([])
-    const [cargando, setCargando] = useState(true)
-    const [q, setQ] = useState('')
+    const [loading, setLoading] = useState(true)
+    const [page, setPage] = useState(1)
+    const [totalPages, setTotalPages] = useState(1)
+    const [filtroTexto, setFiltroTexto] = useState('')
+    const [filtroEstado, setFiltroEstado] = useState('todos')
+    const [filtroResultado, setFiltroResultado] = useState('todos')
+    const [descargando, setDescargando] = useState<string | null>(null)
 
-    const cargar = () => {
-        setCargando(true)
-        fetch(`/api/partes/prf?limit=100${q ? `&q=${encodeURIComponent(q)}` : ''}`)
-            .then(r => r.json()).then(d => setPartes(d.partes || [])).catch(() => {}).finally(() => setCargando(false))
-    }
-    useEffect(() => { cargar() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+    const cargarPartes = useCallback(async () => {
+        setLoading(true)
+        try {
+            const params = new URLSearchParams({ page: String(page), limit: '20' })
+            if (filtroTexto.trim()) params.set('q', filtroTexto.trim())
+            if (filtroEstado !== 'todos') params.set('estado', filtroEstado)
+            const data = await fetch(`/api/partes/prf?${params}`).then(r => r.json())
+            setPartes(data.partes || [])
+            setTotalPages(data.totalPages || 1)
+        } catch {
+            setPartes([])
+        } finally {
+            setLoading(false)
+        }
+    }, [page, filtroTexto, filtroEstado])
 
-    const borrar = async (id: string) => {
+    useEffect(() => { cargarPartes() }, [cargarPartes])
+
+    // El resultado no se filtra en la API, así que se afina aquí sobre lo recibido.
+    const visibles = filtroResultado === 'todos'
+        ? partes
+        : partes.filter(p => (p.resultado || '') === filtroResultado)
+
+    const handleEliminar = async (id: string) => {
         if (!confirm('¿Archivar este parte PRF?')) return
-        await fetch(`/api/partes/prf/${id}`, { method: 'DELETE' })
-        setPartes(p => p.filter(x => x.id !== id))
+        const res = await fetch(`/api/partes/prf/${id}`, { method: 'DELETE' })
+        if (res.ok) setPartes(p => p.filter(x => x.id !== id))
     }
 
-    const fmtFecha = (s: string) => new Date(s).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Europe/Madrid' })
+    const handleDescargarPDF = (id: string, url: string | null) => {
+        if (!url) return
+        setDescargando(id)
+        window.open(url, '_blank', 'noopener,noreferrer')
+        setTimeout(() => setDescargando(null), 800)
+    }
 
     return (
-        <div className="max-w-5xl mx-auto p-4">
-            <div className="flex items-center justify-between rounded-xl px-5 py-4 text-white" style={{ background: AZUL }}>
-                <div className="flex items-center gap-3">
-                    <ClipboardCheck size={26} />
-                    <div>
-                        <h1 className="text-xl font-black leading-tight">Partes PRF · Revisión de Feria</h1>
-                        <p className="text-xs opacity-70">Actas de inspección de casetas de feria</p>
-                    </div>
+        <div className="p-6 max-w-7xl mx-auto">
+            {/* HEADER */}
+            <div className="flex justify-between items-center mb-6">
+                <div>
+                    <h1 className="text-3xl font-bold text-gray-800">Partes de Revisión de Feria (PRF)</h1>
+                    <p className="text-gray-500 mt-1">Actas de inspección de casetas de feria</p>
                 </div>
-                <Link href="/partes/prf?nuevo=1" className="flex items-center gap-1.5 bg-orange-500 hover:bg-orange-600 px-4 py-2 rounded-lg text-sm font-bold">
-                    <Plus size={16} /> Nuevo parte
-                </Link>
+                <div className="flex items-center gap-2">
+                    <Link
+                        href="/partes/prf?nuevo=1"
+                        className="px-5 py-2.5 bg-orange-500 text-white rounded-lg hover:bg-orange-600 font-medium flex items-center gap-2 shadow-md transition-colors whitespace-nowrap"
+                    >
+                        <Plus size={18} />
+                        Nuevo Parte PRF
+                    </Link>
+                </div>
             </div>
 
-            <div className="flex items-center gap-2 mt-4">
-                <div className="relative flex-1">
-                    <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                    <input value={q} onChange={e => setQ(e.target.value)} onKeyDown={e => e.key === 'Enter' && cargar()}
-                        placeholder="Buscar por nº, expediente o caseta…" className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-lg text-sm outline-none focus:border-blue-500" />
+            {/* FILTROS */}
+            <div className="bg-white rounded-xl p-4 mb-6 shadow-sm border border-gray-200">
+                <div className="flex flex-wrap gap-4 items-end">
+                    <div className="flex-[2] min-w-[220px]">
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Buscar</label>
+                        <input
+                            type="text"
+                            value={filtroTexto}
+                            onChange={e => { setFiltroTexto(e.target.value); setPage(1) }}
+                            placeholder="Nº de parte, expediente o caseta"
+                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none"
+                        />
+                    </div>
+                    <div className="flex-1 min-w-[160px]">
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Estado</label>
+                        <select
+                            value={filtroEstado}
+                            onChange={e => { setFiltroEstado(e.target.value); setPage(1) }}
+                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 bg-white outline-none"
+                        >
+                            <option value="todos">Todos</option>
+                            <option value="borrador">Borrador</option>
+                            <option value="completo">Completo</option>
+                        </select>
+                    </div>
+                    <div className="flex-1 min-w-[160px]">
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Resultado</label>
+                        <select
+                            value={filtroResultado}
+                            onChange={e => setFiltroResultado(e.target.value)}
+                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 bg-white outline-none"
+                        >
+                            <option value="todos">Todos</option>
+                            <option value="apto">Apto</option>
+                            <option value="apto_condiciones">Apto con condiciones</option>
+                            <option value="no_apto">No apto</option>
+                        </select>
+                    </div>
+                    <button
+                        onClick={() => { setFiltroTexto(''); setFiltroEstado('todos'); setFiltroResultado('todos'); setPage(1) }}
+                        className="px-4 py-2 text-sm bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 font-medium"
+                    >
+                        Limpiar
+                    </button>
                 </div>
-                <button onClick={cargar} className="px-4 py-2 bg-slate-800 text-white rounded-lg text-sm font-semibold">Buscar</button>
             </div>
 
-            <div className="mt-4 bg-white rounded-xl border border-slate-200 overflow-hidden">
-                {cargando ? (
-                    <div className="p-16 flex justify-center"><Loader2 className="animate-spin text-blue-600" /></div>
-                ) : partes.length === 0 ? (
-                    <div className="p-16 text-center text-slate-400">
-                        <FileText size={40} className="mx-auto mb-3 opacity-30" />
-                        <p className="text-sm">No hay partes PRF todavía.</p>
-                    </div>
-                ) : (
-                    <table className="w-full text-left text-sm">
-                        <thead className="bg-slate-50 border-b border-slate-200 text-[11px] uppercase text-slate-400 font-bold">
+            {/* TABLA */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-x-auto">
+                <table className="w-full min-w-[820px] table-fixed">
+                    <colgroup>
+                        <col className="w-[140px]" />
+                        <col className="w-auto" />
+                        <col className="w-[130px]" />
+                        <col className="w-[110px]" />
+                        <col className="w-[150px]" />
+                        <col className="w-[120px]" />
+                        <col className="w-[130px]" />
+                    </colgroup>
+                    <thead className="bg-slate-50 border-b border-gray-200">
+                        <tr>
+                            <th className="text-left px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wide whitespace-nowrap">Nº Parte</th>
+                            <th className="text-left px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wide whitespace-nowrap">Caseta</th>
+                            <th className="text-left px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wide whitespace-nowrap">Expediente</th>
+                            <th className="text-left px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wide whitespace-nowrap">Fecha</th>
+                            <th className="text-left px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wide whitespace-nowrap">Creado por</th>
+                            <th className="text-center px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wide whitespace-nowrap">Resultado</th>
+                            <th className="text-center px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wide whitespace-nowrap">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                        {loading ? (
                             <tr>
-                                <th className="px-4 py-3">Nº parte</th>
-                                <th className="px-4 py-3">Caseta</th>
-                                <th className="px-4 py-3">Expediente</th>
-                                <th className="px-4 py-3">Fecha</th>
-                                <th className="px-4 py-3">Resultado</th>
-                                <th className="px-4 py-3 text-right">Acciones</th>
+                                <td colSpan={7} className="text-center py-16">
+                                    <Loader2 className="animate-spin mx-auto text-orange-500 mb-2" size={24} />
+                                    <span className="text-sm text-gray-400">Cargando partes...</span>
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
-                            {partes.map(p => (
-                                <tr key={p.id} className="hover:bg-slate-50">
-                                    <td className="px-4 py-3 font-mono font-bold text-slate-700">{p.numeroParte}</td>
-                                    <td className="px-4 py-3">{p.nombreCaseta || '—'}{p.numeroCaseta ? ` · ${p.numeroCaseta}` : ''}</td>
-                                    <td className="px-4 py-3 text-slate-500">{p.expediente || '—'}</td>
-                                    <td className="px-4 py-3 text-slate-500">{fmtFecha(p.createdAt)}</td>
-                                    <td className="px-4 py-3">
-                                        {p.resultado && RES_BADGE[p.resultado]
-                                            ? <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${RES_BADGE[p.resultado].cls}`}>{RES_BADGE[p.resultado].txt}</span>
-                                            : <span className="text-[11px] text-slate-400">{p.estado === 'borrador' ? 'Borrador' : '—'}</span>}
-                                    </td>
-                                    <td className="px-4 py-3">
-                                        <div className="flex items-center justify-end gap-2">
-                                            <Link href={`/partes/prf?id=${p.id}`} className="text-blue-600 hover:text-blue-800 font-semibold text-xs">Abrir</Link>
-                                            {p.pdfUrl && <a href={p.pdfUrl} target="_blank" rel="noreferrer" className="text-slate-500 hover:text-slate-700"><FileText size={16} /></a>}
-                                            <button onClick={() => borrar(p.id)} className="text-red-500 hover:text-red-700"><Trash2 size={16} /></button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                )}
+                        ) : visibles.length === 0 ? (
+                            <tr>
+                                <td colSpan={7} className="text-center py-16 text-sm text-gray-400">
+                                    <ClipboardCheck size={32} className="mx-auto mb-2 opacity-30" />
+                                    No hay partes que coincidan con los filtros.
+                                </td>
+                            </tr>
+                        ) : (
+                            visibles.map(parte => {
+                                const estadoInfo = ESTADOS_PARTE[parte.estado as keyof typeof ESTADOS_PARTE]
+                                const resultado = parte.resultado ? RESULTADOS[parte.resultado] : null
+                                const fecha = new Date(parte.fecha)
+                                return (
+                                    <tr key={parte.id} className="hover:bg-orange-50/30 transition-colors">
+                                        <td className="px-4 py-3">
+                                            <span className="font-mono text-xs font-semibold text-gray-700 whitespace-nowrap">
+                                                {parte.numeroParte}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <span className="text-sm text-gray-800 font-medium block truncate" title={parte.nombreCaseta || ''}>
+                                                {parte.nombreCaseta || '—'}
+                                            </span>
+                                            {parte.numeroCaseta && (
+                                                <span className="text-xs text-gray-400">{parte.numeroCaseta}</span>
+                                            )}
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <span className="text-sm text-gray-600 block truncate">{parte.expediente || '—'}</span>
+                                        </td>
+                                        <td className="px-4 py-3 whitespace-nowrap">
+                                            <span className="text-sm text-gray-700">{format(fecha, 'dd/MM/yy', { locale: es })}</span>
+                                        </td>
+                                        <td className="px-4 py-3 whitespace-nowrap">
+                                            <span className="text-sm text-gray-600 block truncate">{parte.creadoPorNombre || '—'}</span>
+                                        </td>
+                                        <td className="px-4 py-3 text-center">
+                                            {resultado ? (
+                                                <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-semibold border whitespace-nowrap ${resultado.clases}`}>
+                                                    {resultado.label}
+                                                </span>
+                                            ) : estadoInfo ? (
+                                                <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-semibold border whitespace-nowrap ${estadoInfo.bgColor} ${estadoInfo.textColor} ${estadoInfo.borderColor}`}>
+                                                    {estadoInfo.label}
+                                                </span>
+                                            ) : (
+                                                <span className="text-xs text-gray-400">{parte.estado}</span>
+                                            )}
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <div className="flex items-center justify-center gap-1">
+                                                <Link
+                                                    href={`/partes/prf?id=${parte.id}`}
+                                                    className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                    title="Abrir parte"
+                                                >
+                                                    <Eye size={16} />
+                                                </Link>
+                                                {parte.pdfUrl && (
+                                                    <a
+                                                        href={parte.pdfUrl}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors"
+                                                        title="Ver el PDF guardado"
+                                                    >
+                                                        <FileText size={16} />
+                                                    </a>
+                                                )}
+                                                <button
+                                                    onClick={() => handleDescargarPDF(parte.id, parte.pdfUrl)}
+                                                    disabled={!parte.pdfUrl || descargando === parte.id}
+                                                    className="p-1.5 text-green-600 hover:bg-green-50 rounded-lg transition-colors disabled:opacity-40"
+                                                    title={parte.pdfUrl ? 'Descargar PDF' : 'Este parte aún no tiene PDF guardado'}
+                                                >
+                                                    {descargando === parte.id
+                                                        ? <Loader2 size={16} className="animate-spin" />
+                                                        : <Download size={16} />}
+                                                </button>
+                                                <button
+                                                    onClick={() => handleEliminar(parte.id)}
+                                                    className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                                    title="Archivar"
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                )
+                            })
+                        )}
+                    </tbody>
+                </table>
             </div>
+
+            {/* PAGINACIÓN */}
+            {totalPages > 1 && (
+                <div className="flex justify-center gap-2 mt-6">
+                    <button
+                        onClick={() => setPage(p => Math.max(1, p - 1))}
+                        disabled={page === 1}
+                        className="px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 text-sm font-medium"
+                    >
+                        Anterior
+                    </button>
+                    <span className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium">
+                        {page} / {totalPages}
+                    </span>
+                    <button
+                        onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                        disabled={page === totalPages}
+                        className="px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 text-sm font-medium"
+                    >
+                        Siguiente
+                    </button>
+                </div>
+            )}
         </div>
     )
 }
