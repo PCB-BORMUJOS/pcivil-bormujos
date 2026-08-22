@@ -1,0 +1,243 @@
+/*
+ * Hoja del Parte de Revisión de Feria (PRF).
+ *
+ * Todas las medidas están tomadas del documento oficial con pdfplumber, no a
+ * ojo: página A4 de 210×297 mm, márgenes de 7,4 mm (ancho útil 195,1 mm),
+ * banda de cabecera de 21,7 mm a sangre, pie de 19,6 mm y barras de sección de
+ * 5,0 mm exactos. La paleta y los cuerpos de letra salen igualmente del PDF.
+ *
+ * Esta misma hoja es el formulario en pantalla y el origen del PDF: al
+ * imprimir se ocultan los adornos de edición y queda el documento. Así el
+ * formulario y su exportación no pueden divergir nunca.
+ */
+
+.prf {
+  /* Paleta exacta del documento */
+  --azul: #0E3393;
+  --naranja: #FF601E;
+  --campo: #F5F7FB;
+  --borde: #C3CBD4;
+  --borde-fuerte: #98A2AE;
+  --regla: #D5DCE4;
+  --texto: #1F2937;
+  --etiqueta: #6B7A90;
+
+  /* Rejilla real del modelo */
+  --margen: 7.4mm;
+  --util: 195.1mm;
+  --barra: 5mm;
+
+  font-family: var(--fuente-barlow), 'Barlow', system-ui, sans-serif;
+  color: var(--texto);
+  font-size: 8.2pt;
+  line-height: 1.25;
+}
+
+/* ── Hoja A4 ─────────────────────────────────────────────────────────────── */
+.prf-hoja {
+  position: relative;
+  width: 210mm;
+  height: 297mm;
+  background: #fff;
+  overflow: hidden;
+  margin: 0 auto;
+}
+.prf-hoja + .prf-hoja { margin-top: 8mm; }
+
+/* En pantalla se ve como un folio; al imprimir, a sangre y sin sombra. */
+@media screen {
+  .prf-hoja { box-shadow: 0 2px 14px rgba(15, 23, 42, .18); border-radius: 2px; }
+  .prf-lienzo { background: #F1F5F9; padding: 8mm 0; }
+}
+
+/* ── Cabecera y pie, a sangre ────────────────────────────────────────────── */
+.prf-cab {
+  position: absolute; left: 0; top: 0.3mm; width: 209.9mm; height: 21.7mm;
+  background: var(--azul); display: flex; align-items: center;
+  padding: 0 var(--margen); box-sizing: border-box;
+}
+.prf-cab-sigla {
+  font-family: var(--fuente-barlow), 'Barlow', sans-serif;
+  font-weight: 800; font-size: 30pt; color: #fff; letter-spacing: -0.5pt;
+  line-height: 1; margin-right: 4mm;
+}
+.prf-cab-titulo {
+  font-family: var(--fuente-barlow-cond), 'Barlow Semi Condensed', sans-serif;
+  font-weight: 600; font-size: 11pt; color: #fff; line-height: 1.15;
+  text-transform: uppercase; letter-spacing: .2pt;
+}
+.prf-cab-marca { margin-left: auto; display: flex; align-items: center; gap: 3mm; }
+.prf-cab-marca-txt { text-align: right; line-height: 1.1; }
+.prf-cab-marca-txt .l1 {
+  font-family: var(--fuente-barlow-cond), 'Barlow Semi Condensed', sans-serif;
+  font-size: 8.2pt; color: #fff; letter-spacing: 1.1pt; text-transform: uppercase;
+}
+.prf-cab-marca-txt .l2 {
+  font-weight: 700; font-size: 12.5pt; color: #fff; letter-spacing: .3pt; text-transform: uppercase;
+}
+/* Isotipo: cuatro cuadrados, dos naranjas y dos blancos */
+.prf-iso { display: grid; grid-template-columns: repeat(3, 3.1mm); grid-template-rows: repeat(2, 3.1mm); gap: .5mm; }
+.prf-iso i { display: block; }
+.prf-iso .n { background: var(--naranja); }
+.prf-iso .b { background: #fff; }
+.prf-iso .v { background: transparent; }
+
+.prf-pie {
+  position: absolute; left: 0; top: 277.6mm; width: 209.9mm; height: 19.6mm;
+  background: var(--azul); display: flex; align-items: center; justify-content: space-between;
+  padding: 0 var(--margen); box-sizing: border-box; color: #fff;
+}
+.prf-pie-centro { text-align: center; font-size: 6.5pt; line-height: 1.45; font-weight: 700; }
+.prf-pie-centro .fina { font-weight: 600; }
+
+/* ── Área de contenido ───────────────────────────────────────────────────── */
+.prf-cuerpo {
+  position: absolute; left: var(--margen); top: 26mm; width: var(--util);
+}
+
+/* Rótulo de bloque de página (ACTA DE INSPECCIÓN…, ANEXO…) */
+.prf-rotulo {
+  display: flex; align-items: flex-end; gap: 3mm; padding-bottom: 1.4mm;
+}
+.prf-rotulo h2 {
+  font-family: var(--fuente-barlow-cond), 'Barlow Semi Condensed', sans-serif;
+  font-weight: 600; font-size: 7.5pt; color: var(--azul);
+  letter-spacing: 1.15pt; text-transform: uppercase; margin: 0;
+}
+.prf-regla-naranja { height: .5mm; background: var(--naranja); width: 100%; }
+
+/* ── Barras de sección: 5 mm exactos ─────────────────────────────────────── */
+.prf-sec {
+  height: var(--barra); background: var(--azul); color: #fff;
+  display: flex; align-items: center; padding: 0 2mm; box-sizing: border-box;
+}
+.prf-sec.naranja { background: var(--naranja); }
+.prf-sec .num {
+  font-weight: 700; font-size: 7.1pt; color: var(--naranja);
+  margin-right: 2mm; letter-spacing: .3pt;
+}
+.prf-sec.naranja .num { color: #fff; opacity: .85; }
+.prf-sec .tit {
+  font-family: var(--fuente-barlow-cond), 'Barlow Semi Condensed', sans-serif;
+  font-weight: 600; font-size: 7.5pt; letter-spacing: 1.05pt; text-transform: uppercase;
+}
+.prf-sec .ref {
+  margin-left: auto; font-size: 6.5pt; letter-spacing: .5pt;
+  text-transform: uppercase; opacity: .85;
+}
+
+/* ── Campos ──────────────────────────────────────────────────────────────── */
+.prf-etq {
+  display: block; font-size: 6.5pt; color: var(--etiqueta);
+  letter-spacing: .5pt; text-transform: uppercase; margin-bottom: .8mm;
+  font-weight: 500; white-space: nowrap;
+}
+.prf-campo {
+  width: 100%; box-sizing: border-box; background: var(--campo);
+  border: 0; border-bottom: .4mm solid var(--borde);
+  height: 5.2mm; padding: 0 1.2mm; font: inherit; font-size: 8.2pt; color: var(--texto);
+}
+.prf-campo:focus { outline: 0; border-bottom-color: var(--azul); background: #EEF3FF; }
+.prf-campo.azul  { border-bottom-color: var(--azul); }
+.prf-campo.naranja { border-bottom-color: var(--naranja); }
+
+/* Rejilla de campos: se declara con --cols en el elemento */
+.prf-fila { display: grid; gap: 0 3.2mm; margin-top: 2.2mm; }
+
+/* ── Casillas ────────────────────────────────────────────────────────────── */
+.prf-casilla {
+  width: 3.4mm; height: 3.4mm; border: .35mm solid var(--azul);
+  background: #fff; display: inline-flex; align-items: center; justify-content: center;
+  cursor: pointer; padding: 0; flex: 0 0 auto;
+}
+.prf-casilla[data-marcada="true"]::after {
+  content: ''; width: 1.9mm; height: 1.9mm; background: var(--azul); display: block;
+}
+.prf-casilla.naranja { border-color: var(--naranja); }
+.prf-casilla.naranja[data-marcada="true"]::after { background: var(--naranja); }
+.prf-opcion { display: inline-flex; align-items: center; gap: 1.4mm; font-size: 8.2pt; }
+
+/* ── Listas SÍ / NO / N.A. ───────────────────────────────────────────────── */
+.prf-checks { width: 100%; border-collapse: collapse; }
+.prf-checks th {
+  font-size: 6.5pt; color: var(--etiqueta); font-weight: 500; letter-spacing: .5pt;
+  text-transform: uppercase; padding: 0 0 .6mm; width: 6.2mm; text-align: center;
+}
+.prf-checks td { padding: .42mm 0; font-size: 8.2pt; vertical-align: middle; }
+.prf-checks td.marca { text-align: center; width: 6.2mm; }
+.prf-checks tr:nth-child(even) td { background: var(--campo); }
+.prf-checks td:first-child { padding-left: 1.2mm; }
+
+/* ── Avisos ──────────────────────────────────────────────────────────────── */
+.prf-nota {
+  background: var(--campo); border: .25mm solid var(--regla);
+  padding: 2mm 2.4mm; font-size: 6.7pt; line-height: 1.5; text-align: justify;
+  color: #33415C;
+}
+.prf-nota b { font-weight: 700; }
+.prf-aviso {
+  background: #FFF4EC; border-left: .8mm solid var(--naranja);
+  padding: 2mm 2.4mm; font-size: 6.7pt; line-height: 1.5; text-align: justify; color: #7A4A25;
+}
+.prf-aviso .cab { color: var(--naranja); font-weight: 700; }
+.prf-legal { font-size: 5.6pt; line-height: 1.45; color: #8A94A6; text-align: justify; }
+.prf-legal b { color: #6B7A90; }
+
+/* ── Recuadros ───────────────────────────────────────────────────────────── */
+.prf-caja { border: .25mm solid var(--regla); border-top: 0; padding: 2.2mm; }
+.prf-zona-foto {
+  border: .3mm dashed var(--borde); background: #F1F3F6;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 1.5mm; color: #8A94A6; font-size: 8.2pt;
+}
+
+/* ── Firmas ──────────────────────────────────────────────────────────────── */
+.prf-firmas { display: grid; grid-template-columns: repeat(4, 46.4mm); gap: 0 3mm; }
+.prf-firma-linea { height: .3mm; background: var(--azul); margin-bottom: 1mm; }
+.prf-firma-tit {
+  font-family: var(--fuente-barlow-cond), 'Barlow Semi Condensed', sans-serif;
+  font-weight: 600; font-size: 7.1pt; color: var(--azul);
+  letter-spacing: .85pt; text-transform: uppercase;
+}
+.prf-firma-sub { font-size: 6.5pt; color: var(--etiqueta); }
+.prf-firma-hueco { height: 18mm; }
+
+/* ── Impresión ───────────────────────────────────────────────────────────── */
+@page { size: A4 portrait; margin: 0; }
+
+@media print {
+  /* Solo la hoja: se oculta todo lo demás de la aplicación */
+  body * { visibility: hidden !important; }
+  .prf-lienzo, .prf-lienzo * { visibility: visible !important; }
+  .prf-lienzo {
+    position: absolute !important; left: 0; top: 0; width: 210mm;
+    background: #fff !important; padding: 0 !important; margin: 0 !important;
+  }
+  .prf-hoja {
+    box-shadow: none !important; border-radius: 0 !important;
+    margin: 0 !important; page-break-after: always; break-after: page;
+  }
+  .prf-hoja:last-child { page-break-after: auto; break-after: auto; }
+
+  /* Los campos dejan de parecer campos y quedan como texto del documento */
+  .prf-campo {
+    background: transparent !important; border-bottom-color: var(--borde) !important;
+  }
+  .prf-no-imprimir { display: none !important; }
+
+  /* Los fondos de color son parte del documento, no decoración */
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+}
+
+/* ── Anclaje a las coordenadas reales del modelo ──────────────────────────────
+ * Las secciones no se dejan fluir: se clavan en la Y exacta medida en el PDF
+ * oficial. Es la única forma de que la hoja case pixel a pixel y de que el
+ * contenido no empuje la sección 06 por debajo del pie de página.
+ */
+.prf-en {
+  position: absolute;
+  left: 0;
+  width: var(--util);
+  top: var(--y);
+}
+.prf-en.col { left: var(--x); width: var(--w); }
