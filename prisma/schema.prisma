@@ -1242,6 +1242,54 @@ model PartePRF {
   @@map("partes_prf")
 }
 
+model PartePAS {
+  id          String   @id @default(cuid())
+  numeroParte String   @unique // 20260823-001
+  fecha       DateTime @default(now())
+  estado      String   @default("borrador") // "borrador" | "completo"
+  archivado   Boolean  @default(false)
+
+  // Campos que se muestran en el listado y por los que se busca
+  numeroInforme String? // Nº de informe del documento
+  lugar         String?
+  motivo        String?
+  pacienteNombre String?
+  pacienteDni    String?
+  traslado       String? // resumen del traslado / renuncia
+
+  // Contenido completo del parte: pautas de tiempo, filiación, las dos tandas
+  // de constantes, vía aérea, circulación, RCP, neurología, inmovilización,
+  // traslado, Glasgow, lesiones, quemaduras, observaciones y accidente.
+  datos Json
+
+  // Marcas de lesión sobre las figuras anatómicas: [{ figura, x, y, codigo }]
+  lesiones Json?
+
+  // Firmas (PNG en base64): indicativos que intervienen, Vº Bº y testigos.
+  firmas Json?
+
+  // PDF generado
+  pdfUrl      String?
+  pdfGenerado Boolean @default(false)
+
+  // Copia en Google Drive
+  googleDriveId  String?
+  googleDriveUrl String?
+
+  // Auditoría (sin relación FK, como el patrón de audit del proyecto)
+  creadoPorId     String
+  creadoPorNombre String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([numeroParte])
+  @@index([fecha])
+  @@index([estado])
+  @@index([archivado])
+  @@index([creadoPorId])
+  @@map("partes_pas")
+}
+
 model PartePRVFSV {
   id               String   @id @default(cuid())
   numeroReferencia String   @unique
