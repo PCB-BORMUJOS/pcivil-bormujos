@@ -267,11 +267,14 @@ input[type="datetime-local"].prf-campo { cursor: pointer; }
     position: static !important; width: 210mm !important;
     background: #fff !important; padding: 0 !important; margin: 0 !important;
   }
+  /* Sin saltos de página forzados: cada hoja mide justo 297 mm y arranca en 0,
+     297 y 594, así que la paginación sale sola. Forzarlos añadía una página en
+     blanco detrás de cada hoja, porque el salto se pedía cuando la hoja ya
+     había llenado el folio. */
   .prf-hoja {
     box-shadow: none !important; border-radius: 0 !important;
-    margin: 0 !important; page-break-after: always; break-after: page;
+    margin: 0 !important; break-inside: avoid;
   }
-  .prf-hoja:last-child { page-break-after: auto; break-after: auto; }
 
   /* Única diferencia consentida respecto a la pantalla: el relleno gris de los
      campos no se imprime. En pantalla marca dónde se escribe; en el papel solo
