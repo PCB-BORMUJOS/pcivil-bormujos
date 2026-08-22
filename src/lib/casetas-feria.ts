@@ -14,6 +14,10 @@
  * Ojo: el aforo autorizado definitivo es el valor más restrictivo que permitan
  * las salidas de evacuación de la caseta. Si al revisarla las salidas no dan
  * para este número, se corrige a la baja en el parte.
+ *
+ * Corrección sobre el PAE: la tabla del plan sitúa la Peña Sevillista en Toro
+ * de El Rancho, pero está en Currillo de Bormujos. Prevalece lo comprobado
+ * sobre el terreno; conviene arreglarlo también en el plan.
  */
 
 export type CasetaFeria = {
@@ -33,7 +37,7 @@ export type CasetaFeria = {
 
 export const CASETAS_FERIA: CasetaFeria[] = [
     { id: 'TOR-01', nombre: 'Municipal',                  calle: 'Toro de El Rancho',    modulos: 6, superficie: 800, aforoMesas: 467, aforoOperativo: 397, aforoDePie: 1600 },
-    { id: 'PSV-01', nombre: 'Peña Sevillista',            calle: 'Toro de El Rancho',    modulos: 3, superficie: 180, aforoMesas: 105, aforoOperativo: 89,  aforoDePie: 360 },
+    { id: 'PSV-01', nombre: 'Peña Sevillista',            calle: 'Currillo de Bormujos', modulos: 3, superficie: 180, aforoMesas: 105, aforoOperativo: 89,  aforoDePie: 360 },
     { id: 'CUR-01', nombre: 'Coro Parroquial',            calle: 'Currillo de Bormujos', modulos: 2, superficie: 120, aforoMesas: 70,  aforoOperativo: 60,  aforoDePie: 240 },
     { id: 'CUR-02', nombre: 'Reoma',                      calle: 'Currillo de Bormujos', modulos: 3, superficie: 180, aforoMesas: 105, aforoOperativo: 89,  aforoDePie: 360 },
     { id: 'CUR-03', nombre: 'El Rancho',                  calle: 'Currillo de Bormujos', modulos: 2, superficie: 120, aforoMesas: 70,  aforoOperativo: 60,  aforoDePie: 240 },
