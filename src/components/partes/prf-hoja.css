@@ -292,6 +292,11 @@ input[type="datetime-local"].prf-campo { cursor: pointer; }
   .prf-hoja {
     box-shadow: none !important; border-radius: 0 !important;
     margin: 0 !important; break-inside: avoid;
+    /* Dos décimas menos de 297. El A4 mide en realidad 296,9989 mm y la hoja
+       renderizaba 297,1: ese sobrante, por tres hojas, se derramaba a una cuarta
+       página en forma de franja azul del pie. El holgura es invisible porque el
+       pie va anclado al borde inferior y sube con él. */
+    height: 296.8mm !important;
   }
 
   /* Única diferencia consentida respecto a la pantalla: el relleno gris de los
