@@ -226,8 +226,6 @@ input[type="datetime-local"].prf-campo { cursor: pointer; }
 .prf-firma-hueco.editable:hover { border-color: var(--azul); background: #F2F6FF; }
 .prf-firma-img { max-height: 100%; max-width: 100%; object-fit: contain; }
 .prf-firma-pista { font-size: 6.5pt; color: #A8B2C1; }
-@media print { .prf-firma-hueco.editable { border: 0; background: transparent; } }
-
 /* ── Impresión ───────────────────────────────────────────────────────────── */
 @page { size: A4 portrait; margin: 0; }
 
@@ -245,10 +243,11 @@ input[type="datetime-local"].prf-campo { cursor: pointer; }
   }
   .prf-hoja:last-child { page-break-after: auto; break-after: auto; }
 
-  /* Los campos dejan de parecer campos y quedan como texto del documento */
-  .prf-campo {
-    background: transparent !important; border-bottom-color: var(--borde) !important;
-  }
+  /* Única diferencia consentida respecto a la pantalla: el relleno gris de los
+     campos no se imprime. En pantalla marca dónde se escribe; en el papel solo
+     gastaría tinta. La posición y el tamaño del campo no cambian. */
+  .prf-campo { background: transparent !important; }
+  .prf-firma-hueco.editable { border: 0 !important; background: transparent !important; }
   .prf-no-imprimir { display: none !important; }
 
   /* Los fondos de color son parte del documento, no decoración */
