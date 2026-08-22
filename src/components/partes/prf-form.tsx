@@ -108,6 +108,43 @@ function ordenarIndicativos(lista: unknown): string[] {
         .sort((a, b) => grupo(a) - grupo(b) || num(a) - num(b) || a.localeCompare(b, 'es'))
 }
 
+/**
+ * Imprime la hoja del parte.
+ *
+ * No basta con llamar a window.print(): la hoja vive dentro del armazón de la
+ * aplicación, cuyos contenedores le añaden 12,7 mm de relleno. El navegador ve
+ * entonces un documento de 224 mm, lo encoge al 93,7 % para meterlo en los 210
+ * del A4 y las hojas dejan de medir 297 mm, con lo que ya no coinciden con las
+ * páginas y aparece una de más al final.
+ *
+ * Por eso, mientras dura la impresión, la hoja se cuelga directamente de <body>
+ * y se devuelve a su sitio al terminar. Se hace moviendo el nodo, no copiándolo,
+ * para que lo escrito en los campos viaje con él.
+ */
+function imprimirHoja() {
+    const hoja = document.querySelector('.prf-lienzo')
+    if (!hoja || hoja.parentElement === document.body) { window.print(); return }
+
+    const origen = hoja.parentElement!
+    const marca = document.createComment('prf')
+    origen.insertBefore(marca, hoja)
+    document.body.appendChild(hoja)
+    document.documentElement.classList.add('prf-imprimiendo')
+
+    const devolver = () => {
+        document.documentElement.classList.remove('prf-imprimiendo')
+        if (marca.parentNode) { marca.parentNode.insertBefore(hoja, marca); marca.remove() }
+        window.removeEventListener('afterprint', devolver)
+    }
+    window.addEventListener('afterprint', devolver)
+
+    try { window.print() } finally {
+        // Safari no siempre dispara afterprint; esta red de seguridad garantiza
+        // que la hoja vuelve a su sitio pase lo que pase.
+        setTimeout(devolver, 1000)
+    }
+}
+
 export function PrfForm() {
     const params = useSearchParams()
     const router = useRouter()
@@ -192,7 +229,7 @@ export function PrfForm() {
             // mismo documento, así que no pueden diferir. En el diálogo del
             // navegador basta con elegir "Guardar como PDF".
             await new Promise(r => setTimeout(r, 350))
-            window.print()
+            imprimirHoja()
         } catch (e: any) { setAviso('Error generando el PDF: ' + (e?.message || '')) } finally { setExportando(false) }
     }
 

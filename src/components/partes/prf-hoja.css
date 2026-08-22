@@ -256,9 +256,19 @@ input[type="datetime-local"].prf-campo { cursor: pointer; }
      salían cuatro páginas en vez de tres. Aquí se retira de la maquetación
      todo lo que no sea la hoja, su contenido o alguno de los contenedores que
      la envuelven. */
-  body *:not(:has(.prf-lienzo)):not(.prf-lienzo):not(.prf-lienzo *) {
-    display: none !important;
+  /* No se usa :has(): no todos los navegadores lo admiten dentro de :not(), y
+     donde no lo admiten se descarta la regla entera. Eso dejaba en pie el
+     relleno del contenedor de la aplicación —12,7 mm—, con lo que el documento
+     medía 224 mm, el navegador lo encogía al 93,7 % para que cupiera en los 210
+     del A4 y las hojas dejaban de medir 297 mm. En su lugar, al imprimir se
+     cuelga la hoja directamente de <body> y se oculta todo lo demás, que es un
+     selector que entiende cualquier navegador. */
+  html.prf-imprimiendo,
+  html.prf-imprimiendo body {
+    width: 210mm !important; min-width: 0 !important; max-width: 210mm !important;
+    margin: 0 !important; padding: 0 !important; background: #fff !important;
   }
+  html.prf-imprimiendo body > *:not(.prf-lienzo) { display: none !important; }
 
   /* Ocultar no basta: visibility deja el hueco, y con la barra lateral y los
      márgenes de la aplicación el documento medía 370 mm de ancho. El navegador
@@ -270,11 +280,6 @@ input[type="datetime-local"].prf-campo { cursor: pointer; }
     width: 210mm !important; min-width: 0 !important; max-width: 210mm !important;
     margin: 0 !important; padding: 0 !important; overflow: hidden !important;
     background: #fff !important;
-  }
-  body :has(.prf-lienzo) {
-    display: block !important; position: static !important;
-    width: 210mm !important; min-width: 0 !important; max-width: 210mm !important;
-    margin: 0 !important; padding: 0 !important; overflow: visible !important;
   }
   .prf-lienzo {
     position: static !important; width: 210mm !important;
