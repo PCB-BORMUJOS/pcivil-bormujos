@@ -76,19 +76,19 @@
 
 /* ── Barras de sección ───────────────────────────────────────────────────── */
 .pas-sec {
-  background: var(--azul); color: #fff; font-weight: 700; font-size: 6.3pt;
-  letter-spacing: .6pt; text-transform: uppercase;
-  padding: .8mm 1.4mm; box-sizing: border-box;
+  background: var(--azul); color: #fff; font-weight: 700; font-size: 5.8pt;
+  letter-spacing: .5pt; text-transform: uppercase;
+  padding: .5mm 1mm; box-sizing: border-box;
 }
 
 /* ── Campos ──────────────────────────────────────────────────────────────── */
 .pas-etq {
   display: block; font-size: 6pt; color: var(--etiqueta); font-weight: 600;
-  letter-spacing: .4pt; text-transform: uppercase; margin-bottom: .5mm; white-space: nowrap;
+  letter-spacing: .4pt; text-transform: uppercase; margin-bottom: .2mm; white-space: nowrap;
 }
 .pas-campo {
   width: 100%; box-sizing: border-box; background: var(--campo);
-  border: .25mm solid var(--borde); height: 4.6mm; padding: 0 1mm;
+  border: .25mm solid var(--borde); height: 3.4mm; padding: 0 .8mm;
   font: inherit; font-size: 7.1pt; color: var(--texto);
 }
 .pas-campo:focus { outline: 0; border-color: var(--azul); background: #EEF3FF; }
@@ -97,20 +97,22 @@ textarea.pas-campo { height: auto; padding: 1mm; resize: none; line-height: 1.35
 
 /* ── Casillas ────────────────────────────────────────────────────────────── */
 .pas-casilla {
-  width: 3mm; height: 3mm; border: .3mm solid var(--azul); background: #fff;
+  width: 2.5mm; height: 2.5mm; border: .3mm solid var(--azul); background: #fff;
   display: inline-flex; align-items: center; justify-content: center;
   cursor: pointer; padding: 0; flex: 0 0 auto;
 }
 .pas-casilla[data-marcada="true"]::after {
-  content: ''; width: 1.7mm; height: 1.7mm; background: var(--azul); display: block;
+  content: ''; width: 1.4mm; height: 1.4mm; background: var(--azul); display: block;
 }
-.pas-opcion { display: inline-flex; align-items: center; gap: 1.1mm; font-size: 7.1pt; }
+.pas-opcion { display: inline-flex; align-items: center; gap: .9mm; font-size: 6pt; }
 
 /* ── Recuadros con título ────────────────────────────────────────────────── */
-.pas-caja { border: .25mm solid var(--regla); border-top: 0; padding: 1.2mm; }
+.pas-caja { border: .25mm solid var(--regla); border-top: 0; padding: .5mm; }
 .pas-lista { width: 100%; border-collapse: collapse; }
-.pas-lista td { padding: .3mm 0; font-size: 6.3pt; vertical-align: middle; }
-.pas-lista td.marca { width: 4.2mm; text-align: center; }
+/* Los seis bloques de exploración meten hasta nueve filas en 35 mm, así que la
+   fila tiene que medir unos 2,5 mm, como en el papel. */
+.pas-lista td { padding: .02mm 0; font-size: 5.6pt; line-height: 1.15; vertical-align: middle; }
+.pas-lista td.marca { width: 3.8mm; text-align: center; }
 .pas-lista tr:nth-child(even) td { background: var(--campo); }
 
 /* ── Figuras anatómicas con marcas de lesión ─────────────────────────────── */
@@ -156,3 +158,9 @@ textarea.pas-campo { height: auto; padding: 1mm; resize: none; line-height: 1.35
   .pas-no-imprimir { display: none !important; }
   * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
 }
+
+/* Fila con la etiqueta a la izquierda del campo, como en el modelo: así ocupa
+   unos 5 mm en vez de los 7,7 que gastaba con la etiqueta encima. */
+.pas-fila { display: flex; align-items: center; gap: 1.4mm; }
+.pas-fila > .pas-etq { margin-bottom: 0; flex: 0 0 auto; }
+.pas-fila > .campo { flex: 1; min-width: 0; }

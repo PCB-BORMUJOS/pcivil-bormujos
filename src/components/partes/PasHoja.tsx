@@ -170,14 +170,20 @@ export default function PasHoja({
                             <Campo etq="Hora" valor={d.hora} onChange={set('hora')} editable={editable} tipo="time" centrado />
                             <Campo etq="Nº informe" valor={d.numeroInforme} onChange={set('numeroInforme')} editable={editable} />
                         </div>
-                        <div style={{ marginTop: '1.6mm' }}>
-                            <Campo etq="Lugar" valor={d.lugar} onChange={set('lugar')} editable={editable} />
+                        <div className="pas-fila" style={{ marginTop: '1.4mm' }}>
+                            <label className="pas-etq" style={{ width: '15mm' }}>Lugar</label>
+                            <input className="pas-campo campo" value={d.lugar} readOnly={!editable}
+                                   onChange={e => set('lugar')(e.target.value)} />
                         </div>
-                        <div style={{ marginTop: '1.2mm' }}>
-                            <Campo etq="Motivo" valor={d.motivo} onChange={set('motivo')} editable={editable} />
+                        <div className="pas-fila" style={{ marginTop: '1.1mm' }}>
+                            <label className="pas-etq" style={{ width: '15mm' }}>Motivo</label>
+                            <input className="pas-campo campo" value={d.motivo} readOnly={!editable}
+                                   onChange={e => set('motivo')(e.target.value)} />
                         </div>
-                        <div style={{ marginTop: '1.2mm' }}>
-                            <Campo etq="Alertante" valor={d.alertante} onChange={set('alertante')} editable={editable} />
+                        <div className="pas-fila" style={{ marginTop: '1.1mm' }}>
+                            <label className="pas-etq" style={{ width: '15mm' }}>Alertante</label>
+                            <input className="pas-campo campo" value={d.alertante} readOnly={!editable}
+                                   onChange={e => set('alertante')(e.target.value)} />
                         </div>
                     </Bloque>
 
@@ -186,7 +192,7 @@ export default function PasHoja({
                             <div>
                                 <Sec>Vehículos</Sec>
                                 {d.vehiculos.map((v, i) => (
-                                    <input key={i} className="pas-campo pas-centrado" style={{ marginTop: '.6mm' }}
+                                    <input key={i} className="pas-campo pas-centrado" style={{ marginTop: '.35mm', height: '3.3mm' }}
                                            value={v} readOnly={!editable}
                                            onChange={e => { const n = [...d.vehiculos]; n[i] = e.target.value; onCampo?.('vehiculos', n) }} />
                                 ))}
@@ -194,7 +200,7 @@ export default function PasHoja({
                             <div>
                                 <Sec>Equipo</Sec>
                                 {d.equipo.map((v, i) => (
-                                    <input key={i} className="pas-campo pas-centrado" style={{ marginTop: '.6mm' }}
+                                    <input key={i} className="pas-campo pas-centrado" style={{ marginTop: '.35mm', height: '3.3mm' }}
                                            value={v} readOnly={!editable}
                                            onChange={e => { const n = [...d.equipo]; n[i] = e.target.value; onCampo?.('equipo', n) }} />
                                 ))}
@@ -202,9 +208,9 @@ export default function PasHoja({
                             <div>
                                 <Sec>Pautas de tiempo</Sec>
                                 {PAUTAS_TIEMPO.map(p => (
-                                    <div key={p.key} style={{ display: 'flex', alignItems: 'center', gap: '1mm', marginTop: '.6mm' }}>
+                                    <div key={p.key} style={{ display: 'flex', alignItems: 'center', gap: '1mm', marginTop: '.35mm' }}>
                                         <span style={{ flex: 1, fontSize: '6pt', textAlign: 'right', textTransform: 'uppercase' }}>{p.label}</span>
-                                        <input type="time" className="pas-campo pas-centrado" style={{ width: '15mm', height: '3.6mm' }}
+                                        <input type="time" className="pas-campo pas-centrado" style={{ width: '15mm', height: '3.1mm' }}
                                                value={(d as any)[p.key] || ''} disabled={!editable}
                                                onChange={e => onCampo?.(p.key as keyof PasDatos, e.target.value)} />
                                     </div>
@@ -234,7 +240,7 @@ export default function PasHoja({
                                 </div>
                             </div>
                         </div>
-                        <div style={{ display: 'flex', gap: '2mm', marginTop: '1.2mm' }}>
+                        <div style={{ display: 'flex', gap: '2mm', marginTop: '.3mm' }}>
                             <Campo etq="Domicilio" valor={d.domicilio} onChange={set('domicilio')} editable={editable} />
                             {([['Nº', 'numero'], ['Bq', 'bloque'], ['Piso', 'piso'], ['Puerta', 'puerta'], ['Letra', 'letra'], ['CP', 'cp']] as const).map(([et, k]) => (
                                 <div key={k} style={{ width: '13mm' }}>
@@ -242,7 +248,7 @@ export default function PasHoja({
                                 </div>
                             ))}
                         </div>
-                        <div style={{ display: 'flex', gap: '2mm', marginTop: '1.2mm' }}>
+                        <div style={{ display: 'flex', gap: '2mm', marginTop: '.3mm' }}>
                             <Campo etq="Localidad" valor={d.localidad} onChange={set('localidad')} editable={editable} />
                             <Campo etq="Provincia" valor={d.provincia} onChange={set('provincia')} editable={editable} />
                             <Campo etq="DNI / NIE" valor={d.dniNie} onChange={set('dniNie')} editable={editable} />
@@ -313,8 +319,8 @@ export default function PasHoja({
                         <Sec>Circulación · 1ª 2ª</Sec>
                         <div className="pas-caja">
                             {CIRCULACION.map(g => (
-                                <div key={g.grupo} style={{ marginBottom: '.6mm' }}>
-                                    <div style={{ fontSize: '6pt', fontWeight: 700, color: 'var(--etiqueta)', textTransform: 'uppercase' }}>{g.grupo}</div>
+                                <div key={g.grupo}>
+                                    <div style={{ fontSize: '5pt', fontWeight: 700, color: 'var(--etiqueta)', textTransform: 'uppercase', lineHeight: 1.1 }}>{g.grupo}</div>
                                     <ListaDoble items={g.items} dobles={dobles} onCambio={marcarDoble} editable={editable} />
                                 </div>
                             ))}
@@ -437,18 +443,18 @@ export default function PasHoja({
                     {/* ── Textos libres ── */}
                     <Bloque y="213.1mm" x="0mm" w="97.5mm">
                         <Sec>Antecedentes / alergias</Sec>
-                        <textarea className="pas-campo" style={{ height: '11mm' }} value={d.antecedentes}
+                        <textarea className="pas-campo" style={{ height: '7.4mm' }} value={d.antecedentes}
                                   readOnly={!editable} onChange={e => set('antecedentes')(e.target.value)} />
                     </Bloque>
                     <Bloque y="213.1mm" x="99.3mm" w="97.5mm">
                         <Sec>Demandas del paciente</Sec>
-                        <textarea className="pas-campo" style={{ height: '11mm' }} value={d.demandas}
+                        <textarea className="pas-campo" style={{ height: '7.4mm' }} value={d.demandas}
                                   readOnly={!editable} onChange={e => set('demandas')(e.target.value)} />
                     </Bloque>
 
                     <Bloque y="225.8mm">
                         <Sec>Observaciones de la intervención</Sec>
-                        <textarea className="pas-campo" style={{ height: '10mm' }} value={d.observaciones}
+                        <textarea className="pas-campo" style={{ height: '8mm' }} value={d.observaciones}
                                   readOnly={!editable} onChange={e => set('observaciones')(e.target.value)} />
                     </Bloque>
 
@@ -457,20 +463,20 @@ export default function PasHoja({
                         <Sec>Accidentes de tráfico</Sec>
                         <div className="pas-caja">
                             <div style={{ display: 'flex', alignItems: 'center', gap: '1.4mm' }}>
-                                <span style={{ fontSize: '6.3pt', width: '42mm' }}>Matrícula vehículos implicados</span>
+                                <span style={{ fontSize: '5.2pt', whiteSpace: 'nowrap', flex: '0 0 auto' }}>Matrícula vehículos implicados</span>
                                 {d.matriculas.map((m, i) => (
-                                    <input key={i} className="pas-campo pas-centrado" style={{ height: '4mm' }}
+                                    <input key={i} className="pas-campo pas-centrado" style={{ height: '2.9mm' }}
                                            value={m} readOnly={!editable}
                                            onChange={e => { const n = [...d.matriculas]; n[i] = e.target.value; onCampo?.('matriculas', n) }} />
                                 ))}
                             </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '1.4mm', marginTop: '1mm' }}>
-                                <span style={{ fontSize: '6.3pt', width: '52mm' }}>Agentes de la autoridad que intervienen</span>
-                                <span style={{ fontSize: '6pt', textTransform: 'uppercase' }}>Policía Local de</span>
-                                <input className="pas-campo" style={{ height: '4mm' }} value={d.policiaLocalDe}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '1.4mm', marginTop: '.25mm' }}>
+                                <span style={{ fontSize: '5.2pt', whiteSpace: 'nowrap', flex: '0 0 auto' }}>Agentes de la autoridad que intervienen</span>
+                                <span style={{ fontSize: '5.2pt', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>Policía Local de</span>
+                                <input className="pas-campo" style={{ height: '2.9mm' }} value={d.policiaLocalDe}
                                        readOnly={!editable} onChange={e => set('policiaLocalDe')(e.target.value)} />
-                                <span style={{ fontSize: '6pt', textTransform: 'uppercase' }}>Guardia Civil de</span>
-                                <input className="pas-campo" style={{ height: '4mm' }} value={d.guardiaCivilDe}
+                                <span style={{ fontSize: '5.2pt', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>Guardia Civil de</span>
+                                <input className="pas-campo" style={{ height: '2.9mm' }} value={d.guardiaCivilDe}
                                        readOnly={!editable} onChange={e => set('guardiaCivilDe')(e.target.value)} />
                             </div>
                         </div>
@@ -479,7 +485,7 @@ export default function PasHoja({
                     {/* ── Renuncia, indicativos y Vº Bº ── */}
                     <Bloque y="254.4mm" x="0mm" w="107.9mm">
                         <Sec>Renuncia del paciente</Sec>
-                        <div className="pas-caja" style={{ fontSize: '6pt', lineHeight: 1.35 }}>
+                        <div className="pas-caja" style={{ fontSize: '5.2pt', lineHeight: 1.25 }}>
                             <div style={{ display: 'flex', gap: '1.4mm' }}>
                                 <Casilla marcada={d.renunciaSinTraslado} editable={editable}
                                          onClick={() => onCampo?.('renunciaSinTraslado', !d.renunciaSinTraslado)} />
@@ -487,15 +493,15 @@ export default function PasHoja({
                                     y no desea ser trasladado a un centro sanitario en este momento.
                                     <b> En caso de empeoramiento llame al 112</b></span>
                             </div>
-                            <div style={{ display: 'flex', gap: '1.4mm', marginTop: '1mm', alignItems: 'center' }}>
+                            <div style={{ display: 'flex', gap: '1.4mm', marginTop: '.6mm', alignItems: 'center' }}>
                                 <Casilla marcada={d.renunciaSinAsistencia} editable={editable}
                                          onClick={() => onCampo?.('renunciaSinAsistencia', !d.renunciaSinAsistencia)} />
                                 <span style={{ width: '24mm' }}><b>No desea asistencia.</b></span>
                                 <div style={{ flex: 1 }}>
                                     {([['testigo1', 'Testigo · nombre y DNI'], ['testigo2', 'Testigo · nombre y DNI']] as const).map(([k, et]) => (
                                         <div key={k} style={{ display: 'flex', alignItems: 'center', gap: '1mm', marginBottom: '.4mm' }}>
-                                            <span style={{ fontSize: '5.6pt', width: '26mm', textTransform: 'uppercase' }}>{et}</span>
-                                            <input className="pas-campo" style={{ height: '3.6mm' }} value={(d as any)[k]}
+                                            <span style={{ fontSize: '5pt', width: '24mm', textTransform: 'uppercase' }}>{et}</span>
+                                            <input className="pas-campo" style={{ height: '3.1mm' }} value={(d as any)[k]}
                                                    readOnly={!editable} onChange={e => onCampo?.(k as keyof PasDatos, e.target.value)} />
                                         </div>
                                     ))}
