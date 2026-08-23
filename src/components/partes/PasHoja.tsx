@@ -141,7 +141,8 @@ export default function PasHoja({
     }
 
     const figura = (n: number, src: string) => (
-        <div className={`pas-figura${editable ? ' editable' : ''}`} onClick={tocarFigura(n)}>
+        <div className={`pas-figura ${n === 0 ? 'frontal' : 'lateral'}${editable ? ' editable' : ''}`}
+             onClick={tocarFigura(n)}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={src} alt={n === 0 ? 'Figura frontal y dorsal' : 'Figura frontal y dorsal'} />
             {marcas.map((m, i) => m.figura === n && (
@@ -273,7 +274,7 @@ export default function PasHoja({
                             <thead>
                                 <tr style={{ background: 'var(--campo)' }}>
                                     {['', 'Hora', 'FR', 'FC', 'TA', 'Resp.', 'O₂ L/min', 'FiO₂', 'Sat.', 'Gluc.', 'GCS', 'Pupila I', 'Pupila D', 'React.'].map(h => (
-                                        <th key={h} style={{ fontSize: '5.6pt', padding: '.4mm', textTransform: 'uppercase', color: 'var(--etiqueta)' }}>{h}</th>
+                                        <th key={h} style={{ fontSize: '6pt', padding: '.8mm .4mm', textTransform: 'uppercase', color: 'var(--etiqueta)' }}>{h}</th>
                                     ))}
                                 </tr>
                             </thead>
@@ -288,12 +289,12 @@ export default function PasHoja({
                                     return (
                                         <tr key={i}>
                                             <td style={{ fontWeight: 700, textAlign: 'center', width: '7mm' }}>{i + 1}ª</td>
-                                            <td><input type="time" className="pas-campo pas-centrado" style={{ height: '3.8mm', fontSize: '6pt' }} value={c.hora} disabled={!editable} onChange={e => act('hora', e.target.value)} /></td>
+                                            <td><input type="time" className="pas-campo pas-centrado" style={{ height: '5.4mm', fontSize: '6.7pt' }} value={c.hora} disabled={!editable} onChange={e => act('hora', e.target.value)} /></td>
                                             {(['fr', 'fc', 'ta'] as const).map(k => (
-                                                <td key={k}><input className="pas-campo pas-centrado" style={{ height: '3.8mm', fontSize: '6.3pt' }} value={c[k]} readOnly={!editable} onChange={e => act(k, e.target.value)} /></td>
+                                                <td key={k}><input className="pas-campo pas-centrado" style={{ height: '5.4mm', fontSize: '7.1pt' }} value={c[k]} readOnly={!editable} onChange={e => act(k, e.target.value)} /></td>
                                             ))}
                                             <td>
-                                                <select className="pas-campo pas-centrado" style={{ height: '3.8mm', fontSize: '6pt' }} value={c.respiracion} disabled={!editable} onChange={e => act('respiracion', e.target.value)}>
+                                                <select className="pas-campo pas-centrado" style={{ height: '5.4mm', fontSize: '6.7pt' }} value={c.respiracion} disabled={!editable} onChange={e => act('respiracion', e.target.value)}>
                                                     <option value="">—</option>
                                                     <option value="norm">Norm</option>
                                                     <option value="ansi">Ansi</option>
@@ -301,13 +302,13 @@ export default function PasHoja({
                                                 </select>
                                             </td>
                                             {(['oxiLmin', 'oxiFio2', 'saturacion', 'glucosa'] as const).map(k => (
-                                                <td key={k}><input className="pas-campo pas-centrado" style={{ height: '3.8mm', fontSize: '6.3pt' }} value={c[k]} readOnly={!editable} onChange={e => act(k, e.target.value)} /></td>
+                                                <td key={k}><input className="pas-campo pas-centrado" style={{ height: '5.4mm', fontSize: '7.1pt' }} value={c[k]} readOnly={!editable} onChange={e => act(k, e.target.value)} /></td>
                                             ))}
                                             <td style={{ textAlign: 'center', fontWeight: 700 }}>{total ?? '—'}</td>
                                             {/* El modelo valora cada ojo por separado */}
                                             {(['pupilaI', 'pupilaD'] as const).map(ojo => (
                                                 <td key={ojo}>
-                                                    <select className="pas-campo pas-centrado" style={{ height: '3.8mm', fontSize: '6pt' }}
+                                                    <select className="pas-campo pas-centrado" style={{ height: '5.4mm', fontSize: '6.7pt' }}
                                                             value={(c as any)[ojo]} disabled={!editable} onChange={e => act(ojo, e.target.value)}>
                                                         <option value="">—</option>
                                                         {PUPILAS.map(o => <option key={o.valor} value={o.valor}>{o.label}</option>)}
@@ -315,7 +316,7 @@ export default function PasHoja({
                                                 </td>
                                             ))}
                                             <td>
-                                                <select className="pas-campo pas-centrado" style={{ height: '3.8mm', fontSize: '6pt' }}
+                                                <select className="pas-campo pas-centrado" style={{ height: '5.4mm', fontSize: '6.7pt' }}
                                                         value={c.reactivas} disabled={!editable} onChange={e => act('reactivas', e.target.value)}>
                                                     <option value="">—</option>
                                                     <option value="si">Sí</option>
@@ -521,21 +522,21 @@ export default function PasHoja({
                     <Bloque y="238.8mm">
                         <Sec>Accidentes de tráfico</Sec>
                         <div className="pas-caja">
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '1.4mm' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '3mm' }}>
                                 <span style={{ fontSize: '5.2pt', whiteSpace: 'nowrap', flex: '0 0 auto' }}>Matrícula vehículos implicados</span>
                                 {d.matriculas.map((m, i) => (
-                                    <input key={i} className="pas-campo pas-centrado" style={{ height: '2.9mm' }}
+                                    <input key={i} className="pas-campo pas-centrado" style={{ height: '4.2mm' }}
                                            value={m} readOnly={!editable}
                                            onChange={e => { const n = [...d.matriculas]; n[i] = e.target.value; onCampo?.('matriculas', n) }} />
                                 ))}
                             </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '1.4mm', marginTop: '.25mm' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '3mm', marginTop: '1.4mm' }}>
                                 <span style={{ fontSize: '5.2pt', whiteSpace: 'nowrap', flex: '0 0 auto' }}>Agentes de la autoridad que intervienen</span>
                                 <span style={{ fontSize: '5.2pt', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>Policía Local de</span>
-                                <input className="pas-campo" style={{ height: '2.9mm' }} value={d.policiaLocalDe}
+                                <input className="pas-campo" style={{ height: '4.2mm' }} value={d.policiaLocalDe}
                                        readOnly={!editable} onChange={e => set('policiaLocalDe')(e.target.value)} />
                                 <span style={{ fontSize: '5.2pt', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>Guardia Civil de</span>
-                                <input className="pas-campo" style={{ height: '2.9mm' }} value={d.guardiaCivilDe}
+                                <input className="pas-campo" style={{ height: '4.2mm' }} value={d.guardiaCivilDe}
                                        readOnly={!editable} onChange={e => set('guardiaCivilDe')(e.target.value)} />
                             </div>
                         </div>
@@ -593,13 +594,25 @@ export default function PasHoja({
                         </div>
                     </Bloque>
 
+                    {/* Firman los dos indicativos que intervienen y el Jefe de Servicio */}
                     <Bloque y="254.4mm" x="154mm" w="42.8mm">
-                        <Sec>Vº Bº Jefe de Servicio</Sec>
-                        <div className="pas-caja" style={{ height: '11.4mm', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            {d.firmaJefe
-                                /* eslint-disable-next-line @next/next/no-img-element */
-                                ? <img src={d.firmaJefe} alt="Firma" style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain' }} />
-                                : <span style={{ fontSize: '6pt', color: '#A8B2C1' }}>J-44</span>}
+                        <Sec>Firmas</Sec>
+                        <div className="pas-caja" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '.8mm' }}>
+                            {([['firmaInd1', d.indicativosIntervienen[0] || 'Indicativo 1'],
+                               ['firmaInd2', d.indicativosIntervienen[1] || 'Indicativo 2'],
+                               ['firmaJefe', 'Vº Bº ' + (d.indicativosIntervienen.includes('J-44') ? 'J-44' : 'Jefe')]] as const).map(([campo, pie]) => (
+                                <div key={campo}>
+                                    <div style={{ height: '9mm', border: '.25mm solid var(--regla)',
+                                                  display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                        {(d as any)[campo]
+                                            /* eslint-disable-next-line @next/next/no-img-element */
+                                            ? <img src={(d as any)[campo]} alt={`Firma ${pie}`} style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain' }} />
+                                            : null}
+                                    </div>
+                                    <div style={{ fontSize: '5pt', textAlign: 'center', color: 'var(--etiqueta)',
+                                                  textTransform: 'uppercase', marginTop: '.3mm' }}>{pie}</div>
+                                </div>
+                            ))}
                         </div>
                     </Bloque>
                 </div>

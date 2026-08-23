@@ -244,7 +244,7 @@ export function estadoInicialPAS() {
 
         // Firmas
         indicativosIntervienen: ['', '', '', ''] as string[],
-        firmaIndicativos: '', firmaJefe: '',
+        firmaInd1: '', firmaInd2: '', firmaJefe: '',
     }
 }
 

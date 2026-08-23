@@ -117,10 +117,14 @@ textarea.pas-campo { height: auto; padding: 1mm; resize: none; line-height: 1.35
 
 /* ── Figuras anatómicas con marcas de lesión ─────────────────────────────── */
 .pas-figuras { position: relative; display: flex; gap: 3mm; justify-content: center; align-items: flex-start; }
-/* Las dos imágenes tienen proporciones distintas en el original; se les da el
-   mismo alto y se reparten el ancho a partes iguales para que ocupen lo mismo. */
-.pas-figura { position: relative; flex: 1 1 0; min-width: 0; }
-.pas-figura img { height: 69.8mm; width: 100%; object-fit: contain; object-position: center top; image-rendering: auto; }
+/* Las dos imágenes no tienen la misma proporción: 603x760 y 536x760 px. Darles
+   el mismo ancho hacía que cada una se dibujara a una escala distinta y los
+   cuerpos salieran de distinto tamaño. A cada una se le da el ancho que le toca
+   por su propia proporción, con lo que ambas se dibujan a la misma escala. */
+.pas-figura { position: relative; flex: 0 0 auto; }
+.pas-figura.frontal { width: 55.4mm; }
+.pas-figura.lateral { width: 49.2mm; }
+.pas-figura img { height: 69.8mm; width: 100%; display: block; }
 .pas-figura img { width: 100%; height: auto; display: block; }
 .pas-figura.editable { cursor: crosshair; }
 .pas-marca {
