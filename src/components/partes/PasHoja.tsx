@@ -228,7 +228,7 @@ export default function PasHoja({
                     </Bloque>
 
                     {/* ── Filiación del paciente ── */}
-                    <Bloque y="52mm">
+                    <Bloque y="50mm">
                         <div style={{ display: 'flex', gap: '2mm' }}>
                             <Campo etq="Nombre" valor={d.nombre} onChange={set('nombre')} editable={editable} />
                             <Campo etq="Apellidos" valor={d.apellidos} onChange={set('apellidos')} editable={editable} />
@@ -251,7 +251,7 @@ export default function PasHoja({
                                 </div>
                             </div>
                         </div>
-                        <div style={{ display: 'flex', gap: '2mm', marginTop: '.3mm' }}>
+                        <div style={{ display: 'flex', gap: '2mm', marginTop: '1.6mm' }}>
                             <Campo etq="Domicilio" valor={d.domicilio} onChange={set('domicilio')} editable={editable} />
                             {([['Nº', 'numero'], ['Bq', 'bloque'], ['Piso', 'piso'], ['Puerta', 'puerta'], ['Letra', 'letra'], ['CP', 'cp']] as const).map(([et, k]) => (
                                 <div key={k} style={{ width: '13mm' }}>
@@ -259,7 +259,7 @@ export default function PasHoja({
                                 </div>
                             ))}
                         </div>
-                        <div style={{ display: 'flex', gap: '2mm', marginTop: '.3mm' }}>
+                        <div style={{ display: 'flex', gap: '2mm', marginTop: '1.6mm' }}>
                             <Campo etq="Localidad" valor={d.localidad} onChange={set('localidad')} editable={editable} />
                             <Campo etq="Provincia" valor={d.provincia} onChange={set('provincia')} editable={editable} />
                             <Campo etq="DNI / NIE" valor={d.dniNie} onChange={set('dniNie')} editable={editable} />
@@ -273,7 +273,7 @@ export default function PasHoja({
                             <thead>
                                 <tr style={{ background: 'var(--campo)' }}>
                                     {['', 'Hora', 'FR', 'FC', 'TA', 'Resp.', 'O₂ L/min', 'FiO₂', 'Sat.', 'Gluc.', 'GCS', 'Pupila I', 'Pupila D', 'React.'].map(h => (
-                                        <th key={h} style={{ fontSize: '5.2pt', padding: '.3mm', textTransform: 'uppercase', color: 'var(--etiqueta)' }}>{h}</th>
+                                        <th key={h} style={{ fontSize: '5.6pt', padding: '.4mm', textTransform: 'uppercase', color: 'var(--etiqueta)' }}>{h}</th>
                                     ))}
                                 </tr>
                             </thead>
@@ -288,12 +288,12 @@ export default function PasHoja({
                                     return (
                                         <tr key={i}>
                                             <td style={{ fontWeight: 700, textAlign: 'center', width: '7mm' }}>{i + 1}ª</td>
-                                            <td><input type="time" className="pas-campo pas-centrado" style={{ height: '3.4mm', fontSize: '5.4pt' }} value={c.hora} disabled={!editable} onChange={e => act('hora', e.target.value)} /></td>
+                                            <td><input type="time" className="pas-campo pas-centrado" style={{ height: '3.8mm', fontSize: '6pt' }} value={c.hora} disabled={!editable} onChange={e => act('hora', e.target.value)} /></td>
                                             {(['fr', 'fc', 'ta'] as const).map(k => (
-                                                <td key={k}><input className="pas-campo pas-centrado" style={{ height: '3.4mm', fontSize: '5.6pt' }} value={c[k]} readOnly={!editable} onChange={e => act(k, e.target.value)} /></td>
+                                                <td key={k}><input className="pas-campo pas-centrado" style={{ height: '3.8mm', fontSize: '6.3pt' }} value={c[k]} readOnly={!editable} onChange={e => act(k, e.target.value)} /></td>
                                             ))}
                                             <td>
-                                                <select className="pas-campo pas-centrado" style={{ height: '3.4mm', fontSize: '5.2pt' }} value={c.respiracion} disabled={!editable} onChange={e => act('respiracion', e.target.value)}>
+                                                <select className="pas-campo pas-centrado" style={{ height: '3.8mm', fontSize: '6pt' }} value={c.respiracion} disabled={!editable} onChange={e => act('respiracion', e.target.value)}>
                                                     <option value="">—</option>
                                                     <option value="norm">Norm</option>
                                                     <option value="ansi">Ansi</option>
@@ -301,13 +301,13 @@ export default function PasHoja({
                                                 </select>
                                             </td>
                                             {(['oxiLmin', 'oxiFio2', 'saturacion', 'glucosa'] as const).map(k => (
-                                                <td key={k}><input className="pas-campo pas-centrado" style={{ height: '3.4mm', fontSize: '5.6pt' }} value={c[k]} readOnly={!editable} onChange={e => act(k, e.target.value)} /></td>
+                                                <td key={k}><input className="pas-campo pas-centrado" style={{ height: '3.8mm', fontSize: '6.3pt' }} value={c[k]} readOnly={!editable} onChange={e => act(k, e.target.value)} /></td>
                                             ))}
                                             <td style={{ textAlign: 'center', fontWeight: 700 }}>{total ?? '—'}</td>
                                             {/* El modelo valora cada ojo por separado */}
                                             {(['pupilaI', 'pupilaD'] as const).map(ojo => (
                                                 <td key={ojo}>
-                                                    <select className="pas-campo pas-centrado" style={{ height: '3.4mm', fontSize: '5.2pt' }}
+                                                    <select className="pas-campo pas-centrado" style={{ height: '3.8mm', fontSize: '6pt' }}
                                                             value={(c as any)[ojo]} disabled={!editable} onChange={e => act(ojo, e.target.value)}>
                                                         <option value="">—</option>
                                                         {PUPILAS.map(o => <option key={o.valor} value={o.valor}>{o.label}</option>)}
@@ -315,7 +315,7 @@ export default function PasHoja({
                                                 </td>
                                             ))}
                                             <td>
-                                                <select className="pas-campo pas-centrado" style={{ height: '3.4mm', fontSize: '5.2pt' }}
+                                                <select className="pas-campo pas-centrado" style={{ height: '3.8mm', fontSize: '6pt' }}
                                                         value={c.reactivas} disabled={!editable} onChange={e => act('reactivas', e.target.value)}>
                                                     <option value="">—</option>
                                                     <option value="si">Sí</option>
@@ -334,7 +334,7 @@ export default function PasHoja({
                         {/* Se limita por el alto: hay 23 mm hasta el bloque de traslado,
                             y a ancho completo la leyenda medía 33 y se metía dentro. */}
                         <img src="/images/pas-pupilas.png" alt="Ejemplos de pupila"
-                             style={{ height: '22mm', width: 'auto', maxWidth: '100%', display: 'block', margin: '0 auto' }} />
+                             style={{ height: '22mm', width: 'auto', maxWidth: '100%', display: 'block', marginLeft: 'auto' }} />
                     </Bloque>
 
                     {/* ── Los seis bloques de exploración, en la misma fila del modelo ── */}

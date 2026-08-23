@@ -163,10 +163,10 @@ export function totalQuemaduras(zonas: string[], edad: 'ninios' | 'adultos'): nu
 
 /** Estados de pupila del modelo, en su mismo orden. */
 export const PUPILAS = [
-    { valor: 'isocoria', label: 'Isocoria' },
-    { valor: 'miosis', label: 'Miosis' },
-    { valor: 'midriasis', label: 'Midriasis' },
-    { valor: 'anisocoria', label: 'Anisocoria' },
+    { valor: 'isocoria', label: 'ISOC' },
+    { valor: 'miosis', label: 'MIOS' },
+    { valor: 'midriasis', label: 'MIDR' },
+    { valor: 'anisocoria', label: 'ANIS' },
 ] as const
 
 /** Momentos que se cronometran en el recuadro «Pautas de tiempo». */
