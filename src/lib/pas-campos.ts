@@ -156,6 +156,11 @@ export const QUEMADURAS: { zona: string; ninios: number; adultos: number }[] = [
     { zona: 'Abdomen', ninios: 9, adultos: 9 },
 ]
 
+/** Superficie corporal quemada: suma de las zonas marcadas, por la regla de los nueves. */
+export function totalQuemaduras(zonas: string[], edad: 'ninios' | 'adultos'): number {
+    return QUEMADURAS.filter(q => zonas.includes(q.zona)).reduce((t, q) => t + q[edad], 0)
+}
+
 /** Momentos que se cronometran en el recuadro «Pautas de tiempo». */
 export const PAUTAS_TIEMPO: Item[] = [
     { key: 'tLlamada', label: 'Llamada' },
@@ -210,6 +215,10 @@ export function estadoInicialPAS() {
         // Bloques de exploración
         checks, dobles, sino,
         rcpDescargas: '', rcpTiempoSvb: '', rcpHoraRecuperacion: '', rcpHoraInicioSva: '',
+
+        // Quemaduras: zonas marcadas y tabla de referencia que se aplica
+        quemadurasEdad: 'adultos' as 'ninios' | 'adultos',
+        quemadurasZonas: [] as string[],
 
         // Texto libre
         antecedentes: '', demandas: '', observaciones: '',

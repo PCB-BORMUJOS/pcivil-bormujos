@@ -22,6 +22,23 @@ export function PasForm() {
     const [guardando, setGuardando] = useState(false)
     const [exportando, setExportando] = useState(false)
     const [aviso, setAviso] = useState<string | null>(null)
+    const [indicativos, setIndicativos] = useState<string[]>([])
+
+    // Indicativos del servicio para el desplegable de equipo: J-44 primero,
+    // luego los S- y los B-, y fuera J0, J1 y los dados de baja.
+    useEffect(() => {
+        fetch('/api/indicativos')
+            .then(r => r.ok ? r.json() : { indicativos: [] })
+            .then(d => {
+                const lista: string[] = Array.isArray(d.indicativos) ? d.indicativos : []
+                const num = (i: string) => { const m = i.match(/(\d+)/); return m ? parseInt(m[1], 10) : 9999 }
+                const grupo = (i: string) => (i === 'J-44' ? 0 : i.startsWith('S-') ? 1 : i.startsWith('B-') ? 2 : 3)
+                setIndicativos(lista
+                    .filter(i => typeof i === 'string' && !/^J-?[01]$/i.test(i.trim()) && !/\bbajas?\b/i.test(i))
+                    .sort((a, b) => grupo(a) - grupo(b) || num(a) - num(b) || a.localeCompare(b, 'es')))
+            })
+            .catch(() => setIndicativos([]))
+    }, [])
 
     const set = <K extends keyof PasDatos>(k: K, v: PasDatos[K]) => setDatos(p => ({ ...p, [k]: v }))
 
@@ -135,6 +152,7 @@ export function PasForm() {
                 datos={datos}
                 marcas={marcas}
                 lesionActiva={lesionActiva}
+                indicativos={indicativos}
                 editable
                 onCampo={(k, v) => set(k as any, v)}
                 onMarcas={setMarcas}

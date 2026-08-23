@@ -13,7 +13,7 @@ import './pas-hoja.css'
 import {
     VIA_AEREA, CIRCULACION, RCP_SINO, NEUROLOGIA, INMOVILIZACION, TRASLADO,
     GLASGOW_OCULAR, GLASGOW_VERBAL, GLASGOW_MOTORA, LESIONES, QUEMADURAS,
-    PAUTAS_TIEMPO, totalGlasgow,
+    PAUTAS_TIEMPO, totalGlasgow, totalQuemaduras,
     type PasDatos, type MarcaLesion, type ValorSiNo,
 } from '@/lib/pas-campos'
 
@@ -23,6 +23,8 @@ export type PasHojaProps = {
     editable?: boolean
     /** Lesión seleccionada en la tabla; al tocar una figura se coloca esta. */
     lesionActiva?: number
+    /** Indicativos del servicio, para los desplegables de equipo. */
+    indicativos?: string[]
     onCampo?: (campo: keyof PasDatos, valor: any) => void
     onMarcas?: (marcas: MarcaLesion[]) => void
     onLesionActiva?: (n: number) => void
@@ -113,7 +115,7 @@ function ListaDoble({ items, dobles, onCambio, editable }: {
 // ── Hoja ─────────────────────────────────────────────────────────────────────
 
 export default function PasHoja({
-    datos: d, marcas = [], editable = false, lesionActiva = 1,
+    datos: d, marcas = [], editable = false, lesionActiva = 1, indicativos = [],
     onCampo, onMarcas, onLesionActiva,
 }: PasHojaProps) {
     const set = (k: keyof PasDatos) => (v: any) => onCampo?.(k, v)
@@ -192,17 +194,23 @@ export default function PasHoja({
                             <div>
                                 <Sec>Vehículos</Sec>
                                 {d.vehiculos.map((v, i) => (
-                                    <input key={i} className="pas-campo pas-centrado" style={{ marginTop: '.35mm', height: '3.3mm' }}
-                                           value={v} readOnly={!editable}
-                                           onChange={e => { const n = [...d.vehiculos]; n[i] = e.target.value; onCampo?.('vehiculos', n) }} />
+                                    <select key={i} className="pas-campo pas-centrado" style={{ marginTop: '.35mm', height: '3.3mm' }}
+                                            value={v} disabled={!editable}
+                                            onChange={e => { const n = [...d.vehiculos]; n[i] = e.target.value; onCampo?.('vehiculos', n) }}>
+                                        <option value="">—</option>
+                                        {['UMJ', 'VIR', 'FSV', 'PMA'].map(x => <option key={x} value={x}>{x}</option>)}
+                                    </select>
                                 ))}
                             </div>
                             <div>
                                 <Sec>Equipo</Sec>
                                 {d.equipo.map((v, i) => (
-                                    <input key={i} className="pas-campo pas-centrado" style={{ marginTop: '.35mm', height: '3.3mm' }}
-                                           value={v} readOnly={!editable}
-                                           onChange={e => { const n = [...d.equipo]; n[i] = e.target.value; onCampo?.('equipo', n) }} />
+                                    <select key={i} className="pas-campo pas-centrado" style={{ marginTop: '.35mm', height: '3.3mm' }}
+                                            value={v} disabled={!editable}
+                                            onChange={e => { const n = [...d.equipo]; n[i] = e.target.value; onCampo?.('equipo', n) }}>
+                                        <option value="">—</option>
+                                        {indicativos.map(ind => <option key={ind} value={ind}>{ind}</option>)}
+                                    </select>
                                 ))}
                             </div>
                             <div>
@@ -388,6 +396,13 @@ export default function PasHoja({
                                     })}
                                 </div>
                             ))}
+                            <div style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center',
+                                          justifyContent: 'flex-end', gap: '1.4mm', marginTop: '.6mm' }}>
+                                <span style={{ fontSize: '5.6pt', fontWeight: 700, textTransform: 'uppercase', color: 'var(--etiqueta)' }}>Total</span>
+                                <span style={{ fontSize: '9pt', fontWeight: 800, color: 'var(--azul)' }}>
+                                    {totalGlasgow(d.constantes[0].glasgowO, d.constantes[0].glasgowV, d.constantes[0].glasgowM) ?? '—'} / 15
+                                </span>
+                            </div>
                         </div>
                     </Bloque>
 
@@ -404,7 +419,12 @@ export default function PasHoja({
                         <div className="pas-caja">
                             <table className="pas-lista">
                                 <thead>
-                                    <tr><th style={{ fontSize: '6pt', textAlign: 'left' }}>Edades</th><th style={{ fontSize: '6pt' }}>Niños</th><th style={{ fontSize: '6pt' }}>Adultos</th></tr>
+                                    <tr>
+                                        <th style={{ fontSize: '5.6pt', textAlign: 'left' }}>Zona</th>
+                                        <th style={{ fontSize: '5.6pt' }}>Niños</th>
+                                        <th style={{ fontSize: '5.6pt' }}>Adultos</th>
+                                        <th style={{ fontSize: '5.6pt' }}>✓</th>
+                                    </tr>
                                 </thead>
                                 <tbody>
                                     {QUEMADURAS.map(q => (
@@ -412,10 +432,29 @@ export default function PasHoja({
                                             <td>{q.zona}</td>
                                             <td className="marca">{q.ninios}</td>
                                             <td className="marca">{q.adultos}</td>
+                                            <td className="marca">
+                                                <Casilla marcada={d.quemadurasZonas.includes(q.zona)} editable={editable}
+                                                         onClick={() => onCampo?.('quemadurasZonas',
+                                                             d.quemadurasZonas.includes(q.zona)
+                                                                 ? d.quemadurasZonas.filter(z => z !== q.zona)
+                                                                 : [...d.quemadurasZonas, q.zona])} />
+                                            </td>
                                         </tr>
                                     ))}
                                 </tbody>
                             </table>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '1.4mm', marginTop: '.5mm' }}>
+                                <select className="pas-campo pas-centrado" style={{ width: '17mm', height: '3.2mm', fontSize: '5.6pt' }}
+                                        value={d.quemadurasEdad} disabled={!editable}
+                                        onChange={e => onCampo?.('quemadurasEdad', e.target.value)}>
+                                    <option value="adultos">Adultos</option>
+                                    <option value="ninios">Niños</option>
+                                </select>
+                                <span style={{ fontSize: '5.6pt', fontWeight: 700, textTransform: 'uppercase', color: 'var(--etiqueta)', marginLeft: 'auto' }}>Total</span>
+                                <span style={{ fontSize: '8pt', fontWeight: 800, color: 'var(--azul)' }}>
+                                    {totalQuemaduras(d.quemadurasZonas, d.quemadurasEdad)} %
+                                </span>
+                            </div>
                         </div>
                     </Bloque>
 

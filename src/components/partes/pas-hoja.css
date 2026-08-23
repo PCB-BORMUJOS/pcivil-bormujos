@@ -117,7 +117,10 @@ textarea.pas-campo { height: auto; padding: 1mm; resize: none; line-height: 1.35
 
 /* ── Figuras anatómicas con marcas de lesión ─────────────────────────────── */
 .pas-figuras { position: relative; display: flex; gap: 2mm; }
-.pas-figura { position: relative; flex: 1; }
+/* Las dos imágenes tienen proporciones distintas en el original; se les da el
+   mismo alto y se reparten el ancho a partes iguales para que ocupen lo mismo. */
+.pas-figura { position: relative; flex: 1 1 0; min-width: 0; }
+.pas-figura img { height: 69.8mm; width: 100%; object-fit: contain; object-position: top; }
 .pas-figura img { width: 100%; height: auto; display: block; }
 .pas-figura.editable { cursor: crosshair; }
 .pas-marca {
