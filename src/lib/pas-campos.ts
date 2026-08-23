@@ -76,7 +76,7 @@ export const INMOVILIZACION: Item[] = [
     { key: 'in_fernokit', label: 'Fernokit' },
     { key: 'in_inm_cabeza', label: 'Inm. cabeza' },
     { key: 'in_camilla_tijera', label: 'Camilla tijera' },
-    { key: 'in_colchon_vacio', label: 'Colchón de vacío' },
+    { key: 'in_colchon_vacio', label: 'Colchón vacío' },
     { key: 'in_ferula_ms', label: 'Férula M.S.' },
     { key: 'in_ferula_mi', label: 'Férula M.I.' },
     { key: 'in_ferula_tracc', label: 'Férula tracc.' },
@@ -201,7 +201,7 @@ export function estadoInicialPAS() {
         fecha: '', hora: '', numeroInforme: '',
         lugar: '', motivo: '', alertante: '',
         vehiculos: ['', '', ''] as string[],
-        equipo: ['', '', ''] as string[],
+        equipo: ['', '', '', ''] as string[],
         tLlamada: '', tSalida: '', tLlegada: '', tTerminado: '', tDisponible: '',
 
         // Filiación del paciente
@@ -233,7 +233,7 @@ export function estadoInicialPAS() {
         testigo1: '', testigo2: '',
 
         // Firmas
-        indicativosIntervienen: ['', ''] as string[],
+        indicativosIntervienen: ['', '', '', ''] as string[],
         firmaIndicativos: '', firmaJefe: '',
     }
 }

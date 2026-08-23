@@ -217,8 +217,8 @@ export default function PasHoja({
                                 <Sec>Pautas de tiempo</Sec>
                                 {PAUTAS_TIEMPO.map(p => (
                                     <div key={p.key} style={{ display: 'flex', alignItems: 'center', gap: '1mm', marginTop: '.35mm' }}>
-                                        <span style={{ flex: 1, fontSize: '6pt', textAlign: 'right', textTransform: 'uppercase' }}>{p.label}</span>
-                                        <input type="time" className="pas-campo pas-centrado" style={{ width: '15mm', height: '3.1mm' }}
+                                        <span style={{ flex: '0 0 12mm', fontSize: '5.4pt', textAlign: 'right', textTransform: 'uppercase' }}>{p.label}</span>
+                                        <input type="time" className="pas-campo pas-centrado" style={{ flex: 1, minWidth: 0, height: '3.1mm', fontSize: '6pt' }}
                                                value={(d as any)[p.key] || ''} disabled={!editable}
                                                onChange={e => onCampo?.(p.key as keyof PasDatos, e.target.value)} />
                                     </div>
@@ -399,7 +399,7 @@ export default function PasHoja({
                             <div style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center',
                                           justifyContent: 'flex-end', gap: '1.4mm', marginTop: '.6mm' }}>
                                 <span style={{ fontSize: '5.6pt', fontWeight: 700, textTransform: 'uppercase', color: 'var(--etiqueta)' }}>Total</span>
-                                <span style={{ fontSize: '9pt', fontWeight: 800, color: 'var(--azul)' }}>
+                                <span style={{ fontSize: '7.1pt', fontWeight: 800, color: 'var(--azul)' }}>
                                     {totalGlasgow(d.constantes[0].glasgowO, d.constantes[0].glasgowV, d.constantes[0].glasgowM) ?? '—'} / 15
                                 </span>
                             </div>
@@ -552,11 +552,24 @@ export default function PasHoja({
                     <Bloque y="254.4mm" x="109.5mm" w="43mm">
                         <Sec>Indicativos que intervienen</Sec>
                         <div className="pas-caja">
-                            {d.indicativosIntervienen.map((v, i) => (
-                                <input key={i} className="pas-campo pas-centrado" style={{ marginTop: i ? '.8mm' : 0 }}
-                                       value={v} readOnly={!editable}
-                                       onChange={e => { const n = [...d.indicativosIntervienen]; n[i] = e.target.value; onCampo?.('indicativosIntervienen', n) }} />
-                            ))}
+                            {/* Cuatro huecos, en dos filas de dos. Ofrecen primero los
+                                indicativos ya puestos en «Equipo», que son los que han
+                                intervenido, y despues el resto del servicio. */}
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '.6mm' }}>
+                                {d.indicativosIntervienen.map((v, i) => {
+                                    const delEquipo = d.equipo.filter(Boolean)
+                                    const resto = indicativos.filter(x => !delEquipo.includes(x))
+                                    return (
+                                        <select key={i} className="pas-campo pas-centrado" style={{ height: '3.4mm' }}
+                                                value={v} disabled={!editable}
+                                                onChange={e => { const n = [...d.indicativosIntervienen]; n[i] = e.target.value; onCampo?.('indicativosIntervienen', n) }}>
+                                            <option value="">—</option>
+                                            {delEquipo.map(x => <option key={'e' + x} value={x}>{x}</option>)}
+                                            {resto.map(x => <option key={x} value={x}>{x}</option>)}
+                                        </select>
+                                    )
+                                })}
+                            </div>
                         </div>
                     </Bloque>
 
