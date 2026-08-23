@@ -307,7 +307,7 @@ export default function PasHoja({
                                             <td style={{ textAlign: 'center', fontWeight: 700 }}>{total ?? '—'}</td>
                                             {/* El modelo valora cada ojo por separado */}
                                             {(['pupilaI', 'pupilaD'] as const).map(ojo => (
-                                                <td key={ojo}>
+                                                <td key={ojo} style={{ width: '20mm' }}>
                                                     <select className="pas-campo pas-centrado" style={{ height: '5.4mm', fontSize: '6.7pt' }}
                                                             value={(c as any)[ojo]} disabled={!editable} onChange={e => act(ojo, e.target.value)}>
                                                         <option value="">—</option>
@@ -315,7 +315,7 @@ export default function PasHoja({
                                                     </select>
                                                 </td>
                                             ))}
-                                            <td>
+                                            <td style={{ width: '15mm' }}>
                                                 <select className="pas-campo pas-centrado" style={{ height: '5.4mm', fontSize: '6.7pt' }}
                                                         value={c.reactivas} disabled={!editable} onChange={e => act('reactivas', e.target.value)}>
                                                     <option value="">—</option>
@@ -503,18 +503,18 @@ export default function PasHoja({
                     {/* ── Textos libres ── */}
                     <Bloque y="213.1mm" x="0mm" w="97.5mm">
                         <Sec>Antecedentes / alergias</Sec>
-                        <textarea className="pas-campo" style={{ height: '7.4mm' }} value={d.antecedentes}
+                        <textarea className="pas-campo" style={{ height: '8.6mm' }} value={d.antecedentes}
                                   readOnly={!editable} onChange={e => set('antecedentes')(e.target.value)} />
                     </Bloque>
                     <Bloque y="213.1mm" x="99.3mm" w="97.5mm">
                         <Sec>Demandas del paciente</Sec>
-                        <textarea className="pas-campo" style={{ height: '7.4mm' }} value={d.demandas}
+                        <textarea className="pas-campo" style={{ height: '8.6mm' }} value={d.demandas}
                                   readOnly={!editable} onChange={e => set('demandas')(e.target.value)} />
                     </Bloque>
 
                     <Bloque y="225.8mm">
                         <Sec>Observaciones de la intervención</Sec>
-                        <textarea className="pas-campo" style={{ height: '8mm' }} value={d.observaciones}
+                        <textarea className="pas-campo" style={{ height: '9mm' }} value={d.observaciones}
                                   readOnly={!editable} onChange={e => set('observaciones')(e.target.value)} />
                     </Bloque>
 
@@ -577,7 +577,7 @@ export default function PasHoja({
                                 indicativos ya puestos en «Equipo», que son los que han
                                 intervenido, y despues el resto del servicio. */}
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '.6mm' }}>
-                                {d.indicativosIntervienen.map((v, i) => {
+                                {d.indicativosIntervienen.slice(0, 2).map((v, i) => {
                                     const delEquipo = d.equipo.filter(Boolean)
                                     const resto = indicativos.filter(x => !delEquipo.includes(x))
                                     return (
@@ -591,28 +591,32 @@ export default function PasHoja({
                                     )
                                 })}
                             </div>
+                            {/* Debajo de cada indicativo, su firma */}
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '.8mm', marginTop: '.8mm' }}>
+                                {(['firmaInd1', 'firmaInd2'] as const).map(campo => (
+                                    <div key={campo} style={{ height: '8mm', border: '.25mm solid var(--regla)',
+                                                              display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                        {(d as any)[campo]
+                                            /* eslint-disable-next-line @next/next/no-img-element */
+                                            ? <img src={(d as any)[campo]} alt="Firma" style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain' }} />
+                                            : <span style={{ fontSize: '5pt', color: '#C3CBD4' }}>Firma</span>}
+                                    </div>
+                                ))}
+                            </div>
                         </div>
                     </Bloque>
 
-                    {/* Firman los dos indicativos que intervienen y el Jefe de Servicio */}
+                    {/* Un solo hueco de firma para el Vº Bº del Jefe de Servicio */}
                     <Bloque y="254.4mm" x="154mm" w="42.8mm">
-                        <Sec>Firmas</Sec>
-                        <div className="pas-caja" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '.8mm' }}>
-                            {([['firmaInd1', d.indicativosIntervienen[0] || 'Indicativo 1'],
-                               ['firmaInd2', d.indicativosIntervienen[1] || 'Indicativo 2'],
-                               ['firmaJefe', 'Vº Bº ' + (d.indicativosIntervienen.includes('J-44') ? 'J-44' : 'Jefe')]] as const).map(([campo, pie]) => (
-                                <div key={campo}>
-                                    <div style={{ height: '9mm', border: '.25mm solid var(--regla)',
-                                                  display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                        {(d as any)[campo]
-                                            /* eslint-disable-next-line @next/next/no-img-element */
-                                            ? <img src={(d as any)[campo]} alt={`Firma ${pie}`} style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain' }} />
-                                            : null}
-                                    </div>
-                                    <div style={{ fontSize: '5pt', textAlign: 'center', color: 'var(--etiqueta)',
-                                                  textTransform: 'uppercase', marginTop: '.3mm' }}>{pie}</div>
-                                </div>
-                            ))}
+                        <Sec>Vº Bº Jefe de Servicio</Sec>
+                        <div className="pas-caja">
+                            <div style={{ height: '13.5mm', border: '.25mm solid var(--regla)',
+                                          display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                {d.firmaJefe
+                                    /* eslint-disable-next-line @next/next/no-img-element */
+                                    ? <img src={d.firmaJefe} alt="Firma del Jefe de Servicio" style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain' }} />
+                                    : <span style={{ fontSize: '5.6pt', color: '#C3CBD4' }}>J-44</span>}
+                            </div>
                         </div>
                     </Bloque>
                 </div>
