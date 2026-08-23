@@ -232,17 +232,20 @@ export default function PasHoja({
                         <div style={{ display: 'flex', gap: '2mm' }}>
                             <Campo etq="Nombre" valor={d.nombre} onChange={set('nombre')} editable={editable} />
                             <Campo etq="Apellidos" valor={d.apellidos} onChange={set('apellidos')} editable={editable} />
-                            <div style={{ width: '16mm' }}>
+                            <div style={{ width: '18mm' }}>
                                 <Campo etq="Edad" valor={d.edad} onChange={set('edad')} editable={editable} centrado />
                             </div>
-                            <div style={{ width: '22mm' }}>
-                                <label className="pas-etq">Sexo</label>
-                                <div style={{ display: 'flex', gap: '2mm', height: '4.6mm', alignItems: 'center' }}>
+                            {/* Sexo se alinea con Edad —etiqueta arriba, contenido abajo— y
+                                aprovecha el hueco de la derecha para separar y centrar H y M. */}
+                            <div style={{ width: '30mm' }}>
+                                <label className="pas-etq" style={{ textAlign: 'center' }}>Sexo</label>
+                                <div style={{ display: 'flex', justifyContent: 'center', gap: '5mm',
+                                              height: '3.4mm', alignItems: 'center' }}>
                                     {(['H', 'M'] as const).map(s => (
-                                        <span className="pas-opcion" key={s}>
+                                        <span className="pas-opcion" key={s} style={{ fontSize: '7.1pt', gap: '1.4mm' }}>
                                             <Casilla marcada={d.sexo === s} editable={editable}
                                                      onClick={() => onCampo?.('sexo', d.sexo === s ? '' : s)} />
-                                            {s}
+                                            <b>{s}</b>
                                         </span>
                                     ))}
                                 </div>
