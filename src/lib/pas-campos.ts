@@ -161,6 +161,14 @@ export function totalQuemaduras(zonas: string[], edad: 'ninios' | 'adultos'): nu
     return QUEMADURAS.filter(q => zonas.includes(q.zona)).reduce((t, q) => t + q[edad], 0)
 }
 
+/** Estados de pupila del modelo, en su mismo orden. */
+export const PUPILAS = [
+    { valor: 'isocoria', label: 'Isocoria' },
+    { valor: 'miosis', label: 'Miosis' },
+    { valor: 'midriasis', label: 'Midriasis' },
+    { valor: 'anisocoria', label: 'Anisocoria' },
+] as const
+
 /** Momentos que se cronometran en el recuadro «Pautas de tiempo». */
 export const PAUTAS_TIEMPO: Item[] = [
     { key: 'tLlamada', label: 'Llamada' },
@@ -178,7 +186,9 @@ export function constantesVacias() {
         oxiLmin: '', oxiFio2: '',
         saturacion: '', glucosa: '',
         glasgowO: 0, glasgowV: 0, glasgowM: 0, glasgowT: 0,
-        pupilas: '' as '' | 'isocoria' | 'miosis' | 'midriasis' | 'anisocoria',
+        // El modelo valora cada ojo por separado, más si son reactivas
+        pupilaI: '' as '' | 'isocoria' | 'miosis' | 'midriasis' | 'anisocoria',
+        pupilaD: '' as '' | 'isocoria' | 'miosis' | 'midriasis' | 'anisocoria',
         reactivas: '' as ValorSiNo,
     }
 }

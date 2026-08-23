@@ -13,7 +13,7 @@ import './pas-hoja.css'
 import {
     VIA_AEREA, CIRCULACION, RCP_SINO, NEUROLOGIA, INMOVILIZACION, TRASLADO,
     GLASGOW_OCULAR, GLASGOW_VERBAL, GLASGOW_MOTORA, LESIONES, QUEMADURAS,
-    PAUTAS_TIEMPO, totalGlasgow, totalQuemaduras,
+    PAUTAS_TIEMPO, PUPILAS, totalGlasgow, totalQuemaduras,
     type PasDatos, type MarcaLesion, type ValorSiNo,
 } from '@/lib/pas-campos'
 
@@ -265,12 +265,12 @@ export default function PasHoja({
                     </Bloque>
 
                     {/* ── Constantes: dos tandas ── */}
-                    <Bloque y="72mm">
+                    <Bloque y="74mm" x="0mm" w="178mm">
                         <table className="pas-lista" style={{ border: '.25mm solid var(--regla)' }}>
                             <thead>
                                 <tr style={{ background: 'var(--campo)' }}>
-                                    {['', 'Hora', 'FR/min', 'FC/min', 'TA/mmHg', 'Respiración', 'O₂ L/min', 'FiO₂', 'Satur.', 'Glucosa', 'Glasgow', 'Pupilas'].map(h => (
-                                        <th key={h} style={{ fontSize: '6pt', padding: '.6mm', textTransform: 'uppercase', color: 'var(--etiqueta)' }}>{h}</th>
+                                    {['', 'Hora', 'FR', 'FC', 'TA', 'Resp.', 'O₂ L/min', 'FiO₂', 'Sat.', 'Gluc.', 'GCS', 'Pupila I', 'Pupila D', 'React.'].map(h => (
+                                        <th key={h} style={{ fontSize: '5.2pt', padding: '.3mm', textTransform: 'uppercase', color: 'var(--etiqueta)' }}>{h}</th>
                                     ))}
                                 </tr>
                             </thead>
@@ -285,12 +285,12 @@ export default function PasHoja({
                                     return (
                                         <tr key={i}>
                                             <td style={{ fontWeight: 700, textAlign: 'center', width: '7mm' }}>{i + 1}ª</td>
-                                            <td><input type="time" className="pas-campo pas-centrado" style={{ height: '4mm' }} value={c.hora} disabled={!editable} onChange={e => act('hora', e.target.value)} /></td>
+                                            <td><input type="time" className="pas-campo pas-centrado" style={{ height: '3.4mm', fontSize: '5.4pt' }} value={c.hora} disabled={!editable} onChange={e => act('hora', e.target.value)} /></td>
                                             {(['fr', 'fc', 'ta'] as const).map(k => (
-                                                <td key={k}><input className="pas-campo pas-centrado" style={{ height: '4mm' }} value={c[k]} readOnly={!editable} onChange={e => act(k, e.target.value)} /></td>
+                                                <td key={k}><input className="pas-campo pas-centrado" style={{ height: '3.4mm', fontSize: '5.6pt' }} value={c[k]} readOnly={!editable} onChange={e => act(k, e.target.value)} /></td>
                                             ))}
                                             <td>
-                                                <select className="pas-campo pas-centrado" style={{ height: '4mm' }} value={c.respiracion} disabled={!editable} onChange={e => act('respiracion', e.target.value)}>
+                                                <select className="pas-campo pas-centrado" style={{ height: '3.4mm', fontSize: '5.2pt' }} value={c.respiracion} disabled={!editable} onChange={e => act('respiracion', e.target.value)}>
                                                     <option value="">—</option>
                                                     <option value="norm">Norm</option>
                                                     <option value="ansi">Ansi</option>
@@ -298,16 +298,25 @@ export default function PasHoja({
                                                 </select>
                                             </td>
                                             {(['oxiLmin', 'oxiFio2', 'saturacion', 'glucosa'] as const).map(k => (
-                                                <td key={k}><input className="pas-campo pas-centrado" style={{ height: '4mm' }} value={c[k]} readOnly={!editable} onChange={e => act(k, e.target.value)} /></td>
+                                                <td key={k}><input className="pas-campo pas-centrado" style={{ height: '3.4mm', fontSize: '5.6pt' }} value={c[k]} readOnly={!editable} onChange={e => act(k, e.target.value)} /></td>
                                             ))}
                                             <td style={{ textAlign: 'center', fontWeight: 700 }}>{total ?? '—'}</td>
+                                            {/* El modelo valora cada ojo por separado */}
+                                            {(['pupilaI', 'pupilaD'] as const).map(ojo => (
+                                                <td key={ojo}>
+                                                    <select className="pas-campo pas-centrado" style={{ height: '3.4mm', fontSize: '5.2pt' }}
+                                                            value={(c as any)[ojo]} disabled={!editable} onChange={e => act(ojo, e.target.value)}>
+                                                        <option value="">—</option>
+                                                        {PUPILAS.map(o => <option key={o.valor} value={o.valor}>{o.label}</option>)}
+                                                    </select>
+                                                </td>
+                                            ))}
                                             <td>
-                                                <select className="pas-campo pas-centrado" style={{ height: '4mm' }} value={c.pupilas} disabled={!editable} onChange={e => act('pupilas', e.target.value)}>
+                                                <select className="pas-campo pas-centrado" style={{ height: '3.4mm', fontSize: '5.2pt' }}
+                                                        value={c.reactivas} disabled={!editable} onChange={e => act('reactivas', e.target.value)}>
                                                     <option value="">—</option>
-                                                    <option value="isocoria">Isocoria</option>
-                                                    <option value="miosis">Miosis</option>
-                                                    <option value="midriasis">Midriasis</option>
-                                                    <option value="anisocoria">Anisocoria</option>
+                                                    <option value="si">Sí</option>
+                                                    <option value="no">No</option>
                                                 </select>
                                             </td>
                                         </tr>
@@ -315,6 +324,14 @@ export default function PasHoja({
                                 })}
                             </tbody>
                         </table>
+                    </Bloque>
+
+                    <Bloque y="74mm" x="179.5mm" w="17.3mm">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        {/* Se limita por el alto: hay 23 mm hasta el bloque de traslado,
+                            y a ancho completo la leyenda medía 33 y se metía dentro. */}
+                        <img src="/images/pas-pupilas.png" alt="Ejemplos de pupila"
+                             style={{ height: '22mm', width: 'auto', maxWidth: '100%', display: 'block', margin: '0 auto' }} />
                     </Bloque>
 
                     {/* ── Los seis bloques de exploración, en la misma fila del modelo ── */}
