@@ -1,9 +1,13 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
 import { signOut, useSession } from 'next-auth/react'
+import { usePathname } from 'next/navigation'
 
-const INACTIVITY_MS = 5 * 60 * 1000
-const WARNING_MS = 4 * 60 * 1000
+// Tiempo hasta el cierre por inactividad. En CECOPAL se amplía a 30 min: tener
+// esa pantalla abierta significa que se está trabajando en una emergencia.
+const INACTIVITY_NORMAL_MS = 5 * 60 * 1000
+const INACTIVITY_CECOPAL_MS = 30 * 60 * 1000
+const AVISO_ANTES_MS = 60 * 1000 // el aviso (contador de 60 s) salta 1 min antes
 
 // Registro global de callbacks de guardado para que los formularios puedan
 // registrar su función de guardado y sea invocada antes de cerrar la sesión.
@@ -17,6 +21,11 @@ export function registerInactivitySaveCallback(fn: SaveCallback): () => void {
 
 export default function InactivityGuard() {
   const { data: session } = useSession()
+  const pathname = usePathname()
+  // La duración vive en un ref para que startTimers use siempre el valor actual
+  // (cambia al entrar o salir de CECOPAL sin recrear la función).
+  const inactividadRef = useRef(INACTIVITY_NORMAL_MS)
+  inactividadRef.current = pathname?.startsWith('/cecopal') ? INACTIVITY_CECOPAL_MS : INACTIVITY_NORMAL_MS
   const timerRef = useRef<NodeJS.Timeout | null>(null)
   const warningRef = useRef<NodeJS.Timeout | null>(null)
   const warningActiveRef = useRef(false)
@@ -62,11 +71,11 @@ export default function InactivityGuard() {
           return prev - 1
         })
       }, 1000)
-    }, WARNING_MS)
+    }, Math.max(0, inactividadRef.current - AVISO_ANTES_MS))
 
     timerRef.current = setTimeout(() => {
       doSignOut()
-    }, INACTIVITY_MS)
+    }, inactividadRef.current)
   }
 
   const resetTimer = () => {
@@ -85,7 +94,8 @@ export default function InactivityGuard() {
       eventos.forEach(e => window.removeEventListener(e, resetTimer))
       clearAllTimers()
     }
-  }, [session])
+    // Incluye pathname: al entrar o salir de CECOPAL se re-arma con la nueva duración.
+  }, [session, pathname])
 
   if (!showWarning) return null
 
