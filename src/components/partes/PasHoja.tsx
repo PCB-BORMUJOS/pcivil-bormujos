@@ -293,7 +293,7 @@ export default function PasHoja({
                                             {(['fr', 'fc', 'ta'] as const).map(k => (
                                                 <td key={k}><input className="pas-campo pas-centrado" style={{ height: '5.4mm', fontSize: '7.1pt' }} value={c[k]} readOnly={!editable} onChange={e => act(k, e.target.value)} /></td>
                                             ))}
-                                            <td>
+                                            <td style={{ width: '19mm' }}>
                                                 <select className="pas-campo pas-centrado" style={{ height: '5.4mm', fontSize: '6.7pt' }} value={c.respiracion} disabled={!editable} onChange={e => act('respiracion', e.target.value)}>
                                                     <option value="">—</option>
                                                     <option value="norm">Norm</option>
@@ -335,7 +335,8 @@ export default function PasHoja({
                         {/* Se limita por el alto: hay 23 mm hasta el bloque de traslado,
                             y a ancho completo la leyenda medía 33 y se metía dentro. */}
                         <img src="/images/pas-pupilas.png" alt="Ejemplos de pupila"
-                             style={{ height: '22mm', width: 'auto', maxWidth: '100%', display: 'block', marginLeft: 'auto' }} />
+                             style={{ height: '22mm', width: 'auto', maxWidth: '100%', display: 'block',
+                                      marginLeft: 'auto', borderTop: '.3mm solid var(--texto)' }} />
                     </Bloque>
 
                     {/* ── Los seis bloques de exploración, en la misma fila del modelo ── */}
@@ -594,7 +595,7 @@ export default function PasHoja({
                             {/* Debajo de cada indicativo, su firma */}
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '.8mm', marginTop: '.8mm' }}>
                                 {(['firmaInd1', 'firmaInd2'] as const).map(campo => (
-                                    <div key={campo} style={{ height: '8mm', border: '.25mm solid var(--regla)',
+                                    <div key={campo} style={{ height: '9mm', border: '.25mm solid var(--regla)',
                                                               display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                         {(d as any)[campo]
                                             /* eslint-disable-next-line @next/next/no-img-element */
@@ -610,7 +611,7 @@ export default function PasHoja({
                     <Bloque y="254.4mm" x="154mm" w="42.8mm">
                         <Sec>Vº Bº Jefe de Servicio</Sec>
                         <div className="pas-caja">
-                            <div style={{ height: '13.5mm', border: '.25mm solid var(--regla)',
+                            <div style={{ height: '11mm', border: '.25mm solid var(--regla)',
                                           display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                 {d.firmaJefe
                                     /* eslint-disable-next-line @next/next/no-img-element */
