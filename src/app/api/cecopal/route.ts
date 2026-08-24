@@ -67,17 +67,12 @@ export async function GET(request: NextRequest) {
   const tipo = searchParams.get('tipo')
   try {
     if (tipo === 'novedades-hoy') {
-      // Si se pasa "desde" (inicio del servicio), se recogen las novedades desde
-      // ese instante hasta ahora: así un servicio que empieza a las 20:00 y se
-      // prolonga hasta la madrugada incluye TODAS sus novedades aunque cruce la
-      // medianoche. Sin "desde", se usa el día natural de Madrid.
-      const desde = searchParams.get('desde')
-      const rango = rangoDiaMadrid()
-      const createdAtWhere = desde
-        ? { gte: new Date(desde) }
-        : { gte: rango.inicio, lt: rango.fin }
+      // Las novedades del turno PERSISTEN hasta que se eliminan manualmente: no se
+      // filtran por fecha, así una novedad registrada hoy sigue visible mañana y
+      // los días siguientes hasta que alguien la borra. (El parámetro "desde" se
+      // mantiene por compatibilidad pero ya no restringe el listado.)
       const novedades = await prisma.incidenciaCecopal.findMany({
-        where: { estado: 'novedad', createdAt: createdAtWhere },
+        where: { estado: 'novedad' },
         orderBy: { createdAt: 'asc' },
         select: { id: true, titulo: true, descripcion: true, horaLlamada: true, createdAt: true, leida: true, leidaPor: true, leidaEn: true }
       })
