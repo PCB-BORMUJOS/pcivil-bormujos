@@ -57,6 +57,10 @@ export async function uploadToGoogleDrive(
                 body: bufferStream,
             },
             fields: 'id,webViewLink,webContentLink',
+            // Necesario para subir a una UNIDAD COMPARTIDA (Shared Drive): las
+            // cuentas de servicio no tienen cuota propia y NO pueden subir a "Mi
+            // unidad", solo a unidades compartidas donde sean miembros.
+            supportsAllDrives: true,
         })
 
         return {
