@@ -183,9 +183,9 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 401 })
         }
 
-        const parte = await prisma.partePSI.create({
+        const crearParte = (num: string) => prisma.partePSI.create({
             data: {
-                numeroParte,
+                numeroParte: num,
                 fecha: parseFechaES(body.fecha),
                 estado,
                 horaLlamada: body.horaLlamada,
@@ -228,7 +228,21 @@ export async function POST(request: NextRequest) {
                     select: { nombre: true, apellidos: true, numeroVoluntario: true }
                 }
             }
-        })
+          })
+
+        // Reintento ante colisión del número (@unique): si dos partes se crean casi
+        // a la vez y obtienen el mismo número, se regenera y se reintenta.
+        let numero = numeroParte
+        let parte: Awaited<ReturnType<typeof crearParte>> | null = null
+        for (let intento = 0; intento < 4 && !parte; intento++) {
+            try { parte = await crearParte(numero) }
+            catch (e: any) {
+                if (e?.code === 'P2002' && intento < 3) { numero = await generarNumeroParte(); continue }
+                throw e
+            }
+        }
+        if (!parte) throw new Error('No se pudo asignar número de parte')
+
         const { usuarioId, usuarioNombre } = getUsuarioAudit(session)
         await registrarAudit({
             accion: 'CREATE',

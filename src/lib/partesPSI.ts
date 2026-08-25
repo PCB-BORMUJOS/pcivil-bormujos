@@ -28,11 +28,20 @@ export async function generarNumeroParte(): Promise<string> {
     diasServicio.add(hoyStr)
     const nnn = String(diasServicio.size).padStart(3, '0')
 
-    // P: nº de parte del día (partes ya creados hoy + 1).
-    const partesHoy = await prisma.partePSI.count({
-        where: { numeroParte: { startsWith: yyyymmdd }, archivado: false },
+    // P: nº de parte del día. Se toma el MÁXIMO sufijo -P existente hoy y se suma 1
+    // (NO el conteo): así, aunque haya huecos por partes borrados o archivados, el
+    // nuevo número nunca colisiona con uno ya usado. Se incluyen los archivados,
+    // porque su número sigue reservado por la restricción @unique.
+    const partesHoy = await prisma.partePSI.findMany({
+        where: { numeroParte: { startsWith: yyyymmdd } },
+        select: { numeroParte: true },
     })
-    const p = partesHoy + 1
+    let maxP = 0
+    for (const { numeroParte } of partesHoy) {
+        const m = numeroParte.match(/-(\d+)$/)
+        if (m) maxP = Math.max(maxP, Number(m[1]))
+    }
+    const p = maxP + 1
 
     return `${yyyymmdd}${nnn}-${p}`
 }
