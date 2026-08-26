@@ -369,8 +369,12 @@ export default function TrazabilidadPanel() {
                             </table>
                         </div>
 
-                        {/* Paginación */}
-                        <div className="p-4 border-t flex items-center justify-between">
+                        {/* Paginación.
+                            El botón flotante del agente ocupa la esquina inferior derecha
+                            (56 px a 24 del borde) y tapaba estos controles, de modo que no
+                            se podía cambiar de página. Se reserva ese hueco a la derecha y
+                            algo de aire por debajo. */}
+                        <div className="p-4 pr-24 pb-8 border-t flex items-center justify-between">
                             <div className="text-sm text-slate-500">
                                 Página {pagina} de {totalPaginas}
                             </div>
