@@ -53,9 +53,10 @@ export async function PUT(
         }
 
         // Verificar que el parte existe y que el usuario es el creador o tiene nivel >= 2 (coordinador/admin)
+        // Se trae el parte entero, no solo el id: hace falta para comparar y dejar
+        // constancia de qué cambia exactamente en esta edición.
         const parteExistente = await prisma.partePSI.findUnique({
-            where: { id: params.id },
-            select: { id: true, creadoPorId: true }
+            where: { id: params.id }
         })
         if (!parteExistente) {
             return NextResponse.json({ error: 'Parte no encontrado' }, { status: 404 })
@@ -147,16 +148,25 @@ export async function PUT(
             }
         })
 
-        const { registrarAudit, getUsuarioAudit } = await import('@/lib/audit')
+        const { registrarAudit, getUsuarioAudit, compararCambios } = await import('@/lib/audit')
         const { usuarioId, usuarioNombre } = getUsuarioAudit(session)
+        // Qué campos ha tocado esta edición, y con qué valores.
+        const cambios = compararCambios(parteExistente as any, updateData as any)
+        const detalle = cambios.campos.length
+            ? ` · campos: ${cambios.campos.join(', ')}`
+            : ' · sin cambios en los datos'
         await registrarAudit({
             accion: estado === 'completo' ? 'APPROVE' : 'UPDATE',
             entidad: 'PartePSI',
             entidadId: parte.id,
-            descripcion: estado === 'completo' ? `Parte PSI validado por Jefe: ${parte.numeroParte}` : `Parte PSI actualizado: ${parte.numeroParte}`,
+            descripcion: (estado === 'completo'
+                ? `Parte PSI validado por Jefe: ${parte.numeroParte}`
+                : `Parte PSI actualizado: ${parte.numeroParte}`) + detalle,
             usuarioId,
             usuarioNombre,
-            modulo: 'Partes'
+            modulo: 'Partes',
+            datosAnteriores: cambios.antes,
+            datosNuevos: cambios.despues
         })
 
         return NextResponse.json({ success: true, parte, message: 'Parte actualizado correctamente' })
