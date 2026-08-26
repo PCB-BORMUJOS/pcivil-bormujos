@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
-import { registrarAudit, getUsuarioAudit } from '@/lib/audit'
+import { registrarAudit, getUsuarioAudit, compararCambios } from '@/lib/audit'
 
 /** GET /api/partes/prf/[id] — un parte. */
 export async function GET(_request: NextRequest, { params }: { params: { id: string } }) {
@@ -49,11 +49,16 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
         const parte = await prisma.partePAS.update({ where: { id: params.id }, data })
 
+        const cambios = compararCambios(existente as any, data as any)
         const { usuarioId, usuarioNombre } = getUsuarioAudit(session)
         await registrarAudit({
             accion: 'UPDATE', entidad: 'PartePAS', entidadId: parte.id,
-            descripcion: `Parte PAS actualizado: ${parte.numeroParte}`,
+            // Se deja constancia de que campos ha tocado esta edicion, para poder
+            // saber quien cambio que cuando varias personas editan el mismo parte.
+            descripcion: `Parte PAS actualizado: ${parte.numeroParte}`
+                + (cambios.campos.length ? ` · campos: ${cambios.campos.join(', ')}` : ' · sin cambios en los datos'),
             usuarioId, usuarioNombre, modulo: 'Partes',
+            datosAnteriores: cambios.antes, datosNuevos: cambios.despues,
         })
 
         return NextResponse.json({ success: true, parte })

@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { getNivel } from '@/lib/permisos'
-import { registrarAudit, getUsuarioAudit } from '@/lib/audit'
+import { registrarAudit, getUsuarioAudit, compararCambios } from '@/lib/audit'
 
 export async function GET(
     _req: Request,
@@ -37,9 +37,9 @@ export async function PUT(
         const session = await getServerSession(authOptions)
         if (!session?.user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
+        // Entero, no solo el id: hace falta para saber que cambia en esta edicion.
         const parteExistente = await prisma.partePRVFSV.findUnique({
             where: { id: params.id },
-            select: { id: true, creadoPorId: true },
         })
         if (!parteExistente) return NextResponse.json({ error: 'Parte no encontrado' }, { status: 404 })
 
@@ -68,6 +68,18 @@ export async function PUT(
         const parte = await prisma.partePRVFSV.update({
             where: { id: params.id },
             data: updateData,
+        })
+
+        // Este parte no dejaba ningun rastro al actualizarse: solo se auditaba el
+        // borrado. Ahora registra la edicion y que campos se han tocado.
+        const cambios = compararCambios(parteExistente as any, updateData as any)
+        const { usuarioId, usuarioNombre } = getUsuarioAudit(session)
+        await registrarAudit({
+            accion: 'UPDATE', entidad: 'PartePRVFSV', entidadId: parte.id,
+            descripcion: `Parte PRV-FSV actualizado: ${parte.numeroReferencia}`
+                + (cambios.campos.length ? ` · campos: ${cambios.campos.join(', ')}` : ' · sin cambios en los datos'),
+            usuarioId, usuarioNombre, modulo: 'Partes',
+            datosAnteriores: cambios.antes, datosNuevos: cambios.despues,
         })
 
         return NextResponse.json(parte)
