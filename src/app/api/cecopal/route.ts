@@ -9,11 +9,30 @@ function getHoraActual(): string {
   return new Date().toLocaleTimeString('es-ES', { timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit' })
 }
 
-function getHoraTurno(): string {
-  const h = parseInt(new Date().toLocaleTimeString('es-ES', { timeZone: 'Europe/Madrid', hour: '2-digit' }))
-  if (h >= 7 && h < 15) return 'mañana'
-  if (h >= 15 && h < 23) return 'tarde'
-  return 'noche'
+/**
+ * Turno de servicio en este momento y, sobre todo, a qué día pertenece.
+ *
+ * Lo segundo es lo que fallaba: un turno de noche que está de servicio a las
+ * 00:30 empezó la tarde anterior, de modo que su guardia está grabada con la
+ * fecha del día anterior. Al pedir las guardias de «hoy» se devolvía la noche
+ * que aún no había entrado, y en el CECOPAL aparecían indicativos que no
+ * estaban de servicio.
+ *
+ * Un mismo indicativo puede cubrir tarde y noche del mismo día, así que aquí no
+ * se supone que los turnos sean excluyentes: solo se acota qué turno y de qué
+ * día hay que consultar.
+ */
+function getTurnoDeServicio(): { turno: string; fecha: string } {
+  const ahora = new Date()
+  const h = parseInt(ahora.toLocaleTimeString('es-ES', { timeZone: 'Europe/Madrid', hour: '2-digit' }))
+  const dia = (desplazamiento: number) =>
+    new Date(ahora.getTime() + desplazamiento * 86400000)
+      .toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' })
+
+  if (h >= 7 && h < 15) return { turno: 'mañana', fecha: dia(0) }
+  if (h >= 15 && h < 23) return { turno: 'tarde', fecha: dia(0) }
+  // De 23:00 a 06:59 manda la noche; pasada la medianoche, la del día anterior.
+  return { turno: 'noche', fecha: h < 7 ? dia(-1) : dia(0) }
 }
 
 // Numera a partir del MÁXIMO sufijo existente (no del conteo): con count+1,
@@ -80,8 +99,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (tipo === 'turno-hoy') {
-      const hoy = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' })
-      const turno = getHoraTurno()
+      const { turno, fecha: hoy } = getTurnoDeServicio()
       const guardias = await prisma.guardia.findMany({
         where: {
           fecha: { gte: new Date(hoy), lt: new Date(new Date(hoy).getTime() + 86400000) },
