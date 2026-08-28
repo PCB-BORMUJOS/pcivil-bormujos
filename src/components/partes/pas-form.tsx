@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { Save, FileDown, Loader2, ChevronLeft } from 'lucide-react'
 import PasHoja from './PasHoja'
+import SignatureCanvas from './SignatureCanvas'
 import { estadoInicialPAS, type PasDatos, type MarcaLesion } from '@/lib/pas-campos'
 import { getTodaySpain } from '@/lib/date-utils'
 
@@ -23,6 +24,7 @@ export function PasForm() {
     const [exportando, setExportando] = useState(false)
     const [aviso, setAviso] = useState<string | null>(null)
     const [indicativos, setIndicativos] = useState<string[]>([])
+    const [firmando, setFirmando] = useState<string | null>(null)
 
     // Indicativos del servicio para el desplegable de equipo: J-44 primero,
     // luego los S- y los B-, y fuera J0, J1 y los dados de baja.
@@ -165,6 +167,24 @@ export function PasForm() {
                 </button>
             </div>
 
+            {/* Panel de firma: se dibuja en grande y se guarda en el hueco */}
+            {firmando && (
+                <div className="pas-no-imprimir fixed inset-0 z-[1400] bg-slate-900/60 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-xl p-4 w-full max-w-lg">
+                        <h3 className="text-sm font-bold text-slate-800 mb-3">Firma</h3>
+                        <SignatureCanvas
+                            label=""
+                            initialSignature={(datos as any)[firmando] || undefined}
+                            onSave={(val: string) => { set(firmando as any, val as any); setFirmando(null) }}
+                        />
+                        <div className="flex justify-end gap-2 mt-3">
+                            <button onClick={() => setFirmando(null)}
+                                    className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg">Cerrar</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <PasHoja
                 datos={datos}
                 marcas={marcas}
@@ -174,6 +194,7 @@ export function PasForm() {
                 onCampo={(k, v) => set(k as any, v)}
                 onMarcas={setMarcas}
                 onLesionActiva={setLesionActiva}
+                onFirmar={campo => setFirmando(campo)}
             />
         </div>
     )

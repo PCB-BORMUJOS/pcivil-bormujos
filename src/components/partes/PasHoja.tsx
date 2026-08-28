@@ -28,6 +28,8 @@ export type PasHojaProps = {
     onCampo?: (campo: keyof PasDatos, valor: any) => void
     onMarcas?: (marcas: MarcaLesion[]) => void
     onLesionActiva?: (n: number) => void
+    /** Abre el panel de firma para el campo indicado. */
+    onFirmar?: (campo: string) => void
 }
 
 // ── Piezas comunes ───────────────────────────────────────────────────────────
@@ -116,7 +118,7 @@ function ListaDoble({ items, dobles, onCambio, editable }: {
 
 export default function PasHoja({
     datos: d, marcas = [], editable = false, lesionActiva = 1, indicativos = [],
-    onCampo, onMarcas, onLesionActiva,
+    onCampo, onMarcas, onLesionActiva, onFirmar,
 }: PasHojaProps) {
     const set = (k: keyof PasDatos) => (v: any) => onCampo?.(k, v)
     const checks = d.checks || {}
@@ -571,7 +573,7 @@ export default function PasHoja({
                         </div>
                     </Bloque>
 
-                    <Bloque y="254.4mm" x="109.5mm" w="43mm">
+                    <Bloque y="254.4mm" x="109.5mm" w="52mm">
                         <Sec>Indicativos que intervienen</Sec>
                         <div className="pas-caja">
                             {/* Cuatro huecos, en dos filas de dos. Ofrecen primero los
@@ -593,14 +595,23 @@ export default function PasHoja({
                                 })}
                             </div>
                             {/* Debajo de cada indicativo, su firma */}
+                            {/* Se pulsa el hueco y se abre el panel de firma */}
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '.8mm', marginTop: '.8mm' }}>
                                 {(['firmaInd1', 'firmaInd2'] as const).map(campo => (
-                                    <div key={campo} style={{ height: '9mm', border: '.25mm solid var(--regla)',
-                                                              display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    <div key={campo}
+                                         onClick={() => editable && onFirmar?.(campo)}
+                                         role={editable ? 'button' : undefined}
+                                         title={editable ? 'Pulsa para firmar' : undefined}
+                                         style={{
+                                             height: '10mm', border: '.25mm solid var(--regla)',
+                                             display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                             cursor: editable ? 'pointer' : 'default',
+                                             background: editable && !(d as any)[campo] ? '#FBFCFE' : undefined,
+                                         }}>
                                         {(d as any)[campo]
                                             /* eslint-disable-next-line @next/next/no-img-element */
                                             ? <img src={(d as any)[campo]} alt="Firma" style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain' }} />
-                                            : <span style={{ fontSize: '5pt', color: '#C3CBD4' }}>Firma</span>}
+                                            : editable && <span className="pas-no-imprimir" style={{ fontSize: '5.2pt', color: '#A8B2C1' }}>Pulsa para firmar</span>}
                                     </div>
                                 ))}
                             </div>
@@ -608,11 +619,18 @@ export default function PasHoja({
                     </Bloque>
 
                     {/* Un solo hueco de firma para el Vº Bº del Jefe de Servicio */}
-                    <Bloque y="254.4mm" x="154mm" w="42.8mm">
+                    <Bloque y="254.4mm" x="162.5mm" w="34.3mm">
                         <Sec>Vº Bº Jefe de Servicio</Sec>
                         <div className="pas-caja">
-                            <div style={{ height: '11mm', border: '.25mm solid var(--regla)',
-                                          display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <div onClick={() => editable && onFirmar?.('firmaJefe')}
+                                 role={editable ? 'button' : undefined}
+                                 title={editable ? 'Pulsa para firmar' : undefined}
+                                 style={{
+                                     height: '10mm', border: '.25mm solid var(--regla)',
+                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                     cursor: editable ? 'pointer' : 'default',
+                                     background: editable && !d.firmaJefe ? '#FBFCFE' : undefined,
+                                 }}>
                                 {d.firmaJefe
                                     /* eslint-disable-next-line @next/next/no-img-element */
                                     ? <img src={d.firmaJefe} alt="Firma del Jefe de Servicio" style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain' }} />
