@@ -28,23 +28,6 @@ async function generarNumeroParte(): Promise<string> {
 }
 
 /**
- * Nº de informe: correlativo del año natural, del tipo PAS-2026-0001.
- *
- * No se tecleaba y quedaba vacío. Se genera aquí, con el mismo criterio del
- * mayor sufijo, para que no se repita ni deje huecos al borrar.
- */
-async function generarNumeroInforme(): Promise<string> {
-    const anio = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' }).slice(0, 4)
-    const ultimo = await prisma.partePAS.findFirst({
-        where: { numeroInforme: { startsWith: `PAS-${anio}-` } },
-        orderBy: { numeroInforme: 'desc' },
-        select: { numeroInforme: true },
-    })
-    const previo = ultimo?.numeroInforme ? parseInt(ultimo.numeroInforme.split('-')[2] || '0', 10) : 0
-    return `PAS-${anio}-${String(previo + 1).padStart(4, '0')}`
-}
-
-/**
  * Momento real de la asistencia.
  *
  * Lo que vale es cuándo se atendió, no a qué jornada de servicio pertenece: a
@@ -122,7 +105,9 @@ export async function POST(request: NextRequest) {
                 fecha: momentoAsistencia(datos),
                 estado: body.estado === 'completo' ? 'completo' : 'borrador',
                 // Datos que se muestran en el listado y por los que se busca.
-                numeroInforme: datos.numeroInforme ? String(datos.numeroInforme) : await generarNumeroInforme(),
+                // El nº de informe es el mismo número del parte: no se le da otro
+                // formato. Solo se respeta si viene escrito a mano.
+                numeroInforme: datos.numeroInforme ? String(datos.numeroInforme) : numeroParte,
                 lugar: datos.lugar ? String(datos.lugar) : null,
                 motivo: datos.motivo ? String(datos.motivo) : null,
                 pacienteNombre: [datos.nombre, datos.apellidos].filter(Boolean).join(' ').trim() || null,
