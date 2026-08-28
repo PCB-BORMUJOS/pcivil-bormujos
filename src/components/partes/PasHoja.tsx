@@ -219,9 +219,9 @@ export default function PasHoja({
                             <div>
                                 <Sec>Pautas de tiempo</Sec>
                                 {PAUTAS_TIEMPO.map(p => (
-                                    <div key={p.key} style={{ display: 'flex', alignItems: 'center', gap: '1mm', marginTop: '.35mm' }}>
+                                    <div key={p.key} style={{ display: 'flex', alignItems: 'center', gap: '1mm', marginTop: '.2mm' }}>
                                         <span style={{ flex: '0 0 12mm', fontSize: '5.4pt', textAlign: 'right', textTransform: 'uppercase' }}>{p.label}</span>
-                                        <input type="time" className="pas-campo pas-centrado" style={{ flex: 1, minWidth: 0, height: '3.1mm', fontSize: '6pt' }}
+                                        <input type="time" className="pas-campo pas-centrado" style={{ flex: 1, minWidth: 0, height: '2.9mm', fontSize: '5.8pt' }}
                                                value={(d as any)[p.key] || ''} disabled={!editable}
                                                onChange={e => onCampo?.(p.key as keyof PasDatos, e.target.value)} />
                                     </div>
@@ -231,7 +231,7 @@ export default function PasHoja({
                     </Bloque>
 
                     {/* ── Filiación del paciente ── */}
-                    <Bloque y="50mm">
+                    <Bloque y="52.5mm">
                         <div style={{ display: 'flex', gap: '2mm' }}>
                             <Campo etq="Nombre" valor={d.nombre} onChange={set('nombre')} editable={editable} />
                             <Campo etq="Apellidos" valor={d.apellidos} onChange={set('apellidos')} editable={editable} />
