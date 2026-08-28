@@ -42,9 +42,15 @@ export function PasForm() {
 
     const set = <K extends keyof PasDatos>(k: K, v: PasDatos[K]) => setDatos(p => ({ ...p, [k]: v }))
 
-    // Un parte nuevo arranca con la fecha de hoy en hora española.
+    // Un parte nuevo arranca con el momento real de la asistencia, fecha y hora.
+    // Importa de madrugada: una atencion a la 01:00 del dia 29 es del 29, aunque
+    // el turno de noche empezara la tarde del 28.
     useEffect(() => {
-        if (!idParam) setDatos(p => ({ ...p, fecha: p.fecha || getTodaySpain() }))
+        if (idParam) return
+        const ahora = new Date().toLocaleTimeString('es-ES', {
+            timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit', hour12: false,
+        })
+        setDatos(p => ({ ...p, fecha: p.fecha || getTodaySpain(), hora: p.hora || ahora }))
     }, [idParam])
 
     const cargar = useCallback(async () => {
@@ -72,6 +78,8 @@ export function PasForm() {
             if (d.parte) {
                 setId(d.parte.id)
                 setNumeroParte(d.parte.numeroParte || '')
+                // El nº de informe lo genera el servidor al crear el parte.
+                if (d.parte.numeroInforme) setDatos(p => ({ ...p, numeroInforme: d.parte.numeroInforme }))
                 if (!id) router.replace(`/partes/pas?id=${d.parte.id}`)
             }
             setAviso('✓ Guardado')

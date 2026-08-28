@@ -5,14 +5,61 @@ import { prisma } from '@/lib/db'
 import { registrarAudit, getUsuarioAudit } from '@/lib/audit'
 
 /** Genera el número de parte del día: YYYYMMDD-NNN (correlativo diario). */
+/**
+ * Número de parte del día, en hora de Madrid.
+ *
+ * Se numera a partir del MAYOR sufijo existente, no del recuento: contando,
+ * cualquier hueco —un parte borrado— repite un número ya usado y choca con la
+ * restricción de unicidad. Es el mismo problema que dio el PSI.
+ *
+ * La fecha que manda es la real: una asistencia a la 01:00 del día 29 lleva
+ * prefijo del 29, aunque el turno de noche empezara el 28.
+ */
 async function generarNumeroParte(): Promise<string> {
-    const hoy = new Date()
-    const y = hoy.toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' }) // YYYY-MM-DD
-    const prefijo = y.replace(/-/g, '')
-    const desde = new Date(`${y}T00:00:00+02:00`)
-    const hasta = new Date(`${y}T23:59:59+02:00`)
-    const n = await prisma.partePAS.count({ where: { createdAt: { gte: desde, lte: hasta } } })
-    return `${prefijo}-${String(n + 1).padStart(3, '0')}`
+    const dia = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' })
+    const prefijo = dia.replace(/-/g, '')
+    const ultimo = await prisma.partePAS.findFirst({
+        where: { numeroParte: { startsWith: `${prefijo}-` } },
+        orderBy: { numeroParte: 'desc' },
+        select: { numeroParte: true },
+    })
+    const previo = ultimo ? parseInt(ultimo.numeroParte.split('-')[1] || '0', 10) : 0
+    return `${prefijo}-${String(previo + 1).padStart(3, '0')}`
+}
+
+/**
+ * Nº de informe: correlativo del año natural, del tipo PAS-2026-0001.
+ *
+ * No se tecleaba y quedaba vacío. Se genera aquí, con el mismo criterio del
+ * mayor sufijo, para que no se repita ni deje huecos al borrar.
+ */
+async function generarNumeroInforme(): Promise<string> {
+    const anio = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' }).slice(0, 4)
+    const ultimo = await prisma.partePAS.findFirst({
+        where: { numeroInforme: { startsWith: `PAS-${anio}-` } },
+        orderBy: { numeroInforme: 'desc' },
+        select: { numeroInforme: true },
+    })
+    const previo = ultimo?.numeroInforme ? parseInt(ultimo.numeroInforme.split('-')[2] || '0', 10) : 0
+    return `PAS-${anio}-${String(previo + 1).padStart(4, '0')}`
+}
+
+/**
+ * Momento real de la asistencia.
+ *
+ * Lo que vale es cuándo se atendió, no a qué jornada de servicio pertenece: a
+ * la 01:00 del día 29 la fecha del parte es el 29, aunque el turno arrancara la
+ * tarde del 28. Si el formulario trae fecha y hora, mandan esas; si no, ahora.
+ */
+function momentoAsistencia(datos: any): Date {
+    const f = typeof datos?.fecha === 'string' ? datos.fecha.trim() : ''
+    const h = typeof datos?.hora === 'string' ? datos.hora.trim() : ''
+    if (/^\d{4}-\d{2}-\d{2}$/.test(f)) {
+        const hora = /^\d{2}:\d{2}$/.test(h) ? h : '12:00'
+        const d = new Date(`${f}T${hora}:00`)
+        if (!isNaN(d.getTime())) return d
+    }
+    return new Date()
 }
 
 /** GET /api/partes/prf — lista paginada con filtros. */
@@ -72,9 +119,10 @@ export async function POST(request: NextRequest) {
         const parte = await prisma.partePAS.create({
             data: {
                 numeroParte,
+                fecha: momentoAsistencia(datos),
                 estado: body.estado === 'completo' ? 'completo' : 'borrador',
                 // Datos que se muestran en el listado y por los que se busca.
-                numeroInforme: datos.numeroInforme ? String(datos.numeroInforme) : null,
+                numeroInforme: datos.numeroInforme ? String(datos.numeroInforme) : await generarNumeroInforme(),
                 lugar: datos.lugar ? String(datos.lugar) : null,
                 motivo: datos.motivo ? String(datos.motivo) : null,
                 pacienteNombre: [datos.nombre, datos.apellidos].filter(Boolean).join(' ').trim() || null,
