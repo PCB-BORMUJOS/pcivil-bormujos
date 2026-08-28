@@ -51,7 +51,16 @@ export async function GET(request: NextRequest) {
         const session = await getServerSession(authOptions)
         if (!session?.user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
+
         const { searchParams } = new URL(request.url)
+        // Un parte que aún no se ha guardado no tiene número: el servidor lo
+        // asigna al crearlo. Con ?siguiente=1 se consulta cuál tocaría, para
+        // poder enseñarlo en el formulario desde el primer momento. Es
+        // orientativo: el definitivo se asigna al guardar, por si entretanto
+        // otra persona crea un parte.
+        if (searchParams.get('siguiente') === '1') {
+            return NextResponse.json({ numeroParte: await generarNumeroParte() })
+        }
         const page = parseInt(searchParams.get('page') || '1')
         const limit = parseInt(searchParams.get('limit') || '20')
         const estado = searchParams.get('estado')

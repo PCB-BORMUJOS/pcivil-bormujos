@@ -51,6 +51,15 @@ export function PasForm() {
             timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit', hour12: false,
         })
         setDatos(p => ({ ...p, fecha: p.fecha || getTodaySpain(), hora: p.hora || ahora }))
+
+        // El número lo asigna el servidor al guardar, así que en un parte nuevo
+        // aún no existe. Se consulta cuál tocaría para enseñarlo desde el
+        // principio, igual que la fecha y la hora. El definitivo llega al
+        // guardar, por si entretanto otra persona ha creado un parte.
+        fetch('/api/partes/pas?siguiente=1')
+            .then(r => r.ok ? r.json() : null)
+            .then(d => { if (d?.numeroParte) setDatos(p => ({ ...p, numeroInforme: p.numeroInforme || d.numeroParte })) })
+            .catch(() => {})
     }, [idParam])
 
     const cargar = useCallback(async () => {
