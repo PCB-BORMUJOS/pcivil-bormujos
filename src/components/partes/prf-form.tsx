@@ -290,10 +290,14 @@ export function PrfForm() {
                         <SignatureCanvas
                             label=""
                             initialSignature={(datos as any)[firmando] || undefined}
-                            onSave={(val: string) => { set(firmando as any, val as any); setFirmando(null) }}
+                            /* Solo guarda. No cierra: el lienzo avisa cada vez que se
+                               levanta el lápiz, y cerrar ahí impedía completar el trazo. */
+                            onSave={(val: string) => set(firmando as any, val as any)}
                         />
                         <div className="flex justify-end gap-2 mt-3">
-                            <button onClick={() => setFirmando(null)} className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg">Cerrar</button>
+                            <button onClick={() => setFirmando(null)} className="px-4 py-2 text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg">
+                                Hecho
+                            </button>
                         </div>
                     </div>
                 </div>
