@@ -166,7 +166,8 @@ export async function POST(request: NextRequest) {
         origenDetalle: body.origenDetalle || null,
         direccion: body.direccion,
         descripcion: body.descripcion || null,
-        horaLlamada: body.horaLlamada || getHoraActual(),
+        // Igual que las isócronas: la hora de llamada la sella el servidor.
+        horaLlamada: getHoraActual(),
         vehiculosIds: body.vehiculosIds || [],
         voluntariosIds: body.voluntariosIds || [],
         latitud: coords?.lat ?? null,
@@ -206,9 +207,22 @@ export async function PUT(request: NextRequest) {
     const body = await request.json()
     const { id, tipo } = body
     if (tipo === 'isocrona') {
+      // La hora la pone el servidor, no el navegador.
+      //
+      // Antes se guardaba la que mandaba el cliente, de modo que el sello
+      // dependía del reloj del equipo desde el que se trabajaba. En el ordenador
+      // del CECOPAL eso metía una hora de más: la noche del 28 al 29, las seis
+      // incidencias quedaron selladas exactamente 1 h por delante del momento en
+      // que se crearon, y en algunas el «terminado» salía antes que la «llegada».
+      //
+      // Se acepta un valor del cliente solo si es una correccion escrita a mano,
+      // que llega marcada con `manual`.
+      const valor = body.manual && typeof body.valor === 'string'
+        ? body.valor
+        : getHoraActual()
       const incidencia = await prisma.incidenciaCecopal.update({
         where: { id },
-        data: { [body.campo]: body.valor }
+        data: { [body.campo]: valor }
       })
       return NextResponse.json({ incidencia })
     }

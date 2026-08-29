@@ -271,16 +271,20 @@ export default function CecopalPage() {
 
   const activarIsocrona = async (campo: string) => {
     if (!incidenciaActiva || incidenciaActiva[campo]) return
-    const valor = getHoraActual()
-    patchIncidencia(incidenciaActiva.id, { [campo]: valor })
-    await fetch('/api/cecopal', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'isocrona', id: incidenciaActiva.id, campo, valor }) })
+    // La hora la sella el servidor: el reloj del equipo no siempre es fiable.
+    // Se pinta al momento la del navegador para no dejar el botón sin respuesta,
+    // y en cuanto responde el servidor se sustituye por la buena.
+    patchIncidencia(incidenciaActiva.id, { [campo]: getHoraActual() })
+    const res = await fetch('/api/cecopal', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'isocrona', id: incidenciaActiva.id, campo }) })
+    const d = await res.json().catch(() => null)
+    if (d?.incidencia?.[campo]) patchIncidencia(incidenciaActiva.id, { [campo]: d.incidencia[campo] })
   }
 
   const crearIncidencia = async () => {
     if (!tipoSeleccionado || !origenSeleccionado || !direccion) return
     setGuardando(true)
     try {
-      const res = await fetch('/api/cecopal', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'incidencia', tipoIncidencia: tipoSeleccionado, origenAviso: origenSeleccionado, origenDetalle: origenDetalle || null, direccion, descripcion, horaLlamada: getHoraActual(), vehiculosIds: vehiculosSeleccionados, voluntariosIds: voluntariosSeleccionados }) })
+      const res = await fetch('/api/cecopal', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'incidencia', tipoIncidencia: tipoSeleccionado, origenAviso: origenSeleccionado, origenDetalle: origenDetalle || null, direccion, descripcion, vehiculosIds: vehiculosSeleccionados, voluntariosIds: voluntariosSeleccionados }) })
       const data = await res.json()
       if (data.incidencia) {
         setIncidenciasActivas(prev => [...prev, data.incidencia])
