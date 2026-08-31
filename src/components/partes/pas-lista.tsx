@@ -13,7 +13,7 @@ import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { Plus, FileText, Trash2, Loader2, Eye, Download, HeartPulse } from 'lucide-react'
+import { Plus, FileText, Trash2, Loader2, Eye, Download, HeartPulse, BarChart3 } from 'lucide-react'
 import { ESTADOS_PARTE } from '@/constants/partesPSI'
 
 interface ParteRow {
@@ -105,6 +105,13 @@ export function PasLista() {
                     <p className="text-gray-500 mt-1">Asistencias sanitarias del equipo de SVB</p>
                 </div>
                 <div className="flex items-center gap-2">
+                    <Link
+                        href="/partes/pas/estadisticas"
+                        className="px-4 py-2.5 border border-slate-300 text-slate-600 rounded-lg hover:bg-slate-50 font-medium flex items-center gap-2 transition-colors whitespace-nowrap"
+                    >
+                        <BarChart3 size={16} />
+                        Estadísticas
+                    </Link>
                     <Link
                         href="/partes/pas?nuevo=1"
                         className="px-5 py-2.5 bg-orange-500 text-white rounded-lg hover:bg-orange-600 font-medium flex items-center gap-2 shadow-md transition-colors whitespace-nowrap"
