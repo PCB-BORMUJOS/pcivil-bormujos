@@ -3,7 +3,7 @@ import { useState, useEffect, Suspense } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { Plus, Download, Trash2, Eye, FileText, Loader2, Upload } from 'lucide-react'
+import { Plus, Download, Trash2, Eye, FileText, Loader2, Upload, BarChart3 } from 'lucide-react'
 import dynamic from 'next/dynamic'
 
 const ModalImportarPSI = dynamic(() => import('@/components/partes/ModalImportarPSI'), { ssr: false })
@@ -215,6 +215,13 @@ function PartesPageInner() {
           <p className="text-gray-500 mt-1">Gestión de partes de servicio e intervención</p>
         </div>
         <div className="flex items-center gap-2">
+          <Link
+            href="/partes/estadisticas"
+            className="px-4 py-2.5 border border-slate-300 text-slate-600 rounded-lg hover:bg-slate-50 font-medium flex items-center gap-2 transition-colors whitespace-nowrap"
+          >
+            <BarChart3 size={16} />
+            Estadísticas
+          </Link>
           <button
             onClick={() => setShowImportar(true)}
             className="px-4 py-2.5 border border-slate-300 text-slate-600 rounded-lg hover:bg-slate-50 font-medium flex items-center gap-2 transition-colors whitespace-nowrap"
