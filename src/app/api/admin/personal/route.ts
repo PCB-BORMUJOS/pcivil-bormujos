@@ -57,6 +57,11 @@ export async function POST(request: NextRequest) {
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
+    // Solo coordinación/administración pueden crear personal. El visor es de solo
+    // lectura: NO puede escribir aunque tenga acceso de lectura al panel.
+    if (!['superadmin', 'coordinador', 'admin'].includes((session.user as any)?.rol)) {
+      return NextResponse.json({ error: 'Sin permisos suficientes' }, { status: 403 })
+    }
 
     const body = await request.json()
     const {
@@ -157,6 +162,10 @@ export async function PUT(request: NextRequest) {
     const session = await getServerSession(authOptions)
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    }
+    // Solo coordinación/administración pueden editar personal (visor de solo lectura).
+    if (!['superadmin', 'coordinador', 'admin'].includes((session.user as any)?.rol)) {
+      return NextResponse.json({ error: 'Sin permisos suficientes' }, { status: 403 })
     }
 
     const body = await request.json()

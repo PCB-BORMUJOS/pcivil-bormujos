@@ -331,6 +331,9 @@ function TabButton({ active, onClick, icon: Icon, label, count, alert }: {
 export default function AdministracionPage() {
   const { data: session } = useSession();
   const esSuperadmin = (session?.user as any)?.rol === 'superadmin';
+  // El visor es de SOLO LECTURA: ve el panel pero no puede ejecutar ninguna acción
+  // (crear personal, presentar informes, exportar, altas/movimientos/tickets…).
+  const esVisor = (session?.user as any)?.rol === 'visor';
   // DRAG & DROP STATE
   const [activeId, setActiveId] = useState<string | null>(null);
   const sensors = useSensors(
@@ -1569,14 +1572,15 @@ export default function AdministracionPage() {
           <p className="text-slate-500 text-sm">Gestión del Registro de Voluntarios (FRI) y Disponibilidad.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <button
+          {esVisor && <span className="text-xs font-semibold text-slate-400 bg-slate-100 border border-slate-200 rounded-lg px-3 py-2">Perfil visor · solo lectura</span>}
+          {!esVisor && <button
             onClick={() => setShowExportModal(true)}
             className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-white border border-slate-200 rounded-lg text-slate-700 hover:bg-slate-50 transition-colors text-sm"
           >
             <Download size={16} />
             <span className="hidden sm:inline">Exportar</span>
-          </button>
-          <button
+          </button>}
+          {!esVisor && <button
             onClick={() => {
               if (activeTab === 'personal') {
                 setSelectedVoluntario({ id: '', numeroVoluntario: '', nombre: '', apellidos: '', email: '', telefono: '', activo: true, rolId: '', rol: { id: '', nombre: '' } } as Voluntario);
@@ -1598,7 +1602,7 @@ export default function AdministracionPage() {
                   activeTab === 'caja' ? 'Nuevo Movimiento' :
                     activeTab === 'combustible' ? 'Nuevo Ticket' : 'Nuevo'}
             </span>
-          </button>
+          </button>}
         </div>
       </div>
 
@@ -1865,12 +1869,12 @@ export default function AdministracionPage() {
                     />
                   </div>
                 </div>
-                <button
+                {!esVisor && <button
                   onClick={() => setShowNuevoInforme(true)}
                   className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
                 >
                   <FileText size={18} /> <span className="hidden sm:inline">Presentar Informe</span>
-                </button>
+                </button>}
               </div>
 
               {/* Resumen */}
@@ -2035,12 +2039,12 @@ export default function AdministracionPage() {
                   <p className="text-green-100 text-sm">Saldo Actual</p>
                   <p className="text-3xl font-bold">{saldoActual.toFixed(2)} €</p>
                 </div>
-                <button
+                {!esVisor && <button
                   onClick={() => setShowNuevoMovimiento(true)}
                   className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors self-start sm:self-auto"
                 >
                   <Plus size={18} /> Nuevo Movimiento
-                </button>
+                </button>}
               </div>
 
               {loading ? (
@@ -2136,12 +2140,12 @@ export default function AdministracionPage() {
                   <h3 className="text-lg font-bold text-slate-800">Gestión de Aspirantes</h3>
                   <p className="text-sm text-slate-500">{aspirantes.length} aspirantes registrados</p>
                 </div>
-                <button
+                {!esVisor && <button
                   onClick={() => { setAspiranteEditando(null); setShowNuevoAspirante(true); }}
                   className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
                 >
                   <Plus size={18} /> Nuevo Aspirante
-                </button>
+                </button>}
               </div>
 
               {loading ? (
@@ -2483,9 +2487,9 @@ export default function AdministracionPage() {
                   <button onClick={generarInformeCombustible} className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors">
                     <Printer size={18} /> <span className="hidden sm:inline">Generar Informe</span>
                   </button>
-                  <button onClick={() => setShowNuevoTicket(true)} className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors">
+                  {!esVisor && <button onClick={() => setShowNuevoTicket(true)} className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors">
                     <Plus size={18} /> <span className="hidden sm:inline">Nuevo Ticket</span>
-                  </button>
+                  </button>}
                 </div>
               </div>
 
