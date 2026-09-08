@@ -25,7 +25,7 @@ function SeccionCard({ titulo, children, full = false, hl = false, accent, lblCo
     <div className={`${full ? 'lg:col-span-2' : ''} rounded-2xl border p-5 ${hl ? 'bg-orange-50/70 border-orange-200' : 'bg-white border-slate-200'}`}>
       <div className="flex items-center gap-2.5 mb-3">
         <span className="w-1 h-4 rounded-full flex-shrink-0" style={{ background: bar }} />
-        <span className="text-[11px] font-black uppercase tracking-[0.12em]" style={{ color: lbl }}>{titulo}</span>
+        <span className="text-[12px] font-black uppercase tracking-[0.12em]" style={{ color: lbl }}>{titulo}</span>
       </div>
       {children}
     </div>
@@ -36,10 +36,30 @@ function SeccionCard({ titulo, children, full = false, hl = false, accent, lblCo
 function Prose({ text, hl = false }: { text: string; hl?: boolean }) {
   const parrafos = (text || '').split(/\n{2,}/).map(s => s.trim()).filter(Boolean)
   return (
-    <div className={`space-y-2.5 text-[14.5px] leading-relaxed ${hl ? 'text-slate-800 font-medium' : 'text-slate-600'}`}>
+    <div className={`space-y-3 text-[15.5px] leading-relaxed ${hl ? 'text-slate-800 font-medium' : 'text-slate-700'}`}>
       {parrafos.map((pp, i) => <p key={i} className="whitespace-pre-line">{pp}</p>)}
     </div>
   )
+}
+
+/** Separa el desarrollo en RELATO (párrafos descriptivos) y PASOS numerados.
+ *  - Si hay líneas marcadas (1., 2., -, •) se toman como pasos y las líneas sin
+ *    marcar previas como relato.
+ *  - Si no hay marcas, cada línea es un paso (comportamiento previo). */
+function parseDesarrollo(texto?: string): { relato: string; pasos: string[] } {
+  const lineas = (texto || '').split('\n').map(l => l.trim()).filter(Boolean)
+  const esPaso = (l: string) => /^(\d+[.)]|[-•·])\s+/.test(l)
+  const hayMarcas = lineas.some(esPaso)
+  if (!hayMarcas) return { relato: '', pasos: lineas }
+  const relatoLineas: string[] = []
+  const pasos: string[] = []
+  let empezaronPasos = false
+  for (const l of lineas) {
+    if (esPaso(l)) { empezaronPasos = true; pasos.push(l.replace(/^(\d+[.)]|[-•·])\s+/, '')) }
+    else if (!empezaronPasos) relatoLineas.push(l)
+    else pasos.push(l) // continuación de un paso sin marca
+  }
+  return { relato: relatoLineas.join('\n\n'), pasos }
 }
 
 const FAMILIAS = [
@@ -1148,23 +1168,27 @@ export default function PracticasPage() {
                                   {p.objetivo && <SeccionCard titulo="Objetivo" full hl><Prose text={p.objetivo} hl /></SeccionCard>}
                                   {p.definicion && <SeccionCard titulo="Definición" full><Prose text={p.definicion} /></SeccionCard>}
                                   {p.descripcion && <SeccionCard titulo="Descripción" full><Prose text={p.descripcion} /></SeccionCard>}
-                                  {p.desarrollo && (
-                                    <SeccionCard titulo="Desarrollo de la práctica" full>
-                                      <ol className="space-y-3">
-                                        {p.desarrollo.split('\n').filter(Boolean).map((linea, i) => (
-                                          <li key={i} className="flex gap-3 items-start">
-                                            <span className="flex-shrink-0 w-6 h-6 rounded-lg text-white text-[12px] font-black flex items-center justify-center mt-0.5" style={{ background: PCB_NAVY }}>{i + 1}</span>
-                                            <p className="text-[14.5px] text-slate-600 leading-relaxed">{linea.replace(/^[-•\d.)\s]+/, '')}</p>
-                                          </li>
-                                        ))}
-                                      </ol>
-                                    </SeccionCard>
-                                  )}
+                                  {p.desarrollo && (() => {
+                                    const { relato, pasos } = parseDesarrollo(p.desarrollo)
+                                    return (
+                                      <SeccionCard titulo="Desarrollo de la práctica" full>
+                                        {relato && <div className="mb-4"><Prose text={relato} /></div>}
+                                        <ol className="space-y-3.5">
+                                          {pasos.map((paso, i) => (
+                                            <li key={i} className="flex gap-3.5 items-start">
+                                              <span className="flex-shrink-0 w-7 h-7 rounded-lg text-white text-[13px] font-black flex items-center justify-center mt-0.5" style={{ background: PCB_NAVY }}>{i + 1}</span>
+                                              <p className="text-[15.5px] text-slate-700 leading-relaxed pt-0.5">{paso}</p>
+                                            </li>
+                                          ))}
+                                        </ol>
+                                      </SeccionCard>
+                                    )
+                                  })()}
                                   {p.materialNecesario && (
                                     <SeccionCard titulo="Material necesario">
                                       <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-2">
                                         {parseMaterial(p.materialNecesario).map((item, i) => (
-                                          <li key={i} className="flex items-baseline gap-2.5 text-[14px] text-slate-600">
+                                          <li key={i} className="flex items-baseline gap-2.5 text-[15px] text-slate-700">
                                             <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: PCB_ORANGE, transform: 'translateY(-1px)' }} />
                                             <span>{item}</span>
                                           </li>
@@ -1175,7 +1199,7 @@ export default function PracticasPage() {
                                   {riesgoInfo && (
                                     <SeccionCard titulo="Riesgo de la práctica" accent={riesgoInfo.id === 'bajo' ? '#15803d' : riesgoInfo.id === 'medio' ? '#b45309' : '#c02626'}>
                                       <span className={`inline-flex items-center gap-2 font-black text-sm px-3 py-1.5 rounded-full ${riesgoInfo.id === 'bajo' ? 'bg-green-50 text-green-700' : riesgoInfo.id === 'medio' ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-700'}`}>● {riesgoInfo.label}</span>
-                                      {p.riesgoObservaciones && <div className="mt-3 pt-3 border-t border-dashed border-slate-200"><p className="text-[10.5px] font-black uppercase tracking-widest text-slate-400 mb-1.5">Medidas preventivas</p><p className="text-[14px] text-slate-600 leading-relaxed whitespace-pre-line">{p.riesgoObservaciones}</p></div>}
+                                      {p.riesgoObservaciones && <div className="mt-3 pt-3 border-t border-dashed border-slate-200"><p className="text-[11px] font-black uppercase tracking-widest text-slate-400 mb-1.5">Medidas preventivas</p><p className="text-[15px] text-slate-700 leading-relaxed whitespace-pre-line">{p.riesgoObservaciones}</p></div>}
                                     </SeccionCard>
                                   )}
                                   {p.riesgoIntervencion && <SeccionCard titulo="Riesgos de la intervención" full accent="#c02626"><Prose text={p.riesgoIntervencion} /></SeccionCard>}
@@ -1184,8 +1208,8 @@ export default function PracticasPage() {
                                       <ul className="space-y-2.5">
                                         {p.conclusiones.split('\n').filter(Boolean).map((linea, i) => (
                                           <li key={i} className="flex gap-2.5 items-start">
-                                            <CheckCircle2 size={17} className="text-green-600 flex-shrink-0 mt-0.5" />
-                                            <span className="text-[14.5px] text-slate-600 leading-relaxed">{linea.replace(/^[-•]\s*/, '')}</span>
+                                            <CheckCircle2 size={18} className="text-green-600 flex-shrink-0 mt-0.5" />
+                                            <span className="text-[15.5px] text-slate-700 leading-relaxed">{linea.replace(/^[-•]\s*/, '')}</span>
                                           </li>
                                         ))}
                                       </ul>

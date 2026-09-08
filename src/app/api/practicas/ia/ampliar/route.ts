@@ -57,7 +57,7 @@ RIESGOS DE LA INTERVENCIÓN: ${p.riesgoIntervencion || '(vacío)'}
 CONCLUSIONES: ${p.conclusiones || '(vacío)'}
 
 Completa y AMPLÍA cada apartado a nivel experto, respetando y mejorando lo que ya haya y rellenando lo que falte. Formato:
-- "desarrollo": pasos claros, UNO POR LÍNEA (sin numerar tú; solo el texto del paso).
+- "desarrollo": empieza con un PÁRRAFO DESCRIPTIVO (un relato breve que hile y dé sentido a la secuencia de la práctica), y a continuación los PASOS numerados, uno por línea, empezando cada paso con su número (por ejemplo "1. ...", "2. ..."). El relato va antes de los pasos y sin numerar.
 - "materialNecesario": UN material por línea; añade cantidad si procede (p. ej. "DEA de entrenamiento x1").
 - "conclusiones": UNA idea clave por línea.
 - "riesgoPractica": exactamente uno de "bajo", "medio" o "alto".
