@@ -702,7 +702,8 @@ export default function CuadrantesPage() {
       const u = disponibilidades[sk]?.find(d => d.id === uid) ||
         guardiasGuardadas.find(g => g.usuarioId === uid)?.usuario ||
         todosUsuarios.find((t: any) => t.id === uid)
-      return (u as any)?.esOperativo !== false
+      // J-44 no cuenta como dotación básica (ver conteo por slot).
+      return (u as any)?.esOperativo !== false && (u as any)?.numeroVoluntario !== 'J-44'
     })
     return operativos.length >= cap
   }).length
@@ -864,15 +865,18 @@ export default function CuadrantesPage() {
                 const asignados = asignaciones[sk] || []
                 const sugeridosSk = sugerencias[sk] || []
                 const cap = capacidad[sk] || 4
-                const asignadosOp = asignados.filter(uid => {
-                  const u = disponibles.find(d => d.id === uid) ||
+                const usuarioDeUid = (uid: string) => disponibles.find(d => d.id === uid) ||
                     guardiasGuardadas.find(g => g.usuarioId === uid)?.usuario ||
                     todosUsuarios.find((t: any) => t.id === uid)
+                const asignadosOp = asignados.filter(uid => {
                   // Solo false explícito excluye; si no hay dato se asume operativo
-                  return (u as any)?.esOperativo !== false
+                  return (usuarioDeUid(uid) as any)?.esOperativo !== false
                 })
-                const slotOk = asignadosOp.length >= cap
-                const slotParcial = asignadosOp.length > 0 && asignadosOp.length < cap
+                // Dotación del turno: J-44 (Jefe de Servicio) NO cuenta como dotación
+                // básica; sigue asignado y genera su dieta, pero no suma en el conteo.
+                const asignadosDotacion = asignadosOp.filter(uid => (usuarioDeUid(uid) as any)?.numeroVoluntario !== 'J-44')
+                const slotOk = asignadosDotacion.length >= cap
+                const slotParcial = asignadosDotacion.length > 0 && asignadosDotacion.length < cap
                 return (
                   <div key={dayIdx} className={`border-r border-slate-100 last:border-r-0 p-2.5 ${dayIdx >= 5 ? 'bg-slate-50/60' : ''} ${COLOR_SLOT[turno.key].fondo}`}>
                     {/* Cabecera del slot: nombre del turno + contador de cobertura */}
@@ -883,7 +887,7 @@ export default function CuadrantesPage() {
                       </div>
                       <div className="flex items-center gap-0.5">
                         <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded ${slotOk ? 'bg-green-100 text-green-700' : slotParcial ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-400'}`}>
-                          {asignadosOp.length}/{cap}
+                          {asignadosDotacion.length}/{cap}
                         </span>
                         <button onClick={() => setCapacidad(p => ({ ...p, [sk]: Math.max(1, (p[sk] || 4) - 1) }))} aria-label="Reducir capacidad" className="w-4 h-4 flex items-center justify-center hover:bg-slate-200 rounded text-slate-400"><Minus size={7} /></button>
                         <button onClick={() => setCapacidad(p => ({ ...p, [sk]: (p[sk] || 4) + 1 }))} aria-label="Aumentar capacidad" className="w-4 h-4 flex items-center justify-center hover:bg-slate-200 rounded text-slate-400"><Plus size={7} /></button>
