@@ -11,6 +11,37 @@ import ModalImportarPDF from '@/components/practicas/ModalImportarPDF'
 import AsistenteIAPracticas from '@/components/practicas/AsistenteIAPracticas'
 import RevisarIAButton from '@/components/practicas/RevisarIAButton'
 
+// ── Diseño unificado de la ficha de práctica ──────────────────────────────────
+const PCB_NAVY = '#283666'
+const PCB_ORANGE = '#ef6c00'
+
+/** Tarjeta de apartado: MISMO patrón para todos (barra de acento + etiqueta). */
+function SeccionCard({ titulo, children, full = false, hl = false, accent, lblColor }: {
+  titulo: string; children: any; full?: boolean; hl?: boolean; accent?: string; lblColor?: string
+}) {
+  const bar = accent || (hl ? PCB_ORANGE : PCB_NAVY)
+  const lbl = lblColor || accent || (hl ? PCB_ORANGE : '#64748b')
+  return (
+    <div className={`${full ? 'lg:col-span-2' : ''} rounded-2xl border p-5 ${hl ? 'bg-orange-50/70 border-orange-200' : 'bg-white border-slate-200'}`}>
+      <div className="flex items-center gap-2.5 mb-3">
+        <span className="w-1 h-4 rounded-full flex-shrink-0" style={{ background: bar }} />
+        <span className="text-[11px] font-black uppercase tracking-[0.12em]" style={{ color: lbl }}>{titulo}</span>
+      </div>
+      {children}
+    </div>
+  )
+}
+
+/** Cuerpo de texto con párrafos homogéneos. */
+function Prose({ text, hl = false }: { text: string; hl?: boolean }) {
+  const parrafos = (text || '').split(/\n{2,}/).map(s => s.trim()).filter(Boolean)
+  return (
+    <div className={`space-y-2.5 text-[14.5px] leading-relaxed ${hl ? 'text-slate-800 font-medium' : 'text-slate-600'}`}>
+      {parrafos.map((pp, i) => <p key={i} className="whitespace-pre-line">{pp}</p>)}
+    </div>
+  )
+}
+
 const FAMILIAS = [
   { id: 'socorrismo', label: 'Socorrismo', color: 'bg-pink-100 text-pink-700 border-pink-200' },
   { id: 'incendios', label: 'Incendios', color: 'bg-red-100 text-red-700 border-red-200' },
@@ -720,7 +751,43 @@ export default function PracticasPage() {
     return acc
   }, {} as Record<string, Practica[]>)
 
-  const { isAdmin, isJefeArea } = usePermisos()
+  const { isAdmin, isJefeArea, rol } = usePermisos()
+  // El botón de ampliación con IA es exclusivo de admin y superadmin (no coordinador).
+  const esAdminEstricto = rol === 'admin' || rol === 'superadmin'
+  const [ampliandoId, setAmpliandoId] = useState<string | null>(null)
+  const [propuestaAmpliacion, setPropuestaAmpliacion] = useState<{ practica: Practica; propuesta: any; agente?: string } | null>(null)
+
+  // Pide al agente especialista del área que amplíe la práctica (propuesta revisable).
+  const ampliarConAgente = async (p: Practica) => {
+    setAmpliandoId(p.id)
+    try {
+      const res = await fetch('/api/practicas/ia/ampliar', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ practicaId: p.id }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Error del agente')
+      setPropuestaAmpliacion({ practica: p, propuesta: data.propuesta || {}, agente: data.agente })
+    } catch (e: any) {
+      alert('No se pudo ampliar la práctica: ' + (e?.message || 'error desconocido'))
+    } finally { setAmpliandoId(null) }
+  }
+
+  // Aplica la propuesta (ya revisada/editada) guardando la práctica.
+  const [aplicandoAmpliacion, setAplicandoAmpliacion] = useState(false)
+  const aplicarAmpliacion = async (campos: Record<string, string>) => {
+    const p = propuestaAmpliacion?.practica
+    if (!p) return
+    setAplicandoAmpliacion(true)
+    try {
+      const body = { ...p, ...campos, id: p.id }
+      const res = await fetch('/api/practicas', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+      const data = await res.json()
+      if (data.error) throw new Error(data.error)
+      setPropuestaAmpliacion(null)
+      cargarDatos()
+    } catch (e: any) { alert('No se pudo guardar: ' + (e?.message || '')) }
+    finally { setAplicandoAmpliacion(false) }
+  }
 
   const FormularioPractica = () => (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000] p-4">
@@ -1048,6 +1115,7 @@ export default function PracticasPage() {
                                 <h3 className="text-lg font-black text-slate-900 leading-tight mb-1.5">{p.titulo}</h3>
                                 <div className="flex items-center gap-2 mb-2 flex-wrap">
                                   {p.subfamilia && <span className="text-xs font-semibold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200">{p.subfamilia}</span>}
+                                  {p.lugarDesarrollo && <span className="text-xs font-semibold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200">{p.lugarDesarrollo}</span>}
                                   {p.grupo && <span className="text-xs text-slate-400 italic">{p.grupo}</span>}
                                 </div>
                                 <p className="text-sm text-slate-600 leading-relaxed line-clamp-2">{p.objetivo}</p>
@@ -1076,65 +1144,54 @@ export default function PracticasPage() {
                                 <div className="px-6 py-4"><p className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-1">Nivel</p><p className={`text-xl font-black ${nivelInfo?.id === 'basico' ? 'text-green-600' : nivelInfo?.id === 'intermedio' ? 'text-amber-600' : 'text-red-600'}`}>{nivelInfo?.label}</p></div>
                               </div>
                               <div className="p-6 space-y-5">
-                                {p.objetivo && <div className="bg-orange-50 border border-orange-200 rounded-2xl p-5"><p className="text-xs font-black text-orange-600 uppercase tracking-widest mb-2">Objetivo</p><p className="text-base text-slate-800 leading-relaxed font-medium">{p.objetivo}</p></div>}
-                                {(p.definicion || p.lugarDesarrollo) && (
-                                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                                    {p.definicion && <div className="lg:col-span-2 bg-slate-50 border border-slate-200 rounded-2xl p-5"><p className="text-xs font-black text-slate-500 uppercase tracking-widest mb-2">Definición</p><p className="text-sm text-slate-700 leading-relaxed">{p.definicion}</p></div>}
-                                    {p.lugarDesarrollo && <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5"><p className="text-xs font-black text-slate-500 uppercase tracking-widest mb-2">Lugar de desarrollo</p><p className="text-sm font-semibold text-slate-800">{p.lugarDesarrollo}</p></div>}
-                                  </div>
-                                )}
-                                {p.descripcion && <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5"><p className="text-xs font-black text-slate-500 uppercase tracking-widest mb-2">Descripción</p><p className="text-sm text-slate-700 leading-relaxed">{p.descripcion}</p></div>}
-                                {p.desarrollo && (
-                                  <div className="rounded-2xl p-6 border border-slate-700" style={{background: 'linear-gradient(135deg, #0f172a, #1e293b)'}}>
-                                    <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Desarrollo de la práctica</p>
-                                    <div className="space-y-2.5">
-                                      {p.desarrollo.split('\n').filter(Boolean).map((linea, i) => (
-                                        <div key={i} className="flex items-start gap-3">
-                                          <span className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 text-xs font-black" style={{background: 'rgba(249,115,22,0.2)', color: '#fb923c', border: '1px solid rgba(249,115,22,0.3)'}}>{i+1}</span>
-                                          <p className="text-sm text-slate-200 leading-relaxed">{linea.replace(/^[-•]\s*/, '')}</p>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  </div>
-                                )}
                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                                  {p.materialNecesario && (
-                                    <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5">
-                                      <p className="text-xs font-black text-amber-700 uppercase tracking-widest mb-3">Material necesario</p>
-                                      <div className="space-y-2">
-                                        {parseMaterial(p.materialNecesario).map((item, i) => (
-                                          <div key={i} className="flex items-center gap-2.5">
-                                            <div className="w-1.5 h-1.5 rounded-full bg-amber-500 flex-shrink-0" />
-                                            <p className="text-sm text-slate-700">{item}</p>
-                                          </div>
+                                  {p.objetivo && <SeccionCard titulo="Objetivo" full hl><Prose text={p.objetivo} hl /></SeccionCard>}
+                                  {p.definicion && <SeccionCard titulo="Definición" full><Prose text={p.definicion} /></SeccionCard>}
+                                  {p.descripcion && <SeccionCard titulo="Descripción" full><Prose text={p.descripcion} /></SeccionCard>}
+                                  {p.desarrollo && (
+                                    <SeccionCard titulo="Desarrollo de la práctica" full>
+                                      <ol className="space-y-3">
+                                        {p.desarrollo.split('\n').filter(Boolean).map((linea, i) => (
+                                          <li key={i} className="flex gap-3 items-start">
+                                            <span className="flex-shrink-0 w-6 h-6 rounded-lg text-white text-[12px] font-black flex items-center justify-center mt-0.5" style={{ background: PCB_NAVY }}>{i + 1}</span>
+                                            <p className="text-[14.5px] text-slate-600 leading-relaxed">{linea.replace(/^[-•\d.)\s]+/, '')}</p>
+                                          </li>
                                         ))}
-                                      </div>
-                                    </div>
+                                      </ol>
+                                    </SeccionCard>
                                   )}
-                                  <div className="space-y-3">
-                                    {riesgoInfo && (
-                                      <div className={`rounded-2xl p-5 border ${riesgoInfo.id === 'bajo' ? 'bg-green-50 border-green-200' : riesgoInfo.id === 'medio' ? 'bg-amber-50 border-amber-200' : 'bg-red-50 border-red-200'}`}>
-                                        <p className={`text-xs font-black uppercase tracking-widest mb-2 ${riesgoInfo.id === 'bajo' ? 'text-green-700' : riesgoInfo.id === 'medio' ? 'text-amber-700' : 'text-red-700'}`}>Riesgo de la práctica</p>
-                                        <p className={`text-2xl font-black mb-2 ${riesgoInfo.id === 'bajo' ? 'text-green-700' : riesgoInfo.id === 'medio' ? 'text-amber-700' : 'text-red-700'}`}>{riesgoInfo.label}</p>
-                                        {p.riesgoObservaciones && <p className="text-sm text-slate-700 leading-relaxed border-t border-slate-200 pt-2 mt-2">{p.riesgoObservaciones}</p>}
-                                      </div>
-                                    )}
-                                    {p.riesgoIntervencion && <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4"><p className="text-xs font-black text-slate-500 uppercase tracking-widest mb-2">Riesgo intervención</p><p className="text-sm text-slate-600 leading-relaxed">{p.riesgoIntervencion}</p></div>}
-                                  </div>
+                                  {p.materialNecesario && (
+                                    <SeccionCard titulo="Material necesario">
+                                      <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-2">
+                                        {parseMaterial(p.materialNecesario).map((item, i) => (
+                                          <li key={i} className="flex items-baseline gap-2.5 text-[14px] text-slate-600">
+                                            <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: PCB_ORANGE, transform: 'translateY(-1px)' }} />
+                                            <span>{item}</span>
+                                          </li>
+                                        ))}
+                                      </ul>
+                                    </SeccionCard>
+                                  )}
+                                  {riesgoInfo && (
+                                    <SeccionCard titulo="Riesgo de la práctica" accent={riesgoInfo.id === 'bajo' ? '#15803d' : riesgoInfo.id === 'medio' ? '#b45309' : '#c02626'}>
+                                      <span className={`inline-flex items-center gap-2 font-black text-sm px-3 py-1.5 rounded-full ${riesgoInfo.id === 'bajo' ? 'bg-green-50 text-green-700' : riesgoInfo.id === 'medio' ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-700'}`}>● {riesgoInfo.label}</span>
+                                      {p.riesgoObservaciones && <div className="mt-3 pt-3 border-t border-dashed border-slate-200"><p className="text-[10.5px] font-black uppercase tracking-widest text-slate-400 mb-1.5">Medidas preventivas</p><p className="text-[14px] text-slate-600 leading-relaxed whitespace-pre-line">{p.riesgoObservaciones}</p></div>}
+                                    </SeccionCard>
+                                  )}
+                                  {p.riesgoIntervencion && <SeccionCard titulo="Riesgos de la intervención" full accent="#c02626"><Prose text={p.riesgoIntervencion} /></SeccionCard>}
+                                  {p.conclusiones && (
+                                    <SeccionCard titulo="Conclusiones" full accent="#15803d">
+                                      <ul className="space-y-2.5">
+                                        {p.conclusiones.split('\n').filter(Boolean).map((linea, i) => (
+                                          <li key={i} className="flex gap-2.5 items-start">
+                                            <CheckCircle2 size={17} className="text-green-600 flex-shrink-0 mt-0.5" />
+                                            <span className="text-[14.5px] text-slate-600 leading-relaxed">{linea.replace(/^[-•]\s*/, '')}</span>
+                                          </li>
+                                        ))}
+                                      </ul>
+                                    </SeccionCard>
+                                  )}
                                 </div>
-                                {p.conclusiones && (
-                                  <div className="bg-green-50 border border-green-200 rounded-2xl p-5">
-                                    <p className="text-xs font-black text-green-700 uppercase tracking-widest mb-3">Conclusiones</p>
-                                    <div className="space-y-2">
-                                      {p.conclusiones.split('\n').filter(Boolean).map((linea, i) => (
-                                        <div key={i} className="flex items-start gap-2.5">
-                                          <CheckCircle2 size={15} className="text-green-500 flex-shrink-0 mt-0.5" />
-                                          <p className="text-sm text-slate-700 leading-relaxed">{linea.replace(/^[-•]\s*/, '')}</p>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  </div>
-                                )}
                                 {((p.imagenes || []).length > 0 || isAdmin) && (
                                   <div>
                                     <div className="flex items-center justify-between mb-3">
@@ -1172,6 +1229,15 @@ export default function PracticasPage() {
                                       <button onClick={() => handleEliminar(p.id)} className="flex items-center gap-2 px-4 py-2.5 border-2 border-red-100 rounded-xl text-sm font-bold text-red-500 hover:bg-red-50 transition-colors"><Trash2 size={15} />Desactivar</button>
                                       <RevisarIAButton practicaId={p.id} />
                                     </>}
+                                    {esAdminEstricto && (
+                                      <button onClick={() => ampliarConAgente(p)} disabled={ampliandoId === p.id}
+                                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold text-white transition-colors disabled:opacity-60"
+                                        style={{ background: PCB_NAVY }}
+                                        title="El agente especialista del área completa y amplía el contenido (propuesta revisable)">
+                                        {ampliandoId === p.id ? <RefreshCw size={15} className="animate-spin" /> : <span className="text-base leading-none">✦</span>}
+                                        {ampliandoId === p.id ? 'Consultando al agente…' : 'Ampliar con agente experto'}
+                                      </button>
+                                    )}
                                   </div>
                                   <button onClick={() => { setPracticaParaRegistro(p); setShowRegistro(true); setPasoRegistro(1); setParticipantesSeleccionados([]); setFirmaResp(''); setFirmaJefe('') }} className="flex items-center gap-2 px-6 py-2.5 text-white font-black text-sm rounded-xl transition-all hover:scale-105 shadow-lg" style={{background: 'linear-gradient(135deg, #f97316, #ea580c)'}}><ClipboardList size={16} />Registrar realización</button>
                                 </div>
@@ -1272,6 +1338,53 @@ export default function PracticasPage() {
         </div>
       )}
       {(showNueva || practicaEditando) && <FormularioPractica />}
+      {propuestaAmpliacion && (() => {
+        const { practica: pr, propuesta, agente } = propuestaAmpliacion
+        // Cada campo arranca con lo propuesto por el agente; si no hay propuesta, con lo actual.
+        const campos: { key: string; label: string; rows: number; actual: string }[] = [
+          { key: 'objetivo', label: 'Objetivo', rows: 2, actual: pr.objetivo || '' },
+          { key: 'descripcion', label: 'Descripción', rows: 4, actual: pr.descripcion || '' },
+          { key: 'desarrollo', label: 'Desarrollo de la práctica', rows: 8, actual: pr.desarrollo || '' },
+          { key: 'materialNecesario', label: 'Material necesario', rows: 4, actual: pr.materialNecesario || '' },
+          { key: 'riesgoIntervencion', label: 'Riesgos de la intervención', rows: 3, actual: pr.riesgoIntervencion || '' },
+          { key: 'riesgoObservaciones', label: 'Medidas preventivas (riesgo de la práctica)', rows: 3, actual: pr.riesgoObservaciones || '' },
+          { key: 'conclusiones', label: 'Conclusiones', rows: 4, actual: pr.conclusiones || '' },
+        ]
+        return (
+          <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[1000] p-4">
+            <form
+              onSubmit={e => { e.preventDefault(); const f = new FormData(e.currentTarget); const out: Record<string, string> = {}; campos.forEach(c => { out[c.key] = String(f.get(c.key) ?? '') }); aplicarAmpliacion(out) }}
+              className="bg-white rounded-2xl w-full max-w-3xl max-h-[92vh] overflow-y-auto shadow-2xl">
+              <div className="sticky top-0 flex items-center justify-between p-5 border-b" style={{ background: PCB_NAVY }}>
+                <div>
+                  <h3 className="text-base font-black text-white flex items-center gap-2"><span>✦</span> Propuesta del agente experto</h3>
+                  <p className="text-xs text-slate-300 mt-0.5">{pr.numero} — {pr.titulo}{agente ? ` · ${agente}` : ''}</p>
+                </div>
+                <button type="button" onClick={() => setPropuestaAmpliacion(null)} className="text-white/80 hover:text-white"><X size={20} /></button>
+              </div>
+              <div className="p-5 space-y-4">
+                <p className="text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5">Revisa y edita lo que quieras antes de guardar. Nada se aplica hasta que pulses <b>Aplicar cambios</b>.</p>
+                {campos.map(c => {
+                  const propuesto = (propuesta?.[c.key] ?? '').toString()
+                  return (
+                    <div key={c.key}>
+                      <label className="block text-[11px] font-black uppercase tracking-widest text-slate-500 mb-1.5">{c.label}</label>
+                      <textarea name={c.key} defaultValue={propuesto || c.actual} rows={c.rows}
+                        className="w-full border border-slate-300 rounded-xl p-3 text-sm focus:outline-none focus:border-orange-400" />
+                    </div>
+                  )
+                })}
+              </div>
+              <div className="sticky bottom-0 bg-white border-t p-4 flex items-center justify-end gap-2">
+                <button type="button" onClick={() => setPropuestaAmpliacion(null)} className="px-5 py-2.5 border-2 border-slate-200 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-50">Descartar</button>
+                <button type="submit" disabled={aplicandoAmpliacion} className="px-6 py-2.5 rounded-xl text-sm font-black text-white disabled:opacity-60" style={{ background: PCB_ORANGE }}>
+                  {aplicandoAmpliacion ? 'Guardando…' : 'Aplicar cambios'}
+                </button>
+              </div>
+            </form>
+          </div>
+        )
+      })()}
       {showRegistro && practicaParaRegistro && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[1000] p-4">
           <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[95vh] overflow-y-auto shadow-2xl">
