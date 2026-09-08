@@ -9,10 +9,14 @@ import { put, del } from '@vercel/blob'
 const NIVEL: Record<string, number> = {
   superadmin: 5, coordinador: 4, admin: 4, jefe_area: 3, responsable_turno: 2, voluntario: 1, visor: 0,
 }
-async function autorizar(nivelMinimo = 4) {
+async function autorizar(nivelMinimo = 4, opts?: { permitirVisor?: boolean }) {
   const session = await getServerSession(authOptions)
   if (!session?.user?.email) return { session: null, nivel: 0, error: 'No autorizado', status: 401 as const }
-  const nivel = NIVEL[(session.user as any)?.rol ?? 'voluntario'] ?? 1
+  const rol = (session.user as any)?.rol ?? 'voluntario'
+  const nivel = NIVEL[rol] ?? 1
+  // El visor accede a Compras en SOLO LECTURA (GET): se le deja pasar aunque su
+  // nivel sea 0. La escritura sigue exigiendo el nivel mínimo.
+  if (opts?.permitirVisor && rol === 'visor') return { session, nivel, error: null, status: 200 as const }
   if (nivel < nivelMinimo) return { session: null, nivel, error: 'Sin permisos suficientes', status: 403 as const }
   return { session, nivel, error: null, status: 200 as const }
 }
@@ -44,7 +48,7 @@ async function anotarHistorial(expedienteId: string, anterior: string | null, nu
 
 // ── GET ──────────────────────────────────────────────────────────────────────
 export async function GET(request: NextRequest) {
-  const auth = await autorizar()
+  const auth = await autorizar(4, { permitirVisor: true })
   if (!auth.session) return NextResponse.json({ error: auth.error }, { status: auth.status })
 
   const { searchParams } = new URL(request.url)

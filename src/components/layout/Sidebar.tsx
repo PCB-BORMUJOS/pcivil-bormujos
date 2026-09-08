@@ -91,7 +91,7 @@ const navigation: NavItem[] = [
   { name: 'Administración',    href: '/administracion', icon: ShieldCheck, soloRoles: ['admin', 'superadmin'] },
   { name: 'Estadísticas',      href: '/estadisticas',   icon: BarChart2,   minNivel: 4, visibleVisor: true },
   { name: 'Agentes IA',        href: '/agentes',        icon: Bot,         minNivel: 4, visibleVisor: false },
-  { name: 'Compras',           href: '/compras',        icon: CarritoIcon, minNivel: 4, visibleVisor: false },
+  { name: 'Compras',           href: '/compras',        icon: CarritoIcon, minNivel: 4, visibleVisor: true },
   { name: 'Gestión Económica', href: '/presupuesto',    icon: Wallet,      minNivel: 4, visibleVisor: true },
   { name: 'Configuración',     href: '/configuracion',  icon: Settings,    soloRoles: ['superadmin'] },
 ]
