@@ -702,8 +702,8 @@ export default function CuadrantesPage() {
       const u = disponibilidades[sk]?.find(d => d.id === uid) ||
         guardiasGuardadas.find(g => g.usuarioId === uid)?.usuario ||
         todosUsuarios.find((t: any) => t.id === uid)
-      // J-44 no cuenta como dotación básica (ver conteo por slot).
-      return (u as any)?.esOperativo !== false && (u as any)?.numeroVoluntario !== 'J-44'
+      // J-44 y los voluntarios en prácticas no cuentan como dotación básica.
+      return (u as any)?.esOperativo !== false && (u as any)?.numeroVoluntario !== 'J-44' && !(u as any)?.fichaVoluntario?.enPracticas
     })
     return operativos.length >= cap
   }).length
@@ -872,9 +872,13 @@ export default function CuadrantesPage() {
                   // Solo false explícito excluye; si no hay dato se asume operativo
                   return (usuarioDeUid(uid) as any)?.esOperativo !== false
                 })
-                // Dotación del turno: J-44 (Jefe de Servicio) NO cuenta como dotación
-                // básica; sigue asignado y genera su dieta, pero no suma en el conteo.
-                const asignadosDotacion = asignadosOp.filter(uid => (usuarioDeUid(uid) as any)?.numeroVoluntario !== 'J-44')
+                // Dotación del turno: NO computan ni J-44 (Jefe de Servicio) ni los
+                // voluntarios EN PRÁCTICAS (período de formación). Ambos aparecen en el
+                // cuadrante, pero no suman como operativos del turno.
+                const asignadosDotacion = asignadosOp.filter(uid => {
+                  const u = usuarioDeUid(uid) as any
+                  return u?.numeroVoluntario !== 'J-44' && !u?.fichaVoluntario?.enPracticas
+                })
                 const slotOk = asignadosDotacion.length >= cap
                 const slotParcial = asignadosDotacion.length > 0 && asignadosDotacion.length < cap
                 return (

@@ -8,6 +8,7 @@ import { put } from '@vercel/blob'
 import sharp from 'sharp'
 import { registrarAudit, getUsuarioAudit } from '@/lib/audit'
 import { parseFechaES } from '@/lib/date-utils'
+import { recalcularPracticasEnPartes } from '@/lib/practicas-conteo'
 
 /**
  * GET /api/partes/psi
@@ -254,6 +255,10 @@ export async function POST(request: NextRequest) {
             modulo: 'Partes',
             datosNuevos: { numeroParte: parte.numeroParte, lugar: parte.lugar },
         })
+
+        // Recalcular los turnos de prácticas: un voluntario en prácticas cuenta el
+        // turno si figura en un parte de servicio de ese día y turno.
+        await recalcularPracticasEnPartes().catch(() => { /* no bloquear la creación del parte */ })
 
         return NextResponse.json({
             success: true,

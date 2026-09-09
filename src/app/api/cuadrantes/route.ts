@@ -156,31 +156,10 @@ export async function POST(request: NextRequest) {
       // Comprobar si está en prácticas
       const fichaCheck = await prisma.fichaVoluntario.findUnique({ where: { usuarioId } })
       if (fichaCheck?.enPracticas) {
-        const TURNOS_OBLIGATORIOS = 15
-        // Incremento atómico — evita race condition si dos guardias se crean a la vez
-        const fichaActualizada = await prisma.fichaVoluntario.update({
-          where: { usuarioId },
-          data: { turnosPracticasRealizados: { increment: 1 } }
-        })
-        const nuevoContador = fichaActualizada.turnosPracticasRealizados ?? 1
-        if (nuevoContador >= TURNOS_OBLIGATORIOS) {
-          // Ha completado las prácticas → pasar a voluntario
-          await prisma.fichaVoluntario.update({
-            where: { usuarioId },
-            data: { enPracticas: false }
-          })
-          // Notificar al usuario
-          await prisma.notificacion.create({
-            data: {
-              usuarioId,
-              titulo: '¡Prácticas completadas!',
-              mensaje: `Has completado los ${TURNOS_OBLIGATORIOS} turnos de prácticas obligatorios. Ya eres voluntario activo.`,
-              tipo: 'sistema',
-              leida: false
-            }
-          })
-        }
-        // NO generar dieta para personas en prácticas
+        // El voluntario en prácticas APARECE en el cuadrante pero el turno de
+        // prácticas NO se cuenta aquí: solo se contabiliza si figura en el parte
+        // de servicio PSI de ese turno (ver src/lib/practicas-conteo.ts, invocado
+        // al guardar/finalizar el parte). Tampoco genera dieta.
         return NextResponse.json({ success: true, guardia })
       }
 
@@ -369,22 +348,11 @@ export async function DELETE(request: NextRequest) {
     const id = searchParams.get('id')
     if (!id) return NextResponse.json({ error: 'ID requerido' }, { status: 400 })
 
-    // Obtener la guardia antes de borrar para saber si hay que decrementar prácticas
-    const guardia = await prisma.guardia.findUnique({ where: { id } })
-
     await prisma.dieta.deleteMany({ where: { guardiaId: id } })
     await prisma.guardia.delete({ where: { id } })
 
-    // Si el voluntario estaba en prácticas cuando se creó este turno, decrementar el contador
-    if (guardia) {
-      const ficha = await prisma.fichaVoluntario.findUnique({ where: { usuarioId: guardia.usuarioId } })
-      if (ficha?.enPracticas && ficha.turnosPracticasRealizados > 0) {
-        await prisma.fichaVoluntario.update({
-          where: { usuarioId: guardia.usuarioId },
-          data: { turnosPracticasRealizados: { decrement: 1 } }
-        })
-      }
-    }
+    // El contador de prácticas ya NO depende de las guardias del cuadrante: se
+    // recalcula a partir de los partes de servicio PSI (ver practicas-conteo.ts).
 
     return NextResponse.json({ success: true })
   } catch (error) {

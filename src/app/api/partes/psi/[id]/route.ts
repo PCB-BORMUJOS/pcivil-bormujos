@@ -169,6 +169,9 @@ export async function PUT(
             datosNuevos: cambios.despues
         })
 
+        const { recalcularPracticasEnPartes } = await import('@/lib/practicas-conteo')
+        await recalcularPracticasEnPartes().catch(() => { /* no bloquear la actualización */ })
+
         return NextResponse.json({ success: true, parte, message: 'Parte actualizado correctamente' })
     } catch (error) {
         console.error('Error actualizando parte PSI:', error)
@@ -210,6 +213,9 @@ export async function DELETE(
                 modulo: 'Partes'
             })
         }
+
+        const { recalcularPracticasEnPartes } = await import('@/lib/practicas-conteo')
+        await recalcularPracticasEnPartes().catch(() => { /* no bloquear el borrado */ })
 
         return NextResponse.json({ success: true })
     } catch (error) {
