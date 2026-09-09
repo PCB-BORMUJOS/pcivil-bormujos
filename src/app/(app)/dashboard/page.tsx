@@ -1739,7 +1739,6 @@ export default function DashboardPage() {
                   {[...guardiasFiltradas].sort((a: any, b: any) => sortInd(a.usuario?.numeroVoluntario, b.usuario?.numeroVoluntario)).map((g, i) => {
                     const esPract = !!g.usuario?.fichaVoluntario?.enPracticas;
                     const esJefe = g.usuario?.numeroVoluntario === 'J-44';
-                    const noComputa = esPract || esJefe || g.usuario?.esOperativo === false;
                     return (
                     <div key={i} className={`rounded-lg border overflow-hidden ${esPract ? 'border-amber-300' : 'border-orange-100'}`}>
                       {/* Fila principal de la guardia */}
@@ -1752,7 +1751,6 @@ export default function DashboardPage() {
                             <span className="font-bold text-slate-800 text-sm">{g.usuario?.numeroVoluntario}</span>
                             {esPract && <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-bold">PRÁCTICAS</span>}
                             {esJefe && <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-200 text-slate-700 font-bold">JEFE SERVICIO</span>}
-                            {noComputa && <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 font-semibold">no computa</span>}
                             {g.rol === 'Responsable' && <span className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700 font-bold">RESPONSABLE</span>}
                             {g.rol === 'Cecopal' && <span className="text-[10px] px-1.5 py-0.5 rounded bg-orange-100 text-orange-700 font-bold">CECOPAL</span>}
                           </div>
