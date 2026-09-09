@@ -594,6 +594,15 @@ function CalendarView({ eventos, guardias, resumenDisponibilidad, onEventClick, 
                     <>
                       {turnosDelDia.map(turno => {
                         const guardiasTurno = guardiasDelDia.filter(g => g.turno === turno);
+                        // Todos los asignados siguen APARECIENDO en el turno (se pasan a
+                        // onGuardiaClick). Pero la DOTACIÓN (el número) NO cuenta al personal
+                        // no operativo (admin), al Jefe de Servicio (J-44) ni a los
+                        // voluntarios en prácticas.
+                        const nOperativos = guardiasTurno.filter(g =>
+                          g.usuario?.esOperativo !== false &&
+                          g.usuario?.numeroVoluntario !== 'J-44' &&
+                          !g.usuario?.fichaVoluntario?.enPracticas
+                        ).length;
                         const res = resumenDia[turno];
                         const etiqueta = TURNOS_CATALOGO[turno].label;
 
@@ -601,11 +610,11 @@ function CalendarView({ eventos, guardias, resumenDisponibilidad, onEventClick, 
                           return (
                             <div
                               key={turno}
-                              className={`text-[9px] px-1.5 py-1 rounded border-l-2 cursor-pointer ${colorPorCount(turno, guardiasTurno.length)}`}
+                              className={`text-[9px] px-1.5 py-1 rounded border-l-2 cursor-pointer ${colorPorCount(turno, nOperativos)}`}
                               onClick={(e) => { e.stopPropagation(); onGuardiaClick(day.date, turno, guardiasTurno); }}
-                              title={`Asignados: ${guardiasTurno.length}${res ? ` | Disponibles: ${res.total}` : ''}`}
+                              title={`Operativos: ${nOperativos}${guardiasTurno.length !== nOperativos ? ` (de ${guardiasTurno.length} en el turno)` : ''}${res ? ` | Disponibles: ${res.total}` : ''}`}
                             >
-                              <span className="font-bold">T. {etiqueta}</span> ({guardiasTurno.length})
+                              <span className="font-bold">T. {etiqueta}</span> ({nOperativos})
                             </div>
                           );
                         }

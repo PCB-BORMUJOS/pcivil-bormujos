@@ -29,7 +29,10 @@ export async function GET(request: NextRequest) {
       where: whereClause,
       include: {
         usuario: {
-          select: { id: true, nombre: true, apellidos: true, numeroVoluntario: true }
+          // esOperativo y enPracticas permiten que el calendario NO compute como
+          // dotación al Jefe de Servicio (J-44), al personal no operativo (admin)
+          // ni a los voluntarios en período de prácticas.
+          select: { id: true, nombre: true, apellidos: true, numeroVoluntario: true, esOperativo: true, fichaVoluntario: { select: { enPracticas: true } } }
         }
       },
       orderBy: [{ fecha: 'asc' }, { turno: 'asc' }]
