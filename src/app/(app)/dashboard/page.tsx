@@ -1736,16 +1736,23 @@ export default function DashboardPage() {
                 <p className="text-xs text-slate-500 italic pl-4 py-2 bg-amber-50 rounded-lg border border-amber-100">{guardiasFiltradas.length} persona/s asignadas — identidades ocultas hasta la publicación del cuadrante</p>
               ) : (
                 <div className="space-y-2">
-                  {[...guardiasFiltradas].sort((a: any, b: any) => sortInd(a.usuario?.numeroVoluntario, b.usuario?.numeroVoluntario)).map((g, i) => (
-                    <div key={i} className="rounded-lg border border-orange-100 overflow-hidden">
+                  {[...guardiasFiltradas].sort((a: any, b: any) => sortInd(a.usuario?.numeroVoluntario, b.usuario?.numeroVoluntario)).map((g, i) => {
+                    const esPract = !!g.usuario?.fichaVoluntario?.enPracticas;
+                    const esJefe = g.usuario?.numeroVoluntario === 'J-44';
+                    const noComputa = esPract || esJefe || g.usuario?.esOperativo === false;
+                    return (
+                    <div key={i} className={`rounded-lg border overflow-hidden ${esPract ? 'border-amber-300' : 'border-orange-100'}`}>
                       {/* Fila principal de la guardia */}
-                      <div className="flex items-center gap-3 p-2.5 bg-orange-50">
-                        <div className="w-9 h-9 rounded-full bg-orange-500 text-white flex items-center justify-center font-bold text-sm flex-shrink-0">
+                      <div className={`flex items-center gap-3 p-2.5 ${esPract ? 'bg-amber-50' : 'bg-orange-50'}`}>
+                        <div className={`w-9 h-9 rounded-full text-white flex items-center justify-center font-bold text-sm flex-shrink-0 ${esPract ? 'bg-amber-500' : 'bg-orange-500'}`}>
                           {g.usuario?.nombre?.charAt(0)}{g.usuario?.apellidos?.charAt(0)}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-bold text-slate-800 text-sm">{g.usuario?.numeroVoluntario}</span>
+                            {esPract && <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-bold">PRÁCTICAS</span>}
+                            {esJefe && <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-200 text-slate-700 font-bold">JEFE SERVICIO</span>}
+                            {noComputa && <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 font-semibold">no computa</span>}
                             {g.rol === 'Responsable' && <span className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700 font-bold">RESPONSABLE</span>}
                             {g.rol === 'Cecopal' && <span className="text-[10px] px-1.5 py-0.5 rounded bg-orange-100 text-orange-700 font-bold">CECOPAL</span>}
                           </div>
@@ -1819,7 +1826,7 @@ export default function DashboardPage() {
                         </div>
                       )}
                     </div>
-                  ))}
+                  )})}
                 </div>
               )}
             </div>
