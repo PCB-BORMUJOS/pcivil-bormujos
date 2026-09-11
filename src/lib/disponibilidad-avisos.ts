@@ -58,17 +58,48 @@ function desfaseMadrid(instante: Date): number {
 }
 
 /**
- * Momento en que vence el plazo de una semana: el final del viernes anterior.
+ * Momento en que vence el plazo de una semana: el viernes anterior a las 12:00,
+ * hora española.
  *
- * Enviar a lo largo del viernes vale; a partir de ahí la disponibilidad llega
- * fuera de plazo. Se calcula en hora de Madrid, no en UTC: en verano las 23:59
- * de España son las 21:59 UTC, y fijar la hora en UTC adelantaría el corte dos
- * horas, dejando fuera a quien envía el viernes por la noche.
+ * Se calcula en hora de Madrid y no en UTC: en verano las 12:00 de España son
+ * las 10:00 UTC y en invierno las 11:00, así que fijar la hora en UTC movería
+ * el corte una hora al cambio de estación.
  */
 export function fechaLimite(lunes: Date): Date {
     const viernes = isoDe(new Date(lunes.getTime() - 3 * DIA_MS))
-    const tentativo = new Date(`${viernes}T23:59:59.999Z`)
+    const tentativo = new Date(`${viernes}T12:00:00.000Z`)
     return new Date(tentativo.getTime() - desfaseMadrid(tentativo) * 60000)
+}
+
+/**
+ * Servicios especiales que eximen del plazo.
+ *
+ * Si el viernes en que vencía el plazo cayó en mitad de uno de estos
+ * dispositivos, a quien estuvo de servicio no se le reprocha la demora: estaba
+ * trabajando. A quien no participó se le cuenta igual que cualquier otra
+ * semana. El caso que lo motiva es la Feria de 2026: el plazo de la semana
+ * siguiente vencía el viernes 28 en plena Feria, y medio servicio envió su
+ * disponibilidad el domingo, al terminar el dispositivo.
+ */
+export const SERVICIOS_ESPECIALES = [
+    { nombre: 'Feria de Bormujos 2026', desde: '2026-08-26', hasta: '2026-08-30' },
+]
+
+/** El servicio especial que estaba en marcha en ese momento, si lo hubo. */
+function servicioEspecialEnCurso(instante: Date) {
+    const dia = instante.toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' })
+    return SERVICIOS_ESPECIALES.find(s => dia >= s.desde && dia <= s.hasta)
+}
+
+/** Quién estuvo de servicio durante un dispositivo especial. */
+async function participantesEn(servicio: { desde: string; hasta: string }): Promise<Set<string>> {
+    const guardias = await prisma.guardia.findMany({
+        where: {
+            fecha: { gte: aFechaUTC(servicio.desde), lte: new Date(`${servicio.hasta}T23:59:59.999Z`) },
+        },
+        select: { usuarioId: true },
+    })
+    return new Set(guardias.map(g => g.usuarioId))
 }
 
 /** «semana del 14 al 20 de septiembre», tal y como se lee en los avisos. */
@@ -127,8 +158,10 @@ export interface AvisoGenerado {
     nombre: string
     semana: string
     tipo: TipoIncidencia
-    /** Días de retraso sobre el cierre del viernes; solo en los envíos tardíos. */
-    retrasoDias?: number
+    /** Retraso sobre el cierre del viernes; solo en los envíos tardíos. */
+    retrasoHoras?: number
+    /** El mismo retraso ya redactado: «3 h», «2 días». */
+    retraso?: string
 }
 
 /**
@@ -196,7 +229,13 @@ export async function registrarAvisosDisponibilidad(opciones: {
         const texto = textoSemana(lunes)
         const cierre = fechaLimite(lunes)
 
+        // Si el plazo venció durante un dispositivo especial, quien estuvo de
+        // servicio queda exento esa semana.
+        const especial = servicioEspecialEnCurso(cierre)
+        const exentos = especial ? await participantesEn(especial) : new Set<string>()
+
         for (const u of obligados) {
+            if (exentos.has(u.id)) continue
             // A quien se dio de alta después de vencer el plazo no se le puede
             // reprochar esa semana. Sin esto, las altas recientes aparecían como
             // las más incumplidoras por semanas anteriores a su ingreso.
@@ -211,16 +250,21 @@ export async function registrarAvisosDisponibilidad(opciones: {
 
             const indicativo = u.numeroVoluntario || u.nombre
             const nombre = `${u.nombre} ${u.apellidos}`
-            const retrasoDias = cuandoEnvio
-                ? Math.max(1, Math.ceil((cuandoEnvio.getTime() - cierre.getTime()) / DIA_MS))
+            // El retraso se mide en horas: la mayoría envía el mismo viernes por la
+            // tarde, y redondear eso a «1 día» exagera lo ocurrido.
+            const retrasoHoras = cuandoEnvio
+                ? Math.max(1, Math.round((cuandoEnvio.getTime() - cierre.getTime()) / 3600000))
                 : undefined
+            const retraso = retrasoHoras === undefined ? undefined
+                : retrasoHoras < 24 ? `${retrasoHoras} h`
+                    : `${Math.round(retrasoHoras / 24)} día${Math.round(retrasoHoras / 24) === 1 ? '' : 's'}`
 
             // La incidencia se fecha cuando ocurrió —el cierre del viernes, o el
             // momento del envío tardío— y no hoy, para que el histórico de Mi Área
             // quede en orden cronológico real.
             const cuando = cuandoEnvio ?? cierre
             const descripcion = cuandoEnvio
-                ? `Disponibilidad fuera de plazo — ${indicativo} ${nombre} envió la de la ${texto} con ${retrasoDias} día(s) de retraso sobre el cierre del viernes`
+                ? `Disponibilidad fuera de plazo — ${indicativo} ${nombre} envió la de la ${texto} con ${retraso} de retraso sobre el cierre del viernes a las 12:00`
                 : `Disponibilidad no enviada — ${indicativo} ${nombre} no envió la de la ${texto}`
 
             if (!simular) {
@@ -233,7 +277,7 @@ export async function registrarAvisosDisponibilidad(opciones: {
                         datosNuevos: {
                             semanaInicio: iso,
                             cierre: cierre.toISOString(),
-                            ...(cuandoEnvio ? { enviadaEl: cuandoEnvio.toISOString(), retrasoDias } : {}),
+                            ...(cuandoEnvio ? { enviadaEl: cuandoEnvio.toISOString(), retrasoHoras, retraso } : {}),
                         },
                         usuarioId: u.id,
                         usuarioNombre: nombre,
@@ -269,7 +313,7 @@ export async function registrarAvisosDisponibilidad(opciones: {
             }
 
             yaRegistrado.add(`${accion}|${u.id}|${iso}`)
-            creados.push({ usuarioId: u.id, indicativo, nombre, semana: iso, tipo, retrasoDias })
+            creados.push({ usuarioId: u.id, indicativo, nombre, semana: iso, tipo, retrasoHoras, retraso })
         }
     }
 
@@ -279,7 +323,7 @@ export async function registrarAvisosDisponibilidad(opciones: {
 /**
  * Recuerda a quien todavía no ha enviado la disponibilidad de una semana.
  *
- * Esto se lanza *antes* de que cierre el plazo, así que no anota ninguna
+ * Esto se lanza el jueves, un día antes de que cierre el plazo, así que no anota ninguna
  * incidencia: solo empuja, que es de lo que se trata. La incidencia, si acaba
  * habiéndola, la registra después `registrarAvisosDisponibilidad`.
  */
@@ -306,7 +350,7 @@ export async function avisarPendientes(lunes: Date): Promise<string[]> {
             data: {
                 usuarioId: u.id,
                 titulo: '⚠ Disponibilidad pendiente de envío',
-                mensaje: `Aún no has enviado tu disponibilidad para la ${texto}. El plazo termina hoy viernes a las 23:59; a partir de ahí queda registrada como fuera de plazo.`,
+                mensaje: `Aún no has enviado tu disponibilidad para la ${texto}. El plazo termina mañana viernes a las 12:00; a partir de esa hora queda registrada como fuera de plazo.`,
                 tipo: 'alerta',
                 leida: false,
             },
@@ -317,7 +361,7 @@ export async function avisarPendientes(lunes: Date): Promise<string[]> {
                     remitenteId: coordinador.id,
                     destinatarioId: u.id,
                     asunto: `Recordatorio: disponibilidad pendiente — ${texto}`,
-                    contenido: `Hola ${u.nombre},\n\nEstamos preparando el cuadrante de la ${texto} y aún no hemos recibido tu disponibilidad.\n\nEl plazo termina hoy viernes a las 23:59. Accede al panel principal de la aplicación y cumplimenta el formulario «Enviar Disponibilidad» antes de esa hora para poder asignarte los turnos que quieres cubrir.\n\nGracias.\n\nCoordinación — Protección Civil Bormujos`,
+                    contenido: `Hola ${u.nombre},\n\nEstamos preparando el cuadrante de la ${texto} y aún no hemos recibido tu disponibilidad.\n\nEl plazo termina mañana viernes a las 12:00. Accede al panel principal de la aplicación y cumplimenta el formulario «Enviar Disponibilidad» antes de esa hora para poder asignarte los turnos que quieres cubrir.\n\nGracias.\n\nCoordinación — Protección Civil Bormujos`,
                     leido: false,
                 },
             })

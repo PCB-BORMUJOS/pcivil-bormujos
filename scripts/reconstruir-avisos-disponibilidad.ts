@@ -41,7 +41,7 @@ async function main() {
         if (!porPersona.has(c.indicativo)) porPersona.set(c.indicativo, { nombre: c.nombre, sin: [], tarde: [] })
         const d = porPersona.get(c.indicativo)!
         if (c.tipo === 'SIN_ENVIAR') d.sin.push(c.semana)
-        else d.tarde.push(`${c.semana}(+${c.retrasoDias}d)`)
+        else d.tarde.push(`${c.semana}(+${c.retraso})`)
     })
 
     const sin = creados.filter(c => c.tipo === 'SIN_ENVIAR').length

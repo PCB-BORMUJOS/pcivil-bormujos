@@ -35,7 +35,7 @@ export async function GET(_request: NextRequest) {
             createdAt: f.createdAt,
             fueraDePlazo: f.accion === ACCIONES_INCIDENCIA.FUERA_DE_PLAZO,
             semana: (f.datosNuevos as any)?.semanaInicio ?? null,
-            retrasoDias: (f.datosNuevos as any)?.retrasoDias ?? null,
+            retraso: (f.datosNuevos as any)?.retraso ?? null,
         }))
 
         return NextResponse.json({

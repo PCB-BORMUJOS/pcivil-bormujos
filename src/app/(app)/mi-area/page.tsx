@@ -1263,7 +1263,7 @@ export default function MiAreaPage() {
                                   </h4>
                                   {r.fueraDePlazo ? (
                                     <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded font-bold">
-                                      {r.retrasoDias ? `${r.retrasoDias} día(s) de retraso` : 'Fuera de plazo'}
+                                      {r.retraso ? `${r.retraso} de retraso` : 'Fuera de plazo'}
                                     </span>
                                   ) : (
                                     <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded font-bold">Sin enviar</span>

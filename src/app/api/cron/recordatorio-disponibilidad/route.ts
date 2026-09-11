@@ -8,12 +8,12 @@ import {
 /**
  * Control semanal de la disponibilidad.
  *
- * El plazo para enviarla termina el viernes a las 23:59, así que el proceso
- * tiene dos momentos distintos y no se pueden juntar:
+ * El plazo para enviarla termina el viernes a las 12:00, hora española, así que
+ * el proceso tiene dos momentos distintos y no se pueden juntar:
  *
- *   · viernes por la mañana → «aviso»: se recuerda a quien aún no la ha
- *     mandado, cuando todavía está a tiempo. No anota nada.
- *   · sábado por la mañana → «registro»: cerrado ya el plazo, se anota a quien
+ *   · jueves por la mañana → «aviso»: se recuerda a quien aún no la ha mandado,
+ *     con un día por delante para hacerlo. No anota nada.
+ *   · viernes por la tarde → «registro»: cerrado ya el plazo, se anota a quien
  *     no envió y a quien envió tarde.
  *
  * Sin el parámetro `modo` se deduce del día de la semana, de forma que los dos
@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
     try {
         const { searchParams } = new URL(request.url)
         const diaMadrid = new Date().toLocaleDateString('en-US', { timeZone: 'Europe/Madrid', weekday: 'long' })
-        const modo = searchParams.get('modo') || (diaMadrid === 'Friday' ? 'aviso' : 'registro')
+        const modo = searchParams.get('modo') || (diaMadrid === 'Thursday' ? 'aviso' : 'registro')
 
         if (modo === 'aviso') {
             // El plazo todavía está abierto: se empuja, no se anota
@@ -71,7 +71,7 @@ export async function GET(request: NextRequest) {
             modo,
             semana: textoSemana(lunes),
             sinEnviar: sinEnviar.map(c => c.indicativo),
-            fueraDePlazo: tarde.map(c => `${c.indicativo} (+${c.retrasoDias}d)`),
+            fueraDePlazo: tarde.map(c => `${c.indicativo} (+${c.retraso})`),
             yaRegistrados: yaExistian,
         })
     } catch (error) {
