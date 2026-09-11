@@ -319,7 +319,7 @@ export default function EstadisticasPage() {
                     heads={[
                       thVol('Nº Vol.','numeroVoluntario'), thVol('Nombre completo','nombre'), thVol('Área','area'),
                       thVol('Categoría','categoria'), thVol('Guardias','guardias'), thVol('Horas','horas'),
-                      thVol('Dietas','importeDietas'), thVol('Km','km'), thVol('Avisos disp.','recordatorios'), thVol('Estado','activo'),
+                      thVol('Dietas','importeDietas'), thVol('Km','km'), thVol('Disp. ⚠ sin enviar / ⏱ tarde','recordatorios'), thVol('Estado','activo'),
                     ]}
                     rows={statsVolOrdenado.map((v:any)=>[
                       <span key="n" className="font-mono text-xs font-bold text-indigo-600">{v.numeroVoluntario||'—'}</span>,
@@ -331,7 +331,14 @@ export default function EstadisticasPage() {
                       v.importeDietas>0?<span key="d" className="font-semibold text-green-700">{fmtEur(v.importeDietas)}</span>:'—',
                       v.km>0?<span key="km">{fmtKm(v.km)}</span>:'—',
                       v.recordatorios>0
-                        ? <span key="rec" className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-red-100 text-red-700 rounded text-xs font-bold" title={v.ultimoRecordatorio ? `Último: ${fmtDate(v.ultimoRecordatorio)}` : ''}>⚠ {v.recordatorios}</span>
+                        ? <span key="rec" className="inline-flex items-center gap-1" title={[
+                            v.dispSinEnviar>0 ? `${v.dispSinEnviar} sin enviar` : '',
+                            v.dispFueraDePlazo>0 ? `${v.dispFueraDePlazo} fuera de plazo` : '',
+                            v.ultimoRecordatorio ? `Última: ${fmtDate(v.ultimoRecordatorio)}` : '',
+                          ].filter(Boolean).join(' · ')}>
+                            {v.dispSinEnviar>0 && <span className="px-1.5 py-0.5 bg-red-100 text-red-700 rounded text-xs font-bold">⚠ {v.dispSinEnviar}</span>}
+                            {v.dispFueraDePlazo>0 && <span className="px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded text-xs font-bold">⏱ {v.dispFueraDePlazo}</span>}
+                          </span>
                         : <span key="rec" className="text-slate-300 text-xs">—</span>,
                       <Badge key="s" label={v.activo?'Activo':'Inactivo'} variant={v.activo?'green':'red'}/>,
                     ])}

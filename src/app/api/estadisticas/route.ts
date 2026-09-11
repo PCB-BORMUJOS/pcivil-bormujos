@@ -150,16 +150,27 @@ export async function GET(request: NextRequest) {
       }).catch(() => []),
     ])
 
-    // ── Recordatorios de disponibilidad por voluntario ──────────────────────────
-    const recordatoriosRaw = await prisma.auditLog.groupBy({
-      by: ['usuarioId'],
-      where: { accion: 'RECORDATORIO', entidad: 'Disponibilidad', createdAt: { gte: fechaInicio, lte: fechaFin } },
+    // ── Incidencias de disponibilidad por voluntario ────────────────────────────
+    // Dos supuestos distintos: no haberla enviado, y haberla enviado después del
+    // cierre del viernes. Se cuentan por separado y también en total.
+    const incidenciasRaw = await prisma.auditLog.groupBy({
+      by: ['usuarioId', 'accion'],
+      where: {
+        accion: { in: ['RECORDATORIO', 'FUERA_DE_PLAZO'] },
+        entidad: 'Disponibilidad',
+        createdAt: { gte: fechaInicio, lte: fechaFin },
+      },
       _count: { id: true },
       _max: { createdAt: true },
     }).catch(() => [])
-    const recordatoriosMap: Record<string, { count: number; ultimo: Date | null }> = {}
-    ;(recordatoriosRaw as any[]).forEach(r => {
-      if (r.usuarioId) recordatoriosMap[r.usuarioId] = { count: r._count.id, ultimo: r._max.createdAt }
+    const recordatoriosMap: Record<string, { count: number; sinEnviar: number; fueraDePlazo: number; ultimo: Date | null }> = {}
+    ;(incidenciasRaw as any[]).forEach(r => {
+      if (!r.usuarioId) return
+      const acc = recordatoriosMap[r.usuarioId] ||= { count: 0, sinEnviar: 0, fueraDePlazo: 0, ultimo: null }
+      acc.count += r._count.id
+      if (r.accion === 'FUERA_DE_PLAZO') acc.fueraDePlazo += r._count.id
+      else acc.sinEnviar += r._count.id
+      if (r._max.createdAt && (!acc.ultimo || r._max.createdAt > acc.ultimo)) acc.ultimo = r._max.createdAt
     })
 
     // ── GPS km por vehículo (Haversine sobre UbicacionVehiculo) ─────────────
@@ -266,6 +277,8 @@ export async function GET(request: NextRequest) {
         km: dv.reduce((a: number, d: any) => a + Number(d.kilometros || 0), 0),
         diasServicio: dv.length,
         recordatorios: (recordatoriosMap[v.id]?.count) || 0,
+        dispSinEnviar: (recordatoriosMap[v.id]?.sinEnviar) || 0,
+        dispFueraDePlazo: (recordatoriosMap[v.id]?.fueraDePlazo) || 0,
         ultimoRecordatorio: recordatoriosMap[v.id]?.ultimo || null,
       }
     }).sort((a, b) => b.guardias - a.guardias)

@@ -1199,7 +1199,8 @@ export default function MiAreaPage() {
                       <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-purple-500"></span> Formación</span>
                       <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-orange-500"></span> Eventos</span>
                       <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-green-500"></span> Turnos</span>
-                      <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-red-400"></span> Avisos</span>
+                      <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-red-400"></span> Sin enviar</span>
+                      <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-amber-400"></span> Fuera de plazo</span>
                     </div>
                   </div>
 
@@ -1210,7 +1211,7 @@ export default function MiAreaPage() {
                         id: r.id,
                         tipo: 'recordatorio',
                         fecha: r.createdAt,
-                        titulo: 'Aviso automático de disponibilidad',
+                        titulo: r.fueraDePlazo ? 'Disponibilidad fuera de plazo' : 'Disponibilidad no enviada',
                         data: r
                       })),
                       ...disponibilidades.map(d => ({
@@ -1251,18 +1252,28 @@ export default function MiAreaPage() {
                           if (item.tipo === 'recordatorio') {
                           const r = item.data;
                           return (
-                            <div key={item.id} className="flex items-center gap-4 p-4 bg-white border border-red-100 rounded-xl hover:shadow-sm transition-shadow">
-                              <div className="w-1 h-12 rounded-full bg-red-400 flex-shrink-0"></div>
+                            <div key={item.id} className={`flex items-center gap-4 p-4 bg-white border rounded-xl hover:shadow-sm transition-shadow ${r.fueraDePlazo ? 'border-amber-100' : 'border-red-100'}`}>
+                              <div className={`w-1 h-12 rounded-full flex-shrink-0 ${r.fueraDePlazo ? 'bg-amber-400' : 'bg-red-400'}`}></div>
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 flex-wrap">
-                                  <h4 className="font-medium text-slate-800">Aviso de disponibilidad pendiente</h4>
-                                  <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded font-bold">Recordatorio automático</span>
+                                  {/* Enviarla tarde y no enviarla no son lo mismo: se
+                                      distinguen por color y por rótulo. */}
+                                  <h4 className="font-medium text-slate-800">
+                                    {r.fueraDePlazo ? 'Disponibilidad enviada fuera de plazo' : 'Disponibilidad no enviada'}
+                                  </h4>
+                                  {r.fueraDePlazo ? (
+                                    <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded font-bold">
+                                      {r.retrasoDias ? `${r.retrasoDias} día(s) de retraso` : 'Fuera de plazo'}
+                                    </span>
+                                  ) : (
+                                    <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded font-bold">Sin enviar</span>
+                                  )}
                                 </div>
                                 <p className="text-sm text-slate-500 mt-0.5">
                                   {new Date(r.createdAt).toLocaleDateString('es-ES', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}
                                 </p>
                                 {r.descripcion && (
-                                  <p className="text-xs text-red-400 mt-0.5 truncate">{r.descripcion}</p>
+                                  <p className={`text-xs mt-0.5 truncate ${r.fueraDePlazo ? 'text-amber-500' : 'text-red-400'}`}>{r.descripcion}</p>
                                 )}
                               </div>
                             </div>

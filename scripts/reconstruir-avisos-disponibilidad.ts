@@ -36,20 +36,29 @@ async function main() {
         semanas, notificar: false, simular: !aplicar,
     })
 
-    const porPersona = new Map<string, { nombre: string; semanas: string[] }>()
+    const porPersona = new Map<string, { nombre: string; sin: string[]; tarde: string[] }>()
     creados.forEach(c => {
-        if (!porPersona.has(c.indicativo)) porPersona.set(c.indicativo, { nombre: c.nombre, semanas: [] })
-        porPersona.get(c.indicativo)!.semanas.push(c.semana)
+        if (!porPersona.has(c.indicativo)) porPersona.set(c.indicativo, { nombre: c.nombre, sin: [], tarde: [] })
+        const d = porPersona.get(c.indicativo)!
+        if (c.tipo === 'SIN_ENVIAR') d.sin.push(c.semana)
+        else d.tarde.push(`${c.semana}(+${c.retrasoDias}d)`)
     })
 
-    console.log(`Avisos ${aplicar ? 'registrados' : 'que se registrarían'}: ${creados.length}`)
-    if (yaExistian) console.log(`Ya existían y se respetan: ${yaExistian}`)
+    const sin = creados.filter(c => c.tipo === 'SIN_ENVIAR').length
+    const tarde = creados.length - sin
+    console.log(`Incidencias ${aplicar ? 'registradas' : 'que se registrarían'}: ${creados.length}`)
+    console.log(`  · sin enviar:      ${sin}`)
+    console.log(`  · fuera de plazo:  ${tarde}`)
+    if (yaExistian) console.log(`  · ya existían y se respetan: ${yaExistian}`)
     console.log()
 
-    const orden = Array.from(porPersona.entries()).sort((a, b) => b[1].semanas.length - a[1].semanas.length)
+    const orden = Array.from(porPersona.entries())
+        .sort((a, b) => (b[1].sin.length + b[1].tarde.length) - (a[1].sin.length + a[1].tarde.length))
     for (const [indicativo, d] of orden) {
-        console.log(`  ${String(d.semanas.length).padStart(2)}/${semanas.length}  ${indicativo.padEnd(5)} ${d.nombre}`)
-        console.log(`         ${d.semanas.join('  ')}`)
+        const total = d.sin.length + d.tarde.length
+        console.log(`  ${String(total).padStart(2)}/${semanas.length}  ${indicativo.padEnd(5)} ${d.nombre}`)
+        if (d.sin.length) console.log(`          sin enviar:     ${d.sin.join('  ')}`)
+        if (d.tarde.length) console.log(`          fuera de plazo: ${d.tarde.join('  ')}`)
     }
 
     await prisma.$disconnect()

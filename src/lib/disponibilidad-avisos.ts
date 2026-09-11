@@ -50,14 +50,25 @@ export function lunesSiguiente(ahora: Date = new Date()): Date {
     return new Date(hoy.getTime() + dias * DIA_MS)
 }
 
+/** Desfase de Madrid respecto a UTC, en minutos, para un instante dado. */
+function desfaseMadrid(instante: Date): number {
+    const utc = new Date(instante.toLocaleString('en-US', { timeZone: 'UTC' }))
+    const madrid = new Date(instante.toLocaleString('en-US', { timeZone: 'Europe/Madrid' }))
+    return (madrid.getTime() - utc.getTime()) / 60000
+}
+
 /**
- * Momento en que vence el plazo de una semana: el viernes anterior a las 10:00
- * UTC, que es cuando está programada la comprobación automática.
+ * Momento en que vence el plazo de una semana: el final del viernes anterior.
+ *
+ * Enviar a lo largo del viernes vale; a partir de ahí la disponibilidad llega
+ * fuera de plazo. Se calcula en hora de Madrid, no en UTC: en verano las 23:59
+ * de España son las 21:59 UTC, y fijar la hora en UTC adelantaría el corte dos
+ * horas, dejando fuera a quien envía el viernes por la noche.
  */
 export function fechaLimite(lunes: Date): Date {
-    const viernes = new Date(lunes.getTime() - 3 * DIA_MS)
-    viernes.setUTCHours(10, 0, 0, 0)
-    return viernes
+    const viernes = isoDe(new Date(lunes.getTime() - 3 * DIA_MS))
+    const tentativo = new Date(`${viernes}T23:59:59.999Z`)
+    return new Date(tentativo.getTime() - desfaseMadrid(tentativo) * 60000)
 }
 
 /** «semana del 14 al 20 de septiembre», tal y como se lee en los avisos. */
@@ -101,23 +112,39 @@ export async function usuariosObligados(): Promise<ObligadoDisponibilidad[]> {
         .map(({ createdAt, ...u }) => ({ ...u, alta: createdAt }))
 }
 
+/** Las dos formas de incumplir: no enviarla, o enviarla pasado el viernes. */
+export type TipoIncidencia = 'SIN_ENVIAR' | 'FUERA_DE_PLAZO'
+
+/** Acción con la que queda grabada cada una en la trazabilidad. */
+export const ACCIONES_INCIDENCIA: Record<TipoIncidencia, string> = {
+    SIN_ENVIAR: 'RECORDATORIO',
+    FUERA_DE_PLAZO: 'FUERA_DE_PLAZO',
+}
+
 export interface AvisoGenerado {
     usuarioId: string
     indicativo: string
     nombre: string
     semana: string
+    tipo: TipoIncidencia
+    /** Días de retraso sobre el cierre del viernes; solo en los envíos tardíos. */
+    retrasoDias?: number
 }
 
 /**
- * Registra los avisos que falten para las semanas indicadas.
+ * Registra las incidencias de disponibilidad que falten para las semanas dadas.
  *
- * Es idempotente: antes de crear nada comprueba qué avisos existen ya, de modo
- * que relanzarlo —o que el cron se dispare dos veces— no duplica el historial
- * de nadie. La semana concreta se guarda en `datosNuevos` para poder cruzarla.
+ * Distingue dos supuestos, porque no son lo mismo y el servicio los trata
+ * distinto: quien no envió nada y quien envió pero después del cierre del
+ * viernes. Ambos quedan en la trazabilidad y salen en «Mi Área».
  *
- * `notificar` controla si además se avisa a la persona por campana y mensaje
- * interno. Al reconstruir semanas pasadas va en `false`: no tiene sentido
- * mandarle a nadie hoy un recordatorio de una semana de junio.
+ * Es idempotente: antes de crear nada comprueba qué hay registrado, de modo que
+ * relanzarlo —o que el cron se dispare dos veces— no duplica el historial de
+ * nadie. La semana concreta va en `datosNuevos` para poder cruzarla.
+ *
+ * `notificar` controla si además se avisa por campana y mensaje interno, y solo
+ * aplica a quien no ha enviado nada: al reconstruir semanas pasadas va en
+ * `false`, porque no tiene sentido avisar hoy de una semana de junio.
  */
 export async function registrarAvisosDisponibilidad(opciones: {
     semanas: Date[]
@@ -130,22 +157,26 @@ export async function registrarAvisosDisponibilidad(opciones: {
     const obligados = await usuariosObligados()
     const semanasIso = semanas.map(isoDe)
 
-    // Qué disponibilidades hay ya enviadas, por semana
-    const enviadas = await prisma.disponibilidad.findMany({ select: { usuarioId: true, semanaInicio: true } })
-    const porSemana = new Map<string, Set<string>>()
+    // Cuándo envió cada cual la disponibilidad de cada semana
+    const enviadas = await prisma.disponibilidad.findMany({
+        select: { usuarioId: true, semanaInicio: true, createdAt: true },
+    })
+    const envio = new Map<string, Date>()
     enviadas.forEach(d => {
-        const clave = semanaNormalizada(d.semanaInicio)
-        if (!porSemana.has(clave)) porSemana.set(clave, new Set())
-        porSemana.get(clave)!.add(d.usuarioId)
+        const clave = `${d.usuarioId}|${semanaNormalizada(d.semanaInicio)}`
+        // Si hubiera más de un registro para la misma semana vale el primero:
+        // es el momento en que la persona cumplió.
+        const previo = envio.get(clave)
+        if (!previo || d.createdAt < previo) envio.set(clave, d.createdAt)
     })
 
-    // Y qué avisos existen ya, para no repetirlos
+    // Qué incidencias existen ya, para no repetirlas
     const previos = await prisma.auditLog.findMany({
-        where: { accion: 'RECORDATORIO', entidad: 'Disponibilidad' },
-        select: { usuarioId: true, datosNuevos: true },
+        where: { accion: { in: Object.values(ACCIONES_INCIDENCIA) }, entidad: 'Disponibilidad' },
+        select: { accion: true, usuarioId: true, datosNuevos: true },
     })
-    const yaAvisado = new Set(
-        previos.map(a => `${a.usuarioId}|${(a.datosNuevos as any)?.semanaInicio ?? ''}`)
+    const yaRegistrado = new Set(
+        previos.map(a => `${a.accion}|${a.usuarioId}|${(a.datosNuevos as any)?.semanaInicio ?? ''}`)
     )
 
     const creados: AvisoGenerado[] = []
@@ -163,38 +194,57 @@ export async function registrarAvisosDisponibilidad(opciones: {
         const lunes = semanas[i]
         const iso = semanasIso[i]
         const texto = textoSemana(lunes)
-        const cuando = fechaLimite(lunes)
-        const respondieron = porSemana.get(iso) ?? new Set<string>()
+        const cierre = fechaLimite(lunes)
 
         for (const u of obligados) {
             // A quien se dio de alta después de vencer el plazo no se le puede
             // reprochar esa semana. Sin esto, las altas recientes aparecían como
             // las más incumplidoras por semanas anteriores a su ingreso.
-            if (cuando < u.alta) continue
-            if (respondieron.has(u.id)) continue
-            if (yaAvisado.has(`${u.id}|${iso}`)) { yaExistian++; continue }
+            if (cierre < u.alta) continue
+
+            const cuandoEnvio = envio.get(`${u.id}|${iso}`)
+            if (cuandoEnvio && cuandoEnvio <= cierre) continue // en plazo, nada que anotar
+
+            const tipo: TipoIncidencia = cuandoEnvio ? 'FUERA_DE_PLAZO' : 'SIN_ENVIAR'
+            const accion = ACCIONES_INCIDENCIA[tipo]
+            if (yaRegistrado.has(`${accion}|${u.id}|${iso}`)) { yaExistian++; continue }
 
             const indicativo = u.numeroVoluntario || u.nombre
-            const aviso: AvisoGenerado = { usuarioId: u.id, indicativo, nombre: `${u.nombre} ${u.apellidos}`, semana: iso }
+            const nombre = `${u.nombre} ${u.apellidos}`
+            const retrasoDias = cuandoEnvio
+                ? Math.max(1, Math.ceil((cuandoEnvio.getTime() - cierre.getTime()) / DIA_MS))
+                : undefined
+
+            // La incidencia se fecha cuando ocurrió —el cierre del viernes, o el
+            // momento del envío tardío— y no hoy, para que el histórico de Mi Área
+            // quede en orden cronológico real.
+            const cuando = cuandoEnvio ?? cierre
+            const descripcion = cuandoEnvio
+                ? `Disponibilidad fuera de plazo — ${indicativo} ${nombre} envió la de la ${texto} con ${retrasoDias} día(s) de retraso sobre el cierre del viernes`
+                : `Disponibilidad no enviada — ${indicativo} ${nombre} no envió la de la ${texto}`
 
             if (!simular) {
                 await prisma.auditLog.create({
                     data: {
-                        accion: 'RECORDATORIO',
+                        accion,
                         entidad: 'Disponibilidad',
                         entidadId: u.id,
-                        descripcion: `Recordatorio automático — ${indicativo} ${u.nombre} ${u.apellidos} no envió disponibilidad para la ${texto}`,
-                        datosNuevos: { semanaInicio: iso, plazo: cuando.toISOString() },
+                        descripcion,
+                        datosNuevos: {
+                            semanaInicio: iso,
+                            cierre: cierre.toISOString(),
+                            ...(cuandoEnvio ? { enviadaEl: cuandoEnvio.toISOString(), retrasoDias } : {}),
+                        },
                         usuarioId: u.id,
-                        usuarioNombre: `${u.nombre} ${u.apellidos}`,
+                        usuarioNombre: nombre,
                         modulo: 'Sistema',
-                        // La fecha del aviso es la del plazo que se incumplió, no la de
-                        // hoy: así el histórico de Mi Área queda en orden cronológico.
                         createdAt: cuando,
                     },
                 })
 
-                if (notificar) {
+                // Solo se avisa a quien todavía no ha enviado nada: a quien ya
+                // envió, aunque tarde, pedírselo otra vez no tendría sentido.
+                if (notificar && tipo === 'SIN_ENVIAR') {
                     await prisma.notificacion.create({
                         data: {
                             usuarioId: u.id,
@@ -218,12 +268,63 @@ export async function registrarAvisosDisponibilidad(opciones: {
                 }
             }
 
-            yaAvisado.add(`${u.id}|${iso}`)
-            creados.push(aviso)
+            yaRegistrado.add(`${accion}|${u.id}|${iso}`)
+            creados.push({ usuarioId: u.id, indicativo, nombre, semana: iso, tipo, retrasoDias })
         }
     }
 
     return { creados, yaExistian }
+}
+
+/**
+ * Recuerda a quien todavía no ha enviado la disponibilidad de una semana.
+ *
+ * Esto se lanza *antes* de que cierre el plazo, así que no anota ninguna
+ * incidencia: solo empuja, que es de lo que se trata. La incidencia, si acaba
+ * habiéndola, la registra después `registrarAvisosDisponibilidad`.
+ */
+export async function avisarPendientes(lunes: Date): Promise<string[]> {
+    const obligados = await usuariosObligados()
+    const texto = textoSemana(lunes)
+    const iso = isoDe(lunes)
+
+    const enviadas = await prisma.disponibilidad.findMany({ select: { usuarioId: true, semanaInicio: true } })
+    const yaEnviaron = new Set(
+        enviadas.filter(d => semanaNormalizada(d.semanaInicio) === iso).map(d => d.usuarioId)
+    )
+
+    const coordinador = await prisma.usuario.findFirst({
+        where: { activo: true, rol: { nombre: { in: ['coordinador', 'admin', 'superadmin'] } } },
+        select: { id: true },
+    })
+
+    const avisados: string[] = []
+    for (const u of obligados) {
+        if (yaEnviaron.has(u.id)) continue
+
+        await prisma.notificacion.create({
+            data: {
+                usuarioId: u.id,
+                titulo: '⚠ Disponibilidad pendiente de envío',
+                mensaje: `Aún no has enviado tu disponibilidad para la ${texto}. El plazo termina hoy viernes a las 23:59; a partir de ahí queda registrada como fuera de plazo.`,
+                tipo: 'alerta',
+                leida: false,
+            },
+        })
+        if (coordinador) {
+            await prisma.mensaje.create({
+                data: {
+                    remitenteId: coordinador.id,
+                    destinatarioId: u.id,
+                    asunto: `Recordatorio: disponibilidad pendiente — ${texto}`,
+                    contenido: `Hola ${u.nombre},\n\nEstamos preparando el cuadrante de la ${texto} y aún no hemos recibido tu disponibilidad.\n\nEl plazo termina hoy viernes a las 23:59. Accede al panel principal de la aplicación y cumplimenta el formulario «Enviar Disponibilidad» antes de esa hora para poder asignarte los turnos que quieres cubrir.\n\nGracias.\n\nCoordinación — Protección Civil Bormujos`,
+                    leido: false,
+                },
+            })
+        }
+        avisados.push(u.numeroVoluntario || u.nombre)
+    }
+    return avisados
 }
 
 /**

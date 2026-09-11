@@ -1,8 +1,12 @@
 {
   "crons": [
     {
-      "path": "/api/cron/recordatorio-disponibilidad",
-      "schedule": "0 10 * * 5"
+      "path": "/api/cron/recordatorio-disponibilidad?modo=aviso",
+      "schedule": "0 8 * * 5"
+    },
+    {
+      "path": "/api/cron/recordatorio-disponibilidad?modo=registro",
+      "schedule": "0 7 * * 6"
     }
   ]
 }
