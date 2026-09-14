@@ -5,7 +5,7 @@ import { useSession } from 'next-auth/react';
 import { Settings, Shield, CreditCard, History, Users, TrendingUp, Download, Edit, Loader2, Plus, X, Eye, EyeOff, Trash2, Save, ArrowUp, ArrowDown, ArrowUpDown, Lock } from 'lucide-react';
 import TrazabilidadPanel from '@/components/configuracion/TrazabilidadPanel';
 import GestionPermisos from '@/components/configuracion/GestionPermisos';
-import { generarInformeDietasPDF, generarLiquidacionJ44PDF } from '@/lib/informe-dietas';
+import { generarInformeDietasPDF, generarLiquidacionJ44PDF, FIRMANTES_INFORME, type ClaveFirmante } from '@/lib/informe-dietas';
 
 interface Usuario {
   id: string;
@@ -57,7 +57,9 @@ export default function ConfiguracionPage() {
   const [detalleJ44, setDetalleJ44] = useState<any[]>([]);
   // Definición de tramos (+4h/+8h/+12h) para el desglose de días por franja.
   const [tramosDef, setTramosDef] = useState<{ min: number; amount: number }[]>([]);
-  const [firmanteJ44, setFirmanteJ44] = useState<'emilio' | 'diego'>('emilio');
+  const [firmanteJ44, setFirmanteJ44] = useState<ClaveFirmante>('emilio');
+  // Firma del informe mensual de dietas de todos los voluntarios
+  const [firmanteDietas, setFirmanteDietas] = useState<ClaveFirmante>('emilio');
 
   // Estados para usuarios
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
@@ -189,9 +191,9 @@ export default function ConfiguracionPage() {
         `${totalDietas.toFixed(2)} EUR`, `${totalKm.toFixed(2)} EUR`, `${totalImporte.toFixed(2)} EUR`],
       resumenImporte: `${totalImporte.toFixed(2)} EUR`,
       resumenMeta: `${reportData.length} efectivo(s) · ${totalDias} dieta(s) registrada(s)`,
-      firmanteNombre: 'Emilio Simon Gomez',
-      firmanteCargo: 'Jefe de Proteccion Civil y Emergencias',
-      nombreArchivo: `${soloTabla ? 'Tabla-importes-dietas' : 'Informe-dietas'}-${selectedMonth}.pdf`,
+      firmanteNombre: FIRMANTES_INFORME[firmanteDietas].nombre,
+      firmanteCargo: FIRMANTES_INFORME[firmanteDietas].cargo,
+      nombreArchivo: `${soloTabla ? 'Tabla-importes-dietas' : 'Informe-dietas'}-${selectedMonth}${FIRMANTES_INFORME[firmanteDietas].sufijoArchivo}.pdf`,
     });
   };
 
@@ -231,10 +233,12 @@ export default function ConfiguracionPage() {
       totalOrdinarios: suma(ordinarios),
       totalExtras: suma(extras),
       totalGeneral: Number(reportJ44.total),
-      firmanteNombre: firmanteJ44 === 'diego' ? 'Diego Gavino Rodriguez' : 'Emilio Simon Gomez',
-      firmanteCargo: firmanteJ44 === 'diego' ? 'Subinspector Jefe de Policia Local de Bormujos' : 'Jefe de Proteccion Civil y Emergencias',
+      firmanteNombre: FIRMANTES_INFORME[firmanteJ44].nombre,
+      firmanteCargo: FIRMANTES_INFORME[firmanteJ44].cargo,
+      // Si la liquidación del Jefe de Servicio la visa un tercero, no se le
+      // muestra el importe total.
       ocultarImporte: firmanteJ44 === 'diego',
-      nombreArchivo: `Liquidacion-J44-${selectedMonth}${firmanteJ44 === 'diego' ? '-PL' : ''}.pdf`,
+      nombreArchivo: `Liquidacion-J44-${selectedMonth}${FIRMANTES_INFORME[firmanteJ44].sufijoArchivo}.pdf`,
     });
   };
 
@@ -755,7 +759,20 @@ export default function ConfiguracionPage() {
                   <p className="text-3xl font-bold">{reportData.reduce((acc, r) => acc + r.total, 0).toFixed(2)} €</p>
                   <p className="text-xs text-slate-400 mt-1">{reportData.length} efectivo(s) · {reportData.reduce((acc, r) => acc + r.dias, 0)} días de servicio · el Jefe de Servicio (J-44) se liquida aparte</p>
                 </div>
-                <div className="flex gap-3">
+                <div className="flex gap-3 items-center flex-wrap">
+                  {/* Quién firma el informe, igual que en la liquidación del J-44 */}
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs font-semibold text-slate-400 uppercase">Firma</label>
+                    <select
+                      value={firmanteDietas}
+                      onChange={e => setFirmanteDietas(e.target.value as ClaveFirmante)}
+                      className="border border-white/30 bg-slate-800 text-white rounded-lg px-2 py-2 text-xs focus:outline-none focus:border-white/60"
+                    >
+                      {Object.entries(FIRMANTES_INFORME).map(([clave, f]) => (
+                        <option key={clave} value={clave}>{f.etiqueta}</option>
+                      ))}
+                    </select>
+                  </div>
                   <button onClick={() => exportarPDF(false)} className="bg-white text-slate-900 px-5 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-slate-100 transition-colors"><Download size={18} /> Informe completo</button>
                   <button onClick={() => exportarPDF(true)} className="bg-transparent border border-white/40 text-white px-5 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-white/10 transition-colors"><Download size={18} /> Solo tabla</button>
                 </div>
@@ -775,11 +792,12 @@ export default function ConfiguracionPage() {
                   <label className="text-xs font-semibold text-amber-700">Firma:</label>
                   <select
                     value={firmanteJ44}
-                    onChange={e => setFirmanteJ44(e.target.value as 'emilio' | 'diego')}
+                    onChange={e => setFirmanteJ44(e.target.value as ClaveFirmante)}
                     className="border border-amber-300 rounded-lg px-2 py-2 text-xs bg-white focus:outline-none focus:border-amber-500"
                   >
-                    <option value="emilio">Emilio Simón Gómez — Jefe de Protección Civil (J-44)</option>
-                    <option value="diego">Diego Gaviño Rodríguez — Subinspector Jefe de Policía Local</option>
+                    {Object.entries(FIRMANTES_INFORME).map(([clave, f]) => (
+                      <option key={clave} value={clave}>{f.etiqueta}</option>
+                    ))}
                   </select>
                   <button onClick={exportarPDFJ44} className="bg-amber-600 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-amber-700">
                     <Download size={16} /> Informe J-44

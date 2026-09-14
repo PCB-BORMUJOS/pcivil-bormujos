@@ -23,6 +23,30 @@ const txt = (s: any) => String(s ?? '')
   .replace(/[—–]/g, '-').replace(/[“”]/g, '"').replace(/[’‘]/g, "'")
   .replace(/€/g, 'EUR')
 
+/**
+ * Quién puede firmar los informes de dietas.
+ *
+ * Lo normal es que firme la Jefatura del Servicio. Que pueda firmarlo el
+ * Subinspector Jefe de Policía Local existe para el caso en que la liquidación
+ * afecte al propio Jefe de Servicio y convenga que la visa un tercero.
+ */
+export const FIRMANTES_INFORME = {
+  emilio: {
+    nombre: 'Emilio Simon Gomez',
+    cargo: 'Jefe de Proteccion Civil y Emergencias',
+    etiqueta: 'Emilio Simón Gómez — Jefe de Protección Civil (J-44)',
+    sufijoArchivo: '',
+  },
+  diego: {
+    nombre: 'Diego Gavino Rodriguez',
+    cargo: 'Subinspector Jefe de Policia Local de Bormujos',
+    etiqueta: 'Diego Gaviño Rodríguez — Subinspector Jefe de Policía Local',
+    sufijoArchivo: '-PL',
+  },
+} as const
+
+export type ClaveFirmante = keyof typeof FIRMANTES_INFORME
+
 export interface ColumnaInforme { label: string; align?: 'left' | 'center' | 'right'; width: number }
 
 export interface InformeDietasOpts {

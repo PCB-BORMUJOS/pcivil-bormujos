@@ -25,7 +25,13 @@ export function fechasMemoria(mesAnio: string) {
   }
 }
 
-export function bloquesMemoriaDietas(mesAnio: string): BloqueMemoria[] {
+/** Quien redacta el informe, que no tiene por qué ser quien lo firma. */
+export const ELABORA_INFORME = {
+  nombre: 'Emilio Simón Gómez',
+  cargo: 'Jefe de Protección Civil y Emergencias del Ayuntamiento de Bormujos',
+}
+
+export function bloquesMemoriaDietas(mesAnio: string, elabora = ELABORA_INFORME): BloqueMemoria[] {
   const f = fechasMemoria(mesAnio)
   return [
     { tipo: 'titulo', texto: 'INFORME JUSTIFICACIÓN DE COMPENSACIÓN DE LAS DIETAS PARA LOS MIEMBROS DEL SERVICIO LOCAL DE PROTECCIÓN CIVIL' },
@@ -74,5 +80,6 @@ export function bloquesMemoriaDietas(mesAnio: string): BloqueMemoria[] {
     { tipo: 'parrafo', texto: 'Por tanto, resulta igualmente importante dejar claro que, en ningún caso, se entiende la existencia de una relación laboral entre los miembros del Servicio y la Administración Local.' },
     { tipo: 'parrafo', texto: 'Se ha elaborado un acuerdo individual entre cada miembro del servicio y la administración local, firmado libremente por ambas partes, en el que se reconocen sus derechos y obligaciones, tanto presentes como futuras, para que surta los efectos correspondientes.' },
     { tipo: 'parrafo', texto: 'Al presente informe se adjuntan los acuerdos individuales, que serán entregados de forma exclusiva, salvo que en el futuro se integren nuevos miembros al servicio, lo cual conllevará la incorporación de los acuerdos individuales correspondientes.' },
+    { tipo: 'parrafo', texto: `El presente informe ha sido elaborado por ${elabora.nombre}, ${elabora.cargo}.` },
   ]
 }
