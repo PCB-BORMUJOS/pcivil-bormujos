@@ -151,6 +151,13 @@ export default function CuadrantesPage() {
   const [slotsExpandidos, setSlotsExpandidos] = useState<Record<string, boolean>>({})
   const { isAdmin } = usePermisos()
 
+  // La semana inicial se calcula con new Date(), que difiere entre el servidor
+  // (UTC) y el navegador (Madrid) y provocaba errores de hidratación en el
+  // calendario. Hasta que el componente monta en el cliente se muestra un
+  // marcador estable, idéntico en servidor y cliente.
+  const [montado, setMontado] = useState(false)
+  useEffect(() => { setMontado(true) }, [])
+
   const calcularSugerencias = (
     dispMap: Record<string, UsuarioDisponible[]>,
     asigMap: Record<string, string[]>
@@ -710,6 +717,17 @@ export default function CuadrantesPage() {
   const totalSlots = Object.keys(capacidad).length
   const personasUnicas = new Set(Object.values(asignaciones).flat()).size
   const totalAsignaciones = Object.values(asignaciones).flat().length
+
+  // Marcador estable durante el SSR y el primer render del cliente: evita el
+  // desajuste de hidratación por las fechas dependientes de la hora actual.
+  if (!montado) {
+    return (
+      <div className="space-y-4">
+        <div className="h-8 w-64 bg-slate-100 rounded animate-pulse" />
+        <div className="h-96 bg-slate-50 border border-slate-200 rounded-2xl animate-pulse" />
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-4">
