@@ -381,6 +381,9 @@ export default function EstadisticasPage() {
                 <Panel title="Detalle por voluntario">
                   <p className="text-xs text-slate-400 mb-3">
                     Las filas con incidencias de disponibilidad se despliegan al pulsarlas, con la semana, el plazo y la hora real del envío.
+                    {' '}La columna de disponibilidad recoge el <strong className="font-semibold text-slate-500">historial completo</strong>
+                    {data.dispHistorialDesde ? ` desde la primera semana registrada en la aplicación (${fmtDate(data.dispHistorialDesde)})` : ''},
+                    {' '}no solo el periodo seleccionado arriba.
                   </p>
                   <DataTable
                     heads={[

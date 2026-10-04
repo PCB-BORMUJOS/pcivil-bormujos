@@ -32,9 +32,16 @@ async function main() {
         semanas.length ? `(${isoDe(semanas[0])} → ${isoDe(semanas[semanas.length - 1])})` : '')
     console.log(`Obligados a enviar: ${obligados.length}   ·   exentos: ${EXENTOS_DISPONIBILIDAD.join(', ')}\n`)
 
-    const { creados, yaExistian } = await registrarAvisosDisponibilidad({
+    const { creados, corregidos, yaExistian } = await registrarAvisosDisponibilidad({
         semanas, notificar: false, simular: !aplicar,
     })
+
+    if (corregidos.length) {
+        console.log(`Incidencias ${aplicar ? 'corregidas' : 'que se corregirían'}: ${corregidos.length}`)
+        corregidos.forEach(c => console.log(
+            `   ${c.semana}  ${c.indicativo.padEnd(5)} → ${c.tipo === 'FUERA_DE_PLAZO' ? `fuera de plazo (+${c.retraso})` : 'sin enviar'}  ${c.nombre}`))
+        console.log()
+    }
 
     const porPersona = new Map<string, { nombre: string; sin: string[]; tarde: string[] }>()
     creados.forEach(c => {

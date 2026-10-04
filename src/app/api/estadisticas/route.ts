@@ -156,11 +156,15 @@ export async function GET(request: NextRequest) {
     // Se traen las filas una por una, y no agrupadas, porque la tabla de personal
     // despliega el detalle: qué semana fue, cuándo cerraba el plazo y a qué hora
     // real se envió la que llegó tarde.
+    //
+    // A diferencia del resto del panel, esto NO se recorta al año ni al mes
+    // seleccionados: es un historial de cumplimiento acumulado, no una métrica
+    // del periodo. Filtrarlo hacía que al elegir un mes se vieran solo las
+    // incidencias de ese mes, y que en enero el historial apareciera vacío.
     const incidenciasRaw = await prisma.auditLog.findMany({
       where: {
         accion: { in: ['RECORDATORIO', 'FUERA_DE_PLAZO'] },
         entidad: 'Disponibilidad',
-        createdAt: { gte: fechaInicio, lte: fechaFin },
       },
       select: { accion: true, usuarioId: true, createdAt: true, datosNuevos: true },
       orderBy: { createdAt: 'desc' },
@@ -198,6 +202,14 @@ export async function GET(request: NextRequest) {
     // Más reciente primero, y dentro de la misma semana antes lo no enviado
     Object.values(recordatoriosMap).forEach(acc => acc.detalle.sort((a, b) =>
       (b.semana || '').localeCompare(a.semana || '') || a.tipo.localeCompare(b.tipo)))
+
+    // Desde cuándo hay disponibilidad registrada en la aplicación, para poder
+    // decir en pantalla hasta dónde llega el historial en lugar de dejarlo a la
+    // interpretación de quien lo lee.
+    const primeraDisp = await prisma.disponibilidad.findFirst({
+      orderBy: { semanaInicio: 'asc' },
+      select: { semanaInicio: true },
+    }).catch(() => null)
 
     // ── GPS km por vehículo (Haversine sobre UbicacionVehiculo) ─────────────
     const ubicacionesGPS = await prisma.ubicacionVehiculo.findMany({
@@ -675,6 +687,8 @@ export async function GET(request: NextRequest) {
       },
       guardiasPorMes, guardiasPorRol,
       statsVoluntarios, turnosPorMes, statsJ44,
+      // El historial de disponibilidad es acumulado y no depende del periodo
+      dispHistorialDesde: primeraDisp?.semanaInicio ?? null,
       statsPorArea, dietasPorMes,
       eventosPorMes, eventosTipo,
       statsFormacion,

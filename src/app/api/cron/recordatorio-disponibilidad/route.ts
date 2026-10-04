@@ -57,14 +57,23 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ success: true, modo, semana: textoSemana(lunes), avisados: avisados.length, personas: avisados })
         }
 
-        // Plazo cerrado: se registra lo ocurrido con la semana que empieza el lunes
+        // Plazo cerrado: se registra lo ocurrido con la semana que empieza el lunes.
+        //
+        // Se repasan además las cuatro semanas anteriores. No es por capricho:
+        // esta comprobación corre el viernes por la tarde y marca «sin enviar» a
+        // quien aún no ha mandado nada, pero bastantes envían esa misma noche o
+        // el fin de semana. Al volver sobre esas semanas, la incidencia se
+        // corrige a «fuera de plazo» con su hora real en vez de quedarse mal.
         const lunes = lunesSiguiente()
-        const { creados, yaExistian } = await registrarAvisosDisponibilidad({
-            semanas: [lunes], notificar: true,
+        const SEMANA_MS = 7 * 86400000
+        const semanas = [4, 3, 2, 1, 0].map(i => new Date(lunes.getTime() - i * SEMANA_MS))
+
+        const { creados, corregidos, yaExistian } = await registrarAvisosDisponibilidad({
+            semanas, notificar: true,
         })
         const sinEnviar = creados.filter(c => c.tipo === 'SIN_ENVIAR')
         const tarde = creados.filter(c => c.tipo === 'FUERA_DE_PLAZO')
-        console.log(`[CRON] Registro disponibilidad ${textoSemana(lunes)}: ${sinEnviar.length} sin enviar, ${tarde.length} fuera de plazo, ${yaExistian} ya constaban`)
+        console.log(`[CRON] Registro disponibilidad ${textoSemana(lunes)}: ${sinEnviar.length} sin enviar, ${tarde.length} fuera de plazo, ${corregidos.length} corregidas, ${yaExistian} ya constaban`)
 
         return NextResponse.json({
             success: true,
@@ -72,6 +81,7 @@ export async function GET(request: NextRequest) {
             semana: textoSemana(lunes),
             sinEnviar: sinEnviar.map(c => c.indicativo),
             fueraDePlazo: tarde.map(c => `${c.indicativo} (+${c.retraso})`),
+            corregidas: corregidos.map(c => `${c.indicativo} ${c.semana} → ${c.tipo === 'FUERA_DE_PLAZO' ? `fuera de plazo (+${c.retraso})` : 'sin enviar'}`),
             yaRegistrados: yaExistian,
         })
     } catch (error) {

@@ -183,9 +183,9 @@ export async function registrarAvisosDisponibilidad(opciones: {
     semanas: Date[]
     notificar: boolean
     simular?: boolean
-}): Promise<{ creados: AvisoGenerado[]; yaExistian: number }> {
+}): Promise<{ creados: AvisoGenerado[]; corregidos: AvisoGenerado[]; yaExistian: number }> {
     const { semanas, notificar, simular = false } = opciones
-    if (semanas.length === 0) return { creados: [], yaExistian: 0 }
+    if (semanas.length === 0) return { creados: [], corregidos: [], yaExistian: 0 }
 
     const obligados = await usuariosObligados()
     const semanasIso = semanas.map(isoDe)
@@ -203,16 +203,25 @@ export async function registrarAvisosDisponibilidad(opciones: {
         if (!previo || d.createdAt < previo) envio.set(clave, d.createdAt)
     })
 
-    // Qué incidencias existen ya, para no repetirlas
+    // Qué incidencias existen ya. La clave es persona + semana, SIN el tipo: de
+    // una semana solo puede haber una incidencia. Si la registrada no coincide
+    // con lo que de verdad pasó, se corrige en lugar de añadir otra.
+    //
+    // Esto ocurre de hecho todas las semanas: la comprobación se lanza el
+    // viernes por la tarde y anota «sin enviar» a quien aún no ha mandado nada,
+    // pero algunos envían esa misma noche o el fin de semana. Sin corregirlo, se
+    // quedaban marcados como si no hubieran enviado nunca.
     const previos = await prisma.auditLog.findMany({
         where: { accion: { in: Object.values(ACCIONES_INCIDENCIA) }, entidad: 'Disponibilidad' },
-        select: { accion: true, usuarioId: true, datosNuevos: true },
+        select: { id: true, accion: true, usuarioId: true, datosNuevos: true },
     })
-    const yaRegistrado = new Set(
-        previos.map(a => `${a.accion}|${a.usuarioId}|${(a.datosNuevos as any)?.semanaInicio ?? ''}`)
-    )
+    const yaRegistrado = new Map<string, { id: string; accion: string }>()
+    previos.forEach(a => {
+        yaRegistrado.set(`${a.usuarioId}|${(a.datosNuevos as any)?.semanaInicio ?? ''}`, { id: a.id, accion: a.accion })
+    })
 
     const creados: AvisoGenerado[] = []
+    const corregidos: AvisoGenerado[] = []
     let yaExistian = 0
 
     // El remitente de los mensajes internos, igual que en el resto del módulo
@@ -246,7 +255,8 @@ export async function registrarAvisosDisponibilidad(opciones: {
 
             const tipo: TipoIncidencia = cuandoEnvio ? 'FUERA_DE_PLAZO' : 'SIN_ENVIAR'
             const accion = ACCIONES_INCIDENCIA[tipo]
-            if (yaRegistrado.has(`${accion}|${u.id}|${iso}`)) { yaExistian++; continue }
+            const previo = yaRegistrado.get(`${u.id}|${iso}`)
+            if (previo && previo.accion === accion) { yaExistian++; continue }
 
             const indicativo = u.numeroVoluntario || u.nombre
             const nombre = `${u.nombre} ${u.apellidos}`
@@ -267,28 +277,30 @@ export async function registrarAvisosDisponibilidad(opciones: {
                 ? `Disponibilidad fuera de plazo — ${indicativo} ${nombre} envió la de la ${texto} con ${retraso} de retraso sobre el cierre del viernes a las 12:00`
                 : `Disponibilidad no enviada — ${indicativo} ${nombre} no envió la de la ${texto}`
 
+            const datos = {
+                accion,
+                entidad: 'Disponibilidad',
+                entidadId: u.id,
+                descripcion,
+                datosNuevos: {
+                    semanaInicio: iso,
+                    cierre: cierre.toISOString(),
+                    ...(cuandoEnvio ? { enviadaEl: cuandoEnvio.toISOString(), retrasoHoras, retraso } : {}),
+                },
+                usuarioId: u.id,
+                usuarioNombre: nombre,
+                modulo: 'Sistema',
+                createdAt: cuando,
+            }
+
             if (!simular) {
-                await prisma.auditLog.create({
-                    data: {
-                        accion,
-                        entidad: 'Disponibilidad',
-                        entidadId: u.id,
-                        descripcion,
-                        datosNuevos: {
-                            semanaInicio: iso,
-                            cierre: cierre.toISOString(),
-                            ...(cuandoEnvio ? { enviadaEl: cuandoEnvio.toISOString(), retrasoHoras, retraso } : {}),
-                        },
-                        usuarioId: u.id,
-                        usuarioNombre: nombre,
-                        modulo: 'Sistema',
-                        createdAt: cuando,
-                    },
-                })
+                if (previo) await prisma.auditLog.update({ where: { id: previo.id }, data: datos })
+                else await prisma.auditLog.create({ data: datos })
 
                 // Solo se avisa a quien todavía no ha enviado nada: a quien ya
                 // envió, aunque tarde, pedírselo otra vez no tendría sentido.
-                if (notificar && tipo === 'SIN_ENVIAR') {
+                // Y nunca al corregir: el aviso ya se mandó en su momento.
+                if (notificar && !previo && tipo === 'SIN_ENVIAR') {
                     await prisma.notificacion.create({
                         data: {
                             usuarioId: u.id,
@@ -312,12 +324,13 @@ export async function registrarAvisosDisponibilidad(opciones: {
                 }
             }
 
-            yaRegistrado.add(`${accion}|${u.id}|${iso}`)
-            creados.push({ usuarioId: u.id, indicativo, nombre, semana: iso, tipo, retrasoHoras, retraso })
+            const aviso: AvisoGenerado = { usuarioId: u.id, indicativo, nombre, semana: iso, tipo, retrasoHoras, retraso }
+            if (previo) corregidos.push(aviso); else creados.push(aviso)
+            yaRegistrado.set(`${u.id}|${iso}`, { id: previo?.id ?? '', accion })
         }
     }
 
-    return { creados, yaExistian }
+    return { creados, corregidos, yaExistian }
 }
 
 /**
