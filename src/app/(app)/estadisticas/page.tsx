@@ -56,9 +56,24 @@ const YEARS = [currentYear, currentYear - 1, currentYear - 2]
  * De las que no se enviaron solo hay semana y plazo. De las que llegaron tarde
  * se muestra además la fecha y la hora real del envío, en hora española, que es
  * la referencia del plazo.
+ *
+ * Desde aquí se justifican: la incidencia no se borra, sigue constando lo que
+ * ocurrió, pero al quedar escrito el motivo y quién lo autoriza deja de contar
+ * como incumplimiento.
  */
-function DetalleDisponibilidad({ incidencias }: { incidencias: any[] }) {
+function DetalleDisponibilidad({ incidencias, usuarioId, puedeJustificar, onCambio }: {
+  incidencias: any[]
+  usuarioId: string
+  puedeJustificar: boolean
+  onCambio: () => void
+}) {
+  const [editando, setEditando] = useState<string | null>(null)
+  const [motivo, setMotivo] = useState('')
+  const [guardando, setGuardando] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
   if (!incidencias?.length) return null
+
   const semana = (iso: string | null) => {
     if (!iso) return '—'
     const lunes = new Date(`${iso}T00:00:00.000Z`)
@@ -66,27 +81,57 @@ function DetalleDisponibilidad({ incidencias }: { incidencias: any[] }) {
     const f = (d: Date) => d.toLocaleDateString('es-ES', { timeZone: 'UTC', day: 'numeric', month: 'short' })
     return `${f(lunes)} – ${f(domingo)}`
   }
+
+  const justificar = async (sem: string) => {
+    setGuardando(sem); setError(null)
+    try {
+      const r = await fetch('/api/admin/disponibilidades/justificar', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ usuarioId, semana: sem, motivo }),
+      })
+      const d = await r.json()
+      if (!r.ok) throw new Error(d.error || 'No se ha podido guardar')
+      setEditando(null); setMotivo(''); onCambio()
+    } catch (e: any) { setError(e.message) } finally { setGuardando(null) }
+  }
+
+  const retirar = async (sem: string) => {
+    setGuardando(sem); setError(null)
+    try {
+      const r = await fetch(`/api/admin/disponibilidades/justificar?usuarioId=${usuarioId}&semana=${sem}`, { method: 'DELETE' })
+      const d = await r.json()
+      if (!r.ok) throw new Error(d.error || 'No se ha podido retirar')
+      onCambio()
+    } catch (e: any) { setError(e.message) } finally { setGuardando(null) }
+  }
+
+  const justificadas = incidencias.filter(x => x.justificacion).length
+
   return (
-    <div className="space-y-2">
+    <div className="space-y-2" onClick={e => e.stopPropagation()}>
       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">
         Incidencias de disponibilidad · {incidencias.length}
+        {justificadas > 0 && <span className="text-emerald-600"> · {justificadas} justificada(s), no cuentan</span>}
       </p>
+      {error && <p className="text-xs text-red-600 mb-2">{error}</p>}
       <div className="overflow-x-auto">
-        <table className="w-full text-xs min-w-[620px]">
+        <table className="w-full text-xs min-w-[760px]">
           <thead>
             <tr className="text-left text-[10px] font-bold text-slate-400 uppercase tracking-widest">
               <th className="pb-2 pr-4">Semana del cuadrante</th>
               <th className="pb-2 pr-4">Estado</th>
               <th className="pb-2 pr-4">Plazo (viernes 12:00)</th>
               <th className="pb-2 pr-4">Enviada realmente</th>
-              <th className="pb-2">Retraso</th>
+              <th className="pb-2 pr-4">Retraso</th>
+              <th className="pb-2">Justificación</th>
             </tr>
           </thead>
           <tbody>
             {incidencias.map((x: any, i: number) => {
               const tarde = x.tipo === 'fuera_de_plazo'
+              const just = x.justificacion
               return (
-                <tr key={i} className="border-t border-slate-200/70">
+                <tr key={i} className={`border-t border-slate-200/70 ${just ? 'opacity-70' : ''}`}>
                   <td className="py-2 pr-4 font-medium text-slate-700 whitespace-nowrap">{semana(x.semana)}</td>
                   <td className="py-2 pr-4">
                     {tarde
@@ -102,13 +147,58 @@ function DetalleDisponibilidad({ incidencias }: { incidencias: any[] }) {
                       ? <span className="font-semibold text-slate-700">{fmtDiaSemana(x.enviadaEl)} {fmtFechaHora(x.enviadaEl)}</span>
                       : <span className="text-red-400 italic">no se envió</span>}
                   </td>
-                  <td className="py-2 font-bold text-amber-700 whitespace-nowrap">{x.retraso ? `+${x.retraso}` : '—'}</td>
+                  <td className="py-2 pr-4 font-bold text-amber-700 whitespace-nowrap">{x.retraso ? `+${x.retraso}` : '—'}</td>
+                  <td className="py-2 min-w-[240px]">
+                    {just ? (
+                      <div className="flex items-start gap-2">
+                        <div className="flex-1">
+                          <span className="px-1.5 py-0.5 bg-emerald-100 text-emerald-700 rounded font-bold">✓ Justificada</span>
+                          <p className="text-slate-600 mt-1">{just.motivo}</p>
+                          <p className="text-slate-400 mt-0.5">
+                            {just.autorizadoPor || 'Jefatura'} · {fmtDate(just.fecha)}
+                          </p>
+                        </div>
+                        {puedeJustificar && (
+                          <button onClick={() => retirar(x.semana)} disabled={guardando === x.semana}
+                                  className="text-slate-400 hover:text-red-600 underline whitespace-nowrap disabled:opacity-50">
+                            Retirar
+                          </button>
+                        )}
+                      </div>
+                    ) : editando === x.semana ? (
+                      <div className="flex items-center gap-2">
+                        <input
+                          autoFocus value={motivo} onChange={e => setMotivo(e.target.value)}
+                          onKeyDown={e => { if (e.key === 'Enter' && motivo.trim().length > 2) justificar(x.semana) }}
+                          placeholder="Motivo de la justificación"
+                          className="flex-1 border border-slate-300 rounded-lg px-2 py-1 text-xs outline-none focus:border-indigo-500"
+                        />
+                        <button onClick={() => justificar(x.semana)} disabled={motivo.trim().length < 3 || guardando === x.semana}
+                                className="px-2 py-1 bg-indigo-600 text-white rounded-lg font-bold disabled:opacity-40 whitespace-nowrap">
+                          {guardando === x.semana ? '...' : 'Guardar'}
+                        </button>
+                        <button onClick={() => { setEditando(null); setMotivo('') }} className="text-slate-400 hover:text-slate-600">
+                          Cancelar
+                        </button>
+                      </div>
+                    ) : puedeJustificar ? (
+                      <button onClick={() => { setEditando(x.semana); setMotivo('') }}
+                              className="text-indigo-600 hover:text-indigo-800 underline">
+                        Justificar
+                      </button>
+                    ) : <span className="text-slate-300">—</span>}
+                  </td>
                 </tr>
               )
             })}
           </tbody>
         </table>
       </div>
+      {puedeJustificar && (
+        <p className="text-[11px] text-slate-400 pt-2">
+          Justificar no borra la incidencia: queda constancia de lo ocurrido y del motivo, y deja de contar como incumplimiento.
+        </p>
+      )}
     </div>
   )
 }
@@ -389,7 +479,7 @@ export default function EstadisticasPage() {
                     heads={[
                       thVol('Nº Vol.','numeroVoluntario'), thVol('Nombre completo','nombre'), thVol('Área','area'),
                       thVol('Categoría','categoria'), thVol('Guardias','guardias'), thVol('Horas','horas'),
-                      thVol('Dietas','importeDietas'), thVol('Km','km'), thVol('Disp. ⚠ sin enviar / ⏱ tarde','recordatorios'), thVol('Estado','activo'),
+                      thVol('Dietas','importeDietas'), thVol('Km','km'), thVol('Disp. ⚠ sin env. / ⏱ tarde / ✓ just.','recordatorios'), thVol('Estado','activo'),
                     ]}
                     rows={statsVolOrdenado.map((v:any)=>[
                       <span key="n" className="font-mono text-xs font-bold text-indigo-600">{v.numeroVoluntario||'—'}</span>,
@@ -400,20 +490,31 @@ export default function EstadisticasPage() {
                       v.horas>0?`${v.horas} h`:'—',
                       v.importeDietas>0?<span key="d" className="font-semibold text-green-700">{fmtEur(v.importeDietas)}</span>:'—',
                       v.km>0?<span key="km">{fmtKm(v.km)}</span>:'—',
-                      v.recordatorios>0
+                      (v.dispDetalle?.length || 0) > 0
                         ? <span key="rec" className="inline-flex items-center gap-1" title={[
                             v.dispSinEnviar>0 ? `${v.dispSinEnviar} sin enviar` : '',
                             v.dispFueraDePlazo>0 ? `${v.dispFueraDePlazo} fuera de plazo` : '',
+                            v.dispJustificadas>0 ? `${v.dispJustificadas} justificada(s), no cuentan` : '',
                             v.ultimoRecordatorio ? `Última: ${fmtDate(v.ultimoRecordatorio)}` : '',
                           ].filter(Boolean).join(' · ')}>
                             {v.dispSinEnviar>0 && <span className="px-1.5 py-0.5 bg-red-100 text-red-700 rounded text-xs font-bold">⚠ {v.dispSinEnviar}</span>}
                             {v.dispFueraDePlazo>0 && <span className="px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded text-xs font-bold">⏱ {v.dispFueraDePlazo}</span>}
+                            {/* Las justificadas se enseñan, pero aparte: constan y no cuentan */}
+                            {v.dispJustificadas>0 && <span className="px-1.5 py-0.5 bg-emerald-50 text-emerald-600 rounded text-xs font-bold">✓ {v.dispJustificadas}</span>}
+                            {v.recordatorios===0 && v.dispJustificadas>0 && <span className="text-slate-300 text-xs ml-0.5">sin incumplir</span>}
                           </span>
                         : <span key="rec" className="text-slate-300 text-xs">—</span>,
                       <Badge key="s" label={v.activo?'Activo':'Inactivo'} variant={v.activo?'green':'red'}/>,
                     ])}
                     detalles={statsVolOrdenado.map((v:any)=>
-                      v.recordatorios>0 ? <DetalleDisponibilidad incidencias={v.dispDetalle}/> : null
+                      v.dispDetalle?.length
+                        ? <DetalleDisponibilidad
+                            incidencias={v.dispDetalle}
+                            usuarioId={v.id}
+                            puedeJustificar={esSuperadmin || ['coordinador','admin'].includes((session?.user as any)?.rol)}
+                            onCambio={fetchData}
+                          />
+                        : null
                     )}
                     empty="Sin datos de voluntarios"
                   />

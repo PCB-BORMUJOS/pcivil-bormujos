@@ -170,25 +170,45 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: 'desc' },
     }).catch(() => [])
 
+    // Las justificadas siguen figurando, pero no cuentan como incumplimiento:
+    // la incidencia es un hecho y la justificación es el motivo por el que no
+    // se le reprocha.
+    const justificaciones = await prisma.justificacionDisponibilidad.findMany({
+      select: { usuarioId: true, semanaInicio: true, motivo: true, autorizadoPorNombre: true, createdAt: true },
+    }).catch(() => [])
+    const justifMap = new Map(justificaciones.map(j => [
+      `${j.usuarioId}|${j.semanaInicio.toISOString().slice(0, 10)}`,
+      { motivo: j.motivo, autorizadoPor: j.autorizadoPorNombre, fecha: j.createdAt },
+    ]))
+
     interface IncidenciaDisp {
       tipo: 'sin_enviar' | 'fuera_de_plazo'
       semana: string | null
       cierre: string | null
       enviadaEl: string | null
       retraso: string | null
+      justificacion: { motivo: string; autorizadoPor: string | null; fecha: Date } | null
     }
     const recordatoriosMap: Record<string, {
-      count: number; sinEnviar: number; fueraDePlazo: number
+      count: number; sinEnviar: number; fueraDePlazo: number; justificadas: number
       ultimo: Date | null; detalle: IncidenciaDisp[]
     }> = {}
     ;(incidenciasRaw as any[]).forEach(r => {
       if (!r.usuarioId) return
-      const acc = recordatoriosMap[r.usuarioId] ||= { count: 0, sinEnviar: 0, fueraDePlazo: 0, ultimo: null, detalle: [] }
+      const acc = recordatoriosMap[r.usuarioId] ||= { count: 0, sinEnviar: 0, fueraDePlazo: 0, justificadas: 0, ultimo: null, detalle: [] }
       const tarde = r.accion === 'FUERA_DE_PLAZO'
-      acc.count++
-      if (tarde) acc.fueraDePlazo++; else acc.sinEnviar++
-      if (r.createdAt && (!acc.ultimo || r.createdAt > acc.ultimo)) acc.ultimo = r.createdAt
       const d = (r.datosNuevos || {}) as any
+      const justificacion = justifMap.get(`${r.usuarioId}|${d.semanaInicio}`) ?? null
+
+      if (justificacion) {
+        acc.justificadas++
+      } else {
+        // Solo lo no justificado suma al recuento que se muestra en la columna
+        acc.count++
+        if (tarde) acc.fueraDePlazo++; else acc.sinEnviar++
+        if (r.createdAt && (!acc.ultimo || r.createdAt > acc.ultimo)) acc.ultimo = r.createdAt
+      }
+
       acc.detalle.push({
         tipo: tarde ? 'fuera_de_plazo' : 'sin_enviar',
         semana: d.semanaInicio ?? null,
@@ -197,6 +217,7 @@ export async function GET(request: NextRequest) {
         // que no se enviaron nunca no hay nada que fechar.
         enviadaEl: d.enviadaEl ?? null,
         retraso: d.retraso ?? null,
+        justificacion,
       })
     })
     // Más reciente primero, y dentro de la misma semana antes lo no enviado
@@ -317,6 +338,7 @@ export async function GET(request: NextRequest) {
         recordatorios: (recordatoriosMap[v.id]?.count) || 0,
         dispSinEnviar: (recordatoriosMap[v.id]?.sinEnviar) || 0,
         dispFueraDePlazo: (recordatoriosMap[v.id]?.fueraDePlazo) || 0,
+        dispJustificadas: (recordatoriosMap[v.id]?.justificadas) || 0,
         dispDetalle: recordatoriosMap[v.id]?.detalle || [],
         ultimoRecordatorio: recordatoriosMap[v.id]?.ultimo || null,
       }

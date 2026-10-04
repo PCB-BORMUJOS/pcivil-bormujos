@@ -1233,12 +1233,18 @@ export default function MiAreaPage() {
                   {recordatorios.length > 0 && (
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
                       <div className="p-4 rounded-xl bg-red-50 border border-red-100">
-                        <p className="text-2xl font-bold text-red-700">{recordatorios.filter(r => !r.fueraDePlazo).length}</p>
+                        <p className="text-2xl font-bold text-red-700">{recordatorios.filter(r => !r.fueraDePlazo && !r.justificacion).length}</p>
                         <p className="text-xs font-semibold text-red-600 uppercase tracking-wide mt-0.5">Semanas sin enviar</p>
                       </div>
                       <div className="p-4 rounded-xl bg-amber-50 border border-amber-100">
-                        <p className="text-2xl font-bold text-amber-700">{recordatorios.filter(r => r.fueraDePlazo).length}</p>
+                        <p className="text-2xl font-bold text-amber-700">{recordatorios.filter(r => r.fueraDePlazo && !r.justificacion).length}</p>
                         <p className="text-xs font-semibold text-amber-600 uppercase tracking-wide mt-0.5">Enviadas fuera de plazo</p>
+                        {/* Lo justificado consta pero no cuenta */}
+                        {recordatorios.some(r => r.justificacion) && (
+                          <p className="text-[11px] text-emerald-600 font-semibold mt-1">
+                            + {recordatorios.filter(r => r.justificacion).length} justificada(s), no cuentan
+                          </p>
+                        )}
                       </div>
                       <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
                         <p className="text-sm text-slate-600 leading-snug">
@@ -1297,8 +1303,8 @@ export default function MiAreaPage() {
                           if (item.tipo === 'recordatorio') {
                           const r = item.data;
                           return (
-                            <div key={item.id} className={`flex items-center gap-4 p-4 bg-white border rounded-xl hover:shadow-sm transition-shadow ${r.fueraDePlazo ? 'border-amber-100' : 'border-red-100'}`}>
-                              <div className={`w-1 h-12 rounded-full flex-shrink-0 ${r.fueraDePlazo ? 'bg-amber-400' : 'bg-red-400'}`}></div>
+                            <div key={item.id} className={`flex items-center gap-4 p-4 bg-white border rounded-xl hover:shadow-sm transition-shadow ${r.justificacion ? 'border-emerald-100' : r.fueraDePlazo ? 'border-amber-100' : 'border-red-100'}`}>
+                              <div className={`w-1 h-12 rounded-full flex-shrink-0 ${r.justificacion ? 'bg-emerald-400' : r.fueraDePlazo ? 'bg-amber-400' : 'bg-red-400'}`}></div>
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 flex-wrap">
                                   {/* Enviarla tarde y no enviarla no son lo mismo: se
@@ -1312,6 +1318,9 @@ export default function MiAreaPage() {
                                     </span>
                                   ) : (
                                     <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded font-bold">Sin enviar</span>
+                                  )}
+                                  {r.justificacion && (
+                                    <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded font-bold">✓ Justificada</span>
                                   )}
                                 </div>
                                 <p className="text-sm text-slate-500 mt-0.5">
@@ -1328,6 +1337,14 @@ export default function MiAreaPage() {
                                       : <strong className="font-semibold text-red-500">no se envió</strong>}
                                   </span>
                                 </div>
+                                {r.justificacion && (
+                                  <p className="text-xs text-emerald-700 mt-1.5 bg-emerald-50 border border-emerald-100 rounded-lg px-2 py-1.5">
+                                    <strong className="font-semibold">Justificada:</strong> {r.justificacion.motivo}
+                                    <span className="text-emerald-600/70">
+                                      {' '}· {r.justificacion.autorizadoPor || 'Jefatura'}
+                                    </span>
+                                  </p>
+                                )}
                               </div>
                             </div>
                           );

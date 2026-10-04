@@ -29,6 +29,17 @@ export async function GET(_request: NextRequest) {
             select: { id: true, accion: true, descripcion: true, createdAt: true, datosNuevos: true },
         })
 
+        // Las justificadas siguen figurando, pero no cuentan: cada uno debe ver
+        // que su incidencia está resuelta y por qué motivo.
+        const justificaciones = await prisma.justificacionDisponibilidad.findMany({
+            where: { usuarioId: usuario.id },
+            select: { semanaInicio: true, motivo: true, autorizadoPorNombre: true, createdAt: true },
+        })
+        const justifMap = new Map(justificaciones.map(j => [
+            j.semanaInicio.toISOString().slice(0, 10),
+            { motivo: j.motivo, autorizadoPor: j.autorizadoPorNombre, fecha: j.createdAt },
+        ]))
+
         const recordatorios = filas.map(f => ({
             id: f.id,
             descripcion: f.descripcion,
@@ -41,13 +52,16 @@ export async function GET(_request: NextRequest) {
             cierre: (f.datosNuevos as any)?.cierre ?? null,
             enviadaEl: (f.datosNuevos as any)?.enviadaEl ?? null,
             retraso: (f.datosNuevos as any)?.retraso ?? null,
+            justificacion: justifMap.get((f.datosNuevos as any)?.semanaInicio) ?? null,
         }))
 
+        const computan = recordatorios.filter(r => !r.justificacion)
         return NextResponse.json({
             recordatorios,
             total: recordatorios.length,
-            sinEnviar: recordatorios.filter(r => !r.fueraDePlazo).length,
-            fueraDePlazo: recordatorios.filter(r => r.fueraDePlazo).length,
+            sinEnviar: computan.filter(r => !r.fueraDePlazo).length,
+            fueraDePlazo: computan.filter(r => r.fueraDePlazo).length,
+            justificadas: recordatorios.length - computan.length,
         })
     } catch (error) {
         console.error('Error cargando incidencias de disponibilidad:', error)

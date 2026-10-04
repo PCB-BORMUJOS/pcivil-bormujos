@@ -34,6 +34,8 @@ model Usuario {
   asignacionesVestuario        AsignacionVestuario[]
   dietas                       Dieta[]
   disponibilidades             Disponibilidad[]
+  justificacionesDisponibilidad JustificacionDisponibilidad[] @relation("JustificacionesPropias")
+  justificacionesAutorizadas    JustificacionDisponibilidad[] @relation("JustificacionesAutorizadas")
   eventosCreados               Evento[]                 @relation("EventoCreador")
   eventosAsignados             EventoParticipante[]
   fichaVoluntario              FichaVoluntario?
@@ -177,6 +179,38 @@ model Disponibilidad {
 
   @@unique([usuarioId, semanaInicio])
   @@map("disponibilidades")
+}
+
+// Justificación de una incidencia de disponibilidad.
+//
+// Cuando alguien no envía la disponibilidad o la envía pasado el plazo, queda
+// la incidencia registrada. Si hay un motivo legítimo —una limitación laboral,
+// un aviso por otro canal—, la Jefatura la justifica: la incidencia no se borra
+// ni se reescribe, sigue constando lo que ocurrió, pero deja de contar como
+// incumplimiento.
+//
+// Va en tabla propia y no dentro del registro de auditoría a propósito: las
+// incidencias se pueden regenerar, y una justificación guardada dentro de ellas
+// se perdería en la siguiente reconstrucción. Aquí sobrevive.
+model JustificacionDisponibilidad {
+  id           String   @id @default(cuid())
+  usuarioId    String   @map("usuario_id")
+  semanaInicio DateTime @map("semana_inicio") @db.Date
+  motivo       String   @db.Text
+
+  autorizadoPorId     String  @map("autorizado_por_id")
+  autorizadoPorNombre String? @map("autorizado_por_nombre")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  usuario       Usuario @relation("JustificacionesPropias", fields: [usuarioId], references: [id])
+  autorizadoPor Usuario @relation("JustificacionesAutorizadas", fields: [autorizadoPorId], references: [id])
+
+  // Una sola justificación por persona y semana
+  @@unique([usuarioId, semanaInicio])
+  @@index([usuarioId])
+  @@map("justificaciones_disponibilidad")
 }
 
 model CategoriaInventario {
