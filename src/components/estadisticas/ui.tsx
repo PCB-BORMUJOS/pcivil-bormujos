@@ -9,8 +9,8 @@
  * aspecto que el resto del módulo, sin duplicar el estilo en cada sitio.
  */
 
-import type { ReactNode } from 'react'
-import { FileText } from 'lucide-react'
+import { Fragment, useState, type ReactNode } from 'react'
+import { FileText, ChevronRight } from 'lucide-react'
 
 export const PALETTE = {
     indigo: '#4f46e5', blue: '#2563eb', teal: '#0d9488', green: '#16a34a',
@@ -24,6 +24,15 @@ export const fmtEur = (n: any) => (Number(n) || 0).toLocaleString('es-ES', { sty
 export const fmtKm = (n: any) => `${(Number(n) || 0).toLocaleString('es-ES')} km`
 export const fmtNum = (n: any) => (Number(n) || 0).toLocaleString('es-ES')
 export const fmtDate = (d: any) => d ? new Date(d).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-') : '—'
+export const fmtFechaHora = (d: any) => d
+    ? new Date(d).toLocaleString('es-ES', {
+        timeZone: 'Europe/Madrid', day: '2-digit', month: '2-digit', year: 'numeric',
+        hour: '2-digit', minute: '2-digit', hour12: false,
+    }).replace(',', '')
+    : '—'
+export const fmtDiaSemana = (d: any) => d
+    ? new Date(d).toLocaleDateString('es-ES', { timeZone: 'Europe/Madrid', weekday: 'short' })
+    : ''
 export const fmtL = (n: any) => `${(Number(n) || 0).toLocaleString('es-ES', { maximumFractionDigits: 1 })} L`
 
 export function KpiCard({ label, value, sub, color = 'indigo', icon: Icon }: any) {
@@ -98,7 +107,21 @@ export function ChartTooltip({ active, payload, label, formatter }: any) {
     )
 }
 
-export function DataTable({ heads, rows, empty = 'Sin datos disponibles' }: { heads: ReactNode[]; rows: any[][]; empty?: string }) {
+/**
+ * Tabla de datos.
+ *
+ * `detalles` es opcional y va en paralelo a `rows`: donde haya contenido, la
+ * fila se puede desplegar y lo muestra debajo a todo el ancho. Donde sea nulo,
+ * la fila se comporta como siempre.
+ */
+export function DataTable({ heads, rows, empty = 'Sin datos disponibles', detalles }: {
+    heads: ReactNode[]
+    rows: any[][]
+    empty?: string
+    detalles?: (ReactNode | null)[]
+}) {
+    const [abierta, setAbierta] = useState<number | null>(null)
+
     if (!rows.length) return (
         <div className="flex flex-col items-center justify-center py-12 text-slate-400">
             <FileText size={32} className="mb-2 opacity-30" />
@@ -114,11 +137,33 @@ export function DataTable({ heads, rows, empty = 'Sin datos disponibles' }: { he
                     </tr>
                 </thead>
                 <tbody>
-                    {rows.map((row, i) => (
-                        <tr key={i} className="border-b border-slate-50 hover:bg-slate-50/70 transition-colors">
-                            {row.map((cell, j) => <td key={j} className={`px-5 py-3 ${j === 0 ? 'font-medium text-slate-800' : 'text-center text-slate-600'}`}>{cell}</td>)}
-                        </tr>
-                    ))}
+                    {rows.map((row, i) => {
+                        const detalle = detalles?.[i] ?? null
+                        const abierto = abierta === i
+                        return (
+                            <Fragment key={i}>
+                                <tr
+                                    onClick={detalle ? () => setAbierta(abierto ? null : i) : undefined}
+                                    className={`border-b border-slate-50 transition-colors ${detalle ? 'cursor-pointer hover:bg-indigo-50/60' : 'hover:bg-slate-50/70'} ${abierto ? 'bg-indigo-50/60' : ''}`}>
+                                    {row.map((cell, j) => (
+                                        <td key={j} className={`px-5 py-3 ${j === 0 ? 'font-medium text-slate-800' : 'text-center text-slate-600'}`}>
+                                            {j === 0 && detalle
+                                                ? <span className="inline-flex items-center gap-1.5">
+                                                    <ChevronRight size={13} className={`text-slate-400 transition-transform ${abierto ? 'rotate-90' : ''}`} />
+                                                    {cell}
+                                                  </span>
+                                                : cell}
+                                        </td>
+                                    ))}
+                                </tr>
+                                {abierto && detalle && (
+                                    <tr className="border-b border-slate-100 bg-slate-50/60">
+                                        <td colSpan={heads.length} className="px-5 py-4">{detalle}</td>
+                                    </tr>
+                                )}
+                            </Fragment>
+                        )
+                    })}
                 </tbody>
             </table>
         </div>

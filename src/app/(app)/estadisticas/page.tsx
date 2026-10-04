@@ -16,6 +16,7 @@ import {
 import {
   PALETTE, CHART_COLORS, MESES, fmtEur, fmtKm, fmtNum, fmtDate, fmtL,
   KpiCard, Panel, Badge, ChartTooltip, DataTable, ProgressBar,
+  fmtFechaHora, fmtDiaSemana,
 } from '@/components/estadisticas/ui'
 import EstadisticasPartes from '@/components/estadisticas/EstadisticasPartes'
 
@@ -48,6 +49,69 @@ const TABS = [
 const now = new Date()
 const currentYear = now.getFullYear()
 const YEARS = [currentYear, currentYear - 1, currentYear - 2]
+
+/**
+ * Detalle de las incidencias de disponibilidad de un voluntario.
+ *
+ * De las que no se enviaron solo hay semana y plazo. De las que llegaron tarde
+ * se muestra además la fecha y la hora real del envío, en hora española, que es
+ * la referencia del plazo.
+ */
+function DetalleDisponibilidad({ incidencias }: { incidencias: any[] }) {
+  if (!incidencias?.length) return null
+  const semana = (iso: string | null) => {
+    if (!iso) return '—'
+    const lunes = new Date(`${iso}T00:00:00.000Z`)
+    const domingo = new Date(lunes.getTime() + 6 * 86400000)
+    const f = (d: Date) => d.toLocaleDateString('es-ES', { timeZone: 'UTC', day: 'numeric', month: 'short' })
+    return `${f(lunes)} – ${f(domingo)}`
+  }
+  return (
+    <div className="space-y-2">
+      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">
+        Incidencias de disponibilidad · {incidencias.length}
+      </p>
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs min-w-[620px]">
+          <thead>
+            <tr className="text-left text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+              <th className="pb-2 pr-4">Semana del cuadrante</th>
+              <th className="pb-2 pr-4">Estado</th>
+              <th className="pb-2 pr-4">Plazo (viernes 12:00)</th>
+              <th className="pb-2 pr-4">Enviada realmente</th>
+              <th className="pb-2">Retraso</th>
+            </tr>
+          </thead>
+          <tbody>
+            {incidencias.map((x: any, i: number) => {
+              const tarde = x.tipo === 'fuera_de_plazo'
+              return (
+                <tr key={i} className="border-t border-slate-200/70">
+                  <td className="py-2 pr-4 font-medium text-slate-700 whitespace-nowrap">{semana(x.semana)}</td>
+                  <td className="py-2 pr-4">
+                    {tarde
+                      ? <span className="px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded font-bold whitespace-nowrap">⏱ Fuera de plazo</span>
+                      : <span className="px-1.5 py-0.5 bg-red-100 text-red-700 rounded font-bold whitespace-nowrap">⚠ Sin enviar</span>}
+                  </td>
+                  <td className="py-2 pr-4 text-slate-500 whitespace-nowrap">
+                    {x.cierre ? `${fmtDiaSemana(x.cierre)} ${fmtFechaHora(x.cierre)}` : '—'}
+                  </td>
+                  <td className="py-2 pr-4 whitespace-nowrap">
+                    {/* En las que no se enviaron nunca no hay nada que fechar */}
+                    {x.enviadaEl
+                      ? <span className="font-semibold text-slate-700">{fmtDiaSemana(x.enviadaEl)} {fmtFechaHora(x.enviadaEl)}</span>
+                      : <span className="text-red-400 italic">no se envió</span>}
+                  </td>
+                  <td className="py-2 font-bold text-amber-700 whitespace-nowrap">{x.retraso ? `+${x.retraso}` : '—'}</td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
 
 export default function EstadisticasPage() {
   const { data: session } = useSession()
@@ -315,6 +379,9 @@ export default function EstadisticasPage() {
                   </ResponsiveContainer>
                 </Panel>
                 <Panel title="Detalle por voluntario">
+                  <p className="text-xs text-slate-400 mb-3">
+                    Las filas con incidencias de disponibilidad se despliegan al pulsarlas, con la semana, el plazo y la hora real del envío.
+                  </p>
                   <DataTable
                     heads={[
                       thVol('Nº Vol.','numeroVoluntario'), thVol('Nombre completo','nombre'), thVol('Área','area'),
@@ -342,6 +409,9 @@ export default function EstadisticasPage() {
                         : <span key="rec" className="text-slate-300 text-xs">—</span>,
                       <Badge key="s" label={v.activo?'Activo':'Inactivo'} variant={v.activo?'green':'red'}/>,
                     ])}
+                    detalles={statsVolOrdenado.map((v:any)=>
+                      v.recordatorios>0 ? <DetalleDisponibilidad incidencias={v.dispDetalle}/> : null
+                    )}
                     empty="Sin datos de voluntarios"
                   />
                 </Panel>

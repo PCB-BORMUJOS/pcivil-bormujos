@@ -153,25 +153,51 @@ export async function GET(request: NextRequest) {
     // ── Incidencias de disponibilidad por voluntario ────────────────────────────
     // Dos supuestos distintos: no haberla enviado, y haberla enviado después del
     // cierre del viernes. Se cuentan por separado y también en total.
-    const incidenciasRaw = await prisma.auditLog.groupBy({
-      by: ['usuarioId', 'accion'],
+    // Se traen las filas una por una, y no agrupadas, porque la tabla de personal
+    // despliega el detalle: qué semana fue, cuándo cerraba el plazo y a qué hora
+    // real se envió la que llegó tarde.
+    const incidenciasRaw = await prisma.auditLog.findMany({
       where: {
         accion: { in: ['RECORDATORIO', 'FUERA_DE_PLAZO'] },
         entidad: 'Disponibilidad',
         createdAt: { gte: fechaInicio, lte: fechaFin },
       },
-      _count: { id: true },
-      _max: { createdAt: true },
+      select: { accion: true, usuarioId: true, createdAt: true, datosNuevos: true },
+      orderBy: { createdAt: 'desc' },
     }).catch(() => [])
-    const recordatoriosMap: Record<string, { count: number; sinEnviar: number; fueraDePlazo: number; ultimo: Date | null }> = {}
+
+    interface IncidenciaDisp {
+      tipo: 'sin_enviar' | 'fuera_de_plazo'
+      semana: string | null
+      cierre: string | null
+      enviadaEl: string | null
+      retraso: string | null
+    }
+    const recordatoriosMap: Record<string, {
+      count: number; sinEnviar: number; fueraDePlazo: number
+      ultimo: Date | null; detalle: IncidenciaDisp[]
+    }> = {}
     ;(incidenciasRaw as any[]).forEach(r => {
       if (!r.usuarioId) return
-      const acc = recordatoriosMap[r.usuarioId] ||= { count: 0, sinEnviar: 0, fueraDePlazo: 0, ultimo: null }
-      acc.count += r._count.id
-      if (r.accion === 'FUERA_DE_PLAZO') acc.fueraDePlazo += r._count.id
-      else acc.sinEnviar += r._count.id
-      if (r._max.createdAt && (!acc.ultimo || r._max.createdAt > acc.ultimo)) acc.ultimo = r._max.createdAt
+      const acc = recordatoriosMap[r.usuarioId] ||= { count: 0, sinEnviar: 0, fueraDePlazo: 0, ultimo: null, detalle: [] }
+      const tarde = r.accion === 'FUERA_DE_PLAZO'
+      acc.count++
+      if (tarde) acc.fueraDePlazo++; else acc.sinEnviar++
+      if (r.createdAt && (!acc.ultimo || r.createdAt > acc.ultimo)) acc.ultimo = r.createdAt
+      const d = (r.datosNuevos || {}) as any
+      acc.detalle.push({
+        tipo: tarde ? 'fuera_de_plazo' : 'sin_enviar',
+        semana: d.semanaInicio ?? null,
+        cierre: d.cierre ?? null,
+        // Momento real del envío. Solo existe en las que llegaron tarde: en las
+        // que no se enviaron nunca no hay nada que fechar.
+        enviadaEl: d.enviadaEl ?? null,
+        retraso: d.retraso ?? null,
+      })
     })
+    // Más reciente primero, y dentro de la misma semana antes lo no enviado
+    Object.values(recordatoriosMap).forEach(acc => acc.detalle.sort((a, b) =>
+      (b.semana || '').localeCompare(a.semana || '') || a.tipo.localeCompare(b.tipo)))
 
     // ── GPS km por vehículo (Haversine sobre UbicacionVehiculo) ─────────────
     const ubicacionesGPS = await prisma.ubicacionVehiculo.findMany({
@@ -279,6 +305,7 @@ export async function GET(request: NextRequest) {
         recordatorios: (recordatoriosMap[v.id]?.count) || 0,
         dispSinEnviar: (recordatoriosMap[v.id]?.sinEnviar) || 0,
         dispFueraDePlazo: (recordatoriosMap[v.id]?.fueraDePlazo) || 0,
+        dispDetalle: recordatoriosMap[v.id]?.detalle || [],
         ultimoRecordatorio: recordatoriosMap[v.id]?.ultimo || null,
       }
     }).sort((a, b) => b.guardias - a.guardias)
