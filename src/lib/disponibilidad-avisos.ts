@@ -12,6 +12,7 @@
  */
 
 import { prisma } from '@/lib/db'
+import { INDICATIVO_JEFE_SERVICIO } from '@/lib/dietas-j44'
 
 /**
  * Quien no está obligado a enviar disponibilidad.
@@ -122,6 +123,32 @@ export function semanaNormalizada(semanaInicio: Date): string {
         : semanaInicio)
 }
 
+/**
+ * Quién firma los recordatorios de disponibilidad.
+ *
+ * Es la Jefatura del Servicio, y tiene que ser siempre la misma persona: antes
+ * se cogía con un findFirst sobre todos los coordinadores y administradores sin
+ * ordenar, así que la base de datos devolvía a cualquiera de los siete y los
+ * avisos salían firmados por compañeros que no los habían mandado —en la
+ * práctica, 60 a nombre de B-35 y 25 a nombre de S-02, ninguno a nombre de
+ * J-44—. El orden explícito evita que vuelva a depender del azar.
+ */
+async function remitenteJefatura(): Promise<{ id: string } | null> {
+    const jefe = await prisma.usuario.findFirst({
+        where: { activo: true, numeroVoluntario: INDICATIVO_JEFE_SERVICIO },
+        select: { id: true },
+    })
+    if (jefe) return jefe
+
+    // Si el indicativo de Jefatura no estuviera disponible, se recurre al
+    // superadministrador más antiguo, nunca a un indicativo cualquiera.
+    return prisma.usuario.findFirst({
+        where: { activo: true, rol: { nombre: 'superadmin' } },
+        orderBy: { createdAt: 'asc' },
+        select: { id: true },
+    })
+}
+
 export interface ObligadoDisponibilidad {
     id: string
     nombre: string
@@ -225,12 +252,7 @@ export async function registrarAvisosDisponibilidad(opciones: {
     let yaExistian = 0
 
     // El remitente de los mensajes internos, igual que en el resto del módulo
-    const coordinador = notificar
-        ? await prisma.usuario.findFirst({
-            where: { activo: true, rol: { nombre: { in: ['coordinador', 'admin', 'superadmin'] } } },
-            select: { id: true },
-        })
-        : null
+    const coordinador = notificar ? await remitenteJefatura() : null
 
     for (let i = 0; i < semanas.length; i++) {
         const lunes = semanas[i]
@@ -350,10 +372,7 @@ export async function avisarPendientes(lunes: Date): Promise<string[]> {
         enviadas.filter(d => semanaNormalizada(d.semanaInicio) === iso).map(d => d.usuarioId)
     )
 
-    const coordinador = await prisma.usuario.findFirst({
-        where: { activo: true, rol: { nombre: { in: ['coordinador', 'admin', 'superadmin'] } } },
-        select: { id: true },
-    })
+    const coordinador = await remitenteJefatura()
 
     const avisados: string[] = []
     for (const u of obligados) {
