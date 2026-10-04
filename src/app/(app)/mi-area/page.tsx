@@ -171,6 +171,29 @@ function Modal({ title, children, onClose, size = 'md' }: {
   );
 }
 
+/**
+ * Fecha y hora en hora española, que es la referencia del plazo de la
+ * disponibilidad. Las fechas llegan en UTC desde la base de datos.
+ */
+function fechaHoraMadrid(iso: string | null | undefined) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleString('es-ES', {
+    timeZone: 'Europe/Madrid', weekday: 'short', day: '2-digit', month: '2-digit',
+    hour: '2-digit', minute: '2-digit', hour12: false,
+  }).replace(',', '');
+}
+
+/** «5 al 11 de octubre», a partir del lunes de la semana del cuadrante. */
+function semanaTexto(iso: string) {
+  const lunes = new Date(`${iso}T00:00:00.000Z`);
+  const domingo = new Date(lunes.getTime() + 6 * 86400000);
+  const dia = (d: Date) => d.toLocaleDateString('es-ES', { timeZone: 'UTC', day: 'numeric' });
+  const mes = (d: Date) => d.toLocaleDateString('es-ES', { timeZone: 'UTC', month: 'long' });
+  return mes(lunes) === mes(domingo)
+    ? `${dia(lunes)} al ${dia(domingo)} de ${mes(domingo)}`
+    : `${dia(lunes)} de ${mes(lunes)} al ${dia(domingo)} de ${mes(domingo)}`;
+}
+
 // ============================================
 // COMPONENTE PRINCIPAL
 // ============================================
@@ -1204,6 +1227,28 @@ export default function MiAreaPage() {
                     </div>
                   </div>
 
+                  {/* Recuento propio de disponibilidad: los mismos números que
+                      la Jefatura ve en Estadísticas, para que cada uno pueda
+                      comprobar su registro sin tener que preguntar. */}
+                  {recordatorios.length > 0 && (
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                      <div className="p-4 rounded-xl bg-red-50 border border-red-100">
+                        <p className="text-2xl font-bold text-red-700">{recordatorios.filter(r => !r.fueraDePlazo).length}</p>
+                        <p className="text-xs font-semibold text-red-600 uppercase tracking-wide mt-0.5">Semanas sin enviar</p>
+                      </div>
+                      <div className="p-4 rounded-xl bg-amber-50 border border-amber-100">
+                        <p className="text-2xl font-bold text-amber-700">{recordatorios.filter(r => r.fueraDePlazo).length}</p>
+                        <p className="text-xs font-semibold text-amber-600 uppercase tracking-wide mt-0.5">Enviadas fuera de plazo</p>
+                      </div>
+                      <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
+                        <p className="text-sm text-slate-600 leading-snug">
+                          El plazo de la disponibilidad termina el <strong>viernes a las 12:00</strong>.
+                          A partir de esa hora queda registrada como fuera de plazo.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Combinar y ordenar todas las actividades */}
                   {(() => {
                     const todasActividades = [
@@ -1270,11 +1315,19 @@ export default function MiAreaPage() {
                                   )}
                                 </div>
                                 <p className="text-sm text-slate-500 mt-0.5">
-                                  {new Date(r.createdAt).toLocaleDateString('es-ES', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}
+                                  {r.semana ? `Cuadrante de la semana del ${semanaTexto(r.semana)}` :
+                                    new Date(r.createdAt).toLocaleDateString('es-ES', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}
                                 </p>
-                                {r.descripcion && (
-                                  <p className={`text-xs mt-0.5 truncate ${r.fueraDePlazo ? 'text-amber-500' : 'text-red-400'}`}>{r.descripcion}</p>
-                                )}
+                                {/* Plazo y hora real del envío, para que el registro sea comprobable */}
+                                <div className="flex flex-wrap gap-x-5 gap-y-1 mt-1.5 text-xs text-slate-500">
+                                  <span>Plazo: <strong className="font-semibold text-slate-600">{fechaHoraMadrid(r.cierre)}</strong></span>
+                                  <span>
+                                    Enviada:{' '}
+                                    {r.enviadaEl
+                                      ? <strong className="font-semibold text-slate-600">{fechaHoraMadrid(r.enviadaEl)}</strong>
+                                      : <strong className="font-semibold text-red-500">no se envió</strong>}
+                                  </span>
+                                </div>
                               </div>
                             </div>
                           );

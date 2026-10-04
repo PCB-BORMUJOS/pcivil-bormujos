@@ -35,6 +35,11 @@ export async function GET(_request: NextRequest) {
             createdAt: f.createdAt,
             fueraDePlazo: f.accion === ACCIONES_INCIDENCIA.FUERA_DE_PLAZO,
             semana: (f.datosNuevos as any)?.semanaInicio ?? null,
+            // Cuándo cerraba el plazo y a qué hora se envió realmente, los
+            // mismos datos que ve la Jefatura en Estadísticas: cada uno debe
+            // poder comprobar su propio registro.
+            cierre: (f.datosNuevos as any)?.cierre ?? null,
+            enviadaEl: (f.datosNuevos as any)?.enviadaEl ?? null,
             retraso: (f.datosNuevos as any)?.retraso ?? null,
         }))
 
