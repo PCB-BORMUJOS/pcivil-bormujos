@@ -6,7 +6,7 @@ import {
   cargarImagen, drawHeaderCorporativo, drawFooterCorporativo,
   PAGE_W as W, PAGE_H as H,
 } from '@/lib/pdf-corporativo'
-import { bloquesMemoriaDietas } from '@/lib/memoria-dietas'
+import { bloquesMemoriaDietas, bloquesMemoriaJ44 } from '@/lib/memoria-dietas'
 
 const MARGEN = 14
 const TOPE = H - 18 - 8
@@ -71,7 +71,7 @@ export interface InformeDietasOpts {
 // informe general de voluntarios y la liquidación del Jefe de Servicio (J-44),
 // ambos miembros del mismo Servicio Local de Protección Civil. Devuelve la `y`
 // con la que debe continuar la liquidación (siempre en página nueva).
-function renderMemoriaJustificativa(doc: any, mesAnio: string, nuevaPagina: () => void): number {
+function renderMemoriaJustificativa(doc: any, mesAnio: string, nuevaPagina: () => void, j44 = false): number {
   const BODY = 11 // tamaño uniforme para todo el cuerpo de la memoria
   let y = 0
 
@@ -106,7 +106,7 @@ function renderMemoriaJustificativa(doc: any, mesAnio: string, nuevaPagina: () =
     y += gap
   }
 
-  const bloques = bloquesMemoriaDietas(mesAnio)
+  const bloques = j44 ? bloquesMemoriaJ44(mesAnio) : bloquesMemoriaDietas(mesAnio)
 
   // ── PORTADA (página 1): título y periodo, centrados y en grande ──
   y = 90
@@ -318,9 +318,10 @@ export async function generarLiquidacionJ44PDF(o: LiquidacionJ44Opts) {
   const asegurar = (alto: number) => { if (y + alto > TOPE) nuevaPagina() }
   const eur = (n: number) => n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' EUR'
 
-  // La memoria justificativa (documento oficial) se antepone en el "informe completo".
+  // La memoria justificativa específica del Jefe de Servicio se antepone en el
+  // "informe completo".
   if (o.mesAnio) {
-    y = renderMemoriaJustificativa(doc, o.mesAnio, nuevaPagina)
+    y = renderMemoriaJustificativa(doc, o.mesAnio, nuevaPagina, true)
   }
 
   // ── Título descriptivo ──────────────────────────────────────────────────────
