@@ -65,6 +65,66 @@ export interface InformeDietasOpts {
   acento?: [number, number, number]  // color de banda de tabla y recuadro
 }
 
+// ── MEMORIA JUSTIFICATIVA (documento oficial, texto íntegro CON acentos) ──────
+// Se antepone a la liquidación. Se renderiza SIN el normalizador txt() para
+// conservar las tildes (jsPDF las representa correctamente). La comparten el
+// informe general de voluntarios y la liquidación del Jefe de Servicio (J-44),
+// ambos miembros del mismo Servicio Local de Protección Civil. Devuelve la `y`
+// con la que debe continuar la liquidación (siempre en página nueva).
+function renderMemoriaJustificativa(doc: any, mesAnio: string, nuevaPagina: () => void): number {
+  const BODY = 11 // tamaño uniforme para todo el cuerpo de la memoria
+  let y = 0
+
+  // Justifica una línea repartiendo el espacio sobrante entre palabras.
+  const lineaJustificada = (ln: string, x: number, w: number) => {
+    const palabras = ln.trim().split(/\s+/)
+    if (palabras.length < 2) { doc.text(ln, x, y); return }
+    const anchoPalabras = palabras.reduce((s: number, p: string) => s + doc.getTextWidth(p), 0)
+    const hueco = (w - anchoPalabras) / (palabras.length - 1)
+    let cx = x
+    palabras.forEach((p: string) => { doc.text(p, cx, y); cx += doc.getTextWidth(p) + hueco })
+  }
+
+  const escribir = (texto: string, opts: { size: number; bold?: boolean; indent?: number; align?: 'left' | 'center'; dot?: boolean; gap?: number; justify?: boolean }) => {
+    const { size, bold = false, indent = 0, align = 'left', dot = false, gap = 3, justify = false } = opts
+    const LH = size * 0.52 + 0.6
+    const setF = () => { doc.setFont('helvetica', bold ? 'bold' : 'normal'); doc.setFontSize(size); doc.setTextColor(0, 0, 0) }
+    setF()
+    const x = MARGEN + indent
+    const w = ANCHO - indent
+    const lineas: string[] = doc.splitTextToSize(texto, w)
+    lineas.forEach((ln, i) => {
+      if (y + LH > TOPE) { nuevaPagina(); y = 35 }
+      setF() // restaurar la fuente tras un posible cambio de página
+      if (dot && i === 0) { doc.setFillColor(...AZUL); doc.circle(MARGEN + 1.4, y - 1.3, 0.7, 'F'); setF() }
+      const ultima = i === lineas.length - 1
+      if (align === 'center') doc.text(ln, W / 2, y, { align: 'center' })
+      else if (justify && !ultima) lineaJustificada(ln, x, w)
+      else doc.text(ln, x, y)
+      y += LH
+    })
+    y += gap
+  }
+
+  const bloques = bloquesMemoriaDietas(mesAnio)
+
+  // ── PORTADA (página 1): título y periodo, centrados y en grande ──
+  y = 90
+  escribir(bloques[0].texto, { size: 20, bold: true, align: 'center', gap: 10 })
+  escribir(bloques[1].texto, { size: 14, bold: true, align: 'center', gap: 0 })
+  nuevaPagina(); y = 35
+
+  // ── CUERPO (desde INTRODUCCIÓN): justificado y con tipografía uniforme ──
+  bloques.slice(2).forEach(b => {
+    if (b.tipo === 'seccion') { if (y > 40) y += 3; escribir(b.texto, { size: BODY, bold: true, gap: 2.5 }) }
+    else if (b.tipo === 'sub') { y += 1; escribir(b.texto, { size: BODY, bold: true, gap: 1.8 }) }
+    else if (b.tipo === 'bullet') { escribir(b.texto, { size: BODY, indent: 5, dot: true, gap: 2.8, justify: true }) }
+    else escribir(b.texto, { size: BODY, gap: 3.2, justify: true })
+  })
+  nuevaPagina(); y = 35 // la liquidación empieza en página nueva
+  return y
+}
+
 export async function generarInformeDietasPDF(o: InformeDietasOpts) {
   const acento = o.acento ?? AZUL
   const hoy = new Date()
@@ -89,59 +149,9 @@ export async function generarInformeDietasPDF(o: InformeDietasOpts) {
   }
   const asegurar = (alto: number) => { if (y + alto > TOPE) nuevaPagina() }
 
-  // ── MEMORIA JUSTIFICATIVA (documento oficial, texto íntegro CON acentos) ──────
-  // Se antepone a la liquidación. Se renderiza SIN el normalizador txt() para
-  // conservar las tildes (jsPDF las representa correctamente).
+  // La memoria justificativa (documento oficial) se antepone cuando hay mes.
   if (o.mesAnio) {
-    const BODY = 11 // tamaño uniforme para todo el cuerpo de la memoria
-
-    // Justifica una línea repartiendo el espacio sobrante entre palabras.
-    const lineaJustificada = (ln: string, x: number, w: number) => {
-      const palabras = ln.trim().split(/\s+/)
-      if (palabras.length < 2) { doc.text(ln, x, y); return }
-      const anchoPalabras = palabras.reduce((s, p) => s + doc.getTextWidth(p), 0)
-      const hueco = (w - anchoPalabras) / (palabras.length - 1)
-      let cx = x
-      palabras.forEach(p => { doc.text(p, cx, y); cx += doc.getTextWidth(p) + hueco })
-    }
-
-    const escribir = (texto: string, opts: { size: number; bold?: boolean; indent?: number; align?: 'left' | 'center'; dot?: boolean; gap?: number; justify?: boolean }) => {
-      const { size, bold = false, indent = 0, align = 'left', dot = false, gap = 3, justify = false } = opts
-      const LH = size * 0.52 + 0.6
-      const setF = () => { doc.setFont('helvetica', bold ? 'bold' : 'normal'); doc.setFontSize(size); doc.setTextColor(0, 0, 0) }
-      setF()
-      const x = MARGEN + indent
-      const w = ANCHO - indent
-      const lineas: string[] = doc.splitTextToSize(texto, w)
-      lineas.forEach((ln, i) => {
-        if (y + LH > TOPE) nuevaPagina()
-        setF() // restaurar la fuente tras un posible cambio de página
-        if (dot && i === 0) { doc.setFillColor(...AZUL); doc.circle(MARGEN + 1.4, y - 1.3, 0.7, 'F'); setF() }
-        const ultima = i === lineas.length - 1
-        if (align === 'center') doc.text(ln, W / 2, y, { align: 'center' })
-        else if (justify && !ultima) lineaJustificada(ln, x, w)
-        else doc.text(ln, x, y)
-        y += LH
-      })
-      y += gap
-    }
-
-    const bloques = bloquesMemoriaDietas(o.mesAnio)
-
-    // ── PORTADA (página 1): título y periodo, centrados y en grande ──
-    y = 90
-    escribir(bloques[0].texto, { size: 20, bold: true, align: 'center', gap: 10 })
-    escribir(bloques[1].texto, { size: 14, bold: true, align: 'center', gap: 0 })
-    nuevaPagina()
-
-    // ── CUERPO (desde INTRODUCCIÓN): justificado y con tipografía uniforme ──
-    bloques.slice(2).forEach(b => {
-      if (b.tipo === 'seccion') { if (y > 40) y += 3; escribir(b.texto, { size: BODY, bold: true, gap: 2.5 }) }
-      else if (b.tipo === 'sub') { y += 1; escribir(b.texto, { size: BODY, bold: true, gap: 1.8 }) }
-      else if (b.tipo === 'bullet') { escribir(b.texto, { size: BODY, indent: 5, dot: true, gap: 2.8, justify: true }) }
-      else escribir(b.texto, { size: BODY, gap: 3.2, justify: true })
-    })
-    nuevaPagina() // la liquidación empieza en página nueva
+    y = renderMemoriaJustificativa(doc, o.mesAnio, nuevaPagina)
   }
 
   // ── Título y periodo ────────────────────────────────────────────────────────
@@ -279,6 +289,7 @@ export interface LiquidacionJ44Opts {
   firmanteCargo: string
   nombreArchivo: string
   ocultarImporte?: boolean       // si firma un tercero (p.ej. Policía Local), no se muestra el importe total
+  mesAnio?: string               // "2026-06" → antepone la memoria justificativa ("informe completo"); sin él, solo la tabla
 }
 
 const AZUL_CORP: [number, number, number] = [40, 54, 102] // #283666
@@ -306,6 +317,11 @@ export async function generarLiquidacionJ44PDF(o: LiquidacionJ44Opts) {
   }
   const asegurar = (alto: number) => { if (y + alto > TOPE) nuevaPagina() }
   const eur = (n: number) => n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' EUR'
+
+  // La memoria justificativa (documento oficial) se antepone en el "informe completo".
+  if (o.mesAnio) {
+    y = renderMemoriaJustificativa(doc, o.mesAnio, nuevaPagina)
+  }
 
   // ── Título descriptivo ──────────────────────────────────────────────────────
   doc.setTextColor(0, 0, 0)

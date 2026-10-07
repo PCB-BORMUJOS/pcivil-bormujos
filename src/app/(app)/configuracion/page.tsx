@@ -198,7 +198,7 @@ export default function ConfiguracionPage() {
   };
 
   // Informe independiente del Jefe de Servicio (J-44), separado del resto.
-  const exportarPDFJ44 = async () => {
+  const exportarPDFJ44 = async (soloTabla = false) => {
     if (!reportJ44) return;
     const fmtF = (f: any) => new Date(f).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Europe/Madrid' }).replace(/\//g, '-');
     // Rango del mes: 01/MM/AA al último día.
@@ -238,7 +238,9 @@ export default function ConfiguracionPage() {
       // Si la liquidación del Jefe de Servicio la visa un tercero, no se le
       // muestra el importe total.
       ocultarImporte: firmanteJ44 === 'diego',
-      nombreArchivo: `Liquidacion-J44-${selectedMonth}${FIRMANTES_INFORME[firmanteJ44].sufijoArchivo}.pdf`,
+      // "Informe completo" antepone la memoria justificativa; "Solo tabla" la omite.
+      mesAnio: soloTabla ? undefined : selectedMonth,
+      nombreArchivo: `${soloTabla ? 'Tabla-J44' : 'Informe-J44'}-${selectedMonth}${FIRMANTES_INFORME[firmanteJ44].sufijoArchivo}.pdf`,
     });
   };
 
@@ -799,8 +801,11 @@ export default function ConfiguracionPage() {
                       <option key={clave} value={clave}>{f.etiqueta}</option>
                     ))}
                   </select>
-                  <button onClick={exportarPDFJ44} className="bg-amber-600 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-amber-700">
-                    <Download size={16} /> Informe J-44
+                  <button onClick={() => exportarPDFJ44(false)} title="Informe completo (con memoria justificativa y firma)" className="bg-amber-600 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-amber-700">
+                    <Download size={16} /> Informe completo
+                  </button>
+                  <button onClick={() => exportarPDFJ44(true)} title="Solo la tabla de la liquidación, sin memoria" className="bg-white text-amber-700 border border-amber-300 px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-amber-50">
+                    <Download size={16} /> Solo tabla
                   </button>
                 </div>
               </div>
@@ -854,7 +859,10 @@ export default function ConfiguracionPage() {
                   <p className="text-2xl font-bold">{reportJ44.total.toFixed(2)} €</p>
                   <p className="text-xs text-amber-100 mt-0.5">{reportJ44.dias} día(s) de servicio</p>
                 </div>
-                <button onClick={exportarPDFJ44} className="bg-white text-amber-700 px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-amber-50"><Download size={16} /> Informe J-44</button>
+                <div className="flex flex-wrap gap-2">
+                  <button onClick={() => exportarPDFJ44(false)} className="bg-white text-amber-700 px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-amber-50"><Download size={16} /> Informe completo</button>
+                  <button onClick={() => exportarPDFJ44(true)} className="bg-transparent border border-white/50 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-white/10"><Download size={16} /> Solo tabla</button>
+                </div>
               </div>
             </div>
           )}
