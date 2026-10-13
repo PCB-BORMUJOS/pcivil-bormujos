@@ -82,9 +82,15 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ puntos })
     }
 
-    // Modo tiempo real - solo activos
+    // Modo tiempo real - solo activos y recientes.
+    // Se filtra por createdAt (reloj del SERVIDOR, no el del iPad) para que un
+    // vehículo que dejó de emitir hace tiempo desaparezca del mapa en lugar de
+    // quedarse pegado para siempre. 30 min cubre de sobra el estado "Desconectado"
+    // (rojo a los 5 min) antes de retirarlo.
+    const TTL_MIN = 30
+    const limite = new Date(Date.now() - TTL_MIN * 60 * 1000)
     const ubicaciones = await prisma.ubicacionVehiculo.findMany({
-      where: { activo: true },
+      where: { activo: true, createdAt: { gte: limite } },
       include: { vehiculo: { select: { id: true, indicativo: true, tipo: true, modelo: true } } },
       orderBy: { createdAt: "desc" },
     })

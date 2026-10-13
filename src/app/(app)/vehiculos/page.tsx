@@ -627,8 +627,10 @@ export default function VehiculosPage() {
               {ubicacionesGPS.map((u: any) => {
                 // Antigüedad del último punto: si hace >90 s que no envía, se marca
                 // como sin señal; >5 min, desconectado. Así no aparece "activo" eterno.
-                const edadMin = Math.round((Date.now() - tiempoPunto(u)) / 60000)
-                const edadMs = Date.now() - tiempoPunto(u)
+                // Se usa createdAt (hora del SERVIDOR al recibir el punto), no la hora
+                // GPS del iPad: un iPad con el reloj mal descuadraría el online/offline.
+                const edadMs = Date.now() - new Date(u.createdAt).getTime()
+                const edadMin = Math.round(edadMs / 60000)
                 const col = edadMs > 300000
                   ? { c: '#b91c1c', f: '#ef4444', txt: 'Desconectado' }
                   : edadMs > 90000
