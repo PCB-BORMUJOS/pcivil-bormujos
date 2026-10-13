@@ -119,6 +119,9 @@ export default function TrackingPage() {
   const [errorMsg, setErrorMsg] = useState('')
   const [enviados, setEnviados] = useState(0)
   const [pendientes, setPendientes] = useState(0)
+  const [avisoFondo, setAvisoFondo] = useState('')        // aviso tras volver de segundo plano
+  const ocultoDesdeRef = useRef(0)                         // ms en que la pestaña pasó a segundo plano
+  const avisoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const watchRef = useRef<number | null>(null)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const lastPosRef = useRef<GeolocationPosition | null>(null)
@@ -345,7 +348,9 @@ export default function TrackingPage() {
     setRastreando(false)
     if (watchRef.current !== null) { navigator.geolocation.clearWatch(watchRef.current); watchRef.current = null }
     if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null }
+    if (avisoTimerRef.current) { clearTimeout(avisoTimerRef.current); avisoTimerRef.current = null }
     liberarWakeLock()
+    setAvisoFondo('')
     setEstado('inactivo')
   }
 
@@ -355,10 +360,26 @@ export default function TrackingPage() {
   // navegador pudo suspender el GPS y soltar el Wake Lock: se re-piden.
   useEffect(() => {
     const onVis = () => {
-      if (document.visibilityState === 'visible' && activoRef.current) {
-        pedirWakeLock()
-        startWatch()
-        flushOutbox()
+      if (!activoRef.current) return
+      if (document.visibilityState === 'hidden') {
+        // La pestaña se va a segundo plano: iOS congelará el GPS/temporizadores.
+        ocultoDesdeRef.current = Date.now()
+        return
+      }
+      // Vuelve a primer plano: recuperar GPS/Wake Lock y vaciar la cola.
+      pedirWakeLock()
+      startWatch()
+      flushOutbox()
+      // Si estuvo un rato en segundo plano, avisar de que hubo pausa del seguimiento.
+      const desde = ocultoDesdeRef.current
+      if (desde) {
+        ocultoDesdeRef.current = 0
+        const seg = Math.round((Date.now() - desde) / 1000)
+        if (seg >= 3) {
+          setAvisoFondo(`El seguimiento estuvo EN PAUSA ${seg >= 60 ? `${Math.round(seg / 60)} min` : `${seg} s`} mientras la app estaba en segundo plano. Mantén esta pantalla abierta.`)
+          if (avisoTimerRef.current) clearTimeout(avisoTimerRef.current)
+          avisoTimerRef.current = setTimeout(() => setAvisoFondo(''), 10000)
+        }
       }
     }
     document.addEventListener('visibilitychange', onVis)
@@ -455,6 +476,26 @@ export default function TrackingPage() {
           </span>
         </div>
       </header>
+
+      {/* Aviso tras volver de segundo plano: hubo pausa en el seguimiento */}
+      {avisoFondo && (
+        <div role="alert" style={{
+          background: 'rgba(224,169,59,0.14)', border: `1px solid ${C.amber}`, borderRadius: 12,
+          padding: '11px 14px', color: '#F3D08A', fontSize: 13, fontWeight: 700, lineHeight: 1.4,
+        }}>
+          {avisoFondo}
+        </div>
+      )}
+
+      {/* Recordatorio permanente mientras rastrea: cómo evitar cortes en iOS */}
+      {rastreando && (
+        <div style={{
+          background: 'rgba(47,107,255,0.10)', border: `1px solid rgba(47,107,255,0.35)`, borderRadius: 12,
+          padding: '10px 13px', color: '#AFC4FF', fontSize: 12, fontWeight: 600, lineHeight: 1.45,
+        }}>
+          Mantén esta pantalla <b>abierta y encendida</b>. Si bloqueas el iPad o cambias a otra app (como Google Maps), el seguimiento <b>se pausa</b> hasta que vuelvas aquí.
+        </div>
+      )}
 
       {/* Incidencia */}
       {incidencia && tipo ? (
