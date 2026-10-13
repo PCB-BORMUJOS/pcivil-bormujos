@@ -7,6 +7,60 @@ const INTERVAL_MS = 5000
 const INC_INTERVAL_MS = 3000
 const TRACK_TOKEN = process.env.NEXT_PUBLIC_TRACKING_TOKEN
 const ALARMA_SRC = '/alarma-incidencia.wav'
+const MAX_COLA = 500
+
+// ─── Persistencia de la cola de envíos en IndexedDB ───────────────────────────
+// La cola en memoria (outboxRef) se pierde si iOS descarta la pestaña en segundo
+// plano o si la página se recarga. Para no perder tramos del recorrido en zonas
+// sin cobertura, cada punto se guarda también en IndexedDB y solo se borra cuando
+// el servidor confirma su recepción. Todo va envuelto en try/catch porque en modo
+// privado de Safari o con el almacenamiento bloqueado estas llamadas pueden fallar.
+const IDB_NOMBRE = 'pcb-tracking'
+const IDB_STORE = 'outbox'
+function idbAbrir(): Promise<IDBDatabase | null> {
+  return new Promise((resolve) => {
+    try {
+      if (typeof indexedDB === 'undefined') { resolve(null); return }
+      const req = indexedDB.open(IDB_NOMBRE, 1)
+      req.onupgradeneeded = () => {
+        const db = req.result
+        if (!db.objectStoreNames.contains(IDB_STORE)) db.createObjectStore(IDB_STORE, { keyPath: 'k', autoIncrement: true })
+      }
+      req.onsuccess = () => resolve(req.result)
+      req.onerror = () => resolve(null)
+    } catch { resolve(null) }
+  })
+}
+async function idbAdd(p: any): Promise<number | null> {
+  const db = await idbAbrir(); if (!db) return null
+  return new Promise((resolve) => {
+    try {
+      const tx = db.transaction(IDB_STORE, 'readwrite')
+      const req = tx.objectStore(IDB_STORE).add({ p })
+      req.onsuccess = () => resolve(req.result as number)
+      req.onerror = () => resolve(null)
+    } catch { resolve(null) }
+  })
+}
+async function idbDelete(keys: Array<number | null | undefined>): Promise<void> {
+  const reales = keys.filter((k): k is number => typeof k === 'number')
+  if (!reales.length) return
+  const db = await idbAbrir(); if (!db) return
+  try {
+    const st = db.transaction(IDB_STORE, 'readwrite').objectStore(IDB_STORE)
+    reales.forEach((k) => { try { st.delete(k) } catch { /* */ } })
+  } catch { /* */ }
+}
+async function idbAll(): Promise<Array<{ k: number; p: any }>> {
+  const db = await idbAbrir(); if (!db) return []
+  return new Promise((resolve) => {
+    try {
+      const req = db.transaction(IDB_STORE, 'readonly').objectStore(IDB_STORE).getAll()
+      req.onsuccess = () => resolve((req.result || []).map((r: any) => ({ k: r.k, p: r.p })))
+      req.onerror = () => resolve([])
+    } catch { resolve([]) }
+  })
+}
 
 type Incidencia = {
   id: string
@@ -72,7 +126,7 @@ export default function TrackingPage() {
   const activoRef = useRef(false)                 // ¿tracking en marcha? (evita closures obsoletos)
   const lastFixAtRef = useRef(0)                   // ms del último fix GPS válido
   const lastEnqueueRef = useRef(0)                 // ms del último punto encolado (throttle 1/INTERVAL)
-  const outboxRef = useRef<Array<{ lat: number; lng: number; vel: number | null; acc: number | null; tsGps: string }>>([]) // cola offline
+  const outboxRef = useRef<Array<{ lat: number; lng: number; vel: number | null; acc: number | null; tsGps: string; _k?: number | null }>>([]) // cola offline (persistida en IndexedDB)
   const flushingRef = useRef(false)                // evita envíos solapados
   const errCountRef = useRef(0)
   const wakeLockRef = useRef<any>(null)            // Screen Wake Lock (pantalla despierta)
@@ -87,7 +141,7 @@ export default function TrackingPage() {
   const audioElRef = useRef<HTMLAudioElement | null>(null)
 
   // ─── GPS ───
-  type Punto = { lat: number; lng: number; vel: number | null; acc: number | null; tsGps: string }
+  type Punto = { lat: number; lng: number; vel: number | null; acc: number | null; tsGps: string; _k?: number | null }
   const puntoDe = (pos: GeolocationPosition): Punto => {
     const { latitude, longitude, speed, accuracy } = pos.coords
     return {
@@ -117,12 +171,15 @@ export default function TrackingPage() {
     const lote = outboxRef.current
     outboxRef.current = []
     const fallidos: Punto[] = []
+    const enviadasKeys: Array<number | null | undefined> = []
     for (const p of lote) {
-      try { await postPunto(p) } catch { fallidos.push(p) }
+      try { await postPunto(p); enviadasKeys.push(p._k) } catch { fallidos.push(p) }
     }
+    // Borrar de IndexedDB solo lo que el servidor confirmó; los fallidos permanecen.
+    idbDelete(enviadasKeys)
     if (fallidos.length) {
       // conservar como máx. los últimos ~500 puntos (~40 min a 1/5s) para no crecer sin fin
-      outboxRef.current = [...fallidos, ...outboxRef.current].slice(-500)
+      outboxRef.current = [...fallidos, ...outboxRef.current].slice(-MAX_COLA)
     } else {
       setEnviados(n => n + lote.length)
       const u = lote[lote.length - 1]
@@ -233,8 +290,14 @@ export default function TrackingPage() {
         const now = Date.now()
         if (now - lastEnqueueRef.current >= INTERVAL_MS) {
           lastEnqueueRef.current = now
-          outboxRef.current.push(puntoDe(pos))
-          if (outboxRef.current.length > 500) outboxRef.current = outboxRef.current.slice(-500)
+          const punto = puntoDe(pos)
+          outboxRef.current.push(punto)
+          // Persistir en IndexedDB; al resolver, anotar su clave para poder borrarlo tras el envío.
+          idbAdd(punto).then((k) => { punto._k = k }).catch(() => { /* */ })
+          if (outboxRef.current.length > MAX_COLA) {
+            const sobran = outboxRef.current.splice(0, outboxRef.current.length - MAX_COLA)
+            idbDelete(sobran.map((p) => p._k))
+          }
           setPendientes(outboxRef.current.length)
         }
       },
@@ -257,6 +320,16 @@ export default function TrackingPage() {
     setRastreando(true)
     errCountRef.current = 0
     lastFixAtRef.current = Date.now()
+    // Recuperar puntos que quedaran sin enviar de una sesión anterior (recarga,
+    // cierre de pestaña o descarte por iOS en segundo plano).
+    try {
+      const guardados = await idbAll()
+      if (guardados.length) {
+        const ordenados = guardados.sort((a, b) => a.k - b.k).slice(-MAX_COLA)
+        outboxRef.current = ordenados.map((r) => ({ ...r.p, _k: r.k }))
+        setPendientes(outboxRef.current.length)
+      }
+    } catch { /* */ }
     await pedirWakeLock()
     startWatch()
     // Ciclo cada INTERVAL: envía la cola (con reintento) y vigila la señal.
@@ -291,6 +364,33 @@ export default function TrackingPage() {
     document.addEventListener('visibilitychange', onVis)
     return () => document.removeEventListener('visibilitychange', onVis)
   }, [])
+
+  // Antes de que iOS congele/descarte la pestaña (bloqueo de pantalla, cambio a
+  // Google Maps, cierre), enviar de inmediato el último punto conocido con
+  // sendBeacon (no requiere que la página siga viva para completar la petición).
+  useEffect(() => {
+    const beaconUltimo = () => {
+      if (!activoRef.current) return
+      const cola = outboxRef.current
+      const p = cola.length ? cola[cola.length - 1]
+        : lastPosRef.current ? puntoDe(lastPosRef.current) : null
+      if (!p) return
+      try {
+        const body = JSON.stringify({
+          vehiculoId, latitud: p.lat, longitud: p.lng,
+          velocidad: p.vel, precision: p.acc, timestampGps: p.tsGps, token: TRACK_TOKEN,
+        })
+        navigator.sendBeacon?.('/api/vehiculos/ubicacion', new Blob([body], { type: 'application/json' }))
+      } catch { /* */ }
+    }
+    const onHide = () => { if (document.visibilityState === 'hidden') beaconUltimo() }
+    window.addEventListener('pagehide', beaconUltimo)
+    document.addEventListener('visibilitychange', onHide)
+    return () => {
+      window.removeEventListener('pagehide', beaconUltimo)
+      document.removeEventListener('visibilitychange', onHide)
+    }
+  }, [vehiculoId])
 
   useEffect(() => {
     cargarIncidencia()
