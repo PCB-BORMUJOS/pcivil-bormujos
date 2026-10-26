@@ -10,12 +10,12 @@ export async function POST(request: NextRequest) {
     const session = await getServerSession(authOptions)
     if (!session?.user?.email) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
-    // Operación del planificador de cuadrantes: calcula/escribe dietas (dinero) de
-    // CUALQUIER indicativo. Exige nivel de gestión (admin/coordinador/superadmin).
-    // Sin esto, cualquier usuario con sesión podría fabricar, borrar o consultar las
-    // dietas de otro pasando su usuarioId (IDOR de escritura + revelación de importe).
+    // Operación que calcula/escribe dietas (dinero) de CUALQUIER indicativo.
+    // Los datos de dietas son exclusivos de admin y superadmin: el coordinador NO
+    // accede a dietas. Sin este gate, cualquier usuario con sesión podría fabricar,
+    // borrar o consultar las dietas de otro pasando su usuarioId (IDOR + importe).
     const rol = (session.user as any)?.rol ?? 'voluntario'
-    if (!['superadmin', 'coordinador', 'admin'].includes(rol)) {
+    if (!['superadmin', 'admin'].includes(rol)) {
       return NextResponse.json({ error: 'Sin permisos' }, { status: 403 })
     }
 

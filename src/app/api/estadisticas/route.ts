@@ -304,9 +304,14 @@ export async function GET(request: NextRequest) {
       (v.fichaVoluntario as any)?.indicativo2 === 'J-44'
     )?.id || null
     const verJefeServicio = rol === 'superadmin'
-    const dietasVisibles = verJefeServicio
-      ? (dietas as any[])
-      : (dietas as any[]).filter(d => d.usuarioId !== idJefeServicio)
+    // Dietas (datos económicos): SOLO admin y superadmin. El coordinador accede a
+    // estadísticas operativas pero NO a importes de dietas: se le vacían.
+    const verDietas = rol === 'superadmin' || rol === 'admin'
+    const dietasVisibles = !verDietas
+      ? []
+      : verJefeServicio
+        ? (dietas as any[])
+        : (dietas as any[]).filter(d => d.usuarioId !== idJefeServicio)
 
     // ── Stats por voluntario ──────────────────────────────────────────────────
     // El Jefe de Servicio (J-44) NUNCA aparece en la lista de voluntarios (ni en
@@ -316,7 +321,7 @@ export async function GET(request: NextRequest) {
       .filter(v => v.id !== idJefeServicio)
       .map(v => {
       const gv = guardiasReal.filter(g => g.usuarioId === v.id)
-      const dv = (dietas as any[]).filter(d => d.usuarioId === v.id)
+      const dv = verDietas ? (dietas as any[]).filter(d => d.usuarioId === v.id) : []
       const horas = gv.reduce((a: number, g: any) => a + horasGuardia(g), 0)
       return {
         id: v.id,
