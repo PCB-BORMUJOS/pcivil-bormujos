@@ -79,6 +79,18 @@ export async function middleware(request: NextRequest) {
   const personalizado = (token as any)?.permisosPersonalizados === true && rolTok !== 'superadmin'
   const permisosExtra: string[] = ((token as any)?.permisosExtra as string[]) ?? []
 
+  // ── CIERRE GLOBAL DE LA API ──────────────────────────────────────────────
+  // Toda ruta /api/ exige sesión, SALVO una lista blanca explícita de rutas
+  // públicas: NextAuth (login) y las basadas en token (tablets de tracking y
+  // cron de Vercel, que no tienen sesión y se autentican con su propio secreto).
+  // Así, si cualquier endpoint futuro olvidara comprobar la sesión, el middleware
+  // ya impide el acceso anónimo: se cierra la CLASE entera de "huecos abiertos",
+  // no solo los endpoints actuales.
+  const API_PUBLICAS = ['/api/auth', '/api/tracking', '/api/vehiculos/ubicacion', '/api/cron']
+  if (pathname.startsWith('/api/') && !API_PUBLICAS.some(r => pathname.startsWith(r)) && !token) {
+    return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  }
+
   // Visor = solo lectura: bloquear escrituras en toda la API
   const esApiEscritura = pathname.startsWith('/api/') &&
     !pathname.startsWith('/api/auth/') &&
