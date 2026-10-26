@@ -101,10 +101,35 @@ export async function POST(request: NextRequest) {
     })
 
     if (existingUser) {
+      const estado = existingUser.activo ? '' : ' (dado de baja)'
       return NextResponse.json(
-        { error: 'El email ya está registrado' },
+        { error: `Ese email ya está registrado por ${existingUser.nombre} ${existingUser.apellidos}${estado}. Usa otro o reactiva ese indicativo.` },
         { status: 400 }
       )
+    }
+
+    // Pre-comprobar también número de indicativo y DNI (ambos son únicos) para dar
+    // un aviso CLARO antes de intentar crear. Los indicativos dados de baja NO se
+    // borran: siguen ocupando su número/DNI, así que el choque es frecuente.
+    if (numeroVoluntario) {
+      const dupNum = await prisma.usuario.findUnique({ where: { numeroVoluntario } })
+      if (dupNum) {
+        const estado = dupNum.activo ? '' : ' (dado de baja)'
+        return NextResponse.json(
+          { error: `El número de indicativo ${numeroVoluntario} ya está en uso por ${dupNum.nombre} ${dupNum.apellidos}${estado}. Reactiva ese indicativo o usa un número distinto.` },
+          { status: 400 }
+        )
+      }
+    }
+    if (dni) {
+      const dupDni = await prisma.usuario.findUnique({ where: { dni } })
+      if (dupDni) {
+        const estado = dupDni.activo ? '' : ' (dado de baja)'
+        return NextResponse.json(
+          { error: `El DNI ${dni} ya está registrado por ${dupDni.nombre} ${dupDni.apellidos} (${dupDni.numeroVoluntario || 'sin indicativo'})${estado}.` },
+          { status: 400 }
+        )
+      }
     }
 
     // Hash de la contraseña
