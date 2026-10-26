@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
       whereClause.fecha = { gte: inicioMes, lte: finMes }
     }
     
-    const guardias = await prisma.guardia.findMany({
+    let guardias = await prisma.guardia.findMany({
       where: whereClause,
       include: {
         usuario: {
@@ -37,7 +37,29 @@ export async function GET(request: NextRequest) {
       },
       orderBy: [{ fecha: 'asc' }, { turno: 'asc' }]
     })
-    
+
+    // Confidencialidad del cuadrante: los niveles 1-3 (voluntario, responsable de
+    // turno, jefe de área) SOLO pueden ver las guardias de semanas PUBLICADAS. Sin
+    // esto, un usuario normal podría leer por API las asignaciones (indicativos y
+    // nombres) de semanas aún no publicadas. Nivel >=4 (coordinador/admin/super/
+    // visor) ve todo, igual que en el panel.
+    if (_niv < 4) {
+      const pubs = await prisma.semanaPublicada.findMany({
+        where: { publicado: true },
+        select: { semana: true },
+      })
+      const publicadas = new Set(pubs.map(p => p.semana))
+      // Lunes de la semana de una fecha, en la misma convención (UTC-mediodía) que
+      // usa la publicación y el dashboard, para que las claves coincidan.
+      const lunesKey = (f: Date): string => {
+        const d = new Date(Date.UTC(f.getUTCFullYear(), f.getUTCMonth(), f.getUTCDate(), 12, 0, 0))
+        const dow = d.getUTCDay()
+        d.setUTCDate(d.getUTCDate() + (dow === 0 ? -6 : 1 - dow))
+        return d.toISOString().slice(0, 10)
+      }
+      guardias = guardias.filter(g => publicadas.has(lunesKey(g.fecha)))
+    }
+
     return NextResponse.json({ guardias })
   } catch (error) {
     console.error('Error al obtener guardias:', error)
