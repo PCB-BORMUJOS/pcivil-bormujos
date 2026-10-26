@@ -148,6 +148,21 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(usuario, { status: 201 })
   } catch (error) {
     console.error('Error al crear usuario:', error)
+    // Choque de campo único (email/DNI/numeroVoluntario ya en uso, p. ej. de un
+    // indicativo dado de baja que sigue en la BD): mensaje claro, no error crudo.
+    const code = (error as any)?.code
+    if (code === 'P2002') {
+      const target = (error as any)?.meta?.target
+      const campos: string[] = Array.isArray(target) ? target : (target ? [String(target)] : [])
+      const legible = campos.some(c => /numero/i.test(c)) ? 'número de indicativo'
+        : campos.some(c => /dni/i.test(c)) ? 'DNI'
+        : campos.some(c => /email/i.test(c)) ? 'email'
+        : 'uno de los datos'
+      return NextResponse.json(
+        { error: `Ese ${legible} ya está en uso por otro indicativo (incluidos los dados de baja). Usa uno distinto.` },
+        { status: 400 }
+      )
+    }
     const msg = error instanceof Error ? error.message : String(error)
     console.error('Error crear usuario:', msg)
     return NextResponse.json(
