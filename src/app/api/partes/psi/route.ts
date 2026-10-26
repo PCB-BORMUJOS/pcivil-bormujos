@@ -9,6 +9,7 @@ import sharp from 'sharp'
 import { registrarAudit, getUsuarioAudit } from '@/lib/audit'
 import { parseFechaES } from '@/lib/date-utils'
 import { recalcularPracticasEnPartes } from '@/lib/practicas-conteo'
+import { getNivel } from '@/lib/permisos'
 
 /**
  * GET /api/partes/psi
@@ -31,6 +32,10 @@ export async function GET(request: NextRequest) {
 
         // Construir filtros
         const where: any = {}
+
+        // Niveles 1-3 solo ven SUS propios partes; responsable+ (nivel>=2) todos.
+        const nivel = getNivel((session.user as any).rol ?? '')
+        if (nivel < 2) where.creadoPorId = (session.user as any).id
 
         if (!incluirArchivados) {
             where.archivado = false

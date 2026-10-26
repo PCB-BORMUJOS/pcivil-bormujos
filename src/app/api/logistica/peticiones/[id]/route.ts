@@ -4,6 +4,7 @@ import { registrarAudit, getUsuarioAudit } from '@/lib/audit'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { notificarCambioPeticion } from '@/lib/notificaciones'
+import { getNivel } from '@/lib/permisos'
 
 export async function GET(
   _request: NextRequest,
@@ -46,6 +47,13 @@ export async function GET(
 
     if (!peticion) {
       return NextResponse.json({ error: 'Petición no encontrada' }, { status: 404 })
+    }
+
+    // Solo el solicitante o un gestor (nivel>=3) ve el detalle (PII y costes).
+    const nivelGet = getNivel((session.user as any).rol ?? '')
+    const esSolicitanteGet = peticion.solicitante?.id === (session.user as any).id
+    if (nivelGet < 3 && !esSolicitanteGet) {
+      return NextResponse.json({ error: 'Sin permisos sobre esta petición' }, { status: 403 })
     }
 
     return NextResponse.json({ peticion })
@@ -93,6 +101,20 @@ export async function PUT(
 
     if (!peticionActual) {
       return NextResponse.json({ error: 'Petición no encontrada' }, { status: 404 })
+    }
+
+    // Control de acceso: las acciones de GESTIÓN (aprobar, rechazar, poner en
+    // compra, recibir, documentar) son exclusivas de nivel>=3 (responsable+). El
+    // resto (editar/actualizar/cancelar) solo las puede hacer un gestor o el propio
+    // SOLICITANTE sobre su petición. Sin esto, cualquier voluntario podía
+    // autoaprobarse compras o modificar/recibir las de otros.
+    const nivelPet = getNivel(usuario.rol.nombre)
+    const esSolicitante = peticionActual.solicitanteId === usuario.id
+    const ACCIONES_GESTION = ['aprobar', 'rechazar', 'en_compra', 'recibir', 'add_albaran', 'actualizar_docs']
+    if (ACCIONES_GESTION.includes(accion)) {
+      if (nivelPet < 3) return NextResponse.json({ error: 'Sin permisos para gestionar peticiones' }, { status: 403 })
+    } else if (nivelPet < 3 && !esSolicitante) {
+      return NextResponse.json({ error: 'Sin permisos sobre esta petición' }, { status: 403 })
     }
 
     const estadoAnterior = peticionActual.estado

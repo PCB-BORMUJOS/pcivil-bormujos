@@ -36,6 +36,21 @@ export async function GET(request: NextRequest) {
         },
         orderBy: { createdAt: 'asc' }
       })
+      // Confidencialidad: solo se devuelve el hilo si el solicitante PARTICIPA en él
+      // (es remitente o destinatario de algún mensaje, o destinatario por un grupo
+      // al que pertenece). Sin esto, cualquiera podría leer conversaciones privadas
+      // ajenas iterando ids de mensaje.
+      const aU = usuario.fichaVoluntario?.areaAsignada?.toLowerCase()
+      const aS = usuario.fichaVoluntario?.areaSecundaria?.toLowerCase()
+      const gruposUsuario = new Set<string>(['todos', 'rol:' + rolJwt])
+      if (aU) gruposUsuario.add('area:' + aU)
+      if (aS) gruposUsuario.add('area:' + aS)
+      const participa = hilo.some((m: any) =>
+        m.remitenteId === usuario.id ||
+        m.destinatarioId === usuario.id ||
+        (m.destinatarioGrupo && gruposUsuario.has(m.destinatarioGrupo))
+      )
+      if (!participa) return NextResponse.json({ error: 'Sin acceso a esta conversación' }, { status: 403 })
       return NextResponse.json({ hilo })
     }
 

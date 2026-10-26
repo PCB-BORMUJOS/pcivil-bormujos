@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { put } from '@vercel/blob'
 import { prisma } from '@/lib/db'
+import { getNivel } from '@/lib/permisos'
 
 export async function POST(
     req: NextRequest,
@@ -15,6 +16,14 @@ export async function POST(
   }
 
     try {
+        // Solo el creador del parte o un responsable+ (nivel>=2) puede adjuntarle
+        // imágenes; si no, cualquier usuario podría inyectar fotos en el parte de otro.
+        const parteDueno = await prisma.partePSI.findUnique({ where: { id: params.id }, select: { creadoPorId: true } })
+        if (!parteDueno) return NextResponse.json({ error: 'Parte no encontrado' }, { status: 404 })
+        const nivel = getNivel((session.user as any).rol ?? '')
+        const esCreador = parteDueno.creadoPorId === (session.user as any).id
+        if (!esCreador && nivel < 2) return NextResponse.json({ error: 'Sin permisos sobre este parte' }, { status: 403 })
+
         const formData = await req.formData()
         const file = formData.get('file') as File
 

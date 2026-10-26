@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { registrarAudit, getUsuarioAudit } from '@/lib/audit'
+import { getNivel } from '@/lib/permisos'
 
 /** Genera el número de parte del día: YYYYMMDD-NNN (correlativo diario). */
 /**
@@ -68,6 +69,11 @@ export async function GET(request: NextRequest) {
         const incluirArchivados = searchParams.get('archivados') === 'true'
 
         const where: any = {}
+        // Datos médicos: los niveles 1-3 solo ven SUS propios partes; responsable+
+        // (nivel>=2) ve todos. Sin esto, cualquier voluntario listaría los partes
+        // PAS de todos (nombre y DNI de pacientes, lesiones).
+        const nivel = getNivel((session.user as any).rol ?? '')
+        if (nivel < 2) where.creadoPorId = (session.user as any).id
         if (!incluirArchivados) where.archivado = false
         if (estado && ['borrador', 'completo'].includes(estado)) where.estado = estado
         if (q) {

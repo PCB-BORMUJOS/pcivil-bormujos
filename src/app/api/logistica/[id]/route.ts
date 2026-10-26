@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { registrarAudit, getUsuarioAudit } from '@/lib/audit'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
+import { getNivel } from '@/lib/permisos'
 
 export async function GET(
   request: NextRequest,
@@ -58,6 +59,10 @@ export async function PUT(
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
+    // Editar el inventario es acción de gestión: nivel>=3 (responsable+).
+    if (getNivel((session.user as any).rol ?? '') < 3) {
+      return NextResponse.json({ error: 'Sin permisos para editar el inventario' }, { status: 403 })
+    }
 
     const body = await request.json()
 
@@ -103,6 +108,10 @@ export async function DELETE(
     const session = await getServerSession(authOptions)
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    }
+    // Eliminar del inventario: reservado a nivel>=4 (coordinador/admin/superadmin).
+    if (getNivel((session.user as any).rol ?? '') < 4) {
+      return NextResponse.json({ error: 'Sin permisos para eliminar artículos' }, { status: 403 })
     }
 
     // Soft delete

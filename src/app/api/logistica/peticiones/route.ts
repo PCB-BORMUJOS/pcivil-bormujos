@@ -4,6 +4,7 @@ import { registrarAudit, getUsuarioAudit } from '@/lib/audit'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { notificarLogistica } from '@/lib/notificaciones'
+import { getNivel } from '@/lib/permisos'
 
 const AREAS_NOMBRE: Record<string, string> = {
   'socorrismo': 'Socorrismo',
@@ -50,7 +51,10 @@ export async function GET(request: NextRequest) {
     })
 
     const where: any = {}
-    if (misPeticiones && usuario) where.solicitanteId = usuario.id
+    // Los niveles 1-3 solo ven SUS peticiones aunque no pidan ?mis=true; gestores
+    // (nivel>=4) ven todas. Evita exponer PII y costes de las peticiones de otros.
+    const nivelPet = getNivel((session.user as any).rol ?? '')
+    if ((misPeticiones || nivelPet < 4) && usuario) where.solicitanteId = usuario.id
     if (area && area !== 'all') where.areaOrigen = area
     if (estado && estado !== 'all') where.estado = estado
 

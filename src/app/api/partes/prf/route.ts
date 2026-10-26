@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { registrarAudit, getUsuarioAudit } from '@/lib/audit'
 import { componerExpediente } from '@/lib/casetas-feria'
+import { getNivel } from '@/lib/permisos'
 
 /** Genera el número de parte del día: YYYYMMDD-NNN (correlativo diario). */
 async function generarNumeroParte(): Promise<string> {
@@ -30,6 +31,9 @@ export async function GET(request: NextRequest) {
         const incluirArchivados = searchParams.get('archivados') === 'true'
 
         const where: any = {}
+        // Niveles 1-3 solo ven SUS propios partes; responsable+ (nivel>=2) todos.
+        const nivel = getNivel((session.user as any).rol ?? '')
+        if (nivel < 2) where.creadoPorId = (session.user as any).id
         if (!incluirArchivados) where.archivado = false
         if (estado && ['borrador', 'completo'].includes(estado)) where.estado = estado
         if (q) {

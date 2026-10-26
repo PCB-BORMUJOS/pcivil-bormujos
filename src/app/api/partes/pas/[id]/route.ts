@@ -3,14 +3,19 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { registrarAudit, getUsuarioAudit, compararCambios } from '@/lib/audit'
+import { getNivel } from '@/lib/permisos'
 
-/** GET /api/partes/prf/[id] — un parte. */
+/** GET /api/partes/pas/[id] — un parte. Contiene datos médicos del paciente:
+ *  solo el creador o un responsable+ (nivel>=2) pueden verlo. */
 export async function GET(_request: NextRequest, { params }: { params: { id: string } }) {
     try {
         const session = await getServerSession(authOptions)
         if (!session?.user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
         const parte = await prisma.partePAS.findUnique({ where: { id: params.id } })
         if (!parte) return NextResponse.json({ error: 'No encontrado' }, { status: 404 })
+        const nivel = getNivel((session.user as any).rol ?? '')
+        const esCreador = parte.creadoPorId === (session.user as any).id
+        if (!esCreador && nivel < 2) return NextResponse.json({ error: 'Sin permisos para ver este parte' }, { status: 403 })
         return NextResponse.json({ parte })
     } catch (error) {
         console.error('Error GET /api/partes/prf/[id]:', error)
@@ -26,6 +31,9 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
         const existente = await prisma.partePAS.findUnique({ where: { id: params.id } })
         if (!existente) return NextResponse.json({ error: 'No encontrado' }, { status: 404 })
+        const nivel = getNivel((session.user as any).rol ?? '')
+        const esCreador = existente.creadoPorId === (session.user as any).id
+        if (!esCreador && nivel < 2) return NextResponse.json({ error: 'Sin permisos para editar este parte' }, { status: 403 })
 
         const body = await request.json()
         const data: any = {}
@@ -75,6 +83,9 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
         if (!session?.user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
         const existente = await prisma.partePAS.findUnique({ where: { id: params.id } })
         if (!existente) return NextResponse.json({ error: 'No encontrado' }, { status: 404 })
+        const nivel = getNivel((session.user as any).rol ?? '')
+        const esCreador = existente.creadoPorId === (session.user as any).id
+        if (!esCreador && nivel < 2) return NextResponse.json({ error: 'Sin permisos para borrar este parte' }, { status: 403 })
 
         const hard = new URL(request.url).searchParams.get('hard') === 'true'
         if (hard) await prisma.partePAS.delete({ where: { id: params.id } })
