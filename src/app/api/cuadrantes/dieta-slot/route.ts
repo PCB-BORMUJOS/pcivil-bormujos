@@ -10,6 +10,15 @@ export async function POST(request: NextRequest) {
     const session = await getServerSession(authOptions)
     if (!session?.user?.email) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
+    // Operación del planificador de cuadrantes: calcula/escribe dietas (dinero) de
+    // CUALQUIER indicativo. Exige nivel de gestión (admin/coordinador/superadmin).
+    // Sin esto, cualquier usuario con sesión podría fabricar, borrar o consultar las
+    // dietas de otro pasando su usuarioId (IDOR de escritura + revelación de importe).
+    const rol = (session.user as any)?.rol ?? 'voluntario'
+    if (!['superadmin', 'coordinador', 'admin'].includes(rol)) {
+      return NextResponse.json({ error: 'Sin permisos' }, { status: 403 })
+    }
+
     const { usuarioId, fecha, turno, horas, motivo } = await request.json()
     if (!usuarioId || !fecha || !turno || !horas) {
       return NextResponse.json({ error: 'Faltan campos' }, { status: 400 })

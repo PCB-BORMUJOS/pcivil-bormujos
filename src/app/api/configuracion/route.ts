@@ -6,6 +6,13 @@ import { prisma } from '@/lib/db'
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  // Datos sensibles (baremos de dietas, precio/km, config económica de J-44): solo
+  // superadmin. El middleware ya lo bloquea, pero se comprueba también aquí como
+  // defensa en profundidad, por si el matcher del middleware cambiara.
+  const rol = (session.user as any)?.rol?.toLowerCase() || ''
+  if (rol !== 'superadmin') {
+    return NextResponse.json({ error: 'Sin permisos' }, { status: 403 })
+  }
   const { searchParams } = new URL(request.url)
   const clave = searchParams.get('clave')
   try {
