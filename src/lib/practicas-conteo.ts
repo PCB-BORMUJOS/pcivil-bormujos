@@ -38,7 +38,15 @@ const fechaMadrid = (d: Date) => new Date(d).toLocaleDateString('en-CA', { timeZ
 export async function recalcularPracticasEnPartes(): Promise<void> {
   const enPracticas = await prisma.fichaVoluntario.findMany({
     where: { enPracticas: true },
-    select: { usuarioId: true, turnosPracticasRealizados: true, usuario: { select: { numeroVoluntario: true } } },
+    select: {
+      usuarioId: true, turnosPracticasRealizados: true,
+      // Desde cuándo cuentan las prácticas de ESTE voluntario con su indicativo
+      // actual. Imprescindible para los indicativos REUTILIZADOS: sin este suelo,
+      // un número que antes tuvo otra persona heredaría sus turnos de partes
+      // antiguos. Si no hay fecha de inicio, se usa el alta.
+      fechaInicioPracticas: true, fechaAlta: true,
+      usuario: { select: { numeroVoluntario: true } },
+    },
   })
   if (enPracticas.length === 0) return
 
@@ -52,6 +60,7 @@ export async function recalcularPracticasEnPartes(): Promise<void> {
 
   // Precalcular, por parte, su clave día+turno y su conjunto de indicativos.
   const partesInfo = partes.map(p => ({
+    fechaStr: fechaMadrid(p.fecha),
     clave: `${fechaMadrid(p.fecha)}|${turnoDeHora(p.horaLlamada) || 'noche'}`,
     inds: indicativosDeParte(p),
   }))
@@ -59,8 +68,17 @@ export async function recalcularPracticasEnPartes(): Promise<void> {
   for (const f of enPracticas) {
     const ind = (f.usuario?.numeroVoluntario || '').trim().toUpperCase()
     if (!ind) continue
+    // Suelo de fecha: solo cuentan los partes desde que esta persona usa el
+    // indicativo (fechaInicioPracticas; si no, su alta). Así un número reutilizado
+    // no hereda los turnos del voluntario anterior.
+    const desde = f.fechaInicioPracticas ?? f.fechaAlta
+    const desdeStr = desde ? fechaMadrid(desde) : null
     const turnos = new Set<string>()
-    for (const pi of partesInfo) if (pi.inds.has(ind)) turnos.add(pi.clave)
+    for (const pi of partesInfo) {
+      if (!pi.inds.has(ind)) continue
+      if (desdeStr && pi.fechaStr < desdeStr) continue
+      turnos.add(pi.clave)
+    }
     const nuevo = turnos.size
     if (nuevo === (f.turnosPracticasRealizados ?? 0)) continue
 
