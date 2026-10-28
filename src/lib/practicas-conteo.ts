@@ -50,34 +50,34 @@ export async function recalcularPracticasEnPartes(): Promise<void> {
   })
   if (enPracticas.length === 0) return
 
-  const partes = await prisma.partePSI.findMany({
-    where: { archivado: false },
-    select: {
-      fecha: true, horaLlamada: true, equipoWalkies: true,
-      indicativoCumplimenta: true, responsableTurno: true, indicativosInforman: true,
-    },
+  // El cómputo de prácticas = turnos del CUADRANTE realmente realizados (guardias
+  // con fecha <= hoy). Debe coincidir EXACTAMENTE con guardias y estadísticas, por
+  // eso se cuenta sobre la misma fuente (la tabla de guardias) y no sobre los
+  // partes PSI (que incluían apariciones sin turno real y falsos "noche").
+  const usuarioIds = enPracticas.map(f => f.usuarioId)
+  const guardias = await prisma.guardia.findMany({
+    where: { usuarioId: { in: usuarioIds } },
+    select: { usuarioId: true, fecha: true, turno: true },
   })
-
-  // Precalcular, por parte, su clave día+turno y su conjunto de indicativos.
-  const partesInfo = partes.map(p => ({
-    fechaStr: fechaMadrid(p.fecha),
-    clave: `${fechaMadrid(p.fecha)}|${turnoDeHora(p.horaLlamada) || 'noche'}`,
-    inds: indicativosDeParte(p),
-  }))
+  const hoyStr = fechaMadrid(new Date())
+  const porUsuario = new Map<string, Array<{ fechaStr: string; turno: string }>>()
+  for (const g of guardias) {
+    const arr = porUsuario.get(g.usuarioId) ?? []
+    arr.push({ fechaStr: fechaMadrid(g.fecha), turno: g.turno })
+    porUsuario.set(g.usuarioId, arr)
+  }
 
   for (const f of enPracticas) {
-    const ind = (f.usuario?.numeroVoluntario || '').trim().toUpperCase()
-    if (!ind) continue
-    // Suelo de fecha: solo cuentan los partes desde que esta persona usa el
+    // Suelo de fecha: solo cuentan los turnos desde que esta persona usa el
     // indicativo (fechaInicioPracticas; si no, su alta). Así un número reutilizado
     // no hereda los turnos del voluntario anterior.
     const desde = f.fechaInicioPracticas ?? f.fechaAlta
     const desdeStr = desde ? fechaMadrid(desde) : null
     const turnos = new Set<string>()
-    for (const pi of partesInfo) {
-      if (!pi.inds.has(ind)) continue
-      if (desdeStr && pi.fechaStr < desdeStr) continue
-      turnos.add(pi.clave)
+    for (const g of porUsuario.get(f.usuarioId) ?? []) {
+      if (g.fechaStr > hoyStr) continue             // turnos futuros aún no cuentan
+      if (desdeStr && g.fechaStr < desdeStr) continue
+      turnos.add(`${g.fechaStr}|${g.turno}`)
     }
     const nuevo = turnos.size
     if (nuevo === (f.turnosPracticasRealizados ?? 0)) continue

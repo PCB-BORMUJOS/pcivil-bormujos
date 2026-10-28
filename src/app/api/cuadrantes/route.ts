@@ -156,10 +156,12 @@ export async function POST(request: NextRequest) {
       // Comprobar si está en prácticas
       const fichaCheck = await prisma.fichaVoluntario.findUnique({ where: { usuarioId } })
       if (fichaCheck?.enPracticas) {
-        // El voluntario en prácticas APARECE en el cuadrante pero el turno de
-        // prácticas NO se cuenta aquí: solo se contabiliza si figura en el parte
-        // de servicio PSI de ese turno (ver src/lib/practicas-conteo.ts, invocado
-        // al guardar/finalizar el parte). Tampoco genera dieta.
+        // El voluntario en prácticas APARECE en el cuadrante y su turno SÍ cuenta
+        // para las prácticas: el cómputo son los turnos del cuadrante realizados
+        // (debe coincidir con guardias/estadísticas). Se recalcula aquí. NO genera
+        // dieta mientras esté en prácticas.
+        const { recalcularPracticasEnPartes } = await import('@/lib/practicas-conteo')
+        recalcularPracticasEnPartes().catch(() => { /* secundario, no bloquea */ })
         return NextResponse.json({ success: true, guardia })
       }
 
@@ -351,8 +353,10 @@ export async function DELETE(request: NextRequest) {
     await prisma.dieta.deleteMany({ where: { guardiaId: id } })
     await prisma.guardia.delete({ where: { id } })
 
-    // El contador de prácticas ya NO depende de las guardias del cuadrante: se
-    // recalcula a partir de los partes de servicio PSI (ver practicas-conteo.ts).
+    // El cómputo de prácticas son los turnos del cuadrante realizados, así que al
+    // quitar una guardia hay que recalcularlo (debe coincidir con guardias).
+    const { recalcularPracticasEnPartes } = await import('@/lib/practicas-conteo')
+    recalcularPracticasEnPartes().catch(() => { /* secundario, no bloquea */ })
 
     return NextResponse.json({ success: true })
   } catch (error) {
