@@ -158,6 +158,7 @@ const AREAS_SERVICIO = [
   { id: 'TRANSMISIONES', nombre: 'Transmisiones', color: 'bg-cyan-500' },
   { id: 'ACCION_SOCIAL', nombre: 'Acción Social', color: 'bg-pink-500' },
   { id: 'PMA', nombre: 'PMA', color: 'bg-orange-500' },
+  { id: 'DRONES', nombre: 'Drones/RPAS', color: 'bg-teal-500' },
   { id: 'ADMINISTRACION', nombre: 'Administración', color: 'bg-slate-500' },
 ];
 
