@@ -3147,11 +3147,13 @@ export default function AdministracionPage() {
                   <option value="JEFE_SERVICIO">Jefe de Servicio</option>
                 </select>
               </div>
-              {fichaData.enPracticas && (
+              {(fichaData.enPracticas || (fichaData.turnosPracticasRealizados ?? 0) > 0 || fichaData.fechaInicioPracticas) && (
                 <div className="col-span-2 bg-amber-50 border border-amber-200 rounded-lg p-3">
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="w-2 h-2 rounded-full bg-amber-500 inline-block" />
-                    <span className="text-xs font-bold text-amber-700 uppercase">Periodo de Prácticas</span>
+                    <span className={`w-2 h-2 rounded-full inline-block ${fichaData.enPracticas ? 'bg-amber-500' : 'bg-green-500'}`} />
+                    <span className="text-xs font-bold text-amber-700 uppercase">
+                      {fichaData.enPracticas ? 'Periodo de Prácticas' : 'Prácticas completadas'}
+                    </span>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
