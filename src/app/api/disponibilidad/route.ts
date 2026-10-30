@@ -4,6 +4,8 @@ import { registrarAudit, getUsuarioAudit } from '@/lib/audit'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { safeJsonParse } from '@/lib/utils'
+import { fechaLimite } from '@/lib/disponibilidad-avisos'
+import { getNivel } from '@/lib/permisos'
 
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions)
@@ -63,6 +65,22 @@ export async function POST(request: NextRequest) {
     if (!semanaInicio) {
       return NextResponse.json({ error: 'Semana requerida' }, { status: 400 })
     }
+
+    // PLAZO: la disponibilidad se cierra el viernes anterior a las 12:00 (hora de
+    // Madrid). Pasado ese momento, los voluntarios NO pueden enviarla por la app:
+    // deben escribir a J-44. La Jefatura (nivel>=4) puede seguir editándola para
+    // introducir las que lleguen por mensaje.
+    const nivel = getNivel((session.user as any)?.rol ?? '')
+    if (nivel < 4) {
+      const limite = fechaLimite(new Date(semanaInicio + 'T00:00:00.000Z'))
+      if (Date.now() > limite.getTime()) {
+        return NextResponse.json({
+          error: 'FUERA_DE_PLAZO',
+          mensaje: 'El plazo para enviar la disponibilidad terminó el viernes a las 12:00. Para enviarla ahora, escribe un mensaje directo a J-44 desde la aplicación.',
+        }, { status: 409 })
+      }
+    }
+
     const existente = await prisma.disponibilidad.findFirst({
       where: {
         usuarioId: usuario.id,

@@ -197,7 +197,10 @@ function AvailabilityForm({ onClose }: { onClose: () => void }) {
 
       const data = await response.json();
 
-      if (data.success) {
+      if (response.status === 409 && data.error === 'FUERA_DE_PLAZO') {
+        // Plazo cerrado (viernes 12:00): hay que enviarla por mensaje a J-44.
+        alert('⏰ FUERA DE PLAZO\n\n' + (data.mensaje || 'El plazo terminó el viernes a las 12:00. Escribe un mensaje directo a J-44 para enviar tu disponibilidad.'));
+      } else if (data.success) {
         alert('✅ Disponibilidad guardada correctamente');
         onClose();
       } else {
