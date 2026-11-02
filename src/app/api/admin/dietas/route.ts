@@ -92,6 +92,9 @@ export async function GET(request: NextRequest) {
             apellidos: d.usuario.apellidos,
             dias: 0, subtotalDietas: 0, subtotalKm: 0, totalDietas: 0,
             tramos: {} as Record<string, number>,
+            // Desglose de por qué los turnos y las dietas pueden no coincidir
+            dietas: 0, consolidados: 0, sinTramo: 0,
+            fechasConsolidadas: [] as string[],
           })
         }
         const r = map.get(key)
@@ -102,10 +105,23 @@ export async function GET(request: NextRequest) {
         // Solo se cuentan en el desglose las dietas que pagan (importe > 0); los
         // turnos consolidados a 0 no suman tramo. Así +4h·29,45 + +8h·49,15 +
         // +12h·72,37 cuadra EXACTAMENTE con el importe de dietas.
+        //
+        // De ahí que `dias` (turnos realizados) pueda ser mayor que `dietas`
+        // (días abonados): quien hace dos turnos en la misma jornada cobra una
+        // sola dieta por el tramo superior, y el segundo turno queda a 0. El
+        // desglose por tramos suma SIEMPRE `dietas`, nunca `dias`; mostrar el
+        // desglose junto a `dias` era lo que hacía que no cuadrase.
         const imp = Number(d.subtotalDietas)
         if (imp > 0) {
+          r.dietas += 1
           const min = tramoDeImporte(imp)
           if (min !== null) r.tramos[min] = (r.tramos[min] || 0) + 1
+          // Importe que no corresponde a ningún tramo del baremo: antes se
+          // descartaba en silencio y desaparecía del desglose sin dejar rastro.
+          else r.sinTramo += 1
+        } else {
+          r.consolidados += 1
+          r.fechasConsolidadas.push(new Date(d.fecha).toISOString().slice(0, 10))
         }
       })
       return Array.from(map.values()).sort((a, b) => (a.indicativo || '').localeCompare(b.indicativo || ''))

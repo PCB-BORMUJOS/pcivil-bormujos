@@ -135,6 +135,10 @@ export default function ConfiguracionPage() {
         indicativo: r.indicativo || '—',
         nombre: `${r.nombre || ''} ${r.apellidos || ''}`.trim(),
         dias: r.dias || 0,
+        dietas: r.dietas ?? r.dias ?? 0,
+        consolidados: r.consolidados || 0,
+        sinTramo: r.sinTramo || 0,
+        fechasConsolidadas: r.fechasConsolidadas || [],
         tramos: r.tramos || {},
         subtotalDietas: Number(r.subtotalDietas || 0),
         subtotalKm: Number(r.subtotalKm || 0),
@@ -156,6 +160,11 @@ export default function ConfiguracionPage() {
     const totalDietas = reportData.reduce((acc, r) => acc + r.subtotalDietas, 0);
     const totalKm = reportData.reduce((acc, r) => acc + r.subtotalKm, 0);
     const totalDias = reportData.reduce((acc, r) => acc + r.dias, 0);
+    // Los días que de verdad se abonan: quien hace dos turnos en la misma
+    // jornada cobra una sola dieta, así que el desglose por tramos cuadra con
+    // esto y no con el número de turnos.
+    const totalDietasDias = reportData.reduce((acc, r) => acc + (Number(r.dietas) || r.dias), 0);
+    const consolidadas = reportData.filter(r => Number(r.consolidados) > 0);
     // Tramos a mostrar (por defecto +4h/+8h/+12h). Se cuentan por franja horaria.
     const tramos = tramosDef.length ? tramosDef : [{ min: 4, amount: 29.45 }, { min: 8, amount: 49.15 }, { min: 12, amount: 72.37 }];
     const totalTramo = (min: number) => reportData.reduce((acc, r) => acc + (Number(r.tramos?.[min]) || 0), 0);
@@ -164,8 +173,9 @@ export default function ConfiguracionPage() {
     const columnas = [
       { label: 'Indicativo', align: 'left' as const, width: 20 },
       { label: 'Nombre', align: 'left' as const, width: 44 },
-      { label: 'Dias', align: 'center' as const, width: 12 },
-      ...tramos.map(t => ({ label: `+${t.min}h`, align: 'center' as const, width: 12 })),
+      { label: 'Turnos', align: 'center' as const, width: 13 },
+      { label: 'Dietas', align: 'center' as const, width: 13 },
+      ...tramos.map(t => ({ label: `+${t.min}h`, align: 'center' as const, width: 11 })),
       { label: 'Dietas', align: 'right' as const, width: 26 },
       { label: 'Km', align: 'right' as const, width: 18 },
       { label: 'Total', align: 'right' as const, width: 22 },
@@ -178,19 +188,25 @@ export default function ConfiguracionPage() {
       // (varias páginas de texto). En modo tabla se genera únicamente la tabla.
       mesAnio: soloTabla ? undefined : selectedMonth,
       intro: soloTabla ? [] : [
-        'Se relaciona a continuacion la liquidacion de dietas del personal voluntario del Servicio de Proteccion Civil de Bormujos correspondiente al periodo indicado, con el numero de dias de servicio desglosados por franja horaria (+4h/+8h/+12h), el importe de dietas, el kilometraje y el total por efectivo.',
+        'Se relaciona a continuacion la liquidacion de dietas del personal voluntario del Servicio de Proteccion Civil de Bormujos correspondiente al periodo indicado, con los turnos realizados, los dias con dieta desglosados por franja horaria (+4h/+8h/+12h), el importe de dietas, el kilometraje y el total por efectivo.',
+        'La columna "Turnos" recoge los turnos efectivamente realizados y la columna "Dietas" los dias que se abonan. Pueden no coincidir: quien cubre dos turnos en una misma jornada percibe una sola dieta, la del tramo horario superior resultante de sumar ambos. El desglose por tramos corresponde por tanto a la columna "Dietas".',
+        ...(consolidadas.length ? [
+          'En el periodo liquidado concurre esa circunstancia en: ' + consolidadas
+            .map(r => `${r.indicativo} (${r.consolidados} turno(s) el ${(r.fechasConsolidadas || []).join(', ')})`)
+            .join('; ') + '.',
+        ] : []),
       ],
       columnas,
       filas: reportData.map(r => [
-        r.indicativo, r.nombre, String(r.dias),
+        r.indicativo, r.nombre, String(r.dias), String(Number(r.dietas) || r.dias),
         ...tramos.map(t => String(Number(r.tramos?.[t.min]) || 0)),
         `${r.subtotalDietas.toFixed(2)} EUR`, `${r.subtotalKm.toFixed(2)} EUR`, `${r.total.toFixed(2)} EUR`,
       ]),
-      totales: ['TOTALES', '', String(totalDias),
+      totales: ['TOTALES', '', String(totalDias), String(totalDietasDias),
         ...tramos.map(t => String(totalTramo(t.min))),
         `${totalDietas.toFixed(2)} EUR`, `${totalKm.toFixed(2)} EUR`, `${totalImporte.toFixed(2)} EUR`],
       resumenImporte: `${totalImporte.toFixed(2)} EUR`,
-      resumenMeta: `${reportData.length} efectivo(s) · ${totalDias} dieta(s) registrada(s)`,
+      resumenMeta: `${reportData.length} efectivo(s) · ${totalDias} turno(s) · ${totalDietasDias} dieta(s) abonada(s)`,
       firmanteNombre: FIRMANTES_INFORME[firmanteDietas].nombre,
       firmanteCargo: FIRMANTES_INFORME[firmanteDietas].cargo,
       nombreArchivo: `${soloTabla ? 'Tabla-importes-dietas' : 'Informe-dietas'}-${selectedMonth}${FIRMANTES_INFORME[firmanteDietas].sufijoArchivo}.pdf`,
@@ -716,7 +732,8 @@ export default function ConfiguracionPage() {
                     <tr>
                       <th className="p-4 text-xs font-bold text-slate-400 uppercase">Indicativo</th>
                       <th className="p-4 text-xs font-bold text-slate-400 uppercase">Nombre</th>
-                      <th className="p-4 text-xs font-bold text-slate-400 uppercase text-center">Días<br /><span className="text-[9px] normal-case font-semibold text-slate-300">{(tramosDef.length ? tramosDef : [{min:4},{min:8},{min:12}]).map(t => `+${t.min}h`).join(' · ')}</span></th>
+                      <th className="p-4 text-xs font-bold text-slate-400 uppercase text-center">Turnos</th>
+                      <th className="p-4 text-xs font-bold text-slate-400 uppercase text-center">Dietas<br /><span className="text-[9px] normal-case font-semibold text-slate-300">{(tramosDef.length ? tramosDef : [{min:4},{min:8},{min:12}]).map(t => `+${t.min}h`).join(' · ')}</span></th>
                       <th className="p-4 text-xs font-bold text-slate-400 uppercase text-right">Dietas</th>
                       <th className="p-4 text-xs font-bold text-slate-400 uppercase text-right">Km</th>
                       <th className="p-4 text-xs font-bold text-slate-400 uppercase text-right">Total</th>
@@ -729,12 +746,29 @@ export default function ConfiguracionPage() {
                         <td className="p-4 font-medium text-slate-800">{row.nombre}</td>
                         <td className="p-4 text-center text-slate-600">
                           <div className="font-bold text-slate-800">{row.dias}</div>
+                          {/* Dos turnos en la misma jornada se abonan como una sola
+                              dieta, así que aquí puede haber más turnos que dietas. */}
+                          {Number(row.consolidados) > 0 && (
+                            <div className="text-[10px] text-amber-600 font-semibold mt-0.5"
+                                 title={`Turno doble el ${(row.fechasConsolidadas || []).join(', ')}: se abona una sola dieta por el tramo superior`}>
+                              −{row.consolidados} doble{Number(row.consolidados) > 1 ? 's' : ''}
+                            </div>
+                          )}
+                        </td>
+                        <td className="p-4 text-center text-slate-600">
+                          <div className="font-bold text-slate-800">{row.dietas ?? row.dias}</div>
                           <div className="flex justify-center gap-1.5 mt-1 text-[10px] font-semibold">
                             {(tramosDef.length ? tramosDef : [{min:4},{min:8},{min:12}]).map(t => (
                               <span key={t.min} className={`px-1.5 py-0.5 rounded ${Number(row.tramos?.[t.min]) ? 'bg-orange-100 text-orange-700' : 'bg-slate-100 text-slate-400'}`}>
                                 +{t.min}h: {Number(row.tramos?.[t.min]) || 0}
                               </span>
                             ))}
+                            {Number(row.sinTramo) > 0 && (
+                              <span className="px-1.5 py-0.5 rounded bg-red-100 text-red-700"
+                                    title="Importe que no corresponde a ningún tramo del baremo">
+                                otros: {row.sinTramo}
+                              </span>
+                            )}
                           </div>
                         </td>
                         <td className="p-4 text-right text-slate-600">{row.subtotalDietas.toFixed(2)} €</td>
