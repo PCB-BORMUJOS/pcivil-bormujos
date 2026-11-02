@@ -197,12 +197,18 @@ export async function POST(request: NextRequest) {
       const horasOtrosTurnos = dietasOtrosTurnos.reduce((sum, d) => sum + Number(d.horasTrabajadas), 0);
       const horasTotalesDia = horasOtrosTurnos + horasTrabajadas;
 
-      // Baremo: para el voluntariado se calcula sobre el TOTAL del día; para el
-      // Jefe de Servicio (J-44) cada turno es una dieta independiente y el tramo
-      // se calcula solo con las horas de ESE turno (mañana y tarde = dos dietas
-      // de "más de 4h", no una de 8h). Los tramos de 8h/12h solo se fuerzan con
-      // el botón del slot.
-      const horasParaTramo = esJefeServicio ? horasTrabajadas : horasTotalesDia;
+      // Baremo: CADA TURNO es una dieta independiente, y su tramo se calcula solo
+      // con las horas de ESE turno. Mañana y tarde el mismo día son dos dietas de
+      // "más de 4h", no una de "más de 8h": los tramos superiores corresponden a
+      // un turno que de verdad dure tanto (la noche, o uno forzado con el botón
+      // del slot), no a sumar dos turnos cortos.
+      //
+      // Antes se sumaban las horas del día para el voluntariado y solo J-44 se
+      // libraba. Eso pagaba 49,15 € donde correspondían 2 × 29,45 = 58,90 €, y
+      // además contradecía al botón manual del slot, que sí calculaba por turno:
+      // de ahí que los días dobles salieran de una forma u otra según se hubieran
+      // creado.
+      const horasParaTramo = horasTrabajadas;
       const tramo = [...baremo].reverse().find(t => horasParaTramo >= (t.horasMin ?? t.minHours ?? 0));
       const importeDia = tramo?.importe ?? tramo?.amount ?? 0;
 
@@ -214,23 +220,9 @@ export async function POST(request: NextRequest) {
       const subtotalKm = Math.round(kilometros * precioKm * 100) / 100;
       const totalDieta = Math.round((importeDia + subtotalKm) * 100) / 100;
 
-      // Si hay otros turnos del mismo día, poner su importeDia a 0 (el baremo
-      // acumulado va aquí). NO aplica a J-44: cada uno de sus turnos conserva su
-      // propia dieta de "más de 4h".
-      if (!esJefeServicio && dietasOtrosTurnos.length > 0) {
-        const dietaConKm = dietasOtrosTurnos.find(d => Number(d.kilometros) > 0);
-        if (dietaConKm) {
-          const nuevoTotalAnterior = Math.round(Number(dietaConKm.subtotalKm) * 100) / 100;
-          await prisma.dieta.update({
-            where: { id: dietaConKm.id },
-            data: { importeDia: 0, subtotalDietas: 0, totalDieta: nuevoTotalAnterior }
-          });
-        }
-        await prisma.dieta.updateMany({
-          where: { usuarioId, fecha: { gte: inicioDia, lte: finDia }, turno: { not: turno }, kilometros: 0 },
-          data: { importeDia: 0, subtotalDietas: 0, totalDieta: 0 }
-        });
-      }
+      // Los otros turnos del día conservan su propia dieta: ya no se ponen a 0.
+      // Lo único que sigue contándose una sola vez al día es el kilometraje, que
+      // es un gasto de desplazamiento y no retribución del turno (ver kmYaContado).
 
       // No degradar una dieta que ya tenga un tramo FORZADO mayor (+8h/+12h
       // aplicado con el boton del slot antes de guardar). Si existe una dieta de
@@ -266,8 +258,10 @@ export async function POST(request: NextRequest) {
           totalDieta,
           mesAnio,
           estado: 'pendiente',
+          // La nota es informativa: deja constancia de que ese día hubo más de
+          // un turno, pero cada uno lleva su propia dieta.
           notas: dietasOtrosTurnos.length > 0
-            ? `${horasTotalesDia}h día (${desglose}) - baremo ${importeDia}€`
+            ? `${horasTrabajadas}h (${turno}) - baremo ${importeDia}€ · día: ${horasTotalesDia}h (${desglose})`
             : undefined
         }
       });
