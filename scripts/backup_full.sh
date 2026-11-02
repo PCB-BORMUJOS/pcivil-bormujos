@@ -182,6 +182,50 @@ BORRADAS=$(find "$ROOT/backups" -maxdepth 1 -name 'full-*.tar.gz' -type f -mtime
 find "$ROOT/backups" -maxdepth 1 -name 'full-*.tar.gz' -type f -mtime +30 -delete 2>/dev/null
 [ "$BORRADAS" -gt 0 ] && echo "-- Retención: ${BORRADAS} copia(s) de más de 30 días eliminada(s)"
 
+# 7b) COPIA FUERA DEL EQUIPO — una por semana a Google Drive.
+#     El punto débil del resto del esquema es que todas las copias viven en este
+#     Mac: si se rompe o se pierde, se pierden las 32 de golpe. Esta sube una
+#     semanal a la cuenta de Drive del servicio, que la aplicación de Google
+#     sincroniza sola.
+#
+#     No se sube una copia con avisos: si la del día salió mal, se deja la buena
+#     de la semana anterior en lugar de reemplazarla por una defectuosa.
+#
+#     Y no se mira el día de la semana sino si ya hay una de menos de 7 días:
+#     si el Mac estuvo apagado el domingo, la primera ejecución que lo encienda
+#     la sube igual, en vez de esperar al domingo siguiente.
+DRIVE="/Users/emsigo/Library/CloudStorage/GoogleDrive-bormujospc@gmail.com/Mi unidad/COPIAS-SEGURIDAD-PCIVIL"
+if [ "$AVISOS" -ne 0 ]; then
+  echo "-- Copia a Drive omitida: la copia de hoy tiene avisos"
+elif [ ! -d "$(dirname "$DRIVE")" ]; then
+  aviso "Google Drive no está sincronizado en este equipo; no hay copia externa"
+elif [ ! -f "$OUT.tar.gz" ]; then
+  echo "-- Copia a Drive omitida: no hay .tar.gz que subir"
+else
+  mkdir -p "$DRIVE"
+  RECIENTE=$(find "$DRIVE" -maxdepth 1 -name 'full-*.tar.gz' -type f -mtime -7 2>/dev/null | head -1)
+  if [ -n "$RECIENTE" ]; then
+    echo "-- Copia a Drive omitida: ya hay una de esta semana ($(basename "$RECIENTE"))"
+  else
+    echo "-- Copia semanal a Google Drive"
+    # Se copia a un nombre temporal y se renombra al final: si la sincronización
+    # se corta a medio camino, en Drive no queda un fichero a medias con nombre
+    # de copia buena.
+    if cp "$OUT.tar.gz" "$DRIVE/.subiendo-full-$TS.tar.gz" \
+       && mv "$DRIVE/.subiendo-full-$TS.tar.gz" "$DRIVE/full-$TS.tar.gz"; then
+      echo "  subida a Drive: full-$TS.tar.gz ($(du -h "$OUT.tar.gz" | cut -f1))"
+      # Retención aparte en Drive: 5 semanales, poco más de un mes.
+      SOBRAN=$(ls -1t "$DRIVE"/full-*.tar.gz 2>/dev/null | tail -n +6)
+      if [ -n "$SOBRAN" ]; then
+        echo "$SOBRAN" | while read -r f; do rm -f "$f" && echo "  retirada de Drive: $(basename "$f")"; done
+      fi
+    else
+      aviso "no se pudo copiar a Google Drive"
+      rm -f "$DRIVE/.subiendo-full-$TS.tar.gz"
+    fi
+  fi
+fi
+
 # 8) Veredicto. Se escribe también en un fichero de estado fácil de consultar,
 #    para saber de un vistazo si la última copia salió bien.
 COPIAS=$(ls -1 "$ROOT/backups"/full-*.tar.gz 2>/dev/null | wc -l | tr -d ' ')
