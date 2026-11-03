@@ -170,13 +170,16 @@ export default function ConfiguracionPage() {
     const totalTramo = (min: number) => reportData.reduce((acc, r) => acc + (Number(r.tramos?.[min]) || 0), 0);
 
     // Columnas: con los tramos, se estrecha "Nombre" para que quepa todo en A4.
+    // Anchos ajustados para que la suma quepa en el ancho útil A4 (182 mm con
+    // márgenes de 14) y la columna Total de la derecha no se corte.
+    // Suma: 20+40+13+13+(3×10)+24+18+22 = 180 mm.
     const columnas = [
       { label: 'Indicativo', align: 'left' as const, width: 20 },
-      { label: 'Nombre', align: 'left' as const, width: 44 },
+      { label: 'Nombre', align: 'left' as const, width: 40 },
       { label: 'Turnos', align: 'center' as const, width: 13 },
       { label: 'Dietas', align: 'center' as const, width: 13 },
-      ...tramos.map(t => ({ label: `+${t.min}h`, align: 'center' as const, width: 11 })),
-      { label: 'Dietas', align: 'right' as const, width: 26 },
+      ...tramos.map(t => ({ label: `+${t.min}h`, align: 'center' as const, width: 10 })),
+      { label: 'Dietas', align: 'right' as const, width: 24 },
       { label: 'Km', align: 'right' as const, width: 18 },
       { label: 'Total', align: 'right' as const, width: 22 },
     ];
