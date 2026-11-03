@@ -21,7 +21,8 @@ const txt = (s: any) => String(s ?? '')
   .replace(/[ÓÒÖ]/g, 'O').replace(/[ÚÙÜ]/g, 'U')
   .replace(/ñ/g, 'n').replace(/Ñ/g, 'N')
   .replace(/[—–]/g, '-').replace(/[“”]/g, '"').replace(/[’‘]/g, "'")
-  .replace(/€/g, 'EUR')
+  // El símbolo € se conserva: jsPDF (v4) lo renderiza bien y ocupa menos que
+  // "EUR", así que las columnas de importe de la tabla no se cortan.
 
 /**
  * Quién puede firmar los informes de dietas.
@@ -316,7 +317,7 @@ export async function generarLiquidacionJ44PDF(o: LiquidacionJ44Opts) {
     y = 35
   }
   const asegurar = (alto: number) => { if (y + alto > TOPE) nuevaPagina() }
-  const eur = (n: number) => n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' EUR'
+  const eur = (n: number) => n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'
 
   // La memoria justificativa específica del Jefe de Servicio se antepone en el
   // "informe completo".
