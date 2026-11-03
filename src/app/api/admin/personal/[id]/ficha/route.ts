@@ -4,6 +4,7 @@ import { getServerSession } from 'next-auth'
 import { registrarAudit, getUsuarioAudit } from '@/lib/audit'
 import { prisma } from '@/lib/db'
 import { carenciasUsuario } from '@/lib/practicas-cobertura'
+import { getTodaySpain } from '@/lib/date-utils'
 
 export async function GET(
   request: NextRequest,
@@ -131,8 +132,13 @@ export async function POST(
       modelo145Adjunto: body.modelo145Adjunto,
       kmDesplazamiento: body.kmDesplazamiento !== undefined ? parseFloat(body.kmDesplazamiento) || 0 : 0,
       enPracticas: body.enPracticas ?? undefined,
-      turnosPracticasRealizados: body.enPracticas === true ? 0 : (body.turnosPracticasRealizados !== undefined ? parseInt(body.turnosPracticasRealizados) || 0 : undefined),
-      fechaInicioPracticas: body.fechaInicioPracticas ? new Date(body.fechaInicioPracticas) : null
+      turnosPracticasRealizados: body.turnosPracticasRealizados !== undefined ? (parseInt(body.turnosPracticasRealizados) || 0) : undefined,
+      // Si se marca en prácticas sin fecha, se fija automáticamente la de hoy
+      // (desde cuándo cuentan sus turnos). Si la mandan, se respeta. Si no se
+      // indica y no entra en prácticas, se deja como está (undefined, no se borra).
+      fechaInicioPracticas: body.fechaInicioPracticas
+        ? new Date(body.fechaInicioPracticas)
+        : (body.enPracticas === true ? new Date(getTodaySpain()) : undefined)
     }
 
     let ficha
@@ -152,6 +158,17 @@ export async function POST(
 
     const { usuarioId, usuarioNombre } = getUsuarioAudit(session)
     await registrarAudit({ accion: 'UPDATE', entidad: 'FichaVoluntario', entidadId: ficha.id, descripcion: 'Ficha de voluntario actualizada', usuarioId, usuarioNombre, modulo: 'Administracion' })
+
+    // En prácticas NO se cobran dietas: se retiran las dietas PENDIENTES que
+    // tuviera (p. ej. generadas antes de marcarlo), SIN tocar sus guardias —
+    // sigue figurando en el cuadrante en su slot como prácticas. Y se recalculan
+    // sus turnos reales desde el cuadrante.
+    if (body.enPracticas === true) {
+      await prisma.dieta.deleteMany({ where: { usuarioId: params.id, estado: 'pendiente' } }).catch(() => { /* no bloquea el guardado */ })
+      const { recalcularPracticasEnPartes } = await import('@/lib/practicas-conteo')
+      await recalcularPracticasEnPartes().catch(() => { /* secundario */ })
+    }
+
     return NextResponse.json({ success: true, ficha })
   } catch (error) {
     console.error('Error al guardar ficha:', error)
