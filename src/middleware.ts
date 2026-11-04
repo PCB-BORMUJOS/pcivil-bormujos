@@ -67,7 +67,15 @@ const RUTAS_PROTEGIDAS: string[] = [
   '/megacode',
   '/agentes',
   '/compras',
+  '/aula',
 ]
+
+// ── AULA DE FORMACIÓN (sección independiente) ──────────────────────────────
+// Roles cuyo acceso queda LIMITADO exclusivamente al aula (/aula). Pensado para
+// personas externas que no deben ver el resto de la aplicación.
+const ROLES_SOLO_AULA: string[] = ['alumno_externo', 'formador_externo']
+// APIs permitidas a esos roles: aprendizaje (formación/aula) y transversales mínimas.
+const API_PERMITIDAS_AULA: string[] = ['/api/auth', '/api/formacion', '/api/aula', '/api/notificaciones']
 
 export async function middleware(request: NextRequest) {
   const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET })
@@ -89,6 +97,11 @@ export async function middleware(request: NextRequest) {
   const API_PUBLICAS = ['/api/auth', '/api/tracking', '/api/vehiculos/ubicacion', '/api/cron']
   if (pathname.startsWith('/api/') && !API_PUBLICAS.some(r => pathname.startsWith(r)) && !token) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  }
+
+  // Roles solo-aula: la API operativa queda cerrada; solo APIs de aprendizaje.
+  if (token && ROLES_SOLO_AULA.includes(rolTok) && pathname.startsWith('/api/') && !API_PERMITIDAS_AULA.some(r => pathname.startsWith(r))) {
+    return NextResponse.json({ error: 'Acceso restringido al aula de formación' }, { status: 403 })
   }
 
   // Visor = solo lectura: bloquear escrituras en toda la API
@@ -129,21 +142,27 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl)
   }
 
-  // Con token en página de login → redirigir a dashboard
+  // Con token en página de login → al aula si es rol solo-aula, si no al dashboard
   if (token && isAuthPage) {
-    return NextResponse.redirect(new URL('/dashboard', request.url))
+    const destino = ROLES_SOLO_AULA.includes(rolTok) ? '/aula' : '/dashboard'
+    return NextResponse.redirect(new URL(destino, request.url))
   }
 
   if (token && esRutaProtegida) {
     const rol = rolTok
     const nivel = nivelTok
 
+    // Roles solo-aula: solo pueden ver /aula; cualquier otra ruta protegida → al aula.
+    if (ROLES_SOLO_AULA.includes(rol) && !pathname.startsWith('/aula')) {
+      return NextResponse.redirect(new URL('/aula', request.url))
+    }
+
     // Configuración: SIEMPRE solo superadmin (aplica también a personalizados).
     if (RUTAS_SUPERADMIN.some(r => pathname.startsWith(r)) && nivel < 5) {
       return NextResponse.redirect(new URL('/dashboard', request.url))
     }
 
-    if (personalizado) {
+    if (personalizado && !pathname.startsWith('/aula')) {
       // DENEGAR POR DEFECTO: solo se permite una página protegida si es "siempre"
       // (Dashboard, Mi Área, Buscar) o si el usuario tiene 'ver:<modulo>'. Cualquier
       // ruta no mapeada a un módulo permitido queda bloqueada.
@@ -201,6 +220,7 @@ export const config = {
     '/megacode/:path*',
     '/agentes/:path*',
     '/compras/:path*',
+    '/aula/:path*',
     '/login',
   ],
 }

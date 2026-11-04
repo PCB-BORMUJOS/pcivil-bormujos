@@ -76,6 +76,12 @@ model Usuario {
   firmasAsistencia   RegistroFirma[]     @relation("FirmasUsuario")
   certificaciones    Certificacion[]
 
+  // --- Plataforma de Formación (LMS) ---
+  respuestasCorregidas           RespuestaIntento[]   @relation("CorrectorRespuesta")
+  entregasCorregidas             EntregaActividad[]   @relation("CorrectorEntrega")
+  sesionesPracticaImpartidas     SesionPractica[]     @relation("InstructorSesion")
+  evaluacionesPracticaRealizadas EvaluacionPractica[] @relation("InstructorEvaluacion")
+
   @@map("usuarios")
 }
 
@@ -1457,6 +1463,12 @@ model Curso {
   certificaciones Certificacion[]
   necesidades     NecesidadFormativa[]
 
+  // --- Plataforma de Formación (LMS) ---
+  bloques          BloqueTematico[]
+  examenes         Examen[]
+  actividades      Actividad[]
+  accionesPractica AccionFormativaPractica[]
+
   @@map("cursos")
 }
 
@@ -1501,6 +1513,10 @@ model Convocatoria {
   inscripciones Inscripcion[]
   jornadas      JornadaAsistencia[]
 
+  // --- Plataforma de Formación (LMS) ---
+  expediente       ExpedienteFormacion?
+  sesionesPractica SesionPractica[]
+
   @@map("convocatorias")
 }
 
@@ -1531,6 +1547,19 @@ model Inscripcion {
   observaciones String?  @db.Text
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
+
+  // --- Plataforma de Formación (LMS) — campos aditivos ---
+  notaTeorica       Float?  @map("nota_teorica")
+  notaPractica      Float?  @map("nota_practica")
+  progresoPct       Float?  @default(0) @map("progreso_pct")
+  estadoAprendizaje String? @default("no_iniciado") @map("estado_aprendizaje") // no_iniciado|en_curso|apto_teorico|apto|no_apto
+  tipoCertificado   String? @map("tipo_certificado") // aprovechamiento|asistencia|ninguno
+
+  progresoLecciones    ProgresoLeccion[]
+  intentosExamen       IntentoExamen[]
+  entregas             EntregaActividad[]
+  evaluacionesPractica EvaluacionPractica[]
+  notasBloque          NotaBloque[]
 
   @@unique([convocatoriaId, usuarioId])
   @@map("inscripciones")
@@ -1664,6 +1693,324 @@ model ParticipanteExterno {
   firmas RegistroFirma[]
 
   @@map("participantes_externos")
+}
+
+// ============================================
+// PLATAFORMA DE FORMACIÓN (LMS) — Fase 0
+// Currículo · Evaluación · Práctica · Expediente
+// Todo aditivo. Sin relación con Megacode/Prácticas operativas.
+// ============================================
+
+model BloqueTematico {
+  id             String  @id @default(cuid())
+  cursoId        String  @map("curso_id")
+  curso          Curso   @relation(fields: [cursoId], references: [id], onDelete: Cascade)
+  codigo         String?
+  titulo         String
+  orden          Int     @default(0)
+  objetivos      String? @db.Text
+  descripcion    String? @db.Text
+  horas          Float   @default(0)
+  horasPracticas Float   @default(0) @map("horas_practicas")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  lecciones        Leccion[]
+  examenes         Examen[]
+  actividades      Actividad[]
+  accionesPractica AccionFormativaPractica[]
+  notasBloque      NotaBloque[]
+
+  @@map("bloques_tematicos")
+}
+
+model Leccion {
+  id            String  @id @default(cuid())
+  bloqueId      String  @map("bloque_id")
+  bloque        BloqueTematico @relation(fields: [bloqueId], references: [id], onDelete: Cascade)
+  titulo        String
+  orden         Int     @default(0)
+  tipo          String  @default("contenido") // contenido|video|documento|mixto
+  contenidoHtml String? @map("contenido_html") @db.Text
+  duracionMin   Int?    @map("duracion_min")
+  obligatoria   Boolean @default(true)
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  recursos RecursoDidactico[]
+  progreso ProgresoLeccion[]
+
+  @@map("lecciones")
+}
+
+model RecursoDidactico {
+  id        String  @id @default(cuid())
+  leccionId String  @map("leccion_id")
+  leccion   Leccion @relation(fields: [leccionId], references: [id], onDelete: Cascade)
+  tipo      String  // pdf|video|embed|imagen|enlace
+  titulo    String
+  url       String  @db.Text
+  orden     Int     @default(0)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("recursos_didacticos")
+}
+
+model Examen {
+  id              String  @id @default(cuid())
+  cursoId         String? @map("curso_id")
+  curso           Curso?  @relation(fields: [cursoId], references: [id], onDelete: Cascade)
+  bloqueId        String? @map("bloque_id")
+  bloque          BloqueTematico? @relation(fields: [bloqueId], references: [id], onDelete: Cascade)
+  tipo            String  // parcial|final
+  titulo          String
+  descripcion     String? @db.Text
+  notaMinima      Float   @default(5) @map("nota_minima")
+  intentosMax     Int     @default(1) @map("intentos_max")
+  tiempoMin       Int?    @map("tiempo_min")
+  aleatorio       Boolean @default(false)
+  barajarOpciones Boolean @default(true) @map("barajar_opciones")
+  activo          Boolean @default(true)
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  preguntas Pregunta[]
+  intentos  IntentoExamen[]
+
+  @@map("examenes")
+}
+
+model Pregunta {
+  id          String  @id @default(cuid())
+  examenId    String  @map("examen_id")
+  examen      Examen  @relation(fields: [examenId], references: [id], onDelete: Cascade)
+  enunciado   String  @db.Text
+  tipo        String  // test|multiple|vf|abierta
+  puntuacion  Float   @default(1)
+  orden       Int     @default(0)
+  explicacion String? @db.Text
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  opciones   OpcionPregunta[]
+  respuestas RespuestaIntento[]
+
+  @@map("preguntas")
+}
+
+model OpcionPregunta {
+  id         String   @id @default(cuid())
+  preguntaId String   @map("pregunta_id")
+  pregunta   Pregunta @relation(fields: [preguntaId], references: [id], onDelete: Cascade)
+  texto      String   @db.Text
+  correcta   Boolean  @default(false)
+  orden      Int      @default(0)
+
+  @@map("opciones_pregunta")
+}
+
+model IntentoExamen {
+  id            String      @id @default(cuid())
+  inscripcionId String      @map("inscripcion_id")
+  inscripcion   Inscripcion @relation(fields: [inscripcionId], references: [id], onDelete: Cascade)
+  examenId      String      @map("examen_id")
+  examen        Examen      @relation(fields: [examenId], references: [id], onDelete: Cascade)
+  numeroIntento Int         @default(1) @map("numero_intento")
+  inicio        DateTime    @default(now())
+  fin           DateTime?
+  nota          Float?
+  estado        String      @default("en_curso") // en_curso|enviado|corregido
+  aptoParcial   Boolean?    @map("apto_parcial")
+  createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime    @updatedAt @map("updated_at")
+
+  respuestas RespuestaIntento[]
+
+  @@map("intentos_examen")
+}
+
+model RespuestaIntento {
+  id              String        @id @default(cuid())
+  intentoId       String        @map("intento_id")
+  intento         IntentoExamen @relation(fields: [intentoId], references: [id], onDelete: Cascade)
+  preguntaId      String        @map("pregunta_id")
+  pregunta        Pregunta      @relation(fields: [preguntaId], references: [id], onDelete: Cascade)
+  opcionIds       Json?         @map("opcion_ids")
+  textoLibre      String?       @map("texto_libre") @db.Text
+  correcta        Boolean?
+  puntosObtenidos Float?        @map("puntos_obtenidos")
+  corregidaPorId  String?       @map("corregida_por_id")
+  corregidaPor    Usuario?      @relation("CorrectorRespuesta", fields: [corregidaPorId], references: [id], onDelete: SetNull)
+  comentario      String?       @db.Text
+
+  @@map("respuestas_intento")
+}
+
+model Actividad {
+  id                String  @id @default(cuid())
+  cursoId           String? @map("curso_id")
+  curso             Curso?  @relation(fields: [cursoId], references: [id], onDelete: Cascade)
+  bloqueId          String? @map("bloque_id")
+  bloque            BloqueTematico? @relation(fields: [bloqueId], references: [id], onDelete: Cascade)
+  titulo            String
+  descripcion       String? @db.Text
+  fechaLimite       DateTime? @map("fecha_limite")
+  archivoAdjuntoUrl String? @map("archivo_adjunto_url") @db.Text
+  puntuacion        Float   @default(10)
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  entregas EntregaActividad[]
+
+  @@map("actividades")
+}
+
+model EntregaActividad {
+  id               String      @id @default(cuid())
+  actividadId      String      @map("actividad_id")
+  actividad        Actividad   @relation(fields: [actividadId], references: [id], onDelete: Cascade)
+  inscripcionId    String      @map("inscripcion_id")
+  inscripcion      Inscripcion @relation(fields: [inscripcionId], references: [id], onDelete: Cascade)
+  archivoUrl       String?     @map("archivo_url") @db.Text
+  comentarioAlumno String?     @map("comentario_alumno") @db.Text
+  fechaEntrega     DateTime    @default(now()) @map("fecha_entrega")
+  enPlazo          Boolean     @default(true) @map("en_plazo")
+  nota             Float?
+  apto             Boolean?
+  corregidaPorId   String?     @map("corregida_por_id")
+  corregidaPor     Usuario?    @relation("CorrectorEntrega", fields: [corregidaPorId], references: [id], onDelete: SetNull)
+  comentarioTutor  String?     @map("comentario_tutor") @db.Text
+  createdAt        DateTime    @default(now()) @map("created_at")
+  updatedAt        DateTime    @updatedAt @map("updated_at")
+
+  @@unique([actividadId, inscripcionId])
+  @@map("entregas_actividad")
+}
+
+model AccionFormativaPractica {
+  id            String  @id @default(cuid())
+  cursoId       String  @map("curso_id")
+  curso         Curso   @relation(fields: [cursoId], references: [id], onDelete: Cascade)
+  bloqueId      String? @map("bloque_id")
+  bloque        BloqueTematico? @relation(fields: [bloqueId], references: [id], onDelete: SetNull)
+  titulo        String
+  descripcion   String? @db.Text
+  orden         Int     @default(0)
+  duracionHoras Float   @default(0) @map("duracion_horas")
+  lugar         String?
+  competencias  Json?   @default("[]")
+  obligatoria   Boolean @default(true)
+  criterioApto  String? @map("criterio_apto") @db.Text
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  sesiones     SesionPractica[]
+  evaluaciones EvaluacionPractica[]
+
+  @@map("acciones_formativas_practica")
+}
+
+model SesionPractica {
+  id             String       @id @default(cuid())
+  accionId       String       @map("accion_id")
+  accion         AccionFormativaPractica @relation(fields: [accionId], references: [id], onDelete: Cascade)
+  convocatoriaId String       @map("convocatoria_id")
+  convocatoria   Convocatoria @relation(fields: [convocatoriaId], references: [id], onDelete: Cascade)
+  fecha          DateTime
+  horaInicio     String?      @map("hora_inicio")
+  horaFin        String?      @map("hora_fin")
+  lugar          String?
+  instructorId   String?      @map("instructor_id")
+  instructor     Usuario?     @relation("InstructorSesion", fields: [instructorId], references: [id], onDelete: SetNull)
+  observaciones  String?      @db.Text
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+
+  @@map("sesiones_practica")
+}
+
+model EvaluacionPractica {
+  id               String      @id @default(cuid())
+  accionId         String      @map("accion_id")
+  accion           AccionFormativaPractica @relation(fields: [accionId], references: [id], onDelete: Cascade)
+  inscripcionId    String      @map("inscripcion_id")
+  inscripcion      Inscripcion @relation(fields: [inscripcionId], references: [id], onDelete: Cascade)
+  instructorId     String?     @map("instructor_id")
+  instructor       Usuario?    @relation("InstructorEvaluacion", fields: [instructorId], references: [id], onDelete: SetNull)
+  fecha            DateTime    @default(now())
+  competenciasEval Json?       @default("[]") @map("competencias_eval")
+  apto             Boolean     @default(false)
+  nota             Float?
+  observaciones    String?     @db.Text
+  createdAt        DateTime    @default(now()) @map("created_at")
+  updatedAt        DateTime    @updatedAt @map("updated_at")
+
+  @@unique([accionId, inscripcionId])
+  @@map("evaluaciones_practica")
+}
+
+model ProgresoLeccion {
+  id              String      @id @default(cuid())
+  inscripcionId   String      @map("inscripcion_id")
+  inscripcion     Inscripcion @relation(fields: [inscripcionId], references: [id], onDelete: Cascade)
+  leccionId       String      @map("leccion_id")
+  leccion         Leccion     @relation(fields: [leccionId], references: [id], onDelete: Cascade)
+  completada      Boolean     @default(false)
+  fechaCompletada DateTime?   @map("fecha_completada")
+  tiempoSegundos  Int         @default(0) @map("tiempo_segundos")
+  updatedAt       DateTime    @updatedAt @map("updated_at")
+
+  @@unique([inscripcionId, leccionId])
+  @@map("progreso_lecciones")
+}
+
+model NotaBloque {
+  id              String      @id @default(cuid())
+  inscripcionId   String      @map("inscripcion_id")
+  inscripcion     Inscripcion @relation(fields: [inscripcionId], references: [id], onDelete: Cascade)
+  bloqueId        String      @map("bloque_id")
+  bloque          BloqueTematico @relation(fields: [bloqueId], references: [id], onDelete: Cascade)
+  notaTeorica     Float?      @map("nota_teorica")
+  notaActividades Float?      @map("nota_actividades")
+  notaPractica    Float?      @map("nota_practica")
+  apto            Boolean?
+  updatedAt       DateTime    @updatedAt @map("updated_at")
+
+  @@unique([inscripcionId, bloqueId])
+  @@map("notas_bloque")
+}
+
+model ExpedienteFormacion {
+  id                        String       @id @default(cuid())
+  convocatoriaId            String       @unique @map("convocatoria_id")
+  convocatoria              Convocatoria @relation(fields: [convocatoriaId], references: [id], onDelete: Cascade)
+  // Proyecto curricular (art. 6 Orden ESPA)
+  localidad                 String?
+  sede                      String?      @db.Text
+  destinatarios             String?      @db.Text
+  responsableCoordinacion   String?      @map("responsable_coordinacion")
+  telefonoCoordinacion      String?      @map("telefono_coordinacion")
+  estructuracion            String?      @db.Text
+  objetivosDidacticos       String?      @map("objetivos_didacticos") @db.Text
+  metodologia               String?      @default("presencial") // presencial|semipresencial|teleformacion
+  horarioDetalle            String?      @map("horario_detalle") @db.Text
+  profesorado               Json?        @default("[]")
+  instalaciones             String?      @db.Text
+  recursosDidacticos        String?      @map("recursos_didacticos") @db.Text
+  criteriosEvaluacion       String?      @map("criterios_evaluacion") @db.Text
+  perspectivaGenero         String?      @map("perspectiva_genero") @db.Text
+  // Homologación
+  esBasico                  Boolean      @default(false) @map("es_basico")
+  ambito                    String?      @default("local") // local|supraprovincial
+  estadoHomologacion        String       @default("borrador") @map("estado_homologacion") // borrador|presentada|homologada|denegada
+  numeroResolucion          String?      @map("numero_resolucion")
+  fechaResolucion           DateTime?    @map("fecha_resolucion")
+  tipoCertificadoResolucion String?      @map("tipo_certificado_resolucion") // aprovechamiento|asistencia
+  anexoUrl                  String?      @map("anexo_url") @db.Text
+  createdAt                 DateTime     @default(now()) @map("created_at")
+  updatedAt                 DateTime     @updatedAt @map("updated_at")
+
+  @@map("expedientes_formacion")
 }
 
 // ============================================
