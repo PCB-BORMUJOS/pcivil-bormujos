@@ -76,6 +76,10 @@ export default function ConfiguracionPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [editingUser, setEditingUser] = useState<Usuario | null>(null);
 
+  // Filtro por situación. Se carga TODO el personal (igual que el listado de
+  // Administración) y aquí se decide qué se muestra.
+  const [filtroEstado, setFiltroEstado] = useState<'todos' | 'activos' | 'bajas'>('todos');
+
   // Estados para ordenación
   const [sortBy, setSortBy] = useState<'nombre' | 'email' | 'voluntario' | 'rol' | 'estado'>('voluntario');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
@@ -267,7 +271,7 @@ export default function ConfiguracionPage() {
   const fetchData = async () => {
     setLoadingUsuarios(true);
     try {
-      const params = new URLSearchParams({ roles: 'true' });
+      const params = new URLSearchParams({ roles: 'true', bajas: 'true' });
       const response = await fetch(`/api/admin/personal?${params}`);
       const data = await response.json();
       if (data.voluntarios) {
@@ -467,8 +471,12 @@ export default function ConfiguracionPage() {
   };
 
   // Función para ordenar usuarios
+  const usuariosFiltrados = usuarios.filter(u =>
+    filtroEstado === 'todos' ? true : filtroEstado === 'activos' ? u.activo : !u.activo
+  );
+
   const getSortedUsuarios = () => {
-    return [...usuarios].sort((a, b) => {
+    return [...usuariosFiltrados].sort((a, b) => {
       let comparison = 0;
       switch (sortBy) {
         case 'nombre':
@@ -926,10 +934,22 @@ export default function ConfiguracionPage() {
             <div className="p-4 border-b bg-slate-50 flex flex-wrap justify-between items-center gap-2">
               <div className="flex items-center gap-2">
                 <h3 className="font-bold text-slate-800">Usuarios del Sistema</h3>
-                <span className="text-xs text-slate-500 bg-slate-200 px-2 py-0.5 rounded-full">{usuarios.length}</span>
+                <span className="text-xs text-slate-500 bg-slate-200 px-2 py-0.5 rounded-full">
+                  {filtroEstado === 'todos' ? usuarios.length : `${usuariosFiltrados.length} de ${usuarios.length}`}
+                </span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-xs text-slate-400 font-medium">Ordenar por</span>
+                <span className="text-xs text-slate-400 font-medium">Situación</span>
+                <select
+                  value={filtroEstado}
+                  onChange={e => setFiltroEstado(e.target.value as typeof filtroEstado)}
+                  className="text-xs border border-slate-200 rounded-lg px-2 py-1.5 text-slate-600 focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                >
+                  <option value="todos">Todos ({usuarios.length})</option>
+                  <option value="activos">Solo activos ({usuarios.filter(u => u.activo).length})</option>
+                  <option value="bajas">Solo bajas ({usuarios.filter(u => !u.activo).length})</option>
+                </select>
+                <span className="text-xs text-slate-400 font-medium ml-2">Ordenar por</span>
                 <select
                   value={sortBy}
                   onChange={e => { setSortBy(e.target.value as typeof sortBy); }}
@@ -971,9 +991,9 @@ export default function ConfiguracionPage() {
                 </thead>
                 <tbody className="divide-y">
                   {getSortedUsuarios().map(usuario => (
-                    <tr key={usuario.id} className="hover:bg-slate-50">
+                    <tr key={usuario.id} className={`hover:bg-slate-50 ${usuario.activo ? '' : 'bg-slate-50/60'}`}>
                       <td className="p-4">
-                        <div className="font-bold text-slate-800">{usuario.nombre} {usuario.apellidos}</div>
+                        <div className={`font-bold ${usuario.activo ? 'text-slate-800' : 'text-slate-500'}`}>{usuario.nombre} {usuario.apellidos}</div>
                         {usuario.telefono && <div className="text-xs text-slate-400">{usuario.telefono}</div>}
                       </td>
                       <td className="p-4 text-sm text-slate-600">{usuario.email}</td>
@@ -989,7 +1009,7 @@ export default function ConfiguracionPage() {
                       </td>
                       <td className="p-4">
                         <span className={`px-3 py-1 rounded-lg text-xs font-bold ${usuario.activo ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                          {usuario.activo ? 'Activo' : 'Inactivo'}
+                          {usuario.activo ? 'Activo' : 'Baja'}
                         </span>
                       </td>
                       <td className="p-4 text-right flex justify-end gap-2">
@@ -1023,11 +1043,15 @@ export default function ConfiguracionPage() {
                       </td>
                     </tr>
                   ))}
-                  {usuarios.length === 0 && (
+                  {usuariosFiltrados.length === 0 && (
                     <tr>
                       <td colSpan={6} className="p-20 text-center text-slate-400">
                         <Users size={48} className="mx-auto mb-4 opacity-20" />
-                        <p className="text-sm">No hay usuarios registrados</p>
+                        <p className="text-sm">
+                          {usuarios.length === 0 ? 'No hay usuarios registrados'
+                            : filtroEstado === 'bajas' ? 'No hay personal dado de baja'
+                            : 'No hay usuarios activos'}
+                        </p>
                       </td>
                     </tr>
                   )}
@@ -1074,7 +1098,7 @@ export default function ConfiguracionPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y">
-                    {[...usuarios].sort((a, b) => {
+                    {usuarios.filter(u => u.activo).sort((a, b) => {
                         const orden = (v: string) => v?.startsWith('J') ? 0 : v?.startsWith('S') ? 1 : 2;
                         const oa = orden(a.numeroVoluntario || '');
                         const ob = orden(b.numeroVoluntario || '');
@@ -1214,12 +1238,12 @@ export default function ConfiguracionPage() {
                         </td>
                         <td className="p-4 text-center">
                           <span className={`px-3 py-1 rounded-lg text-xs font-bold ${usuario.activo ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                            {usuario.activo ? 'Activo' : 'Inactivo'}
+                            {usuario.activo ? 'Activo' : 'Baja'}
                           </span>
                         </td>
                       </tr>
                     ))}
-                    {usuarios.length === 0 && (
+                    {usuarios.filter(u => u.activo).length === 0 && (
                       <tr>
                         <td colSpan={7} className="p-20 text-center text-slate-400">
                           <Users size={48} className="mx-auto mb-4 opacity-20" />
