@@ -9,6 +9,7 @@ interface UsuarioPermisos {
   nombre: string
   apellidos: string
   numeroVoluntario: string | null
+  activo: boolean
   permisosPersonalizados: boolean
   permisosExtra: string[]
   rol: { nombre: string }
@@ -93,7 +94,7 @@ export default function GestionPermisos() {
   const filtrados = useMemo(() => {
     const q = busqueda.toLowerCase().trim()
     if (!q) return usuarios
-    return usuarios.filter(u => `${u.numeroVoluntario || ''} ${u.nombre} ${u.apellidos} ${u.rol?.nombre || ''}`.toLowerCase().includes(q))
+    return usuarios.filter(u => `${u.numeroVoluntario || ''} ${u.nombre} ${u.apellidos} ${u.rol?.nombre || ''} ${u.activo ? 'activo' : 'baja'}`.toLowerCase().includes(q))
   }, [usuarios, busqueda])
 
   const nVer = Array.from(permisos).filter(k => k.startsWith('ver:')).length
@@ -120,12 +121,15 @@ export default function GestionPermisos() {
           {loading ? (
             <div className="p-6 text-center text-sm text-slate-400">Cargando…</div>
           ) : filtrados.map(u => (
-            <button key={u.id} onClick={() => seleccionar(u)} className={`w-full text-left px-4 py-2.5 border-b border-slate-50 flex items-center justify-between gap-2 hover:bg-slate-50 ${selId === u.id ? 'bg-blue-50' : ''}`}>
+            <button key={u.id} onClick={() => seleccionar(u)} className={`w-full text-left px-4 py-2.5 border-b border-slate-50 flex items-center justify-between gap-2 hover:bg-slate-50 ${selId === u.id ? 'bg-blue-50' : ''} ${u.activo ? '' : 'opacity-60'}`}>
               <div className="min-w-0">
-                <p className="text-sm font-semibold text-slate-800 truncate">{u.nombre} {u.apellidos}</p>
+                <p className={`text-sm font-semibold truncate ${u.activo ? 'text-slate-800' : 'text-slate-500'}`}>{u.nombre} {u.apellidos}</p>
                 <p className="text-xs text-slate-400">{u.numeroVoluntario || '—'} · {u.rol?.nombre}</p>
               </div>
-              {u.permisosPersonalizados && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 whitespace-nowrap">Personalizado</span>}
+              <div className="flex items-center gap-1.5 shrink-0">
+                {!u.activo && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-slate-200 text-slate-600 whitespace-nowrap">Baja</span>}
+                {u.permisosPersonalizados && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 whitespace-nowrap">Personalizado</span>}
+              </div>
             </button>
           ))}
         </div>
@@ -141,7 +145,10 @@ export default function GestionPermisos() {
             <div>
               <div className="flex items-start justify-between gap-3 mb-4">
                 <div>
-                  <h4 className="text-lg font-bold text-slate-800">{sel.nombre} {sel.apellidos}</h4>
+                  <h4 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                    {sel.nombre} {sel.apellidos}
+                    {!sel.activo && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-200 text-slate-600">Dado de baja</span>}
+                  </h4>
                   <p className="text-xs text-slate-500">{sel.numeroVoluntario || '—'} · Rol: {sel.rol?.nombre}</p>
                 </div>
                 <button onClick={guardar} disabled={guardando} className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg text-sm font-semibold">

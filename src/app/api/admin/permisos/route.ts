@@ -13,14 +13,17 @@ export async function GET() {
   const session = await getServerSession(authOptions)
   if (!esSuperadmin(session)) return NextResponse.json({ error: 'Solo superadmin' }, { status: 403 })
 
+  // Se devuelve TODO el personal, incluidos los dados de baja, para que esta
+  // pantalla liste exactamente a las mismas personas que el listado de personal
+  // de Administración. Quien está de baja se marca como tal en la interfaz: sus
+  // permisos siguen siendo editables porque puede reactivarse.
   const usuarios = await prisma.usuario.findMany({
-    where: { activo: true },
     select: {
-      id: true, nombre: true, apellidos: true, numeroVoluntario: true,
+      id: true, nombre: true, apellidos: true, numeroVoluntario: true, activo: true,
       permisosPersonalizados: true, permisosExtra: true,
       rol: { select: { nombre: true } },
     },
-    orderBy: [{ nombre: 'asc' }],
+    orderBy: [{ activo: 'desc' }, { nombre: 'asc' }],
   })
   return NextResponse.json({ usuarios })
 }
